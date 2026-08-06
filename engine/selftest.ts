@@ -14,6 +14,9 @@ import {
   bonusDefesaEquip,
   armaEquipada,
 } from './items';
+import { iniciarCombate, jogadorAtaca, fecharCombate } from './combat';
+import { mestresQueEnsinamAqui, aprenderArte, conjurarLivre } from './magic';
+import { verificarQuests } from './quests';
 
 let falhas = 0;
 function ok(cond: boolean, msg: string) {
@@ -116,6 +119,79 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   // Item concede verbo (gazua → arrombar existe no catálogo).
   const gazua = conteudoVaelhorn.itens.find((i) => i.id === 'gazua');
   ok(gazua?.concedeVerbo === 'arrombar', 'Gazua concede o verbo arrombar (§13.6)');
+}
+
+// Combate (GDD §16, §17).
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Bruto',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'combate-1',
+  });
+  const s = iniciarCombate(conteudoVaelhorn, c, ['rato_gigante']);
+  ok(s.atores.length === 2, 'Combate inicia com jogador e inimigo');
+  ok(s.ordem.length === 2, 'Ordem de iniciativa montada');
+
+  // Luta até acabar (guarda contra laço infinito).
+  let guarda = 0;
+  while (!c.combate!.terminado && guarda < 200) {
+    guarda++;
+    const alvo = c.combate!.atores.find((a) => !a.ehJogador && a.vida > 0);
+    if (!alvo) break;
+    jogadorAtaca(conteudoVaelhorn, c, alvo.id);
+  }
+  ok(c.combate!.terminado, 'Combate termina');
+  ok(!!c.combate!.resultado, `Combate tem resultado (${c.combate!.resultado})`);
+  ok(c.combate!.log.length > 1, 'Combate produz log narrável');
+
+  // Chefe tem fase 2 declarada.
+  const vess = conteudoVaelhorn.criaturas.find((x) => x.id === 'vess_fiador');
+  ok(!!vess?.chefe && !!vess.fase2, 'Chefe Vess tem fase 2 (§17)');
+
+  fecharCombate(c);
+  ok(c.combate === null, 'Combate pode ser fechado');
+}
+
+// Magia: aprender e conjurar (GDD §13.1, §13.3).
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Aprendiz',
+    atributos: atributosBase(),
+    classeId: 'arcanista',
+    origemId: 'divida',
+    seedString: 'magia-1',
+  });
+  // Sarn ensina na taverna, onde a campanha começa.
+  const disp = mestresQueEnsinamAqui(conteudoVaelhorn, c);
+  ok(disp.length > 0, 'Há mestre ensinando no local inicial');
+  const arte = disp[0].artes[0];
+  const ap = aprenderArte(conteudoVaelhorn, c, arte.id);
+  ok(ap.ok && c.personagem.artesConhecidas.includes(arte.id), `Aprendeu ${arte.nome}`);
+
+  const manaAntes = c.personagem.recursos.mana;
+  const conj = conjurarLivre(conteudoVaelhorn, c, arte.id);
+  ok(conj.ok, 'Conjurar fora de combate funciona');
+  ok(c.personagem.recursos.mana < manaAntes, 'Conjurar consome recurso');
+}
+
+// Missões (GDD quests).
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Andarilha',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'foragido',
+    seedString: 'quest-1',
+  });
+  ok(Object.keys(c.questEstado).length === conteudoVaelhorn.quests.length, 'Estado de todas as missões inicializado');
+  // Cumpre o objetivo do edital via flag e confere a recompensa.
+  const dinAntes = c.personagem.dinheiro;
+  c.flags['investigado.taverna.0'] = true;
+  const concl = verificarQuests(conteudoVaelhorn, c);
+  ok(concl.includes('O edital novo'), 'Missão conclui quando o objetivo é cumprido');
+  ok(c.personagem.dinheiro > dinAntes, 'Missão paga a recompensa');
 }
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM.\n' : `\n${falhas} FALHA(S).\n`);

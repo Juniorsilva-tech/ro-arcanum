@@ -11,10 +11,11 @@ import { useGame } from './ui/store';
 import { Entrada, Aviso17 } from './ui/screens/Onboarding';
 import { EscolhaCenario, EscolhaClasse, EscolhaOrigem, Criacao } from './ui/screens/Criacao';
 import { Jogo } from './ui/screens/Jogo';
-import { Ficha, Vinculos, Cronica, Mapa, Livro } from './ui/screens/Paineis';
+import { Ficha, Vinculos, Cronica, Mapa, Livro, Missoes } from './ui/screens/Paineis';
 import { FimCapitulo, Config } from './ui/screens/Sistema';
 import { Inventario } from './ui/screens/Inventario';
 import { Loja } from './ui/screens/Loja';
+import { Combate } from './ui/screens/Combate';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -87,6 +88,10 @@ function roteia(tela: string) {
       return <Inventario />;
     case 'loja':
       return <Loja />;
+    case 'combate':
+      return <Combate />;
+    case 'missoes':
+      return <Missoes />;
     case 'fimcapitulo':
       return <FimCapitulo />;
     default:

@@ -1,0 +1,122 @@
+// ARCANUM · Bestiário de Vaelhorn (GDD §16, §17). Criaturas e o chefe Vess.
+import type { Criatura } from '../../engine/types';
+
+export const criaturasVaelhorn: Criatura[] = [
+  {
+    id: 'rato_gigante',
+    nome: 'Rato gigante',
+    descricao: 'Do tamanho de um cão, e com o dobro da fome.',
+    nivel: 1, vida: 8, defesa: 9, acerto: 9, ataqueNome: 'mordida',
+    dano: { base: 4, dispersao: 0.4, tipo: 'perfurante' },
+    moralBase: 40, xp: 4, faccaoId: 'fauna',
+    loot: [{ item: 'couro_cru', chance: 0.5 }],
+  },
+  {
+    id: 'cao_selvagem',
+    nome: 'Cão selvagem',
+    descricao: 'Faminto, sarnento, rápido.',
+    nivel: 1, vida: 11, defesa: 11, acerto: 11, ataqueNome: 'dentada',
+    dano: { base: 6, dispersao: 0.4, tipo: 'cortante' },
+    moralBase: 45, xp: 6, faccaoId: 'fauna',
+    loot: [{ item: 'couro_cru', chance: 0.6 }],
+  },
+  {
+    id: 'lobo',
+    nome: 'Lobo da Mata',
+    descricao: 'Olhos amarelos entre os troncos. Nunca vem só.',
+    nivel: 2, vida: 15, defesa: 12, acerto: 12, ataqueNome: 'bote',
+    dano: { base: 8, dispersao: 0.35, tipo: 'cortante' },
+    moralBase: 55, xp: 10, faccaoId: 'fauna',
+    loot: [{ item: 'couro_cru', chance: 0.8 }, { item: 'dente_lobo', chance: 0.4 }],
+  },
+  {
+    id: 'javali',
+    nome: 'Javali',
+    descricao: 'Uma tonelada de fúria com presas.',
+    nivel: 2, vida: 20, defesa: 10, acerto: 11, ataqueNome: 'investida',
+    dano: { base: 10, dispersao: 0.5, tipo: 'perfurante' },
+    moralBase: 60, xp: 12, faccaoId: 'fauna',
+    loot: [{ item: 'couro_cru', chance: 0.9 }, { item: 'racao', chance: 0.5 }],
+  },
+  {
+    id: 'salteador',
+    nome: 'Salteador',
+    descricao: 'Capuz baixo, faca pronta, sem paciência.',
+    nivel: 2, vida: 16, defesa: 12, acerto: 12, ataqueNome: 'facada',
+    dano: { base: 8, dispersao: 0.4, tipo: 'perfurante' },
+    moralBase: 40, xp: 12, faccaoId: 'ladroes',
+    loot: [{ item: 'adaga', chance: 0.4 }, { item: 'moeda_antiga', chance: 0.3 }],
+  },
+  {
+    id: 'bandido',
+    nome: 'Bandido armado',
+    descricao: 'Cota remendada e um facão que já viu serviço.',
+    nivel: 3, vida: 22, defesa: 13, acerto: 13, ataqueNome: 'golpe',
+    dano: { base: 10, dispersao: 0.4, tipo: 'cortante' },
+    moralBase: 45, xp: 18, faccaoId: 'ladroes',
+    loot: [{ item: 'espada_curta', chance: 0.35 }, { item: 'gibao_de_couro', chance: 0.25 }],
+  },
+  {
+    id: 'corvo_gigante',
+    nome: 'Corvo gigante',
+    descricao: 'Preto como piche, bico como punhal.',
+    nivel: 2, vida: 12, defesa: 14, acerto: 13, ataqueNome: 'bicada',
+    dano: { base: 7, dispersao: 0.4, tipo: 'perfurante' },
+    moralBase: 35, xp: 10, faccaoId: 'fauna',
+    loot: [{ item: 'pena_de_corvo', chance: 0.9 }],
+  },
+  {
+    id: 'ghoul',
+    nome: 'Carniçal',
+    descricao: 'O que a cripta cospe quando é alimentada.',
+    nivel: 3, vida: 24, defesa: 12, acerto: 12, ataqueNome: 'garras',
+    dano: { base: 9, dispersao: 0.45, tipo: 'cortante' },
+    moralBase: 80, xp: 22, faccaoId: 'morto',
+    loot: [{ item: 'po_de_tumba', chance: 0.5 }, { item: 'osso_talhado', chance: 0.2 }],
+  },
+  {
+    id: 'morto_ambulante',
+    nome: 'Morto ambulante',
+    descricao: 'Alguém que deveria estar descansando.',
+    nivel: 3, vida: 26, defesa: 10, acerto: 11, ataqueNome: 'punho frio',
+    dano: { base: 8, dispersao: 0.4, tipo: 'contusão' },
+    moralBase: 100, xp: 20, faccaoId: 'morto',
+    loot: [{ item: 'po_de_tumba', chance: 0.6 }],
+  },
+  {
+    id: 'aranha_das_arvores',
+    nome: 'Aranha das árvores',
+    descricao: 'Do tamanho de um escudo, e paciente.',
+    nivel: 3, vida: 18, defesa: 14, acerto: 13, ataqueNome: 'picada',
+    dano: { base: 9, dispersao: 0.5, tipo: 'perfurante' },
+    moralBase: 50, xp: 18, faccaoId: 'fauna',
+    loot: [{ item: 'veneno_de_frasco', chance: 0.4 }],
+  },
+
+  // ── CHEFE (GDD §17)
+  {
+    id: 'vess_fiador',
+    nome: 'Vess, o Fiador',
+    descricao: 'Nunca ergue a voz. Nunca precisa. A Corrente pende do seu cinto.',
+    nivel: 6, vida: 64, defesa: 15, acerto: 15, ataqueNome: 'a Corrente',
+    dano: { base: 12, dispersao: 0.35, tipo: 'contusão' },
+    moralBase: 100, xp: 120, faccaoId: 'ladroes',
+    chefe: true,
+    fase2: {
+      gatilhoPct: 0.5,
+      descricao: 'Ergue a Corrente do Fiador, e o ar esquece nomes.',
+      mecanica: 'apagar_vinculo',
+    },
+    loot: [{ item: 'moeda_antiga', chance: 1 }],
+  },
+];
+
+// Encontros por tipo de local (ids de criatura sorteáveis).
+export const encontrosPorTipo: Record<string, string[]> = {
+  floresta: ['lobo', 'javali', 'aranha_das_arvores', 'corvo_gigante', 'cao_selvagem'],
+  cripta: ['ghoul', 'morto_ambulante', 'rato_gigante'],
+  praca: ['salteador', 'cao_selvagem'],
+  mercado: ['salteador', 'rato_gigante'],
+  taverna: ['bandido'],
+  capela: ['morto_ambulante'],
+};

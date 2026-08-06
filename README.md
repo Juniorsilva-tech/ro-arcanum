@@ -38,12 +38,26 @@ Seguindo o §41 do GDD ("não comece pela UI; comece pela engine + verbos + simu
 - **Catálogo de ~55 itens**: armas (corpo e distância, com dano), armaduras e escudos (com defesa), acessórios, poções e comida (consumíveis com efeito), ferramentas e materiais.
 - **Equipamento** (arma/armadura/escudo/acessório afetam os derivados), **loja** (comprar/vender com barganha), itens que geram verbos (§13.6).
 - O Livro: 4 mestres · 6 trabalhos · **~38 artes** · 8 relíquias (incl. 2 Únicas com dono e 1 Perdida).
+- **Bestiário com 11 criaturas** + o chefe **Vess, o Fiador** (fase 2 que apaga um vínculo seu).
+- **5 missões** com objetivos ligados às flags que os verbos produzem.
+
+### Combate (§16, §17)
+Resolvido 100% pela engine, sem chamar o modelo: iniciativa, acerto pela curva
+logística, dano por dispersão, defender, conjurar, usar item, fugir, moral inimiga
+(inimigos debandam abaixo de 25) e **chefe com fases**. Derrota não é game over —
+você sobrevive ferido e perde parte das moedas (§15).
+
+### Magia (§13.1, §13.3)
+Mestres ensinam suas artes quando você está no local deles (custa períodos).
+Artes conhecidas podem ser conjuradas no mundo (Livro) e em combate, consumindo
+recurso e gerando pressão.
 
 ### App (`App.tsx`, `ui/`) — Expo / React Native
 Identidade visual única do §30 (paleta de manuscrito, Cormorant + IBM Plex Mono).
 Telas: entrada, aviso 17+, escolha de cenário/classe/origem, criação, cena com as **três portas**
-(cena · menu de ações · ação livre), Livro, mapa e viagem, ficha, **inventário/equipamento**, **loja**,
-vínculos, crônica, fim de capítulo (paywall diegético), configurações (IA por OpenRouter/Anthropic).
+(cena · menu de ações · ação livre), Livro (aprender/conjurar), mapa e viagem, ficha,
+**inventário/equipamento**, **loja**, **combate**, **missões**, vínculos, crônica, fim de capítulo
+(paywall diegético), configurações (IA por OpenRouter/Anthropic).
 
 ### Narração por IA (opcional)
 Padrão **OpenRouter** (compatível com OpenAI), com modelos gratuitos e sem filtro para ficção adulta

@@ -31,3 +31,4 @@ export function bundlePorId(id: string): ContentBundle | undefined {
 }
 
 export { conteudoVaelhorn };
+export { encontrosPorTipo } from './vaelhorn/bestiary';

@@ -16,10 +16,20 @@ import {
   usarConsumivel,
   comprar as comprarEngine,
   vender as venderEngine,
+  iniciarCombate,
+  jogadorAtaca,
+  jogadorDefende,
+  jogadorConjura,
+  jogadorUsaItemCombate,
+  jogadorFoge,
+  fecharCombate,
+  verificarQuests,
+  aprenderArte as aprenderArteEngine,
+  conjurarLivre,
   type OpcaoResolvida,
   type Contexto,
 } from '@/engine';
-import { bundlePorId } from '@/content';
+import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
   salvarCampanha,
   carregarCampanha,
@@ -47,6 +57,8 @@ export type Tela =
   | 'config'
   | 'inventario'
   | 'loja'
+  | 'combate'
+  | 'missoes'
   | 'fimcapitulo';
 
 export type EntradaFeed = { id: string; texto: string; tipo: 'narracao' | 'eco' | 'sistema' | 'acao' };
@@ -106,6 +118,16 @@ interface GameState {
   usarItem: (id: string) => Promise<void>;
   comprarItem: (id: string) => Promise<void>;
   venderItem: (id: string) => Promise<void>;
+  iniciarLutaLocal: () => void;
+  iniciarLuta: (criaturaIds: string[]) => void;
+  combAtacar: (alvoId: string) => Promise<void>;
+  combDefender: () => Promise<void>;
+  combConjurar: (arteId: string, alvoId?: string) => Promise<void>;
+  combUsar: (itemId: string) => Promise<void>;
+  combFugir: () => Promise<void>;
+  fecharLuta: () => Promise<void>;
+  aprenderArteAcao: (arteId: string) => Promise<void>;
+  conjurarArteLivre: (arteId: string) => Promise<void>;
   acaoLivre: (texto: string) => Promise<void>;
   viajar: (destino: string) => Promise<void>;
 
@@ -227,6 +249,15 @@ export const useGame = create<GameState>((set, get) => ({
       get().irPara('loja');
       return;
     }
+    // Verbos que abrem combate.
+    if (verboId === 'cacar') {
+      get().iniciarLutaLocal();
+      return;
+    }
+    if (verboId === 'confrontar_vess') {
+      get().iniciarLuta(['vess_fiador']);
+      return;
+    }
     await executar(get, set, { tipo: 'verbo', verboId, alvoId }, 'acao');
   },
 
@@ -267,6 +298,107 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     venderEngine(content, camp, id);
     set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+
+  // ── Combate ──────────────────────────────────────────────
+  iniciarLutaLocal() {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const local = content.locais.find((l) => l.id === camp.localAtual);
+    const pool = encontrosPorTipo[local?.tipo ?? ''] ?? ['cao_selvagem'];
+    const count = 1 + (Math.random() < 0.4 ? 1 : 0);
+    const ids = Array.from({ length: count }, () => pool[Math.floor(Math.random() * pool.length)]);
+    iniciarCombate(content, camp, ids);
+    set({ camp: { ...camp }, tela: 'combate' });
+    void salvarCampanha(camp);
+  },
+  iniciarLuta(criaturaIds) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    iniciarCombate(content, camp, criaturaIds);
+    set({ camp: { ...camp }, tela: 'combate' });
+    void salvarCampanha(camp);
+  },
+  async combAtacar(alvoId) {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    jogadorAtaca(content, camp, alvoId);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async combDefender() {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    jogadorDefende(content, camp);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async combConjurar(arteId, alvoId) {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    const r = jogadorConjura(content, camp, arteId, alvoId);
+    if (!r.ok && r.motivo) camp.combate.log.push(`Não deu: ${r.motivo}.`);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async combUsar(itemId) {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    const r = jogadorUsaItemCombate(content, camp, itemId);
+    if (!r.ok && r.motivo) camp.combate.log.push(`Não deu: ${r.motivo}.`);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async combFugir() {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    jogadorFoge(content, camp);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async fecharLuta() {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const resultado = camp.combate?.resultado;
+    const rec = camp.combate?.recompensa;
+    fecharCombate(camp);
+    const cena = montarCena(content, { ...camp });
+    const linhas: EntradaFeed[] = [];
+    if (resultado === 'vitoria') linhas.push(nf(`Você venceu o combate${rec?.xp ? ` (+${rec.xp} xp)` : ''}.`, 'sistema'));
+    else if (resultado === 'derrota') linhas.push(nf('Você foi derrotado, mas sobreviveu — ferido.', 'sistema'));
+    else if (resultado === 'fuga') linhas.push(nf('Você escapou do combate.', 'sistema'));
+    set({ camp: { ...camp }, cena, tela: 'jogo', feed: [...get().feed, ...linhas] });
+    await salvarCampanha(camp);
+    const concl = verificarQuests(content, camp);
+    if (concl.length) set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
+  },
+
+  // ── Magia ────────────────────────────────────────────────
+  async aprenderArteAcao(arteId) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const r = aprenderArteEngine(content, camp, arteId);
+    if (r.ok) {
+      camp.calendario = avancarPeriodos(camp.calendario, 2);
+      crescerImpulsos(camp, 2);
+      camp.capitulo.periodosDecorridos += 2;
+      const arte = content.artes.find((a) => a.id === arteId);
+      set({ camp: { ...camp }, feed: [...get().feed, nf(`Você aprendeu ${arte?.nome ?? arteId}.`, 'sistema')] });
+    } else {
+      set({ feed: [...get().feed, nf(`Não deu para aprender: ${r.motivo}.`, 'sistema')] });
+    }
+    await salvarCampanha(camp);
+    checarCapitulo(get, set);
+  },
+  async conjurarArteLivre(arteId) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const r = conjurarLivre(content, camp, arteId);
+    set({
+      camp: { ...camp },
+      feed: [...get().feed, nf(r.ok ? r.texto! : `Falha: ${r.motivo}.`, r.ok ? 'narracao' : 'sistema')],
+    });
     await salvarCampanha(camp);
   },
   async agirOpcao(op, alvoId) {
@@ -394,6 +526,12 @@ async function executar(
   set({ camp: { ...camp }, cena, feed: [...get().feed, ...novasEntradas], ocupado: false });
   await salvarCampanha(camp);
 
+  // Missões concluídas neste turno.
+  const concl = verificarQuests(content, camp);
+  if (concl.length) {
+    set({ camp: { ...camp }, feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
+  }
+
   // Narração ao vivo pelo modelo, se configurado (substitui o fallback).
   if (config.usarModelo && config.apiKey && cena.contexto) {
     const idAlvo = novasEntradas[0].id;
@@ -423,6 +561,7 @@ function talvezRevelarSegredo(camp: Campaign, alvo?: NPC) {
   const vigiado = camp.flags[`vigiou.${alvo.id}`] === true;
   if ((confiancaAlta || vigiado) && !camp.segredosRevelados.includes(alvo.id)) {
     camp.segredosRevelados.push(alvo.id);
+    camp.flags[`segredo.${alvo.id}`] = true;
   }
 }
 

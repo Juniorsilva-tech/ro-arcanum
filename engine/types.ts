@@ -303,6 +303,53 @@ export type LivroState = {
   reliquias: Record<string, EstadoEntrada>;
 };
 
+// ── Combate (GDD §16, §17). Resolvido 100% pela engine.
+export type Criatura = {
+  id: string;
+  nome: string;
+  descricao: string;
+  nivel: number;
+  vida: number;
+  defesa: number;
+  acerto: number;
+  ataqueNome: string;
+  dano: PerfilDano;
+  moralBase: number; // 0..100
+  xp: number;
+  faccaoId?: string;
+  loot?: { item: string; chance: number }[];
+  chefe?: boolean;
+  // Fase de chefe: dispara quando a vida cai abaixo do gatilho (0..1).
+  fase2?: { gatilhoPct: number; descricao: string; mecanica: 'apagar_vinculo' | 'chamar_reforco' | 'enfurecer' };
+};
+
+export type CombatActor = {
+  id: string;
+  nome: string;
+  ehJogador: boolean;
+  vida: number;
+  vidaMax: number;
+  defesa: number;
+  acerto: number;
+  dano?: PerfilDano;
+  criaturaId?: string;
+  condicoes: string[];
+  defendendo?: boolean;
+};
+
+export type CombatState = {
+  rodada: number;
+  atores: CombatActor[];
+  ordem: string[]; // ids na ordem de iniciativa
+  turno: number; // índice em ordem
+  moralInimiga: number;
+  terminado: boolean;
+  resultado?: 'vitoria' | 'derrota' | 'fuga';
+  log: string[];
+  fase: number;
+  recompensa?: { xp: number; loot: string[] };
+};
+
 // ── Pacote completo de conteúdo de um cenário.
 export type ContentBundle = {
   cenario: Cenario;
@@ -316,9 +363,24 @@ export type ContentBundle = {
   artes: Arte[];
   reliquias: Reliquia[];
   itens: Item[];
+  criaturas: Criatura[];
+  quests: Quest[];
   faccoes: { id: string; nome: string }[];
   localInicial: string;
 };
+
+// ── Missões (GDD §13.2/quests_estado). Objetivos simples ligados a flags.
+export type Quest = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  dador?: string; // NpcId que dá a missão
+  objetivos: { id: string; texto: string; flag: string }[];
+  recompensa: { dinheiro?: number; xp?: number; item?: string; reputacao?: { faccaoId: string; delta: number }[] };
+  prazoDias?: number;
+};
+
+export type QuestEstado = 'desconhecida' | 'ativa' | 'concluida' | 'falhada';
 
 // ── Estado serializável de uma campanha (GDD §34).
 export type Campaign = {
@@ -344,6 +406,8 @@ export type Campaign = {
     alvoNome?: string;
   };
   turno: number;
+  combate?: CombatState | null;
+  questEstado: Record<string, QuestEstado>;
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };

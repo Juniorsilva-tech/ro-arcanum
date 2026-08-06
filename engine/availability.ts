@@ -93,6 +93,10 @@ export function disponibilidadeVerbo(
     if (!alvo || !camp.segredosRevelados.includes(alvo.id)) {
       return { disponivel: false, motivo: 'você não sabe nada que sirva' };
     }
+  } else if (req.condicaoNecessaria === 'sabe_segredo_vess') {
+    if (!camp.segredosRevelados.includes('vess')) {
+      return { disponivel: false, motivo: 'você ainda não sabe o que ele guarda' };
+    }
   } else if (req.condicaoNecessaria && !p.condicoes.includes(req.condicaoNecessaria)) {
     return { disponivel: false, motivo: `exige estar ${req.condicaoNecessaria}` };
   }

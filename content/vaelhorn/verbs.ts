@@ -505,6 +505,26 @@ export const verbosVaelhorn: Verbo[] = [
     },
   }),
 
+  // ─────────────────────────── COMBATE (abre a tela de combate — §16)
+  v({
+    id: 'cacar',
+    nome: 'Caçar / procurar briga',
+    categoria: 'transgressao',
+    descricao: 'Ir atrás do que morde — ou deixar que ele venha.',
+    alvo: 'nenhum',
+    custo: { periodos: 1 },
+  }),
+  v({
+    id: 'confrontar_vess',
+    nome: 'Confrontar Vess, o Fiador',
+    categoria: 'transgressao',
+    descricao: 'Encarar o agiota e a Corrente que ele carrega.',
+    alvo: 'nenhum',
+    custo: { periodos: 0 },
+    requisitos: { localTipo: ['taverna'], condicaoNecessaria: 'sabe_segredo_vess' },
+    tabu: { faccoes: ['ladroes'], consequencia: 'inimizade dos ladrões' },
+  }),
+
   // ─────────────────────────── CONCEDIDOS POR ITEM (GDD §13.6)
   v({
     id: 'envenenar',

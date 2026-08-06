@@ -1,6 +1,6 @@
 // ARCANUM · Painéis: Ficha, Vínculos, Crônica, Mapa e o Livro (GDD §13, §31, §32).
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
 import { TextoSerif, TextoMono, Card, Medidor, Divisor, Rotulo, Selo, Botao } from '../components';
 import { cores, fontes, esp, corPressao, corImpulso } from '../theme';
@@ -13,6 +13,7 @@ import {
   bonusDefesaEquip,
   armaEquipada,
   itemPorId,
+  mestresQueEnsinamAqui,
   type AttrKey,
   type EstadoEntrada,
 } from '@/engine';
@@ -254,16 +255,124 @@ export function Mapa() {
   );
 }
 
+// ─────────────────────────────────────────────── MISSÕES
+export function Missoes() {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+
+  const ativas = content.quests.filter((q) => camp.questEstado[q.id] === 'ativa');
+  const feitas = content.quests.filter((q) => camp.questEstado[q.id] === 'concluida');
+  const ocultas = content.quests.filter((q) => camp.questEstado[q.id] === 'desconhecida');
+
+  return (
+    <Pagina>
+      <BarraVoltar titulo="Missões" />
+      <TextoSerif style={styles.intro}>O que o mundo espera de você — e o que você prometeu.</TextoSerif>
+
+      <Divisor label="em andamento" />
+      {ativas.length === 0 && <TextoMono>Nada em aberto por ora.</TextoMono>}
+      {ativas.map((q) => (
+        <Card key={q.id} acento={cores.ouro}>
+          <TextoSerif style={{ fontSize: 20 }}>{q.titulo}</TextoSerif>
+          <TextoSerif style={{ fontSize: 16, color: cores.mudo, marginTop: 2 }}>{q.descricao}</TextoSerif>
+          {q.objetivos.map((o) => {
+            const feito = !!camp.flags[o.flag];
+            return (
+              <View key={o.id} style={styles.questObj}>
+                <Text style={[styles.questCheck, { color: feito ? cores.verdigris : cores.linha }]}>
+                  {feito ? '✔' : '○'}
+                </Text>
+                <TextoMono style={{ color: feito ? cores.verdigris : cores.mudo, flex: 1 }}>{o.texto}</TextoMono>
+              </View>
+            );
+          })}
+          <TextoMono style={{ color: cores.linha, marginTop: esp.sm }}>
+            recompensa:
+            {q.recompensa.dinheiro ? ` ${q.recompensa.dinheiro} moedas` : ''}
+            {q.recompensa.xp ? ` · ${q.recompensa.xp} xp` : ''}
+            {q.recompensa.item ? ` · ${itemPorId(content, q.recompensa.item)?.nome ?? q.recompensa.item}` : ''}
+          </TextoMono>
+        </Card>
+      ))}
+
+      {feitas.length > 0 && (
+        <>
+          <Divisor label="concluídas" />
+          {feitas.map((q) => (
+            <View key={q.id} style={styles.livroLinha}>
+              <Text style={[styles.livroNome, { color: cores.verdigris }]}>✔ {q.titulo}</Text>
+            </View>
+          ))}
+        </>
+      )}
+
+      {ocultas.length > 0 && (
+        <>
+          <Divisor label="ouvidas por aí" />
+          <TextoMono>
+            {ocultas.length} história(s) esperam alguém que valha a pena — fale com as pessoas certas.
+          </TextoMono>
+        </>
+      )}
+    </Pagina>
+  );
+}
+
 // ─────────────────────────────────────────────── O LIVRO
 export function Livro() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
+  const aprender = useGame((s) => s.aprenderArteAcao);
+  const conjurar = useGame((s) => s.conjurarArteLivre);
   const p = camp.personagem;
+
+  const ensinamAqui = mestresQueEnsinamAqui(content, camp);
+  const localNome = content.locais.find((l) => l.id === camp.localAtual)?.nome ?? '';
 
   return (
     <Pagina>
       <BarraVoltar titulo="O Livro" />
       <TextoSerif style={styles.intro}>Preencher o Livro é o jogo.</TextoSerif>
+
+      {ensinamAqui.length > 0 && (
+        <>
+          <Divisor label={`aprender agora · ${localNome}`} />
+          {ensinamAqui.map(({ mestre, artes }) => (
+            <Card key={mestre.id} acento={cores.verdigris}>
+              <TextoSerif style={{ fontSize: 19 }}>{mestre.nome}</TextoSerif>
+              <TextoMono style={{ marginBottom: esp.sm }}>{mestre.custo}</TextoMono>
+              <View style={styles.chips}>
+                {artes.map((a) => (
+                  <Pressable key={a.id} style={styles.chipAprender} onPress={() => aprender(a.id)}>
+                    <Text style={styles.chipAprenderTxt}>aprender {a.nome}</Text>
+                    <Text style={styles.chipAprenderSub}>2 períodos</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {p.artesConhecidas.length > 0 && (
+        <>
+          <Divisor label="conjurar" />
+          <View style={styles.chips}>
+            {p.artesConhecidas.map((id) => {
+              const a = content.artes.find((x) => x.id === id);
+              if (!a) return null;
+              return (
+                <Pressable key={id} style={styles.chipConjurar} onPress={() => conjurar(id)}>
+                  <Text style={styles.chipAprenderTxt}>{a.nome}</Text>
+                  <Text style={styles.chipAprenderSub}>
+                    {a.custo.valor} {a.custo.recurso}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       <Divisor label="I · Mestres" />
       {content.mestres.map((m) => (
@@ -373,4 +482,22 @@ const styles = StyleSheet.create({
   livroNome: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 17 },
   unica: { marginTop: esp.md, paddingTop: esp.sm, borderTopWidth: 1, borderTopColor: cores.linha },
   unicaUso: { fontFamily: fontes.serif, color: cores.vellum, fontSize: 15, marginTop: 2, fontStyle: 'italic' },
+  chipAprender: {
+    borderWidth: 1,
+    borderColor: cores.verdigris,
+    borderRadius: 6,
+    paddingHorizontal: esp.md,
+    paddingVertical: esp.sm,
+  },
+  chipConjurar: {
+    borderWidth: 1,
+    borderColor: cores.violeta,
+    borderRadius: 6,
+    paddingHorizontal: esp.md,
+    paddingVertical: esp.sm,
+  },
+  chipAprenderTxt: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 15 },
+  chipAprenderSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10 },
+  questObj: { flexDirection: 'row', gap: esp.sm, alignItems: 'flex-start', marginTop: 4 },
+  questCheck: { fontFamily: fontes.mono, fontSize: 13 },
 });

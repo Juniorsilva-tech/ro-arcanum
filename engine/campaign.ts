@@ -49,6 +49,9 @@ export function criarCampanha(content: ContentBundle, entrada: EntradaCriacao): 
 
   const flags: Record<string, boolean | number | string> = { ...(origem.flagsIniciais ?? {}) };
 
+  const questEstado: Record<string, import('./types').QuestEstado> = {};
+  for (const q of content.quests) questEstado[q.id] = q.dador ? 'desconhecida' : 'ativa';
+
   const camp: Campaign = {
     id: `camp_${Date.now().toString(36)}`,
     cenarioId: content.cenario.id,
@@ -67,6 +70,8 @@ export function criarCampanha(content: ContentBundle, entrada: EntradaCriacao): 
     locaisVisitados: [content.localInicial],
     segredosRevelados: [],
     turno: 0,
+    combate: null,
+    questEstado,
   };
 
   return camp;
