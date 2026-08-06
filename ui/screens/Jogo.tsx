@@ -44,6 +44,9 @@ export function Jogo() {
   const [texto, setTexto] = useState('');
   const [catAberta, setCatAberta] = useState<CategoriaVerbo | null>(null);
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
+  const iaStatus = useGame((s) => s.iaStatus);
+  const iaLigada = useGame((s) => s.config.usarModelo && !!s.config.apiKey);
+  const irPara = useGame((s) => s.irPara);
 
   const ctx = cena?.contexto;
 
@@ -110,7 +113,19 @@ export function Jogo() {
             <EntradaNarrativa key={e.id} entrada={e} primeira={i === 0} />
           ))}
 
-          <Divisor label="a cena" />
+          <Divisor label={iaStatus === 'pensando' ? 'a cena · a IA está escrevendo…' : 'a cena'} />
+          {!iaLigada && (
+            <Pressable onPress={() => irPara('config')}>
+              <Text style={styles.iaAviso}>
+                IA desligada — narração local. Toque para ligar em Configurações.
+              </Text>
+            </Pressable>
+          )}
+          {iaLigada && iaStatus === 'erro' && (
+            <Pressable onPress={() => irPara('config')}>
+              <Text style={styles.iaErro}>IA falhou — toque para revisar chave/modelo.</Text>
+            </Pressable>
+          )}
           <TextoSerif style={styles.situacao}>{cena.narracao}</TextoSerif>
 
           {/* PORTA 1 — opções de cena */}
@@ -340,6 +355,8 @@ const styles = StyleSheet.create({
   narracao: { color: cores.vellum, marginBottom: esp.md, fontSize: 20, lineHeight: 30 },
   narracaoPrimeira: { fontSize: 21 },
   situacao: { color: cores.vellum, fontStyle: 'italic', fontSize: 19, lineHeight: 28 },
+  iaAviso: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginBottom: esp.sm },
+  iaErro: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 11, marginBottom: esp.sm },
   eco: { fontFamily: fontes.serif, color: cores.ouro, fontStyle: 'italic', fontSize: 17, marginBottom: esp.md },
   sistema: { color: cores.linha, marginBottom: esp.sm, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
   acao: { fontFamily: fontes.monoMedium, color: cores.verdigris, fontSize: 13, marginBottom: esp.sm },

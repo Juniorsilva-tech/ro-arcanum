@@ -102,20 +102,92 @@ export function montarPacote(
 }
 
 // Narrador adulto. A única regra inviolável é: TODOS os personagens são adultos.
+// O modelo devolve JSON: narração + as opções de cena do próximo turno (§18.2).
 const INSTRUCAO_SISTEMA =
   'Você é o narrador de ARCANUM, um RPG de texto adulto e sombrio, em português do Brasil. ' +
-  'A ENGINE decide o que aconteceu; você escreve a VOZ. Regras:\n' +
-  '1) Narre APENAS o fato consumado que a engine informou — nunca invente um resultado diferente.\n' +
+  'A ENGINE decide o que aconteceu; você escreve a VOZ e propõe os próximos caminhos.\n' +
+  'Regras:\n' +
+  '1) Narre APENAS o fato consumado que a engine informou — nunca invente outro resultado.\n' +
   '2) Cite apenas pessoas e lugares presentes no pacote de contexto.\n' +
   '3) Registro concreto e adulto: 2 a 3 parágrafos, com diálogo quando fizer sentido.\n' +
-  '4) Nunca use notação de dado (d20, 1d6, CD 15) nem números de regra.\n' +
-  '5) Conteúdo adulto — incluindo sexo, violência e temas pesados — é permitido e pode ser ' +
-  'explícito quando a cena pedir, entre personagens adultos e de forma consensual.\n' +
+  '4) Nunca use notação de dado (d20, 1d6, CD 15) nem números de regra no texto.\n' +
+  '5) Conteúdo adulto — sexo, violência, temas pesados — é permitido e pode ser explícito ' +
+  'quando a cena pedir, entre personagens adultos e de forma consensual.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens são adultos (18+). Jamais sexualize ' +
-  'menores de idade em nenhuma hipótese. No pacote, cada presente traz sua idade — respeite-a.\n' +
-  'Escreva só a narração, sem títulos nem comentários fora da ficção.';
+  'menores de idade em nenhuma hipótese. Cada presente traz sua idade no pacote — respeite-a.\n' +
+  '\nRESPONDA SOMENTE COM JSON VÁLIDO, sem cercas de código, neste formato:\n' +
+  '{"narracao":"…","opcoes":[{"rotulo":"…","dica":"…","custoPeriodos":0,' +
+  '"teste":{"atributo":"social","pericia":"persuadir","dificuldade":13}}]}\n' +
+  'Sobre as opções: de 3 a 5, SEMPRE NOVAS e específicas para o que acabou de acontecer e ' +
+  'para quem está presente. "rotulo" até 90 caracteres, imperativo e concreto. "dica" é a ' +
+  'consequência provável em até 12 palavras. "custoPeriodos" de 0 a 3. "teste" é opcional; ' +
+  'se houver, "atributo" ∈ [fisico, precisao, resiliencia, raciocinio, percepcao, social] e ' +
+  '"dificuldade" entre 6 e 26. Não repita opções anteriores.';
 
-export type ResultadoNarracao = { texto?: string; erro?: string };
+export type OpcaoIA = {
+  rotulo: string;
+  dica?: string;
+  custoPeriodos: number;
+  teste?: { atributo: string; pericia?: string; dificuldade: number };
+};
+
+export type ResultadoNarracao = { texto?: string; opcoes?: OpcaoIA[]; erro?: string };
+
+const ATRIBUTOS_VALIDOS = ['fisico', 'precisao', 'resiliencia', 'raciocinio', 'percepcao', 'social'];
+const RE_DADO = /\bd\d+\b|\b\d+d\d+\b|\bCD\s?\d+/i;
+
+// Extrai o JSON mesmo se o modelo embrulhar em ``` ou texto solto.
+function extrairJson(bruto: string): any | null {
+  const semCerca = bruto.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(semCerca);
+  } catch {
+    /* tenta recortar do primeiro { ao último } */
+  }
+  const i = semCerca.indexOf('{');
+  const f = semCerca.lastIndexOf('}');
+  if (i >= 0 && f > i) {
+    try {
+      return JSON.parse(semCerca.slice(i, f + 1));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// Validador das opções propostas pelo modelo (§19: faixas, dificuldade, dado).
+export function validarOpcoesIA(bruto: unknown): OpcaoIA[] {
+  if (!Array.isArray(bruto)) return [];
+  const out: OpcaoIA[] = [];
+  for (const o of bruto) {
+    if (!o || typeof o !== 'object') continue;
+    const rotulo = String((o as any).rotulo ?? '').trim();
+    if (!rotulo || rotulo.length > 90 || RE_DADO.test(rotulo)) continue;
+    const dicaBruta = String((o as any).dica ?? '').trim();
+    const dica = RE_DADO.test(dicaBruta) ? undefined : dicaBruta || undefined;
+    let custo = Number((o as any).custoPeriodos ?? 0);
+    if (!Number.isFinite(custo)) custo = 0;
+    custo = Math.max(0, Math.min(3, Math.round(custo)));
+
+    let teste: OpcaoIA['teste'];
+    const t = (o as any).teste;
+    if (t && typeof t === 'object') {
+      const attr = String(t.atributo ?? '').trim();
+      const dif = Number(t.dificuldade);
+      if (ATRIBUTOS_VALIDOS.includes(attr) && Number.isFinite(dif)) {
+        teste = {
+          atributo: attr,
+          pericia: t.pericia ? String(t.pericia).trim() : undefined,
+          dificuldade: Math.max(6, Math.min(26, Math.round(dif))),
+        };
+      }
+    }
+    out.push({ rotulo, dica, custoPeriodos: custo, teste });
+    if (out.length >= 5) break;
+  }
+  return out;
+}
 
 // Chama o provider configurado. Devolve { texto } no sucesso, ou { erro } com o
 // motivo (para o app mostrar em vez de cair calado no fallback).
@@ -130,13 +202,30 @@ export async function narrarComModelo(
   const userMsg =
     'Pacote de contexto (JSON):\n' +
     JSON.stringify(pacote, null, 2) +
-    '\n\nNarre a cena a partir do fatoConsumado.';
+    '\n\nNarre a cena a partir do fatoConsumado e proponha as novas opções. Responda só o JSON.';
   try {
-    if (cfg.provider === 'anthropic') return await chamarAnthropic(cfg, userMsg);
-    return await chamarOpenRouter(cfg, userMsg);
+    const bruto =
+      cfg.provider === 'anthropic'
+        ? await chamarAnthropic(cfg, userMsg)
+        : await chamarOpenRouter(cfg, userMsg);
+    if (bruto.erro) return bruto;
+    return interpretarResposta(bruto.texto ?? '');
   } catch (e) {
     return { erro: `rede: ${String(e).slice(0, 120)}` };
   }
+}
+
+// Converte a resposta crua em narração + opções válidas. Se o modelo mandar
+// texto puro (sem JSON), aproveita como narração — o jogo nunca trava (§20).
+function interpretarResposta(bruto: string): ResultadoNarracao {
+  const json = extrairJson(bruto);
+  if (json && typeof json === 'object') {
+    const narracao = String(json.narracao ?? '').trim();
+    const opcoes = validarOpcoesIA(json.opcoes);
+    if (narracao) return { texto: narracao, opcoes };
+  }
+  const texto = bruto.trim();
+  return texto ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
 async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<ResultadoNarracao> {
@@ -150,7 +239,7 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<Result
     },
     body: JSON.stringify({
       model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
-      max_tokens: 600,
+      max_tokens: 1000,
       temperature: 0.9,
       messages: [
         { role: 'system', content: INSTRUCAO_SISTEMA },
@@ -182,7 +271,7 @@ async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<Resulta
     },
     body: JSON.stringify({
       model: cfg.modelo || MODELO_PADRAO_ANTHROPIC,
-      max_tokens: 600,
+      max_tokens: 1000,
       system: INSTRUCAO_SISTEMA,
       messages: [{ role: 'user', content: userMsg }],
     }),

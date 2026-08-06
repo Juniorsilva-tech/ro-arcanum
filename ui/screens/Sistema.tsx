@@ -172,13 +172,22 @@ export function Config() {
       <TextInput
         style={styles.input}
         value={chave}
-        onChangeText={setChave}
+        onChangeText={(t) => {
+          // Salva enquanto digita: não dá para o jogador esquecer de tocar "Salvar".
+          setChave(t);
+          setConfig({ apiKey: t.trim() || undefined });
+        }}
         placeholder={ehOR ? 'sk-or-v1-…' : 'sk-ant-…'}
         placeholderTextColor={cores.linha}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
       />
+      {!!chave.trim() && (
+        <TextoMono style={{ color: cores.verdigris, marginBottom: esp.xs }}>
+          chave salva neste aparelho ✓
+        </TextoMono>
+      )}
       {ehOR && (
         <TextoMono style={{ color: cores.linha, marginBottom: esp.sm }}>
           Crie a chave grátis em openrouter.ai/keys
@@ -189,7 +198,10 @@ export function Config() {
       <TextInput
         style={styles.input}
         value={modelo}
-        onChangeText={setModelo}
+        onChangeText={(t) => {
+          setModelo(t);
+          setConfig({ modelo: t.trim() });
+        }}
         placeholder={ehOR ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC}
         placeholderTextColor={cores.linha}
         autoCapitalize="none"

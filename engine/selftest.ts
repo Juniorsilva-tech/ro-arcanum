@@ -3,6 +3,7 @@ import { createRng } from './rng';
 import { probabilidade, resolverTeste } from './resolution';
 import { conteudoVaelhorn } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
+import { validarOpcoesIA } from './llm';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import { atributosBase, derivados } from './character';
@@ -78,6 +79,35 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
 {
   const menores = conteudoVaelhorn.npcs.filter((n) => n.idade < 18);
   ok(menores.length === 0, 'Todos os personagens são adultos (§25)');
+}
+
+// Validador das opções vindas da IA (§19).
+{
+  const validas = validarOpcoesIA([
+    { rotulo: 'Encarar Vess sem desviar o olhar', dica: 'ele mede você', custoPeriodos: 0, teste: { atributo: 'social', pericia: 'intimidar', dificuldade: 15 } },
+    { rotulo: 'Rolar 1d20 contra CD 15', custoPeriodos: 0 }, // deve cair: notação de dado
+    { rotulo: 'x'.repeat(120), custoPeriodos: 0 }, // deve cair: longa demais
+    { rotulo: 'Sair pela porta dos fundos', custoPeriodos: 9, teste: { atributo: 'inventado', dificuldade: 99 } },
+  ]);
+  ok(validas.length === 2, 'Validador rejeita opções com dado e rótulo longo demais');
+  ok(validas[0].teste?.dificuldade === 15, 'Opção válida preserva a dificuldade');
+  ok(validas[1].custoPeriodos === 3, 'Custo fora da faixa é limitado a 3');
+  ok(validas[1].teste === undefined, 'Atributo inválido descarta o teste');
+}
+
+// Opções canônicas não repetem gancho já investigado.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Curiosa',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'ganchos-1',
+  });
+  const antes = montarCena(conteudoVaelhorn, c).opcoes.filter((o) => o.id.startsWith('gancho_')).length;
+  c.flags['investigado.taverna.0'] = true;
+  const depois = montarCena(conteudoVaelhorn, c).opcoes.filter((o) => o.id.startsWith('gancho_')).length;
+  ok(depois === antes - 1, 'Gancho investigado some das opções de cena');
 }
 
 // Sistema de itens (GDD §13.6, §34).

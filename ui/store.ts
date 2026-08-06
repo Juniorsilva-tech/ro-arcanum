@@ -94,6 +94,8 @@ interface GameState {
   temSave: boolean;
   config: ConfigApp;
   rascunho: Rascunho;
+  iaStatus: 'off' | 'pensando' | 'ok' | 'erro';
+  iaErro?: string;
 
   init: () => Promise<void>;
   irPara: (t: Tela) => void;
@@ -153,6 +155,7 @@ export const useGame = create<GameState>((set, get) => ({
   temSave: false,
   config: configPadrao,
   rascunho: { nome: '', atributos: atributosBase() },
+  iaStatus: 'off',
 
   async init() {
     const config = await carregarConfig();
@@ -532,9 +535,11 @@ async function executar(
     set({ camp: { ...camp }, feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
   }
 
-  // Narração ao vivo pelo modelo, se configurado (substitui o fallback).
+  // Narração ao vivo pelo modelo: reescreve o texto E propõe as novas opções
+  // de cena (§18.2). O menu fixo de verbos continua embaixo, sempre.
   if (config.usarModelo && config.apiKey && cena.contexto) {
     const idAlvo = novasEntradas[0].id;
+    set({ iaStatus: 'pensando', iaErro: undefined });
     const res = await narrarComModelo(
       { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
       content,
@@ -543,14 +548,45 @@ async function executar(
       r,
     );
     if (res.texto) {
-      set({ feed: get().feed.map((e) => (e.id === idAlvo ? { ...e, texto: res.texto! } : e)) });
+      const cenaAtual = get().cena;
+      const opcoesIA: OpcaoResolvida[] = (res.opcoes ?? []).map((o, i) => ({
+        id: `ia_${camp.turno}_${i}`,
+        rotulo: o.rotulo,
+        dica: o.dica,
+        custoPeriodos: o.custoPeriodos,
+        teste: o.teste
+          ? {
+              atributo: o.teste.atributo as AttrKey,
+              pericia: o.teste.pericia,
+              dificuldade: o.teste.dificuldade,
+            }
+          : undefined,
+        origem: 'cena',
+      }));
+      set({
+        feed: get().feed.map((e) => (e.id === idAlvo ? { ...e, texto: res.texto! } : e)),
+        cena:
+          cenaAtual && opcoesIA.length > 0
+            ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
+            : cenaAtual,
+        iaStatus: 'ok',
+      });
     } else if (res.erro) {
       // Não silencia: mostra por que a IA não respondeu (§20 mantém o jogo de pé).
-      set({ feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro})`, 'sistema')] });
+      set({
+        iaStatus: 'erro',
+        iaErro: res.erro,
+        feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro})`, 'sistema')],
+      });
     }
   }
 
   checarCapitulo(get, set);
+}
+
+// Mantém só a opção canônica de "deixar o tempo correr" abaixo das da IA.
+function opcoesFixas(opcoes: OpcaoResolvida[]): OpcaoResolvida[] {
+  return opcoes.filter((o) => o.id === 'deixar_correr');
 }
 
 // Descoberta de segredo: se o jogador vigiou/ouviu/ganhou confiança alta.

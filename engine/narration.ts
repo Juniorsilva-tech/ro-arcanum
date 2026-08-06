@@ -74,8 +74,10 @@ function ecoDeConsequencia(rng: RngState, r: ResultadoTurno): string | undefined
 function opcoesCanonicas(content: ContentBundle, camp: Campaign, ctx: Contexto): OpcaoResolvida[] {
   const out: OpcaoResolvida[] = [];
 
-  // Ganchos do local viram oportunidades de investigação.
-  ctx.local.ganchos.slice(0, 2).forEach((g, i) => {
+  // Ganchos do local que AINDA não foram investigados (§0.2: efeito que some
+  // não entra no jogo — investigar duas vezes o mesmo edital não é opção).
+  ctx.local.ganchos.forEach((g, i) => {
+    if (camp.flags[`investigado.${ctx.local.id}.${i}`]) return;
     out.push({
       id: `gancho_${i}`,
       rotulo: `Investigar: ${g}`,
@@ -87,9 +89,8 @@ function opcoesCanonicas(content: ContentBundle, camp: Campaign, ctx: Contexto):
     });
   });
 
-  // Um NPC presente convida a uma abordagem específica.
-  const alvo = ctx.presentes[0];
-  if (alvo) {
+  // Cada pessoa presente é uma porta — não só a primeira.
+  ctx.presentes.slice(0, 3).forEach((alvo) => {
     out.push({
       id: `abordar_${alvo.id}`,
       rotulo: `Puxar assunto com ${alvo.nome}`,
@@ -99,6 +100,21 @@ function opcoesCanonicas(content: ContentBundle, camp: Campaign, ctx: Contexto):
       teste: { atributo: 'social', pericia: 'persuadir', dificuldade: 12 },
       efeitos: [{ tipo: 'relacao', npc: alvo.id, eixo: content.cenario.eixosRelacao[0].id, delta: 3 }],
     });
+  });
+
+  // Se já vasculhou tudo aqui, o lugar oferece a saída como opção viva.
+  if (out.length === 0) {
+    const rota = ctx.local.rotas[0];
+    if (rota) {
+      out.push({
+        id: 'sair_daqui',
+        rotulo: 'Procurar o que fazer em outro lugar',
+        dica: 'este canto já deu o que tinha',
+        custoPeriodos: 0,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'quer.sair', valor: true }],
+      });
+    }
   }
 
   // Deixar o período correr é sempre uma escolha.
