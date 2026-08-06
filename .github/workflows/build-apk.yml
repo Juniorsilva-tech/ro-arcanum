@@ -1,4 +1,5 @@
 name: Build ARCANUM APK
+# build: arm64-v8a release (v3)
 
 # Compila um APK de release instalável (só arm64-v8a) e o publica numa Release
 # do GitHub, para baixar direto no celular. Sem conta externa (Expo/EAS).
