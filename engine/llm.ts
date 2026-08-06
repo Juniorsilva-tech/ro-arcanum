@@ -20,18 +20,45 @@ export type LlmConfig = {
   modelo: string;
 };
 
-// Sugestão de modelo gratuito e permissivo no OpenRouter. Editável nas Configurações.
-export const MODELO_PADRAO_OPENROUTER = 'cognitivecomputations/dolphin3.0-mistral-24b:free';
+// Padrões. Slugs variam com o tempo — use o botão "Buscar modelos" nas
+// Configurações para pegar a lista atual e grátis direto da OpenRouter.
+export const MODELO_PADRAO_OPENROUTER = 'deepseek/deepseek-chat-v3-0324:free';
 export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 
-// Modelos sugeridos (troque à vontade em openrouter.ai/models — filtre por :free).
+// Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
+// substitui esta lista pela lista viva da sua conta.
 export const SUGESTOES_OPENROUTER = [
-  'cognitivecomputations/dolphin3.0-mistral-24b:free', // uncensored, bom p/ roleplay
-  'cognitivecomputations/dolphin3.0-r1-mistral-24b:free',
-  'nousresearch/hermes-3-llama-3.1-405b', // permissivo (pago barato)
   'deepseek/deepseek-chat-v3-0324:free', // qualidade alta, pouco filtro em ficção
-  'sao10k/l3-euryale-70b', // roleplay adulto (pago)
+  'deepseek/deepseek-r1:free',
+  'nousresearch/hermes-3-llama-3.1-405b', // permissivo
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'mistralai/mistral-nemo:free',
 ];
+
+// Busca a lista de modelos da OpenRouter (opcionalmente só os gratuitos).
+// Assim o app nunca depende de um slug chumbado que pode ter saído do ar.
+export async function listarModelosOpenRouter(
+  apiKey?: string,
+  apenasGratis = true,
+): Promise<{ id: string; free: boolean }[]> {
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+    });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as {
+      data?: { id: string; pricing?: { prompt?: string; completion?: string } }[];
+    };
+    const modelos = (data.data ?? []).map((m) => {
+      const free = m.pricing?.prompt === '0' && m.pricing?.completion === '0';
+      return { id: m.id, free };
+    });
+    const filtrados = apenasGratis ? modelos.filter((m) => m.free) : modelos;
+    return filtrados.sort((a, b) => a.id.localeCompare(b.id));
+  } catch {
+    return [];
+  }
+}
 
 // Pacote de contexto de tamanho ~constante (GDD §18.1).
 export function montarPacote(
@@ -88,38 +115,31 @@ const INSTRUCAO_SISTEMA =
   'menores de idade em nenhuma hipótese. No pacote, cada presente traz sua idade — respeite-a.\n' +
   'Escreva só a narração, sem títulos nem comentários fora da ficção.';
 
-type ChamadaArgs = {
-  cfg: LlmConfig;
-  content: ContentBundle;
-  camp: Campaign;
-  ctx: Contexto;
-  r: ResultadoTurno;
-};
+export type ResultadoNarracao = { texto?: string; erro?: string };
 
-// Chama o provider configurado. Retorna null em falha → o chamador cai no fallback (§20).
+// Chama o provider configurado. Devolve { texto } no sucesso, ou { erro } com o
+// motivo (para o app mostrar em vez de cair calado no fallback).
 export async function narrarComModelo(
   cfg: LlmConfig,
   content: ContentBundle,
   camp: Campaign,
   ctx: Contexto,
   r: ResultadoTurno,
-): Promise<string | null> {
+): Promise<ResultadoNarracao> {
   const pacote = montarPacote(content, camp, ctx, r.fato);
   const userMsg =
     'Pacote de contexto (JSON):\n' +
     JSON.stringify(pacote, null, 2) +
     '\n\nNarre a cena a partir do fatoConsumado.';
   try {
-    if (cfg.provider === 'anthropic') {
-      return await chamarAnthropic(cfg, userMsg);
-    }
+    if (cfg.provider === 'anthropic') return await chamarAnthropic(cfg, userMsg);
     return await chamarOpenRouter(cfg, userMsg);
-  } catch {
-    return null;
+  } catch (e) {
+    return { erro: `rede: ${String(e).slice(0, 120)}` };
   }
 }
 
-async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<string | null> {
+async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<ResultadoNarracao> {
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -138,15 +158,20 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<string
       ],
     }),
   });
-  if (!resp.ok) return null;
-  const data = (await resp.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
+  const bruto = await resp.text();
+  if (!resp.ok) return { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+  let data: { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
+  try {
+    data = JSON.parse(bruto);
+  } catch {
+    return { erro: 'resposta inválida da OpenRouter' };
+  }
+  if (data.error?.message) return { erro: data.error.message.slice(0, 160) };
   const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
-  return texto.length > 0 ? texto : null;
+  return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
-async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<string | null> {
+async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<ResultadoNarracao> {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -162,14 +187,20 @@ async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<string 
       messages: [{ role: 'user', content: userMsg }],
     }),
   });
-  if (!resp.ok) return null;
-  const data = (await resp.json()) as { content?: { type: string; text?: string }[] };
+  const bruto = await resp.text();
+  if (!resp.ok) return { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+  let data: { content?: { type: string; text?: string }[] };
+  try {
+    data = JSON.parse(bruto);
+  } catch {
+    return { erro: 'resposta inválida da Anthropic' };
+  }
   const texto = (data.content ?? [])
     .filter((b) => b.type === 'text')
     .map((b) => b.text ?? '')
     .join('')
     .trim();
-  return texto.length > 0 ? texto : null;
+  return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
 // Testa a chave com uma chamada mínima.

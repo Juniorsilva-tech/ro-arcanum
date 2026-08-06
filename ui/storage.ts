@@ -16,7 +16,7 @@ export type ConfigApp = {
 
 export const configPadrao: ConfigApp = {
   provider: 'openrouter',
-  modelo: 'cognitivecomputations/dolphin3.0-mistral-24b:free',
+  modelo: 'deepseek/deepseek-chat-v3-0324:free',
   usarModelo: false,
   avisoAceito: false,
 };

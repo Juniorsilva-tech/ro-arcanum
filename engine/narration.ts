@@ -78,7 +78,7 @@ function opcoesCanonicas(content: ContentBundle, camp: Campaign, ctx: Contexto):
   ctx.local.ganchos.slice(0, 2).forEach((g, i) => {
     out.push({
       id: `gancho_${i}`,
-      rotulo: g,
+      rotulo: `Investigar: ${g}`,
       dica: 'ver de perto pode revelar algo',
       custoPeriodos: 0,
       origem: 'cena',

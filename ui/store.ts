@@ -112,6 +112,7 @@ interface GameState {
   setConfig: (patch: Partial<ConfigApp>) => Promise<void>;
   proximoCapitulo: () => Promise<void>;
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
+  buscarModelosGratis: () => Promise<string[]>;
 }
 
 function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => void) {
@@ -355,6 +356,13 @@ export const useGame = create<GameState>((set, get) => ({
     const { testarChave } = await import('@/engine');
     return testarChave({ provider: config.provider, apiKey: config.apiKey, modelo: config.modelo });
   },
+
+  async buscarModelosGratis() {
+    const { config } = get();
+    const { listarModelosOpenRouter } = await import('@/engine');
+    const modelos = await listarModelosOpenRouter(config.apiKey, true);
+    return modelos.map((m) => m.id);
+  },
 }));
 
 function romano(n: number): string {
@@ -389,17 +397,18 @@ async function executar(
   // Narração ao vivo pelo modelo, se configurado (substitui o fallback).
   if (config.usarModelo && config.apiKey && cena.contexto) {
     const idAlvo = novasEntradas[0].id;
-    const texto = await narrarComModelo(
+    const res = await narrarComModelo(
       { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
       content,
       camp,
       cena.contexto,
       r,
     );
-    if (texto) {
-      set({
-        feed: get().feed.map((e) => (e.id === idAlvo ? { ...e, texto } : e)),
-      });
+    if (res.texto) {
+      set({ feed: get().feed.map((e) => (e.id === idAlvo ? { ...e, texto: res.texto! } : e)) });
+    } else if (res.erro) {
+      // Não silencia: mostra por que a IA não respondeu (§20 mantém o jogo de pé).
+      set({ feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro})`, 'sistema')] });
     }
   }
 

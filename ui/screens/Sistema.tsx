@@ -80,13 +80,29 @@ export function Config() {
   const temSave = useGame((s) => s.temSave);
   const irPara = useGame((s) => s.irPara);
 
+  const buscarModelos = useGame((s) => s.buscarModelosGratis);
   const [chave, setChave] = useState(config.apiKey ?? '');
   const [modelo, setModelo] = useState(config.modelo);
   const [testando, setTestando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
   const [confirmarApagar, setConfirmarApagar] = useState(false);
+  const [modelosVivos, setModelosVivos] = useState<string[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
 
   const provider = config.provider;
+
+  async function buscar() {
+    setBuscando(true);
+    setResultado(null);
+    const lista = await buscarModelos();
+    setBuscando(false);
+    if (lista.length === 0) {
+      setResultado('Não consegui buscar a lista (sem rede ou chave inválida). Use as sugestões.');
+    } else {
+      setModelosVivos(lista);
+      setResultado(`${lista.length} modelos gratuitos encontrados.`);
+    }
+  }
 
   async function trocarProvider(p: 'openrouter' | 'anthropic') {
     const novoModelo = p === 'openrouter' ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC;
@@ -181,11 +197,16 @@ export function Config() {
       />
       {ehOR && (
         <View style={{ marginBottom: esp.sm }}>
-          <TextoMono style={{ color: cores.mudo, marginBottom: esp.xs }}>
-            Sugestões (toque para usar) · filtre :free em openrouter.ai/models
-          </TextoMono>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: esp.xs }}>
+            <TextoMono style={{ color: cores.mudo, flex: 1 }}>
+              {modelosVivos ? 'Modelos gratuitos da sua conta:' : 'Sugestões (toque para usar):'}
+            </TextoMono>
+            <Pressable style={styles.buscarBtn} onPress={buscar}>
+              <Text style={styles.buscarTxt}>{buscando ? '…' : 'Buscar modelos'}</Text>
+            </Pressable>
+          </View>
           <View style={styles.chipsSug}>
-            {SUGESTOES_OPENROUTER.map((m) => (
+            {(modelosVivos ?? SUGESTOES_OPENROUTER).slice(0, 40).map((m) => (
               <Pressable
                 key={m}
                 style={[styles.chipSug, modelo === m && styles.chipSugAtivo]}
@@ -194,10 +215,18 @@ export function Config() {
                   setConfig({ modelo: m });
                 }}
               >
-                <Text style={styles.chipSugTxt}>{m.replace(':free', '')}{m.endsWith(':free') ? ' ·free' : ''}</Text>
+                <Text style={styles.chipSugTxt}>
+                  {m.replace(':free', '')}
+                  {m.endsWith(':free') ? ' ·free' : ''}
+                </Text>
               </Pressable>
             ))}
           </View>
+          {!modelosVivos && (
+            <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
+              Se um modelo der 404, toque "Buscar modelos" para pegar a lista atual e grátis.
+            </TextoMono>
+          )}
         </View>
       )}
 
@@ -300,4 +329,12 @@ const styles = StyleSheet.create({
   },
   chipSugAtivo: { borderColor: cores.ouro },
   chipSugTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10 },
+  buscarBtn: {
+    borderWidth: 1,
+    borderColor: cores.verdigris,
+    borderRadius: raio.sm,
+    paddingHorizontal: esp.sm,
+    paddingVertical: 4,
+  },
+  buscarTxt: { fontFamily: fontes.mono, color: cores.verdigris, fontSize: 11 },
 });
