@@ -33,6 +33,7 @@ export function Pagina({
 const ICONES: { tela: Tela; glifo: string; nome: string }[] = [
   { tela: 'mapa', glifo: '⌖', nome: 'Mapa' },
   { tela: 'livro', glifo: '❧', nome: 'Livro' },
+  { tela: 'inventario', glifo: '⚔', nome: 'Inventário' },
   { tela: 'vinculos', glifo: '⚭', nome: 'Vínculos' },
   { tela: 'ficha', glifo: '✎', nome: 'Ficha' },
   { tela: 'cronica', glifo: '≡', nome: 'Crônica' },

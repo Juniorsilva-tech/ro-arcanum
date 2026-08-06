@@ -6,6 +6,7 @@ import { origensVaelhorn } from './origins';
 import { verbosVaelhorn } from './verbs';
 import { locaisVaelhorn } from './locations';
 import { npcsVaelhorn } from './npcs';
+import { itensVaelhorn } from './items';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -25,6 +26,7 @@ export const conteudoVaelhorn: ContentBundle = {
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,
   reliquias: reliquiasVaelhorn,
+  itens: itensVaelhorn,
   faccoes: faccoesVaelhorn,
   localInicial: 'taverna',
 };

@@ -5,7 +5,15 @@ import { conteudoVaelhorn } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
-import { atributosBase } from './character';
+import { atributosBase, derivados } from './character';
+import {
+  comprar,
+  equipar,
+  usarConsumivel,
+  vender,
+  bonusDefesaEquip,
+  armaEquipada,
+} from './items';
 
 let falhas = 0;
 function ok(cond: boolean, msg: string) {
@@ -67,6 +75,47 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
 {
   const menores = conteudoVaelhorn.npcs.filter((n) => n.idade < 18);
   ok(menores.length === 0, 'Todos os personagens são adultos (§25)');
+}
+
+// Sistema de itens (GDD §13.6, §34).
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Mercador',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'foragido',
+    seedString: 'itens-1',
+  });
+  ok(!!armaEquipada(conteudoVaelhorn, c.personagem), 'Guardião nasce com arma equipada');
+  ok(bonusDefesaEquip(conteudoVaelhorn, c.personagem) > 0, 'Armadura+escudo dão bônus de defesa');
+
+  // Compra encolhe a bolsa e enche a mochila.
+  const antesDinheiro = c.personagem.dinheiro;
+  const compra = comprar(conteudoVaelhorn, c, 'pocao_cura_menor');
+  ok(compra.ok && c.personagem.dinheiro < antesDinheiro, 'Comprar debita moedas');
+  ok((c.personagem.inventario['pocao_cura_menor'] ?? 0) >= 1, 'Comprar adiciona o item');
+
+  // Usar poção cura e consome.
+  c.personagem.recursos.vida = 5;
+  usarConsumivel(conteudoVaelhorn, c, 'pocao_cura_menor');
+  ok(c.personagem.recursos.vida > 5, 'Usar poção recupera vida');
+
+  // Equipar troca a defesa derivada.
+  c.personagem.dinheiro = 500; // bolsa cheia para o teste de compra cara
+  comprar(conteudoVaelhorn, c, 'cota_de_malha');
+  const defAntes = derivados(c.personagem, bonusDefesaEquip(conteudoVaelhorn, c.personagem)).defesa;
+  equipar(conteudoVaelhorn, c, 'cota_de_malha');
+  const defDepois = derivados(c.personagem, bonusDefesaEquip(conteudoVaelhorn, c.personagem)).defesa;
+  ok(defDepois > defAntes, 'Equipar armadura melhor aumenta a defesa');
+
+  // Vender devolve moeda.
+  const d2 = c.personagem.dinheiro;
+  vender(conteudoVaelhorn, c, 'cota_de_malha');
+  ok(c.personagem.dinheiro > d2, 'Vender devolve moedas');
+
+  // Item concede verbo (gazua → arrombar existe no catálogo).
+  const gazua = conteudoVaelhorn.itens.find((i) => i.id === 'gazua');
+  ok(gazua?.concedeVerbo === 'arrombar', 'Gazua concede o verbo arrombar (§13.6)');
 }
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM.\n' : `\n${falhas} FALHA(S).\n`);

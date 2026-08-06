@@ -99,6 +99,47 @@ export type Verbo = {
   efeitosPorGrau?: Partial<Record<Grau, Efeito[]>>;
 };
 
+// ── Itens (catálogo estático — GDD §34 "itens_base").
+export type ItemSlot =
+  | 'arma'
+  | 'armadura'
+  | 'escudo'
+  | 'acessorio'
+  | 'consumivel'
+  | 'ferramenta'
+  | 'material'
+  | 'misc';
+
+export type Item = {
+  id: string;
+  nome: string;
+  descricao: string;
+  slot: ItemSlot;
+  peso: number;
+  valor: number; // preço-base de compra em moedas
+  raridade: 'comum' | 'notavel' | 'rara' | 'unica' | 'mitica' | 'proibida' | 'perdida';
+  empilhavel?: boolean;
+  // arma
+  dano?: PerfilDano;
+  alcance?: 'corpo' | 'distancia';
+  atributoAtaque?: AttrKey;
+  // armadura / escudo
+  defesa?: number;
+  // consumível
+  efeitosUso?: Efeito[];
+  // concede um verbo enquanto estiver no inventário (GDD §13.6)
+  concedeVerbo?: string;
+  // onde é vendido (ids de local). Ausente = não vendido em loja.
+  lojas?: string[];
+};
+
+export type Equipado = {
+  arma?: string;
+  armadura?: string;
+  escudo?: string;
+  acessorio?: string;
+};
+
 // ── Personagem.
 export type Personagem = {
   nome: string;
@@ -113,6 +154,7 @@ export type Personagem = {
   dinheiro: number;
   pericias: Record<string, number>;
   inventario: Record<string, number>;
+  equipado: Equipado;
   artesConhecidas: string[];
   alcunhas: string[];
   cicatrizes: string[];
@@ -185,6 +227,7 @@ export type Classe = {
   bonusAtributos: Partial<Atributos>;
   periciasIniciais: Record<string, number>;
   itensIniciais?: Record<string, number>;
+  equipInicial?: Equipado;
   artesIniciais?: string[];
 };
 
@@ -272,6 +315,7 @@ export type ContentBundle = {
   trabalhos: Trabalho[];
   artes: Arte[];
   reliquias: Reliquia[];
+  itens: Item[];
   faccoes: { id: string; nome: string }[];
   localInicial: string;
 };

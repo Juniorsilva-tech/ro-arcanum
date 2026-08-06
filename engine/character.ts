@@ -16,10 +16,10 @@ export type Derivados = {
   percepcaoPassiva: number;
 };
 
-export function derivados(p: Personagem): Derivados {
+export function derivados(p: Personagem, bonusDefesa = 0): Derivados {
   const a = p.atributos;
   return {
-    defesa: 10 + modificador(a.precisao) + modificador(a.resiliencia),
+    defesa: 10 + modificador(a.precisao) + modificador(a.resiliencia) + bonusDefesa,
     iniciativa: modificador(a.precisao) + modificador(a.percepcao),
     acerto: p.nivel + modificador(a.precisao),
     poder: p.nivel + modificador(a.raciocinio),
@@ -91,6 +91,7 @@ export function criarPersonagem(
     dinheiro: origem.dinheiroInicial,
     pericias: { ...classe.periciasIniciais },
     inventario: { ...(classe.itensIniciais ?? {}) },
+    equipado: { ...(classe.equipInicial ?? {}) },
     artesConhecidas: [...(classe.artesIniciais ?? [])],
     alcunhas: [],
     cicatrizes: [],

@@ -34,14 +34,22 @@ Seguindo o §41 do GDD ("não comece pela UI; comece pela engine + verbos + simu
 
 ### Conteúdo de Vaelhorn (`content/vaelhorn/`)
 - 3 classes · 3 origens · 1 região com 6 locais e rotas · 12 NPCs com rotina, memória e segredos.
-- ~39 verbos universais + 6 arcanos de Vaelhorn.
-- O Livro: 4 mestres · 6 trabalhos · 20 artes · 8 relíquias (incl. 2 Únicas com dono e 1 Perdida).
+- ~41 verbos universais + 6 arcanos + verbos concedidos por item (arrombar, envenenar, tocar).
+- **Catálogo de ~55 itens**: armas (corpo e distância, com dano), armaduras e escudos (com defesa), acessórios, poções e comida (consumíveis com efeito), ferramentas e materiais.
+- **Equipamento** (arma/armadura/escudo/acessório afetam os derivados), **loja** (comprar/vender com barganha), itens que geram verbos (§13.6).
+- O Livro: 4 mestres · 6 trabalhos · **~38 artes** · 8 relíquias (incl. 2 Únicas com dono e 1 Perdida).
 
 ### App (`App.tsx`, `ui/`) — Expo / React Native
 Identidade visual única do §30 (paleta de manuscrito, Cormorant + IBM Plex Mono).
-Telas P0: entrada, aviso 17+, escolha de cenário/classe/origem, criação, cena com as **três portas**
-(cena · menu de ações · ação livre), Livro, mapa e viagem, ficha, vínculos, crônica, fim de capítulo
-(paywall diegético), configurações.
+Telas: entrada, aviso 17+, escolha de cenário/classe/origem, criação, cena com as **três portas**
+(cena · menu de ações · ação livre), Livro, mapa e viagem, ficha, **inventário/equipamento**, **loja**,
+vínculos, crônica, fim de capítulo (paywall diegético), configurações (IA por OpenRouter/Anthropic).
+
+### Narração por IA (opcional)
+Padrão **OpenRouter** (compatível com OpenAI), com modelos gratuitos e sem filtro para ficção adulta
+entre personagens adultos. Anthropic também é suportado. A chave fica só no aparelho; sem chave, o
+jogo usa a narração canônica de fallback (§20). A única regra travada no prompt é que todos os
+personagens são 18+.
 
 ---
 

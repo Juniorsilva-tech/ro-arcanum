@@ -11,6 +11,11 @@ import {
   atributosBase,
   narrarComModelo,
   CAPITULO_MAX_PERIODOS,
+  equipar as equiparEngine,
+  desequipar as desequiparEngine,
+  usarConsumivel,
+  comprar as comprarEngine,
+  vender as venderEngine,
   type OpcaoResolvida,
   type Contexto,
 } from '@/engine';
@@ -40,6 +45,8 @@ export type Tela =
   | 'vinculos'
   | 'cronica'
   | 'config'
+  | 'inventario'
+  | 'loja'
   | 'fimcapitulo';
 
 export type EntradaFeed = { id: string; texto: string; tipo: 'narracao' | 'eco' | 'sistema' | 'acao' };
@@ -94,6 +101,11 @@ interface GameState {
 
   agirVerbo: (verboId: string, alvoId?: string) => Promise<void>;
   agirOpcao: (op: OpcaoResolvida, alvoId?: string) => Promise<void>;
+  equiparItem: (id: string) => Promise<void>;
+  desequiparSlot: (slot: 'arma' | 'armadura' | 'escudo' | 'acessorio') => Promise<void>;
+  usarItem: (id: string) => Promise<void>;
+  comprarItem: (id: string) => Promise<void>;
+  venderItem: (id: string) => Promise<void>;
   acaoLivre: (texto: string) => Promise<void>;
   viajar: (destino: string) => Promise<void>;
 
@@ -209,7 +221,52 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   async agirVerbo(verboId, alvoId) {
+    // Comprar/vender abrem a Loja em vez de gastar um turno.
+    if (verboId === 'comprar' || verboId === 'vender') {
+      get().irPara('loja');
+      return;
+    }
     await executar(get, set, { tipo: 'verbo', verboId, alvoId }, 'acao');
+  },
+
+  async equiparItem(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    equiparEngine(content, camp, id);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async desequiparSlot(slot) {
+    const { camp } = get();
+    if (!camp) return;
+    desequiparEngine(camp, slot);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async usarItem(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const r = usarConsumivel(content, camp, id);
+    set({
+      camp: { ...camp },
+      feed: r.ok ? [...get().feed, nf('Você usa e o corpo responde.', 'sistema')] : get().feed,
+    });
+    await salvarCampanha(camp);
+  },
+  async comprarItem(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const desconto = camp.flags['desconto'] === true;
+    comprarEngine(content, camp, id, desconto);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async venderItem(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    venderEngine(content, camp, id);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
   },
   async agirOpcao(op, alvoId) {
     await executar(get, set, { tipo: 'opcao', opcao: op, alvoId }, 'acao');

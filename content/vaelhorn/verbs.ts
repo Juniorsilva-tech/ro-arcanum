@@ -505,6 +505,41 @@ export const verbosVaelhorn: Verbo[] = [
     },
   }),
 
+  // ─────────────────────────── CONCEDIDOS POR ITEM (GDD §13.6)
+  v({
+    id: 'envenenar',
+    nome: 'Envenenar',
+    categoria: 'transgressao',
+    descricao: 'Um fio de veneno na lâmina, na taça ou no prato.',
+    alvo: 'pessoa',
+    custo: { periodos: 0 },
+    requisitos: { item: 'veneno_de_frasco', testemunhasMax: 1 },
+    teste: { atributo: 'precisao', pericia: 'prestidigitacao', dificuldadeBase: 14 },
+    tabu: { faccoes: ['guarda', 'vila'], consequencia: 'assassinato, se descoberto' },
+    efeitosSempre: [{ tipo: 'item', item: 'veneno_de_frasco', delta: -1 }],
+    efeitosPorGrau: {
+      critico: [rel('$alvo', 'medo', 4), { tipo: 'flag', chave: 'envenenou.$alvo', valor: true }],
+      sucesso: [{ tipo: 'flag', chave: 'envenenou.$alvo', valor: true }],
+      falha_grave: [{ tipo: 'reputacao', faccao: 'guarda', delta: -10 }, { tipo: 'flag', chave: 'visto.envenenando', valor: true }],
+    },
+  }),
+  v({
+    id: 'tocar',
+    nome: 'Tocar (música)',
+    categoria: 'social',
+    descricao: 'Deixar as cordas dizerem o que você não diz.',
+    alvo: 'nenhum',
+    custo: { periodos: 1 },
+    requisitos: { item: 'alaude' },
+    teste: { atributo: 'social', pericia: 'persuadir', dificuldadeBase: 12 },
+    impulsoQueSacia: 'tedio',
+    efeitosPorGrau: {
+      critico: [{ tipo: 'dinheiro', delta: 10 }, { tipo: 'impulso', impulso: 'solidao', delta: -20 }],
+      sucesso: [{ tipo: 'dinheiro', delta: 4 }],
+      falha_grave: [{ tipo: 'reputacao', faccao: 'vila', delta: -2 }],
+    },
+  }),
+
   // ─────────────────────────── DESLOCAMENTO
   v({
     id: 'esperar',

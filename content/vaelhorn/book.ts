@@ -139,6 +139,26 @@ export const artesVaelhorn: Arte[] = [
   { id: 'escudo_arcano', nome: 'Escudo Arcano', escola: 'Abjuração', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Uma parede fina de vontade absorve um golpe.' },
   { id: 'nome_verdadeiro', nome: 'Nome Verdadeiro', escola: 'Adivinhação', grau: 'mitica', custo: { recurso: 'mana', valor: 10 }, efeito: 'Conhecer o nome real de algo é ter poder sobre ele.', pressaoGerada: { medidor: 'sanidade', valor: 6 } },
   { id: 'ultimo_selo', nome: 'O Último Selo', escola: 'Abjuração', grau: 'perdida', custo: { recurso: 'mana', valor: 12 }, efeito: 'A arte que Sarn usou para trancar a cripta. Perdida — reconstruível por pistas.' },
+
+  // ── Ampliação do grimório
+  { id: 'luz_das_fadas', nome: 'Luz das Fadas', escola: 'Evocação', grau: 'comum', custo: { recurso: 'mana', valor: 1 }, efeito: 'Uma luz fria paira e ilumina o caminho.' },
+  { id: 'rajada_gelida', nome: 'Rajada Gélida', escola: 'Evocação', grau: 'notavel', custo: { recurso: 'mana', valor: 4 }, efeito: 'Um sopro de frio que rasga e retarda.' },
+  { id: 'lanca_arcana', nome: 'Lança Arcana', escola: 'Evocação', grau: 'rara', custo: { recurso: 'mana', valor: 5 }, efeito: 'Um dardo de força pura que raramente erra.' },
+  { id: 'chamas_gemeas', nome: 'Chamas Gêmeas', escola: 'Evocação', grau: 'rara', custo: { recurso: 'mana', valor: 6 }, efeito: 'Dois laços de fogo que perseguem alvos distintos.', pressaoGerada: { medidor: 'corrupcao', valor: 2 } },
+  { id: 'passos_na_neblina', nome: 'Passos na Neblina', escola: 'Ilusão', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Uma bruma engana os olhos por alguns instantes.' },
+  { id: 'disfarce_ilusorio', nome: 'Disfarce Ilusório', escola: 'Ilusão', grau: 'rara', custo: { recurso: 'mana', valor: 4 }, efeito: 'Veste outro rosto sobre o seu.' },
+  { id: 'fechadura_arcana', nome: 'Fechadura Arcana', escola: 'Abjuração', grau: 'comum', custo: { recurso: 'mana', valor: 2 }, efeito: 'Sela uma porta contra mãos comuns.' },
+  { id: 'dissipar', nome: 'Dissipar', escola: 'Abjuração', grau: 'rara', custo: { recurso: 'mana', valor: 5 }, efeito: 'Desfaz uma magia menor à sua frente.' },
+  { id: 'pele_de_pedra', nome: 'Pele de Pedra', escola: 'Abjuração', grau: 'rara', custo: { recurso: 'mana', valor: 5 }, efeito: 'A carne endurece contra o golpe.' },
+  { id: 'mao_invisivel', nome: 'Mão Invisível', escola: 'Transmutação', grau: 'comum', custo: { recurso: 'mana', valor: 1 }, efeito: 'Move à distância o que caberia numa mão.' },
+  { id: 'salto_da_corca', nome: 'Salto da Corça', escola: 'Transmutação', grau: 'notavel', custo: { recurso: 'mana', valor: 2 }, efeito: 'Pernas leves cruzam o que seria intransponível.' },
+  { id: 'toque_curativo', nome: 'Toque Curativo', escola: 'Restauração', grau: 'comum', custo: { recurso: 'mana', valor: 2 }, efeito: 'Um calor que costura o pequeno dano.' },
+  { id: 'palavra_de_pavor', nome: 'Palavra de Pavor', escola: 'Encantamento', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Uma sílaba que enche o peito de medo.', pressaoGerada: { medidor: 'sanidade', valor: 2 } },
+  { id: 'dominar_besta', nome: 'Domar a Fera', escola: 'Encantamento', grau: 'rara', custo: { recurso: 'mana', valor: 4 }, efeito: 'Acalma ou verga a vontade de um animal.' },
+  { id: 'golpe_atordoante', nome: 'Golpe Atordoante', escola: 'Técnica', grau: 'notavel', custo: { recurso: 'vigor', valor: 2 }, efeito: 'Um impacto que rouba o fôlego e a ação.' },
+  { id: 'guarda_perfeita', nome: 'Guarda Perfeita', escola: 'Técnica', grau: 'rara', custo: { recurso: 'vigor', valor: 3 }, efeito: 'Por um momento, nenhum golpe encontra brecha.' },
+  { id: 'flecha_dupla', nome: 'Flecha Dupla', escola: 'Técnica', grau: 'notavel', custo: { recurso: 'vigor', valor: 2 }, efeito: 'Duas hastes deixam a corda num só tempo.' },
+  { id: 'vinculo_de_sangue', nome: 'Vínculo de Sangue', escola: 'Necromancia', grau: 'proibida', custo: { recurso: 'mana', valor: 7 }, efeito: 'Ata a dor de outrem à sua vontade.', pressaoGerada: { medidor: 'corrupcao', valor: 12 }, tabu: 'crime capital em Vaelhorn' },
 ];
 
 // ── IV. RELÍQUIAS (8) — incl. 2 Únicas com dono e 1 Perdida (GDD §13.5).

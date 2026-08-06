@@ -10,6 +10,9 @@ import {
   modificador,
   IMPULSOS,
   ATTR_KEYS,
+  bonusDefesaEquip,
+  armaEquipada,
+  itemPorId,
   type AttrKey,
   type EstadoEntrada,
 } from '@/engine';
@@ -20,7 +23,8 @@ export function Ficha() {
   const content = useGame((s) => s.content)!;
   const p = camp.personagem;
   const nomes = content.cenario.nomesAtributos;
-  const d = derivados(p);
+  const d = derivados(p, bonusDefesaEquip(content, p));
+  const arma = armaEquipada(content, p);
   const classe = content.classes.find((c) => c.id === p.classeId);
 
   return (
@@ -90,12 +94,26 @@ export function Ficha() {
         </>
       )}
 
+      <Divisor label="equipamento" />
+      <View style={styles.attrRow}>
+        <Text style={styles.invItem}>Arma</Text>
+        <TextoMono style={{ color: cores.vellum }}>
+          {arma ? `${arma.nome} (dano ${arma.dano?.base ?? '—'})` : 'desarmado'}
+        </TextoMono>
+      </View>
+      <View style={styles.attrRow}>
+        <Text style={styles.invItem}>Armadura</Text>
+        <TextoMono style={{ color: cores.vellum }}>
+          {p.equipado.armadura ? itemPorId(content, p.equipado.armadura)?.nome : '—'}
+        </TextoMono>
+      </View>
+
       {Object.keys(p.inventario).length > 0 && (
         <>
           <Divisor label="inventário" />
-          {Object.entries(p.inventario).map(([item, qtd]) => (
-            <View key={item} style={styles.attrRow}>
-              <Text style={styles.invItem}>{item.replace(/_/g, ' ')}</Text>
+          {Object.entries(p.inventario).map(([id, qtd]) => (
+            <View key={id} style={styles.attrRow}>
+              <Text style={styles.invItem}>{itemPorId(content, id)?.nome ?? id.replace(/_/g, ' ')}</Text>
               <TextoMono>×{qtd}</TextoMono>
             </View>
           ))}

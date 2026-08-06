@@ -13,6 +13,8 @@ import { EscolhaCenario, EscolhaClasse, EscolhaOrigem, Criacao } from './ui/scre
 import { Jogo } from './ui/screens/Jogo';
 import { Ficha, Vinculos, Cronica, Mapa, Livro } from './ui/screens/Paineis';
 import { FimCapitulo, Config } from './ui/screens/Sistema';
+import { Inventario } from './ui/screens/Inventario';
+import { Loja } from './ui/screens/Loja';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -81,6 +83,10 @@ function roteia(tela: string) {
       return <Cronica />;
     case 'config':
       return <Config />;
+    case 'inventario':
+      return <Inventario />;
+    case 'loja':
+      return <Loja />;
     case 'fimcapitulo':
       return <FimCapitulo />;
     default:
