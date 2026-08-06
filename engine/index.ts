@@ -1,0 +1,12 @@
+// ARCANUM · Superfície pública da engine (pacote TS puro, zero dependência de UI — GDD §33).
+export * from './rng';
+export * from './time';
+export * from './resolution';
+export * from './types';
+export * from './character';
+export * from './availability';
+export * from './impulsos';
+export * from './turn';
+export * from './campaign';
+export * from './narration';
+export * from './llm';

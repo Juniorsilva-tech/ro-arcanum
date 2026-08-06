@@ -1,0 +1,185 @@
+// ARCANUM · O Livro de Vaelhorn — o grimório (GDD §13). Preencher o Livro é o jogo.
+import type { Mestre, Trabalho, Arte, Reliquia } from '../../engine/types';
+
+// ── I. MESTRES (4) — cada um muda uma REGRA do jogo (GDD §13.1).
+export const mestresVaelhorn: Mestre[] = [
+  {
+    id: 'mestre_neve',
+    nome: 'Neve, a Caçadora',
+    localBase: 'floresta',
+    dominio: 'Trilhas, arco e sobrevivência',
+    custo: 'Provar-se numa caçada (uma jornada de 3 períodos)',
+    ensina: ['tiro_certeiro', 'passo_leve', 'rastro_frio'],
+    mecanicaUnica: 'Enquanto aluno, oportunidades no ermo aparecem um período antes.',
+    exclusivo: [],
+    podeMorrer: true,
+  },
+  {
+    id: 'mestre_toran',
+    nome: 'Toran, o Ferreiro',
+    localBase: 'mercado',
+    dominio: 'Ofício, reparo e forja',
+    custo: 'Trabalhar de graça na forja por alguns períodos',
+    ensina: ['temperar', 'remendo_rapido'],
+    mecanicaUnica: 'Enquanto aluno, reparar nunca falha grave.',
+    exclusivo: [],
+    podeMorrer: false,
+  },
+  {
+    id: 'mestre_sarn',
+    nome: 'Sarn, o Encapuzado',
+    localBase: 'taverna',
+    dominio: 'Artes arcanas',
+    custo: 'Um segredo seu por cada lição, e 40 períodos de estudo',
+    ensina: ['centelha', 'ler_aura', 'veu', 'selo_menor', 'chama_fria'],
+    mecanicaUnica: 'Enquanto aluno, mana gasta em conjuras pode ser recuperada estudando.',
+    exclusivo: ['mestre_halda'],
+    podeMorrer: true,
+  },
+  {
+    id: 'mestre_halda',
+    nome: 'Halda, a que Vê',
+    localBase: 'praca',
+    dominio: 'Presságios e o outro lado',
+    custo: 'Escutá-la sem rir por muitos períodos',
+    ensina: ['presagio', 'fala_dos_mortos', 'olho_torto'],
+    mecanicaUnica: 'Enquanto aluna, ler presságios não custa Sanidade no sucesso.',
+    exclusivo: ['mestre_sarn'],
+    podeMorrer: true,
+  },
+];
+
+// ── II. TRABALHOS (6) — reservam a agenda (GDD §13.2).
+export const trabalhosVaelhorn: Trabalho[] = [
+  {
+    id: 'servir_taverna',
+    nome: 'Servir na taverna',
+    tipo: 'fixo',
+    requisitos: 'Nenhum',
+    periodosPorCiclo: 2,
+    renda: 6,
+    reputacao: [{ faccaoId: 'vila', delta: 2 }],
+    riscos: 'Brigas de bêbados; ouvir o que não devia.',
+  },
+  {
+    id: 'guarda_noturna',
+    nome: 'Ronda noturna',
+    tipo: 'fixo',
+    requisitos: 'Disposição da guarda',
+    periodosPorCiclo: 2,
+    renda: 8,
+    reputacao: [
+      { faccaoId: 'guarda', delta: 4 },
+      { faccaoId: 'ladroes', delta: -3 },
+    ],
+    riscos: 'Encontros perigosos; conflito de lealdade.',
+  },
+  {
+    id: 'contrato_cacada',
+    nome: 'Contrato de caçada',
+    tipo: 'contrato',
+    requisitos: 'Arco ou lança',
+    periodosPorCiclo: 3,
+    renda: 15,
+    riscos: 'A mata cobra caro.',
+  },
+  {
+    id: 'ajudar_forja',
+    nome: 'Braço na forja',
+    tipo: 'oficio',
+    requisitos: 'Força razoável',
+    periodosPorCiclo: 2,
+    renda: 7,
+    reputacao: [{ faccaoId: 'vila', delta: 1 }],
+    riscos: 'Queimaduras; ganho lento.',
+  },
+  {
+    id: 'entrega_grimm',
+    nome: 'Entrega para Grimm',
+    tipo: 'contrato',
+    requisitos: 'Disposição dos ladrões',
+    periodosPorCiclo: 2,
+    renda: 20,
+    reputacao: [
+      { faccaoId: 'ladroes', delta: 3 },
+      { faccaoId: 'guarda', delta: -5 },
+    ],
+    riscos: 'Se pego, prisão. Contrabando é crime.',
+  },
+  {
+    id: 'divida_do_fiador',
+    nome: 'Saldar a dívida do Fiador',
+    tipo: 'obrigacao',
+    requisitos: 'Dever a Vess',
+    periodosPorCiclo: 1,
+    renda: -10,
+    riscos: 'Não pode ser recusada. O Fiador sempre cobra.',
+  },
+];
+
+// ── III. ARTES (20) — magias e técnicas (GDD §13.3, §13.4).
+export const artesVaelhorn: Arte[] = [
+  { id: 'centelha', nome: 'Centelha', escola: 'Evocação', grau: 'comum', custo: { recurso: 'mana', valor: 2 }, efeito: 'Um estalo de fogo que fere ou acende.' },
+  { id: 'ler_aura', nome: 'Ler Aura', escola: 'Adivinhação', grau: 'comum', custo: { recurso: 'mana', valor: 1 }, efeito: 'Percebe intenção e saúde de quem está à frente.' },
+  { id: 'veu', nome: 'Véu', escola: 'Ilusão', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Some da vista por um instante crucial.' },
+  { id: 'selo_menor', nome: 'Selo Menor', escola: 'Abjuração', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Tranca ou protege uma passagem por um tempo.' },
+  { id: 'chama_fria', nome: 'Chama Fria', escola: 'Evocação', grau: 'rara', custo: { recurso: 'mana', valor: 5 }, efeito: 'Fogo que não aquece e não faz fumaça.', pressaoGerada: { medidor: 'corrupcao', valor: 3 } },
+  { id: 'tiro_certeiro', nome: 'Tiro Certeiro', escola: 'Técnica', grau: 'comum', custo: { recurso: 'vigor', valor: 2 }, efeito: 'Uma flecha que encontra a fresta.' },
+  { id: 'passo_leve', nome: 'Passo Leve', escola: 'Técnica', grau: 'comum', custo: { recurso: 'vigor', valor: 1 }, efeito: 'Move-se sem deixar som nem rastro por um trecho.' },
+  { id: 'rastro_frio', nome: 'Rastro Frio', escola: 'Técnica', grau: 'notavel', custo: { recurso: 'vigor', valor: 2 }, efeito: 'Segue uma trilha que já esfriou.' },
+  { id: 'temperar', nome: 'Temperar', escola: 'Ofício', grau: 'comum', custo: { recurso: 'vigor', valor: 1 }, efeito: 'Dá fio e resistência a uma lâmina.' },
+  { id: 'remendo_rapido', nome: 'Remendo Rápido', escola: 'Ofício', grau: 'comum', custo: { recurso: 'vigor', valor: 1 }, efeito: 'Conserta no campo o que quebrou.' },
+  { id: 'presagio', nome: 'Presságio', escola: 'Adivinhação', grau: 'notavel', custo: { recurso: 'mana', valor: 2 }, efeito: 'Vislumbra a consequência mais provável de um caminho.', pressaoGerada: { medidor: 'sanidade', valor: 2 } },
+  { id: 'olho_torto', nome: 'Olho Torto', escola: 'Adivinhação', grau: 'rara', custo: { recurso: 'mana', valor: 4 }, efeito: 'Vê o que foi escondido de propósito.', pressaoGerada: { medidor: 'sanidade', valor: 4 } },
+  { id: 'fala_dos_mortos', nome: 'Fala dos Mortos', escola: 'Necromancia', grau: 'proibida', custo: { recurso: 'mana', valor: 6 }, efeito: 'Arranca uma resposta de quem já não fala.', pressaoGerada: { medidor: 'corrupcao', valor: 10 }, tabu: 'crime capital em Vaelhorn' },
+  { id: 'mao_do_carrasco', nome: 'Mão do Carrasco', escola: 'Necromancia', grau: 'proibida', custo: { recurso: 'mana', valor: 8 }, efeito: 'Ergue por pouco tempo o que deveria descansar.', pressaoGerada: { medidor: 'corrupcao', valor: 15 }, tabu: 'forca certa se descoberto' },
+  { id: 'coragem', nome: 'Fôlego de Coragem', escola: 'Encantamento', grau: 'comum', custo: { recurso: 'mana', valor: 2 }, efeito: 'Firma a mão e o coração de um aliado.' },
+  { id: 'sussurro', nome: 'Sussurro', escola: 'Encantamento', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Planta uma ideia pequena numa mente aberta.' },
+  { id: 'cura_menor', nome: 'Cura Menor', escola: 'Restauração', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Fecha o que sangra, por ora.' },
+  { id: 'escudo_arcano', nome: 'Escudo Arcano', escola: 'Abjuração', grau: 'notavel', custo: { recurso: 'mana', valor: 3 }, efeito: 'Uma parede fina de vontade absorve um golpe.' },
+  { id: 'nome_verdadeiro', nome: 'Nome Verdadeiro', escola: 'Adivinhação', grau: 'mitica', custo: { recurso: 'mana', valor: 10 }, efeito: 'Conhecer o nome real de algo é ter poder sobre ele.', pressaoGerada: { medidor: 'sanidade', valor: 6 } },
+  { id: 'ultimo_selo', nome: 'O Último Selo', escola: 'Abjuração', grau: 'perdida', custo: { recurso: 'mana', valor: 12 }, efeito: 'A arte que Sarn usou para trancar a cripta. Perdida — reconstruível por pistas.' },
+];
+
+// ── IV. RELÍQUIAS (8) — incl. 2 Únicas com dono e 1 Perdida (GDD §13.5).
+export const reliquiasVaelhorn: Reliquia[] = [
+  {
+    id: 'corrente_fiador',
+    nome: 'A Corrente do Fiador',
+    descricao: 'Elos de prata baça. Quem a toca esquece o que Vess quiser que esqueça.',
+    grau: 'unica',
+    donoAtual: 'vess',
+    usoPeloDono: 'Em combate, apaga um dos seus vínculos por rodada — o NPC deixa de lembrar de você.',
+    viasDeTomada: ['Vencer Vess em aposta', 'Furtar (ele vira caçador)', 'Derrotar e espoliar (herda a inimizade dos ladrões)'],
+    localAtual: 'taverna',
+  },
+  {
+    id: 'lamina_dos_corvos',
+    nome: 'A Lâmina dos Corvos',
+    descricao: 'Uma adaga que assobia baixo perto de mentira. Sarn a trouxe da vida antiga.',
+    grau: 'unica',
+    donoAtual: 'sarn',
+    usoPeloDono: 'Contra você, sempre sabe quando você blefa: suas mentiras a ele falham.',
+    viasDeTomada: ['Herdar (tornar-se seu aluno até o fim)', 'Trocar por um segredo maior', 'Tomar do corpo, se ele cair'],
+    localAtual: 'taverna',
+  },
+  {
+    id: 'chave_da_cripta',
+    nome: 'A Chave da Cripta',
+    descricao: 'Ferro frio que nunca enferruja. Abre o que foi selado — e o que devia continuar selado.',
+    grau: 'perdida',
+    viasDeTomada: ['Reunir as três pistas: a marca do poço, o rabisco na laje, a confissão de Sarn'],
+  },
+  { id: 'amuleto_sao_vandro', nome: 'Amuleto de São Vandro', descricao: 'Estanho gasto. Dizem que afasta o mau-olhado.', grau: 'comum', localAtual: 'capela' },
+  { id: 'anel_de_selo', nome: 'Anel de Selo', descricao: 'O brasão de uma casa que já não existe.', grau: 'notavel' },
+  { id: 'calice_rachado', nome: 'O Cálice Rachado', descricao: 'Prata litúrgica com uma fenda que não vaza.', grau: 'rara', localAtual: 'cripta' },
+  { id: 'diario_do_padre', nome: 'O Diário do Padre', descricao: 'Páginas em latim de igreja, com desenhos que não são de igreja.', grau: 'rara', localAtual: 'capela' },
+  { id: 'coroa_de_junco', nome: 'A Coroa de Junco', descricao: 'Trançada para um rei que a mata coroou e enforcou no mesmo dia.', grau: 'mitica' },
+];
+
+export const faccoesVaelhorn = [
+  { id: 'vila', nome: 'A Vila de Halvet' },
+  { id: 'guarda', nome: 'A Guarda' },
+  { id: 'igreja', nome: 'A Igreja' },
+  { id: 'ladroes', nome: 'Os Ladrões' },
+];
