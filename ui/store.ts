@@ -296,7 +296,7 @@ export const useGame = create<GameState>((set, get) => ({
     const { config } = get();
     if (!config.apiKey) return { ok: false, erro: 'Sem chave.' };
     const { testarChave } = await import('@/engine');
-    return testarChave({ apiKey: config.apiKey, modelo: config.modelo });
+    return testarChave({ provider: config.provider, apiKey: config.apiKey, modelo: config.modelo });
   },
 }));
 
@@ -333,7 +333,7 @@ async function executar(
   if (config.usarModelo && config.apiKey && cena.contexto) {
     const idAlvo = novasEntradas[0].id;
     const texto = await narrarComModelo(
-      { apiKey: config.apiKey, modelo: config.modelo },
+      { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
       content,
       camp,
       cena.contexto,

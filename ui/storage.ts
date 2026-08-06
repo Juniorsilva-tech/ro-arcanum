@@ -7,6 +7,7 @@ const K_CAMP = 'arcanum.campanha.v1';
 const K_CONFIG = 'arcanum.config.v1';
 
 export type ConfigApp = {
+  provider: 'openrouter' | 'anthropic';
   apiKey?: string;
   modelo: string;
   usarModelo: boolean;
@@ -14,7 +15,8 @@ export type ConfigApp = {
 };
 
 export const configPadrao: ConfigApp = {
-  modelo: 'claude-haiku-4-5-20251001',
+  provider: 'openrouter',
+  modelo: 'cognitivecomputations/dolphin3.0-mistral-24b:free',
   usarModelo: false,
   avisoAceito: false,
 };

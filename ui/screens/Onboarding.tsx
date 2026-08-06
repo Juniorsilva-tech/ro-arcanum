@@ -56,8 +56,8 @@ export function Aviso17() {
         </TextoSerif>
         <TextoSerif style={styles.avisoTexto}>
           Sexualidade, substâncias, violência e transgressão existem aqui como sistemas com
-          consequência — nunca como espetáculo nem como instrução. A ação está no menu, o efeito está
-          no estado, e a cena corta.
+          consequência. Com a narração por IA ligada, cenas adultas entre personagens adultos podem
+          ser explícitas. A ação está no menu; o efeito, no estado.
         </TextoSerif>
         <View style={{ height: esp.xl }} />
         <Botao titulo="Tenho 17 anos ou mais — entrar" variante="acento" onPress={aceitar} />

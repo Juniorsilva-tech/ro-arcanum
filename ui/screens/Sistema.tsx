@@ -3,8 +3,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, Pressable } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
 import { Titulo, TextoSerif, TextoMono, Botao, Card, Divisor, Rotulo, Carregando } from '../components';
-import { cores, fontes, esp } from '../theme';
+import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
+import {
+  SUGESTOES_OPENROUTER,
+  MODELO_PADRAO_OPENROUTER,
+  MODELO_PADRAO_ANTHROPIC,
+} from '@/engine';
 
 // ─────────────────────────────────────────────── FIM DE CAPÍTULO
 export function FimCapitulo() {
@@ -81,6 +86,15 @@ export function Config() {
   const [resultado, setResultado] = useState<string | null>(null);
   const [confirmarApagar, setConfirmarApagar] = useState(false);
 
+  const provider = config.provider;
+
+  async function trocarProvider(p: 'openrouter' | 'anthropic') {
+    const novoModelo = p === 'openrouter' ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC;
+    setModelo(novoModelo);
+    setResultado(null);
+    await setConfig({ provider: p, modelo: novoModelo });
+  }
+
   async function salvarChave() {
     await setConfig({ apiKey: chave.trim() || undefined, modelo: modelo.trim() });
     setResultado(chave.trim() ? 'Chave salva.' : 'Chave removida.');
@@ -94,14 +108,17 @@ export function Config() {
     setResultado(r.ok ? 'Chave válida — narração ao vivo pronta.' : `Falhou: ${r.erro}`);
   }
 
+  const ehOR = provider === 'openrouter';
+
   return (
     <Pagina>
       <BarraVoltar titulo="Configurações" />
 
       <Divisor label="Narração por IA" />
       <TextoSerif style={styles.explica}>
-        Por padrão, ARCANUM narra offline com a biblioteca canônica da engine. Você pode ligar a
-        narração ao vivo usando a sua própria chave da API da Anthropic.
+        Por padrão, ARCANUM narra offline com a biblioteca canônica da engine. Ligue a narração ao
+        vivo usando a sua própria chave. Recomendado: OpenRouter, que dá acesso a modelos gratuitos
+        e sem filtro.
       </TextoSerif>
 
       <View style={styles.switchRow}>
@@ -117,27 +134,72 @@ export function Config() {
         />
       </View>
 
-      <Rotulo>Chave da API (x-api-key)</Rotulo>
+      <Rotulo>Provedor</Rotulo>
+      <View style={styles.providerRow}>
+        <Pressable
+          style={[styles.provBtn, ehOR && styles.provBtnAtivo]}
+          onPress={() => trocarProvider('openrouter')}
+        >
+          <Text style={[styles.provTxt, ehOR && styles.provTxtAtivo]}>OpenRouter</Text>
+          <Text style={styles.provSub}>grátis · sem filtro</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.provBtn, !ehOR && styles.provBtnAtivo]}
+          onPress={() => trocarProvider('anthropic')}
+        >
+          <Text style={[styles.provTxt, !ehOR && styles.provTxtAtivo]}>Anthropic</Text>
+          <Text style={styles.provSub}>Claude</Text>
+        </Pressable>
+      </View>
+
+      <Rotulo>{ehOR ? 'Chave da API (OpenRouter)' : 'Chave da API (x-api-key)'}</Rotulo>
       <TextInput
         style={styles.input}
         value={chave}
         onChangeText={setChave}
-        placeholder="sk-ant-…"
+        placeholder={ehOR ? 'sk-or-v1-…' : 'sk-ant-…'}
         placeholderTextColor={cores.linha}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
       />
+      {ehOR && (
+        <TextoMono style={{ color: cores.linha, marginBottom: esp.sm }}>
+          Crie a chave grátis em openrouter.ai/keys
+        </TextoMono>
+      )}
+
       <Rotulo>Modelo</Rotulo>
       <TextInput
         style={styles.input}
         value={modelo}
         onChangeText={setModelo}
-        placeholder="claude-haiku-4-5-20251001"
+        placeholder={ehOR ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC}
         placeholderTextColor={cores.linha}
         autoCapitalize="none"
         autoCorrect={false}
       />
+      {ehOR && (
+        <View style={{ marginBottom: esp.sm }}>
+          <TextoMono style={{ color: cores.mudo, marginBottom: esp.xs }}>
+            Sugestões (toque para usar) · filtre :free em openrouter.ai/models
+          </TextoMono>
+          <View style={styles.chipsSug}>
+            {SUGESTOES_OPENROUTER.map((m) => (
+              <Pressable
+                key={m}
+                style={[styles.chipSug, modelo === m && styles.chipSugAtivo]}
+                onPress={() => {
+                  setModelo(m);
+                  setConfig({ modelo: m });
+                }}
+              >
+                <Text style={styles.chipSugTxt}>{m.replace(':free', '')}{m.endsWith(':free') ? ' ·free' : ''}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={{ flexDirection: 'row', gap: esp.sm }}>
         <View style={{ flex: 1 }}>
@@ -152,8 +214,9 @@ export function Config() {
 
       <View style={styles.avisoSeg}>
         <TextoMono style={{ color: cores.mudo }}>
-          A chave fica só neste aparelho e vai direto para a Anthropic. Ela nunca é embutida no app
-          nem enviada a terceiros. O uso é cobrado na sua conta.
+          A chave fica só neste aparelho e vai direto para {ehOR ? 'a OpenRouter' : 'a Anthropic'}.
+          Nunca é embutida no app nem enviada a terceiros. O uso é cobrado (ou consome a cota grátis)
+          na sua conta.
         </TextoMono>
       </View>
 
@@ -213,4 +276,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: cores.fundo2,
   },
+  providerRow: { flexDirection: 'row', gap: esp.sm, marginTop: esp.xs, marginBottom: esp.md },
+  provBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: raio.md,
+    padding: esp.md,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  provBtnAtivo: { borderColor: cores.ouro, backgroundColor: cores.couro },
+  provTxt: { fontFamily: fontes.serifMedium, color: cores.mudo, fontSize: 18 },
+  provTxtAtivo: { color: cores.vellum },
+  provSub: { fontFamily: fontes.mono, color: cores.linha, fontSize: 10, marginTop: 2 },
+  chipsSug: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs },
+  chipSug: {
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: raio.sm,
+    paddingHorizontal: esp.sm,
+    paddingVertical: 4,
+  },
+  chipSugAtivo: { borderColor: cores.ouro },
+  chipSugTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10 },
 });
