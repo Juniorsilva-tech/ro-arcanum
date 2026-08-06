@@ -1,7 +1,7 @@
 name: Build ARCANUM APK
 
-# Compila um APK de debug instalável e o publica numa Release do GitHub,
-# para baixar direto no celular. Não exige nenhuma conta externa (Expo/EAS).
+# Compila um APK de release instalável (só arm64-v8a) e o publica numa Release
+# do GitHub, para baixar direto no celular. Sem conta externa (Expo/EAS).
 
 on:
   push:
@@ -21,6 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,13 +52,19 @@ jobs:
       - name: Expo prebuild (generate android project)
         run: npx expo prebuild --platform android --no-install
 
-      - name: Build release APK (embeds JS, roda standalone)
+      - name: Build release APK (só arm64-v8a; embeds JS, roda standalone)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          # Compila apenas arm64-v8a (a arquitetura de praticamente todo celular
+          # atual). Corta ~75% do trabalho nativo — build mais rápido/leve e APK
+          # muito menor — evitando o estouro de recursos do runner.
+          ./gradlew assembleRelease \
+            -PreactNativeArchitectures=arm64-v8a \
+            --no-daemon --stacktrace -x lint
         env:
           GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g
+          ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a
 
       - name: Locate and rename APK
         id: apk
@@ -81,14 +88,16 @@ jobs:
           tag_name: apk-build-${{ github.run_number }}
           name: ARCANUM APK · build ${{ github.run_number }}
           body: |
-            APK de debug do ARCANUM (fatia vertical · cenário Vaelhorn).
+            APK de release do ARCANUM (fatia vertical · cenário Vaelhorn) · arm64-v8a.
 
             **Como instalar no Android:**
-            1. Baixe o arquivo `.apk` abaixo (em "Assets").
-            2. Abra no celular e permita "instalar de fontes desconhecidas".
-            3. Abra o ARCANUM.
+            1. Se você instalou uma versão anterior, DESINSTALE antes.
+            2. Baixe o arquivo `.apk` abaixo (em "Assets").
+            3. Abra no celular e permita "instalar de fontes desconhecidas".
+            4. Abra o ARCANUM.
 
-            O jogo roda offline. Para narração ao vivo por IA, cole sua própria
-            chave da API da Anthropic em Configurações.
+            Compatível com celulares arm64 (praticamente todos os atuais). Roda
+            offline. Para narração ao vivo por IA, cole sua própria chave da API
+            da Anthropic em Configurações.
           files: ${{ steps.apk.outputs.path }}
           make_latest: true
