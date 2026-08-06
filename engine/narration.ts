@@ -35,25 +35,48 @@ export function montarCena(content: ContentBundle, camp: Campaign): {
 export function narrarResultado(camp: Campaign, r: ResultadoTurno): { narracao: string; eco?: string } {
   const rng = camp.rng;
   const base = r.fato;
-  const cor = corDaConsequencia(r);
+  const cor = corDaConsequencia(rng, r);
   const eco = ecoDeConsequencia(rng, r);
   return { narracao: `${base} ${cor}`.trim(), eco };
 }
 
-function corDaConsequencia(r: ResultadoTurno): string {
+// Variações por grau: sem IA o registro continua seco, mas não vira disco riscado.
+const CORES_POR_GRAU: Record<string, string[]> = {
+  critico: [
+    'Por um momento, tudo se encaixa.',
+    'Sai melhor do que você tinha o direito de esperar.',
+    'A sorte, dessa vez, escolheu um lado.',
+    'Fica a sensação de ter roubado algo do acaso.',
+  ],
+  sucesso: [
+    '',
+    'Simples assim, e ninguém aplaude.',
+    'Feito. O mundo mal registra.',
+    'Sai como devia sair.',
+  ],
+  sucesso_com_custo: [
+    'Ficou uma conta em aberto.',
+    'Deu certo — e cobrou o troco na hora.',
+    'Você leva o que queria, e algo a mais que não pediu.',
+    'O preço vem depois, mas vem.',
+  ],
+  falha: [
+    'Nada acontece — e isso também é uma resposta.',
+    'A coisa escapa por entre os dedos.',
+    'Não pega. Fica o gesto no ar.',
+    'Faltou pouco, e pouco basta para não ser.',
+  ],
+  falha_grave: [
+    'O silêncio depois é pior que o erro.',
+    'Piora. Piora de um jeito que vai lembrar.',
+    'O estrago é maior que a tentativa.',
+    'Você entende, tarde demais, o tamanho do engano.',
+  ],
+};
+
+function corDaConsequencia(rng: RngState, r: ResultadoTurno): string {
   if (!r.grau) return '';
-  switch (r.grau) {
-    case 'critico':
-      return 'Por um momento, tudo se encaixa.';
-    case 'sucesso':
-      return '';
-    case 'sucesso_com_custo':
-      return 'Ficou uma conta em aberto.';
-    case 'falha':
-      return 'Nada acontece — e isso também é uma resposta.';
-    case 'falha_grave':
-      return 'O silêncio depois é pior que o erro.';
-  }
+  return pick(rng, CORES_POR_GRAU[r.grau] ?? ['']);
 }
 
 function ecoDeConsequencia(rng: RngState, r: ResultadoTurno): string | undefined {

@@ -9,7 +9,7 @@ import {
   avancarPeriodos,
   crescerImpulsos,
   atributosBase,
-  narrarComModelo,
+  narrarComFallback,
   CAPITULO_MAX_PERIODOS,
   equipar as equiparEngine,
   desequipar as desequiparEngine,
@@ -137,6 +137,7 @@ interface GameState {
   proximoCapitulo: () => Promise<void>;
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
   buscarModelosGratis: () => Promise<string[]>;
+  testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
 }
 
 function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => void) {
@@ -498,6 +499,39 @@ export const useGame = create<GameState>((set, get) => ({
     const modelos = await listarModelosOpenRouter(config.apiKey, true);
     return modelos.map((m) => m.id);
   },
+
+  // Diagnóstico honesto: roda o MESMO caminho do jogo e mostra o que voltou.
+  async testarNarracaoReal() {
+    const { config } = get();
+    if (!config.apiKey) return { ok: false, erro: 'Sem chave salva.' };
+    const content = get().content ?? bundlePorId('vaelhorn')!;
+    const camp =
+      get().camp ??
+      criarCampanha(content, {
+        nome: 'Teste',
+        atributos: atributosBase(),
+        classeId: content.classes[0].id,
+        origemId: content.origens[0].id,
+        seedString: 'diagnostico',
+      });
+    const cena = montarCena(content, camp);
+    const r = {
+      fato: 'Você entrou na taverna e olhou em volta — sucesso.',
+      custoPeriodos: 0,
+      efeitosAplicados: [],
+    } as unknown as Parameters<typeof narrarComFallback>[4];
+    const res = await narrarComFallback(
+      { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
+      content,
+      camp,
+      cena.contexto,
+      r,
+    );
+    if (res.texto) {
+      return { ok: true, amostra: res.texto.slice(0, 220), modelo: res.modeloUsado ?? config.modelo };
+    }
+    return { ok: false, erro: res.erro ?? 'sem resposta' };
+  },
 }));
 
 function romano(n: number): string {
@@ -540,7 +574,7 @@ async function executar(
   if (config.usarModelo && config.apiKey && cena.contexto) {
     const idAlvo = novasEntradas[0].id;
     set({ iaStatus: 'pensando', iaErro: undefined });
-    const res = await narrarComModelo(
+    const res = await narrarComFallback(
       { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
       content,
       camp,

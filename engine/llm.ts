@@ -133,6 +133,24 @@ export type OpcaoIA = {
 
 export type ResultadoNarracao = { texto?: string; opcoes?: OpcaoIA[]; erro?: string };
 
+// Traduz os erros mais comuns da OpenRouter para algo acionável.
+// O 404 "No endpoints found" costuma ser política de privacidade da conta:
+// modelos :free exigem permissão de treino/logging em openrouter.ai/settings/privacy.
+export function explicarErroOpenRouter(status: number, corpo: string): string {
+  const c = corpo.toLowerCase();
+  if (status === 404 && c.includes('no endpoints found')) {
+    return (
+      'modelo indisponível. Isso costuma ser a política de privacidade da conta: ' +
+      'entre em openrouter.ai/settings/privacy e permita os modelos gratuitos ' +
+      '(prompt training). Ou toque em "Buscar modelos" e escolha outro.'
+    );
+  }
+  if (status === 401) return 'chave inválida ou sem permissão (401). Confira a chave.';
+  if (status === 402) return 'créditos insuficientes (402). Use um modelo :free.';
+  if (status === 429) return 'limite de uso atingido (429). Espere um pouco ou troque de modelo.';
+  return `HTTP ${status}: ${corpo.slice(0, 160)}`;
+}
+
 const ATRIBUTOS_VALIDOS = ['fisico', 'precisao', 'resiliencia', 'raciocinio', 'percepcao', 'social'];
 const RE_DADO = /\bd\d+\b|\b\d+d\d+\b|\bCD\s?\d+/i;
 
@@ -248,7 +266,7 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<Result
     }),
   });
   const bruto = await resp.text();
-  if (!resp.ok) return { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+  if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
   let data: { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
   try {
     data = JSON.parse(bruto);
@@ -326,8 +344,34 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
         messages: [{ role: 'user', content: 'ok' }],
       }),
     });
-    return resp.ok ? { ok: true } : { ok: false, erro: `HTTP ${resp.status}: ${(await resp.text()).slice(0, 140)}` };
+    return resp.ok
+      ? { ok: true }
+      : { ok: false, erro: explicarErroOpenRouter(resp.status, await resp.text()) };
   } catch (e) {
     return { ok: false, erro: String(e) };
   }
+}
+
+// Tenta o modelo configurado; se ele estiver fora do ar, cai para outro
+// gratuito da lista viva — assim um slug morto não deixa o jogo sem IA.
+export async function narrarComFallback(
+  cfg: LlmConfig,
+  content: ContentBundle,
+  camp: Campaign,
+  ctx: Contexto,
+  r: ResultadoTurno,
+): Promise<ResultadoNarracao & { modeloUsado?: string }> {
+  const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
+  if (primeira.texto || cfg.provider !== 'openrouter') return primeira;
+
+  const indisponivel = /modelo indisponível|no endpoints|HTTP 404/i.test(primeira.erro ?? '');
+  if (!indisponivel) return primeira;
+
+  const vivos = await listarModelosOpenRouter(cfg.apiKey, true);
+  const candidatos = vivos.map((m) => m.id).filter((id) => id !== cfg.modelo).slice(0, 3);
+  for (const modelo of candidatos) {
+    const tentativa = await narrarComModelo({ ...cfg, modelo }, content, camp, ctx, r);
+    if (tentativa.texto) return { ...tentativa, modeloUsado: modelo };
+  }
+  return primeira;
 }

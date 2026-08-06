@@ -246,7 +246,11 @@ function FaixaContexto(props: {
 
 function EntradaNarrativa({ entrada, primeira }: { entrada: EntradaFeed; primeira: boolean }) {
   if (entrada.tipo === 'sistema') {
-    return <TextoMono style={styles.sistema}>{entrada.texto}</TextoMono>;
+    // Falhas de IA precisam saltar aos olhos — antes ficavam num cinza invisível.
+    const alerta = entrada.texto.startsWith('IA ');
+    return (
+      <TextoMono style={[styles.sistema, alerta && styles.sistemaAlerta]}>{entrada.texto}</TextoMono>
+    );
   }
   if (entrada.tipo === 'acao') {
     return <Text style={styles.acao}>{entrada.texto}</Text>;
@@ -358,7 +362,15 @@ const styles = StyleSheet.create({
   iaAviso: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginBottom: esp.sm },
   iaErro: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 11, marginBottom: esp.sm },
   eco: { fontFamily: fontes.serif, color: cores.ouro, fontStyle: 'italic', fontSize: 17, marginBottom: esp.md },
-  sistema: { color: cores.linha, marginBottom: esp.sm, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },
+  sistema: { color: cores.mudo, marginBottom: esp.sm, fontSize: 11, letterSpacing: 0.5 },
+  sistemaAlerta: {
+    color: cores.cinabrio,
+    fontSize: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: cores.cinabrio,
+    paddingLeft: esp.sm,
+    textTransform: 'none',
+  },
   acao: { fontFamily: fontes.monoMedium, color: cores.verdigris, fontSize: 13, marginBottom: esp.sm },
   opcao: {
     borderWidth: 1,

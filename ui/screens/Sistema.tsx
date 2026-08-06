@@ -81,6 +81,7 @@ export function Config() {
   const irPara = useGame((s) => s.irPara);
 
   const buscarModelos = useGame((s) => s.buscarModelosGratis);
+  const testarNarr = useGame((s) => s.testarNarracaoReal);
   const [chave, setChave] = useState(config.apiKey ?? '');
   const [modelo, setModelo] = useState(config.modelo);
   const [testando, setTestando] = useState(false);
@@ -122,6 +123,22 @@ export function Config() {
     const r = await testar();
     setTestando(false);
     setResultado(r.ok ? 'Chave válida — narração ao vivo pronta.' : `Falhou: ${r.erro}`);
+  }
+
+  async function testarNarracao() {
+    await salvarChave();
+    setTestando(true);
+    setResultado(null);
+    const r = await testarNarr();
+    setTestando(false);
+    if (r.ok) {
+      setResultado(
+        `FUNCIONOU (${r.modelo}). A IA escreveu:\n\n"${r.amostra}…"\n\n` +
+          'Agora ligue o botão acima e volte ao jogo.',
+      );
+    } else {
+      setResultado(`NÃO FUNCIONOU: ${r.erro}`);
+    }
   }
 
   const ehOR = provider === 'openrouter';
@@ -250,6 +267,12 @@ export function Config() {
           <Botao titulo="Testar chave" variante="acento" onPress={testarChave} />
         </View>
       </View>
+      <Botao
+        titulo="Testar narração de verdade"
+        sub="usa exatamente o mesmo caminho do jogo"
+        variante="acento"
+        onPress={testarNarracao}
+      />
       {testando && <Carregando texto="testando…" />}
       {resultado && <TextoMono style={{ color: cores.ouro, marginTop: esp.sm }}>{resultado}</TextoMono>}
 
