@@ -8,10 +8,19 @@ import {
   validarOpcoesIA,
   interpretarResposta,
   serveParaNarrar,
+  montarPacote,
   perfilDoModelo,
   detectarRecusa,
 } from './llm';
 import { emBlocos } from './prosa';
+import {
+  registrarLembranca,
+  memoriaParaNarrador,
+  registrarMarco,
+  marcosRecentes,
+  estadoDoNpc,
+} from './memoria';
+import { calcularRitmo } from './ritmo';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import * as narracaoMod from './narration';
@@ -376,6 +385,93 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     ['falar com Elza'],
   );
   ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// Memória: o que importa sobrevive, e chega ao narrador.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Andarilho',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'memoria-1',
+  });
+
+  // Uma noite juntos, e depois vinte conversas de balcão.
+  registrarLembranca(c, 'elza', { tipo: 'intimidade', resumo: 'você a cortejou, e ela deixou', peso: 5 });
+  for (let i = 0; i < 20; i += 1) {
+    c.turno += 1;
+    registrarLembranca(c, 'elza', { tipo: 'conversa', resumo: `conversa fiada ${i}`, peso: 1 });
+  }
+  const lembra = memoriaParaNarrador(c, 'elza', 5);
+  ok(
+    lembra.some((l) => l.includes('cortejou')),
+    'A lembrança pesada sobrevive a vinte conversas rasas',
+  );
+  ok(c.npcState['elza'].memoria.length <= 14, 'A memória tem teto');
+
+  // O turno escreve a lembrança do ponto de vista dela, não o log da engine.
+  const c2 = criarCampanha(conteudoVaelhorn, {
+    nome: 'Ladrão',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'memoria-2',
+  });
+  resolverIntencao(conteudoVaelhorn, c2, { tipo: 'verbo', verboId: 'flertar', alvoId: 'elza' });
+  const m = c2.npcState['elza'].memoria;
+  ok(m.length === 1 && m[0].tipo === 'intimidade', 'Flertar deixa lembrança de intimidade');
+  ok(!m[0].resumo.includes('Você tentou'), 'A lembrança não é o log seco da engine');
+
+  // Quem não foi procurado acumula tensão.
+  ok(c2.npcState['aldrica'].tensao > 0, 'Quem foi ignorado acumula tensão');
+
+  // Marcos: a história longa, sem repetir o mesmo marco.
+  registrarMarco(c2, 'você derrubou Vess, a Fiadora');
+  registrarMarco(c2, 'você derrubou Vess, a Fiadora');
+  ok((c2.marcos ?? []).length === 1, 'Um marco não entra duas vezes');
+  ok(marcosRecentes(c2, 5)[0].includes('Vess'), 'Marcos voltam para o narrador');
+
+  // O pacote precisa carregar tudo isso — era exatamente o que faltava.
+  const cena2 = montarCena(conteudoVaelhorn, c2);
+  const pacote = montarPacote(conteudoVaelhorn, c2, cena2.contexto, 'fato qualquer') as Record<string, unknown>;
+  const presentes = pacote.presentes as { nome: string; lembraDeVoce: string[] }[];
+  ok('jaAconteceu' in pacote && 'arcosAtivos' in pacote, 'O pacote leva história e fios abertos');
+  ok('ritmo' in pacote, 'O pacote leva o ritmo da campanha');
+  ok(
+    presentes.every((x) => Array.isArray(x.lembraDeVoce)),
+    'Cada presente leva o que lembra de você',
+  );
+
+  // Estado da NPC em uma frase, sem número na tela.
+  const elza = conteudoVaelhorn.npcs.find((n) => n.id === 'elza')!;
+  const frase = estadoDoNpc(c2, elza);
+  ok(frase.length > 0 && !/\d/.test(frase), 'O estado da NPC é frase, não número');
+}
+
+// Ritmo: o diretor é cálculo, não uma segunda chamada de IA.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Calmo',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'ritmo-1',
+  });
+  const calmo = calcularRitmo(conteudoVaelhorn, c);
+  ok(calmo.tensao >= 0 && calmo.tensao <= 100, 'Tensão fica na faixa');
+  ok(calmo.fase === 'calmaria', 'Campanha nova começa em calmaria');
+
+  // Machucado, corrompido, com facção atrás e um fio aberto.
+  c.personagem.recursos.vida = 3;
+  c.personagem.pressoes['corrupcao'] = 60;
+  c.personagem.pressoes['sanidade'] = 60;
+  c.reputacao['guarda'] = -20;
+  c.questEstado['q_edital'] = 'ativa';
+  const aperto = calcularRitmo(conteudoVaelhorn, c);
+  ok(aperto.tensao > calmo.tensao, 'Estado ruim empurra a tensão para cima');
+  ok(aperto.motivos.length > 0, 'A tensão vem com motivos nomeados');
+  ok(aperto.tom.length > 20, 'Cada fase manda um tom para o narrador');
 }
 
 // A lista de modelos não pode oferecer o que não narra (o jogador viu geradores

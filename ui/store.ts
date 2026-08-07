@@ -27,6 +27,7 @@ import {
   aprenderArte as aprenderArteEngine,
   conjurarLivre,
   chaveRotulo,
+  registrarMarco,
   NOME_PERIODO,
   PERIODOS,
   type OpcaoResolvida,
@@ -481,6 +482,7 @@ export const useGame = create<GameState>((set, get) => ({
       await salvarCampanha(camp);
       get().irPara('jogo');
       // A cena precisa reagir: novas opções depois de aprender (§7.1).
+      registrarMarco(camp, `você aprendeu ${arte?.nome ?? arteId}`);
       await narrar(get, set, `Você passou períodos aprendendo ${arte?.nome ?? arteId} com a mestra.`);
       checarCapitulo(get, set);
       return;
@@ -544,7 +546,11 @@ export const useGame = create<GameState>((set, get) => ({
       camp.capitulo.periodosDecorridos += rota.periodos;
     }
     camp.localAtual = destino;
-    if (!camp.locaisVisitados.includes(destino)) camp.locaisVisitados.push(destino);
+    if (!camp.locaisVisitados.includes(destino)) {
+      camp.locaisVisitados.push(destino);
+      const nome = content.locais.find((l) => l.id === destino)?.nome ?? destino;
+      registrarMarco(camp, `você pisou em ${nome} pela primeira vez`);
+    }
     camp.flags[`visitou.${destino}`] = true;
     const alvo = content.locais.find((l) => l.id === destino);
     set({
@@ -809,6 +815,7 @@ function talvezRevelarSegredo(camp: Campaign, alvo?: NPC) {
   if ((confiancaAlta || vigiado) && !camp.segredosRevelados.includes(alvo.id)) {
     camp.segredosRevelados.push(alvo.id);
     camp.flags[`segredo.${alvo.id}`] = true;
+    registrarMarco(camp, `você descobriu o que ${alvo.nome} escondia`);
   }
 }
 

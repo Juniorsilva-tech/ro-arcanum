@@ -11,6 +11,8 @@ import type { Campaign, ContentBundle } from './types';
 import type { ResultadoTurno } from './turn';
 import type { Contexto } from './availability';
 import { dataPorExtenso, NOME_PERIODO } from './time';
+import { memoriaParaNarrador, diasDeConvivio, marcosRecentes } from './memoria';
+import { calcularRitmo } from './ritmo';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
 
@@ -230,7 +232,29 @@ export function montarPacote(
       indole: n.personalidade,
       corpo: n.corpo,
       eixos: camp.npcState[n.id]?.eixos ?? {},
+      // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
+      conheceHaDias: diasDeConvivio(camp, n.id),
+      lembraDeVoce: memoriaParaNarrador(camp, n.id, 5),
+      // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
+      // não foi descoberto não entra no pacote — não se entrega de graça.
+      segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
     })),
+    // Os fios que estão abertos agora, com o objetivo que falta cumprir.
+    arcosAtivos: content.quests
+      .filter((q) => camp.questEstado[q.id] === 'ativa')
+      .slice(0, 5)
+      .map((q) => ({
+        titulo: q.titulo,
+        falta: q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto),
+      })),
+    // O que já ficou para trás e merece ser citado de novo.
+    jaAconteceu: marcosRecentes(camp, 8),
+    // Como o vale trata este forasteiro hoje.
+    reputacao: Object.entries(camp.reputacao)
+      .filter(([, v]) => v !== 0)
+      .map(([id, v]) => `${content.faccoes.find((f) => f.id === id)?.nome ?? id}: ${v > 0 ? '+' : ''}${v}`),
+    // O diretor da campanha, calculado pela engine (ver ritmo.ts).
+    ritmo: calcularRitmo(content, camp),
     // Vocabulário permitido: se citar objeto, tem que ser um destes nomes.
     catalogoDeItens: achaveis,
     // Rótulos que já foram oferecidos — proibido repetir (nem reescritos).
@@ -267,6 +291,16 @@ const INSTRUCAO_SISTEMA =
   'explícito quando a cena pedir, entre adultos e de forma consensual.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens são adultos (18+). Jamais ' +
   'sexualize menores em nenhuma hipótese. Cada presente traz a idade — respeite-a.\n' +
+  '\nCONTINUIDADE — o mundo não começa agora:\n' +
+  '• Cada presente traz "lembraDeVoce" e "conheceHaDias". USE. Quem já foi ' +
+  'traída não recebe você como estranha, e quem você ajudou lembra disso.\n' +
+  '• "jaAconteceu" é a história desta campanha. Cite o que couber — uma frase de ' +
+  'retorno a algo antigo vale mais que um parágrafo bonito.\n' +
+  '• "arcosAtivos" são os fios abertos. Puxe pelo menos um por cena, nem que seja ' +
+  'de raspão: um comentário, um obstáculo, uma pista.\n' +
+  '• "ritmo.tom" manda no registro desta cena. Obedeça: se pede respiro, não ' +
+  'invente ameaça; se pede clímax, não alivie.\n' +
+  '• Plante uma coisa que ainda não se explica. O mundo é mais velho que o jogador.\n' +
   '\nOPÇÕES — cada uma é uma decisão, não um verbo solto:\n' +
   '• De 3 a 5, SEMPRE INÉDITAS, nascidas do que acabou de acontecer e de quem está ali.\n' +
   '• Proibido repetir ou reescrever qualquer rótulo de "rotulosProibidos".\n' +

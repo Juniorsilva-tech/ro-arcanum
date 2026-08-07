@@ -12,6 +12,7 @@ import { probabilidade, calcularDano } from './resolution';
 import { nextFloat, nextInt, pick } from './rng';
 import { modificador, clampRecursos } from './character';
 import { bonusDefesaEquip, armaEquipada } from './items';
+import { registrarMarco } from './memoria';
 
 export function criaturaPorId(content: ContentBundle, id: string): Criatura | undefined {
   return content.criaturas.find((c) => c.id === id);
@@ -343,6 +344,8 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       xp += c.xp;
       // Marca a presa: missões podem exigir a queda de uma criatura específica.
       camp.flags[`matou.${c.id}`] = true;
+      // Chefe caído é história, não estatística.
+      if (c.chefe) registrarMarco(camp, `você derrubou ${c.nome}`);
       for (const l of c.loot ?? []) {
         if (nextFloat(camp.rng) < l.chance) {
           loot.push(l.item);

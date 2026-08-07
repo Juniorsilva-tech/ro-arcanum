@@ -1,5 +1,6 @@
 // ARCANUM · Lógica de missões (GDD §13.2 / quests).
 import type { Campaign, ContentBundle } from './types';
+import { registrarMarco } from './memoria';
 
 // Ativa missões cujo dador você já conheceu, e conclui as que tiveram todos os
 // objetivos (flags) cumpridos, entregando a recompensa. Retorna títulos concluídos.
@@ -28,6 +29,7 @@ export function verificarQuests(content: ContentBundle, camp: Campaign): string[
     for (const r of q.recompensa.reputacao ?? []) {
       camp.reputacao[r.faccaoId] = (camp.reputacao[r.faccaoId] ?? 0) + r.delta;
     }
+    registrarMarco(camp, `você cumpriu "${q.titulo}"`);
     concluidas.push(q.titulo);
   }
   return concluidas;

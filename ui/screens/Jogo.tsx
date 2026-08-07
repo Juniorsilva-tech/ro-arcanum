@@ -25,8 +25,10 @@ import {
   type CategoriaVerbo,
   type Verbo,
   emBlocos,
+  estadoDoNpc,
   type OpcaoResolvida,
   type NPC,
+  type Campaign,
 } from '@/engine';
 
 const ORDEM_CATEGORIAS: CategoriaVerbo[] = [
@@ -265,6 +267,7 @@ export function Jogo() {
         <SeletorAlvo
           verbo={verboAlvo}
           presentes={ctx.presentes}
+          camp={camp}
           onEscolher={(id) => {
             agirVerbo(verboAlvo.id, id);
             setVerboAlvo(null);
@@ -436,11 +439,13 @@ function LinhaVerbo({
 function SeletorAlvo({
   verbo,
   presentes,
+  camp,
   onEscolher,
   onCancelar,
 }: {
   verbo: Verbo;
   presentes: NPC[];
+  camp: Campaign;
   onEscolher: (id: string) => void;
   onCancelar: () => void;
 }) {
@@ -453,6 +458,8 @@ function SeletorAlvo({
           <Pressable key={n.id} style={styles.alvoLinha} onPress={() => onEscolher(n.id)}>
             <Text style={styles.alvoNome}>{n.nome}</Text>
             <Text style={styles.alvoOcup}>{n.ocupacao}</Text>
+            {/* Escolher pelo nome é escolher no escuro: aqui vai o estado dela. */}
+            <TextoSerif style={styles.alvoEstado}>{estadoDoNpc(camp, n)}</TextoSerif>
           </Pressable>
         ))}
         <Pressable style={styles.alvoCancelar} onPress={onCancelar}>
@@ -683,6 +690,7 @@ const styles = StyleSheet.create({
   },
   alvoNome: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 20 },
   alvoOcup: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11 },
+  alvoEstado: { color: cores.ouro, fontSize: 15, fontStyle: 'italic', marginTop: 2 },
   alvoCancelar: { marginTop: esp.md, alignItems: 'center' },
   alvoCancelarTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
 });

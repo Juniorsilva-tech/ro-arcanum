@@ -16,3 +16,5 @@ export * from './campaign';
 export * from './narration';
 export * from './llm';
 export * from './prosa';
+export * from './memoria';
+export * from './ritmo';

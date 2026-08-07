@@ -15,6 +15,7 @@ import { clampRecursos } from './character';
 import { crescerImpulsos, saciar, penalidadePorImpulsos } from './impulsos';
 import { calcularContexto } from './availability';
 import { aplicarEfeito, substituirAlvo } from './effects';
+import { lembrarDoTurno } from './memoria';
 
 export type OpcaoResolvida = {
   id: string;
@@ -76,21 +77,27 @@ function construirFato(verbo: Verbo, alvo: NPC | undefined, res?: ResultadoTeste
   }
 }
 
-function atualizarNpcs(camp: Campaign, content: ContentBundle, alvoId: string | undefined, turno: number, resumo: string): void {
-  const periodo = camp.calendario.periodoIndex;
+// Quem foi alvo lembra do que houve; quem foi ignorado acumula tensão.
+function atualizarNpcs(
+  camp: Campaign,
+  content: ContentBundle,
+  alvo: NPC | undefined,
+  verbo: Verbo | undefined,
+  grau: Grau | undefined,
+  rotulo: string,
+): void {
   for (const npc of content.npcs) {
     const din = camp.npcState[npc.id];
     if (!din || !din.vivo) continue;
-    if (npc.id === alvoId) {
+    if (alvo && npc.id === alvo.id) {
       din.tensao = Math.max(0, din.tensao - 20);
-      din.memoria.push({ turno, resumo, peso: 2 });
-      if (din.memoria.length > 10) din.memoria.shift();
     } else {
       // Negligência: tensão sobe passivamente (GDD §10.4).
       din.tensao = Math.min(100, din.tensao + 1);
     }
   }
-  void periodo;
+  // A lembrança dela é escrita do ponto de vista dela, e pesada pelo que foi.
+  if (alvo) lembrarDoTurno(camp, alvo, verbo, grau, rotulo);
 }
 
 export function resolverIntencao(
@@ -180,7 +187,7 @@ export function resolverIntencao(
     ? construirFato(verbo, alvo, resultado)
     : `${rotulo}${resultado ? ` — ${NOME_GRAU[resultado.grau]}` : ''}.`;
 
-  atualizarNpcs(camp, content, intencao.alvoId, camp.turno, fato);
+  atualizarNpcs(camp, content, alvo, verbo, grau, rotulo);
 
   // Sequela: se a vida chegou a 0 (GDD §15) — marca condição agonizante.
   if (p.recursos.vida <= 0 && !p.condicoes.includes('agonizante')) {

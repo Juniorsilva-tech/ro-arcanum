@@ -185,7 +185,15 @@ export type NpcDinamico = {
   eixos: Record<string, number>; // disposicao/confianca/medo, ou desejo/confianca/conforto
   vivo: boolean;
   tensao: number; // sobe com negligência (GDD §10.4)
-  memoria: { turno: number; resumo: string; peso: number }[];
+  // Lembranças tipadas, retidas por peso (ver engine/memoria.ts). Os campos
+  // novos são opcionais para não invalidar save antigo.
+  memoria: {
+    turno: number;
+    resumo: string;
+    peso: number;
+    tipo?: string;
+    dia?: number;
+  }[];
 };
 
 // ── Local (GDD §7).
@@ -417,6 +425,9 @@ export type Campaign = {
   // Rótulos de opção já oferecidos. A IA recebe a lista e fica proibida de
   // repetir — opção repetida é o cheiro mais forte de jogo sem memória.
   opcoesUsadas?: string[];
+  // Os grandes acontecimentos da campanha, para o narrador poder citar o que
+  // ficou para trás em vez de tratar cada turno como um episódio solto.
+  marcos?: { turno: number; dia: number; texto: string }[];
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };
