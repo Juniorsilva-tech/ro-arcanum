@@ -4,7 +4,8 @@ import { probabilidade, resolverTeste } from './resolution';
 import { conteudoVaelhorn } from '../content/vaelhorn';
 import { encontrosPorTipo } from '../content/vaelhorn/bestiary';
 import { criarCampanha } from './campaign';
-import { validarOpcoesIA } from './llm';
+import { validarOpcoesIA, interpretarResposta } from './llm';
+import { emBlocos } from './prosa';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import { atributosBase, derivados } from './character';
@@ -305,6 +306,15 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   if (quebras.length) console.log('  referências quebradas:', quebras.slice(0, 12).join(' · '));
   ok(quebras.length === 0, `Integridade do conteúdo (${quebras.length} referência(s) quebrada(s))`);
 
+  // A LEVA: o vale é das mulheres. Ninguém do elenco pode ter ofício no
+  // masculino, e todo mundo precisa de corpo — o narrador usa os dois.
+  const MASCULINO = /\b(taverneiro|ferreiro|coveiro|moleiro|pescador|carreteiro|escriba errante|mercador|padre|sargento|senhor|capataz do|vigia noturno|armeiro|eremita solitário)\b/;
+  const comOficioMasculino = C.npcs.filter((n) => MASCULINO.test(n.ocupacao));
+  ok(comOficioMasculino.length === 0, `Nenhum ofício masculino no elenco (${comOficioMasculino.map((n) => n.ocupacao).join(', ')})`);
+  const semCorpo = C.npcs.filter((n) => !n.corpo || n.corpo.length < 40);
+  ok(semCorpo.length === 0, `Todo mundo tem corpo descrito (${semCorpo.map((n) => n.id).join(', ')})`);
+  ok((C.cenario.premissa ?? []).length >= 4, 'O cenário carrega a premissa do mundo');
+
   // Volume: o cenário precisa continuar grande.
   ok(C.locais.length >= 16, `Mapa com ${C.locais.length} locais`);
   ok(C.npcs.length >= 28, `Elenco com ${C.npcs.length} NPCs`);
@@ -312,6 +322,68 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   ok(C.criaturas.length >= 30, `Bestiário com ${C.criaturas.length} criaturas`);
   ok(C.artes.length >= 55, `Livro com ${C.artes.length} artes`);
   ok(C.quests.length >= 14, `${C.quests.length} missões`);
+}
+
+// Resposta da IA: JSON cortado nunca pode virar texto na tela (bug do jogador).
+{
+  const inteiro = JSON.stringify({
+    narracao: 'A moeda bate no tampo gasto.\n\n— Guarde seu ouro, freguesa.',
+    opcoes: [{ rotulo: 'Insistir com Elza', dica: 'pode selar a antipatia', custoPeriodos: 1 }],
+    achado: 'moeda_antiga',
+  });
+  const a = interpretarResposta(inteiro, conteudoVaelhorn);
+  ok(!!a.texto && !a.texto.includes('"narracao"'), 'JSON inteiro vira prosa limpa');
+  ok(a.opcoes?.length === 1, 'JSON inteiro entrega as opções');
+  ok(a.achado === 'moeda_antiga', 'Achado válido é aceito');
+
+  // Exatamente o caso do print: corte no meio do array de opções.
+  const cortado =
+    '{"narracao":"A moeda de prata bate no tampo gasto com um som surdo. ' +
+    '\\"Peço desculpas, Elza.\\" A palavra fica pendurada no ar gorduroso.",' +
+    '"opcoes":[{"rotulo":"Insistir com Elza","dica":"pode ganhar confiança","custoPeriodos":1},' +
+    '{"rotulo":"C';
+  const b = interpretarResposta(cortado, conteudoVaelhorn);
+  ok(!!b.texto, 'JSON truncado ainda entrega narração');
+  ok(!b.texto!.includes('"narracao"') && !b.texto!.includes('rotulo'), 'Narração resgatada sem resíduo de JSON');
+  ok(b.texto!.includes('"Peço desculpas, Elza."'), 'Escapes viram aspas de verdade');
+  ok(b.opcoes?.length === 1, 'Opção completa aproveitada; a cortada, descartada');
+
+  // Lixo puro: melhor falhar e deixar o fallback local assumir.
+  const c = interpretarResposta('{"opcoes":[{"rotulo":"a', conteudoVaelhorn);
+  ok(!c.texto && !!c.erro, 'Resposta sem narração vira erro, não texto cru');
+
+  // Prosa sem JSON continua servindo.
+  const d = interpretarResposta('A neblina desce sobre a ponte quebrada.', conteudoVaelhorn);
+  ok(d.texto === 'A neblina desce sobre a ponte quebrada.', 'Prosa pura é aceita');
+
+  // Id de item inventado não entra no jogo.
+  const e = interpretarResposta(
+    JSON.stringify({ narracao: 'Você acha algo no lodo.', achado: 'espada_de_mentira' }),
+    conteudoVaelhorn,
+  );
+  ok(e.achado === undefined, 'Item inventado pela IA é recusado');
+
+  // Repetição de opção nunca passa.
+  const rep = validarOpcoesIA(
+    [{ rotulo: 'Falar com a Elza!', custoPeriodos: 0 }, { rotulo: 'Erguer o edital', custoPeriodos: 0 }],
+    ['falar com Elza'],
+  );
+  ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// Tipografia: o texto vira parágrafos e falas separadas.
+{
+  const blocos = emBlocos(
+    'A taverna cheira a sebo.\n\n— Guarde seu ouro, freguesa.\n\nElza vira as costas.',
+    ['Elza'],
+  );
+  ok(blocos.length === 3, 'Três blocos de narração');
+  ok(blocos[1].tipo === 'fala', 'Linha com travessão vira fala');
+  ok(blocos[1].tipo === 'fala' && blocos[1].quem === 'Elza', 'Fala é atribuída a quem está por perto');
+
+  const parede = 'Frase comprida que se repete. '.repeat(30);
+  const partido = emBlocos(parede, []);
+  ok(partido.length > 1, 'Parede de texto sem quebra é fatiada em parágrafos');
 }
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM.\n' : `\n${falhas} FALHA(S).\n`);

@@ -218,7 +218,7 @@ export const criaturasVaelhorn: Criatura[] = [
   {
     id: 'carnical_de_cova',
     nome: 'Carniçal de cova',
-    descricao: 'Come o que Odo enterra, e às vezes não espera.',
+    descricao: 'Come o que Oda enterra, e às vezes não espera.',
     nivel: 4, vida: 30, defesa: 14, acerto: 14, ataqueNome: 'unhada',
     dano: { base: 11, dispersao: 0.45, tipo: 'cortante' },
     moralBase: 100, xp: 36, faccaoId: 'morto',
@@ -273,7 +273,7 @@ export const criaturasVaelhorn: Criatura[] = [
   // ── CHEFE (GDD §17)
   {
     id: 'vess_fiador',
-    nome: 'Vess, o Fiador',
+    nome: 'Vess, a Fiadora',
     descricao: 'Nunca ergue a voz. Nunca precisa. A Corrente pende do seu cinto.',
     nivel: 6, vida: 64, defesa: 15, acerto: 15, ataqueNome: 'a Corrente',
     dano: { base: 12, dispersao: 0.35, tipo: 'contusão' },
@@ -281,7 +281,7 @@ export const criaturasVaelhorn: Criatura[] = [
     chefe: true,
     fase2: {
       gatilhoPct: 0.5,
-      descricao: 'Ergue a Corrente do Fiador, e o ar esquece nomes.',
+      descricao: 'Ergue a Corrente da Fiadora, e o ar esquece nomes.',
       mecanica: 'apagar_vinculo',
     },
     loot: [{ item: 'moeda_antiga', chance: 1 }],
@@ -319,7 +319,7 @@ export const criaturasVaelhorn: Criatura[] = [
   {
     id: 'o_selado',
     nome: 'O Selado',
-    descricao: 'O que Sarn trancou embaixo da capela. Não tem forma fixa porque nunca precisou de uma.',
+    descricao: 'O que Sarine trancou embaixo da capela. Não tem forma fixa porque nunca precisou de uma.',
     nivel: 9, vida: 110, defesa: 18, acerto: 17, ataqueNome: 'a coisa sem nome',
     dano: { base: 18, dispersao: 0.4, tipo: 'arcano' },
     moralBase: 100, xp: 320, faccaoId: 'arcano',

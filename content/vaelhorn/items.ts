@@ -116,7 +116,7 @@ export const itensVaelhorn: Item[] = [
   it({ id: 'bastao_ferrado', nome: 'Bastão ferrado', descricao: 'Carvalho com anéis de ferro. O tipo de arma que não parece arma.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 20, dano: { base: 10, dispersao: 0.35, tipo: 'contusão' }, lojas: MERC }),
   it({ id: 'espada_bastarda', nome: 'Espada bastarda', descricao: 'Uma mão ou duas, conforme o dia exigir.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 78, raridade: 'notavel', dano: { base: 15, dispersao: 0.32, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'lamina_dos_corvos', nome: 'A Lâmina dos Corvos', descricao: 'O aço é escuro e não reflete quem o segura.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 320, raridade: 'unica', dano: { base: 16, dispersao: 0.28, tipo: 'cortante' } }),
-  it({ id: 'martelo_do_dunn', nome: 'Martelo de Dunn', descricao: 'A marca do ferreiro está do lado de dentro, onde só ele veria.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 190, raridade: 'rara', dano: { base: 17, dispersao: 0.4, tipo: 'contusão' } }),
+  it({ id: 'martelo_do_dunn', nome: 'Martelo de Duna', descricao: 'A marca da ferreira está do lado de dentro, onde só ela veria.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 190, raridade: 'rara', dano: { base: 17, dispersao: 0.4, tipo: 'contusão' } }),
 
   // ───────────────────────────── ARMAS à distância
   it({ id: 'dardos', nome: 'Punhado de dardos', descricao: 'Leves, sujos, atirados sem cerimônia.', slot: 'arma', alcance: 'distancia', peso: 1, valor: 8, dano: { base: 6, dispersao: 0.45, tipo: 'perfurante' }, lojas: MERC }),
@@ -131,7 +131,7 @@ export const itensVaelhorn: Item[] = [
   it({ id: 'peles_de_cacador', nome: 'Peles de caçador', descricao: 'Quentes, silenciosas, com cheiro de mata.', slot: 'armadura', peso: 5, valor: 38, defesa: 3, lojas: MERC }),
   it({ id: 'cota_de_escamas', nome: 'Cota de escamas', descricao: 'Placas costuradas como telhas. Barulhenta e boa.', slot: 'armadura', peso: 14, valor: 145, defesa: 6, lojas: MERC }),
   it({ id: 'cota_do_regimento', nome: 'Cota do regimento', descricao: 'A insígnia foi arrancada, mas a costura ainda diz de onde veio.', slot: 'armadura', peso: 12, valor: 130, raridade: 'notavel', defesa: 5 }),
-  it({ id: 'armadura_do_vigia', nome: 'Armadura do vigia', descricao: 'Leve o bastante para subir a torre, grossa o bastante para descer inteiro.', slot: 'armadura', peso: 9, valor: 160, raridade: 'notavel', defesa: 6 }),
+  it({ id: 'armadura_do_vigia', nome: 'Armadura da vigia', descricao: 'Leve o bastante para subir a torre, grossa o bastante para descer inteiro.', slot: 'armadura', peso: 9, valor: 160, raridade: 'notavel', defesa: 6 }),
 
   // ───────────────────────────── ESCUDOS
   it({ id: 'tampa_de_barril', nome: 'Tampa de barril', descricao: 'Improviso da taverna. Funciona uma vez.', slot: 'escudo', peso: 3, valor: 2, defesa: 1, lojas: TAV }),
@@ -157,7 +157,7 @@ export const itensVaelhorn: Item[] = [
   it({ id: 'pocao_cura_maior', nome: 'Poção de cura maior', descricao: 'Cara como um mês de trabalho, e vale.', slot: 'consumivel', peso: 1, valor: 120, raridade: 'rara', efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 45 }], lojas: MERC }),
   it({ id: 'tonico_de_mana_maior', nome: 'Tônico de mana maior', descricao: 'Azul-escuro, denso, com gosto de tempestade.', slot: 'consumivel', peso: 1, valor: 90, raridade: 'rara', efeitosUso: [{ tipo: 'recurso', recurso: 'mana', delta: 20 }], lojas: MERC }),
   it({ id: 'oleo_de_lamina', nome: 'Óleo de lâmina', descricao: 'Passa-se no gume antes da briga que se sabe que virá.', slot: 'consumivel', peso: 0, valor: 18, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 5 }], lojas: MERC }),
-  it({ id: 'sal_bento', nome: 'Sal bento', descricao: 'Uma linha no chão que o padre jura que segura.', slot: 'consumivel', peso: 0, valor: 26, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -6 }, { tipo: 'pressao', pressao: 'sanidade', delta: -6 }], lojas: ['capela'] }),
+  it({ id: 'sal_bento', nome: 'Sal bento', descricao: 'Uma linha no chão que a madre jura que segura.', slot: 'consumivel', peso: 0, valor: 26, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -6 }, { tipo: 'pressao', pressao: 'sanidade', delta: -6 }], lojas: ['capela'] }),
   it({ id: 'fumo_de_nadja', nome: 'Fumo de Nadja', descricao: 'Enrolado apertado. Tira a dor e um pedaço da manhã seguinte.', slot: 'consumivel', peso: 0, valor: 16, efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 6 }, { tipo: 'pressao', pressao: 'sanidade', delta: 5 }], lojas: ['acampamento'] }),
   it({ id: 'compressa_de_ervas', nome: 'Compressa de ervas', descricao: 'Morna, apertada sobre o roxo. Devolve o fôlego.', slot: 'consumivel', peso: 0, valor: 10, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 8 }, { tipo: 'condicao', condicao: 'ferido', adicionar: false }], lojas: MERC }),
   it({ id: 'agua_benta', nome: 'Água benta', descricao: 'Um frasco de vidro leitoso. Ferve perto do que não devia andar.', slot: 'consumivel', peso: 0, valor: 22, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -8 }], lojas: ['capela'] }),
@@ -165,7 +165,7 @@ export const itensVaelhorn: Item[] = [
   // ───────────────────────────── FERRAMENTAS
   it({ id: 'lanterna_surda', nome: 'Lanterna surda', descricao: 'Só ilumina para onde a portinhola aponta.', slot: 'ferramenta', peso: 2, valor: 24, lojas: MERC }),
   it({ id: 'pedra_de_amolar', nome: 'Pedra de amolar', descricao: 'O som que precede toda briga bem planejada.', slot: 'ferramenta', peso: 1, valor: 6, concedeVerbo: 'reparar', lojas: MERC }),
-  it({ id: 'pa_de_coveiro', nome: 'Pá de coveiro', descricao: 'A de Odo tem o cabo lustroso de uso.', slot: 'ferramenta', peso: 4, valor: 9, concedeVerbo: 'profanar', lojas: MERC }),
+  it({ id: 'pa_de_coveiro', nome: 'Pá de coveiro', descricao: 'A de Oda tem o cabo lustroso de uso.', slot: 'ferramenta', peso: 4, valor: 9, concedeVerbo: 'profanar', lojas: MERC }),
   it({ id: 'vara_de_pesca', nome: 'Vara de pesca', descricao: 'A desculpa perfeita para passar o dia parado.', slot: 'ferramenta', peso: 2, valor: 7, lojas: MERC }),
   it({ id: 'armadilha_de_aco', nome: 'Armadilha de aço', descricao: 'Fecha na canela e não pergunta de quem é.', slot: 'ferramenta', peso: 5, valor: 32, lojas: MERC }),
   it({ id: 'papel_e_tinta', nome: 'Papel e tinta', descricao: 'Caro. Poucos na vila sabem para que serve.', slot: 'ferramenta', peso: 1, valor: 20, concedeVerbo: 'estudar', lojas: MERC }),
@@ -177,7 +177,7 @@ export const itensVaelhorn: Item[] = [
   // ───────────────────────────── MATERIAIS
   it({ id: 'dente_lobo', nome: 'Dente de lobo', descricao: 'Amarelo, curvo, ainda afiado.', slot: 'material', peso: 0, valor: 7 }),
   it({ id: 'garra_curva', nome: 'Garra curva', descricao: 'Arrancada com a raiz. Vale mais assim.', slot: 'material', peso: 0, valor: 9 }),
-  it({ id: 'pele_de_urso', nome: 'Pele de urso', descricao: 'Pesa como um homem morto e aquece como três.', slot: 'material', peso: 6, valor: 40, raridade: 'notavel' }),
+  it({ id: 'pele_de_urso', nome: 'Pele de urso', descricao: 'Pesa como um corpo morto e aquece como três.', slot: 'material', peso: 6, valor: 40, raridade: 'notavel' }),
   it({ id: 'escama_de_junco', nome: 'Escama de junco', descricao: 'Verde-lodo, dura, quase bonita.', slot: 'material', peso: 0, valor: 6 }),
   it({ id: 'glandula_de_veneno', nome: 'Glândula de veneno', descricao: 'Não fure. Nadja sabe o que fazer com ela.', slot: 'material', peso: 0, valor: 24, raridade: 'notavel' }),
   it({ id: 'osso_limpo', nome: 'Osso limpo', descricao: 'Sem uma grama de carne. Ninguém sabe quem limpou.', slot: 'material', peso: 1, valor: 5 }),

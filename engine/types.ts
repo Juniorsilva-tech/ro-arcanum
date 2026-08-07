@@ -172,6 +172,9 @@ export type NPC = {
   rotina: Partial<Record<Periodo, string>>; // eles se movem (GDD §10.3)
   vozNarrativa: string;
   personalidade: string;
+  // Como ela é de corpo. O narrador descreve gente, não fichas — e num jogo
+  // adulto isso é parte do retrato, na mesma linha da voz e da índole.
+  corpo?: string;
   segredo?: { conteudo: string; comoDescobrir: string };
   ensinaMestre?: string; // id de mestre no Livro
   atributos?: Partial<Atributos>;
@@ -215,6 +218,9 @@ export type Cenario = {
   k: number; // botão de caos (GDD §2.1)
   tabuCentral: string;
   eixosRelacao: { id: string; nome: string }[]; // disposicao/confianca/medo (GDD §10.1)
+  // A verdade do mundo, em poucas linhas. Vai inteira no pacote do narrador:
+  // é isso que faz a voz dele ser deste lugar e não de qualquer fantasia.
+  premissa?: string[];
 };
 
 // ── Classe e origem (GDD §6.3).
@@ -408,6 +414,9 @@ export type Campaign = {
   turno: number;
   combate?: CombatState | null;
   questEstado: Record<string, QuestEstado>;
+  // Rótulos de opção já oferecidos. A IA recebe a lista e fica proibida de
+  // repetir — opção repetida é o cheiro mais forte de jogo sem memória.
+  opcoesUsadas?: string[];
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };

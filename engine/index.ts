@@ -15,3 +15,4 @@ export * from './turn';
 export * from './campaign';
 export * from './narration';
 export * from './llm';
+export * from './prosa';

@@ -31,7 +31,7 @@ export const locaisVaelhorn: Local[] = [
     perigo: 3,
     ganchos: [
       'Um edital novo no quadro, ainda com a cera fresca',
-      'Um homem encapuzado bebe sozinho no canto',
+      'Uma mulher encapuzada bebe sozinha no canto',
     ],
     pontos: ['balcão', 'lareira', 'quarto de cima', 'porão'],
     rotas: [
@@ -85,7 +85,7 @@ export const locaisVaelhorn: Local[] = [
     },
     privacidadeBase: { madrugada: 2, manha: 0, tarde: 0, entardecer: 1, anoitecer: 2, noite: 2 },
     perigo: 2,
-    ganchos: ['Uma banca vende amuletos que o padre condenaria', 'O ferreiro discute alto com um cliente'],
+    ganchos: ['Uma banca vende amuletos que a madre condenaria', 'A ferreira discute alto com uma freguesa'],
     pontos: ['banca de ervas', 'ferraria', 'beco dos fundos'],
     rotas: [
       { destino: 'taverna', periodos: 0, perigo: 1 },
@@ -240,15 +240,15 @@ export const locaisVaelhorn: Local[] = [
       tarde: 'Vento constante. As flores secas rolam entre as pedras.',
       entardecer: 'As sombras das lápides se alongam morro abaixo, todas na mesma direção.',
       anoitecer: 'O portão range mesmo sem vento.',
-      noite: 'Aqui, à noite, você entende por que o padre benze o caminho de volta.',
+      noite: 'Aqui, à noite, você entende por que a madre benze o caminho de volta.',
     },
     privacidadeBase: { madrugada: 3, manha: 1, tarde: 2, entardecer: 2, anoitecer: 3, noite: 3 },
     perigo: 5,
     ganchos: [
       'Três covas recentes sem nome na pedra',
-      'A pá do coveiro largada no meio do caminho, ainda com terra fresca',
+      'A pá da coveira largada no meio do caminho, ainda com terra fresca',
     ],
-    pontos: ['portão de ferro', 'cova aberta', 'casa do coveiro', 'ossário'],
+    pontos: ['portão de ferro', 'cova aberta', 'casa da coveira', 'ossário'],
     rotas: [
       { destino: 'capela', periodos: 0, perigo: 2 },
       { destino: 'praca', periodos: 0, perigo: 1 },
@@ -294,7 +294,7 @@ export const locaisVaelhorn: Local[] = [
       'A via velha que ligava o vale ao litoral. Desde que a ponte caiu, só passam os desesperados e os que lucram com eles.',
     atmosferaPorPeriodo: {
       madrugada: 'Vazia e fria. Cada curva parece guardar alguém.',
-      manha: 'Uma carroça ou outra, o carreteiro olhando para trás mais do que para frente.',
+      manha: 'Uma carroça ou outra, a carreteira olhando para trás mais do que para frente.',
       tarde: 'Poeira, calor e o cheiro de esterco secando.',
       entardecer: 'A hora em que os salteadores gostam: luz baixa e viajante cansado.',
       anoitecer: 'Ninguém viaja a esta hora por escolha.',
@@ -326,7 +326,7 @@ export const locaisVaelhorn: Local[] = [
       madrugada: 'Uma vela acesa na janela do segundo andar. Sempre a mesma janela.',
       manha: 'Criados entram e saem pela porta de serviço, de cabeça baixa.',
       tarde: 'O portão da frente permanece fechado. Ninguém bate.',
-      entardecer: 'Cheiro de comida boa escapando pela chaminé — comida demais para um homem só.',
+      entardecer: 'Cheiro de comida boa escapando pela chaminé — comida demais para as duas que moram aqui.',
       anoitecer: 'Vozes lá dentro. Mais de uma. Todas baixas.',
       noite: 'A casa dorme, menos aquela janela.',
     },
@@ -376,7 +376,7 @@ export const locaisVaelhorn: Local[] = [
     regiao: 'Fora do Vale',
     tipo: 'torre',
     descricaoBase:
-      'Uma torre de fronteira que a coroa esqueceu de pagar. Um homem ainda sobe todo dia, por hábito, e acende o farol que ninguém vê.',
+      'Uma torre de fronteira que a coroa esqueceu de pagar. Uma vigia ainda sobe todo dia, por hábito, e acende o farol que ninguém vê.',
     atmosferaPorPeriodo: {
       madrugada: 'O farol arde no alto. Contra o quê, já ninguém lembra.',
       manha: 'Do topo se enxerga o vale inteiro — e a ponte, ou o que sobrou dela.',
@@ -391,7 +391,7 @@ export const locaisVaelhorn: Local[] = [
       'Um registro de sinais luminosos com uma entrada na noite em que Mir queimou',
       'A escada do último lance foi serrada e reposta',
     ],
-    pontos: ['topo do farol', 'quarto do vigia', 'arquivo de sinais'],
+    pontos: ['topo do farol', 'quarto da vigia', 'arquivo de sinais'],
     rotas: [{ destino: 'estrada', periodos: 1, perigo: 4 }],
   },
 

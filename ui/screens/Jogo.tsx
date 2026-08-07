@@ -24,6 +24,7 @@ import {
   NOME_CATEGORIA,
   type CategoriaVerbo,
   type Verbo,
+  emBlocos,
   type OpcaoResolvida,
   type NPC,
 } from '@/engine';
@@ -57,6 +58,18 @@ export function Jogo() {
   const irPara = useGame((s) => s.irPara);
 
   const ctx = cena?.contexto;
+
+  // Nomes que o narrador pode citar — servem para saber de quem é cada fala.
+  const nomesConhecidos = useMemo(() => {
+    if (!content) return [] as string[];
+    const set = new Set<string>();
+    for (const n of content.npcs) {
+      set.add(n.nome);
+      const primeiro = n.nome.split(/[,\s]/)[0];
+      if (primeiro.length > 2) set.add(primeiro);
+    }
+    return [...set].sort((a, b) => b.length - a.length);
+  }, [content]);
 
   const porCategoria = useMemo(() => {
     const m = new Map<CategoriaVerbo, Verbo[]>();
@@ -118,7 +131,7 @@ export function Jogo() {
           showsVerticalScrollIndicator={false}
         >
           {feed.map((e, i) => (
-            <EntradaNarrativa key={e.id} entrada={e} primeira={i === 0} />
+            <EntradaNarrativa key={e.id} entrada={e} primeira={i === 0} nomes={nomesConhecidos} />
           ))}
 
           <Divisor label={iaStatus === 'pensando' ? 'a cena · a IA está escrevendo…' : 'a cena'} />
@@ -263,21 +276,79 @@ function FaixaContexto(props: {
   );
 }
 
-function EntradaNarrativa({ entrada, primeira }: { entrada: EntradaFeed; primeira: boolean }) {
+function EntradaNarrativa({
+  entrada,
+  primeira,
+  nomes,
+}: {
+  entrada: EntradaFeed;
+  primeira: boolean;
+  nomes: string[];
+}) {
+  // Cada ação abre um bloco visível: o jogador precisa ver onde um turno
+  // terminou e o outro começou.
+  const marca = entrada.abreTurno ? (
+    <View style={styles.marcaTurno}>
+      <View style={styles.marcaRegua} />
+      {!!entrada.cabecalho && <Text style={styles.marcaTexto}>{entrada.cabecalho}</Text>}
+      <View style={styles.marcaRegua} />
+    </View>
+  ) : null;
+
   if (entrada.tipo === 'sistema') {
     // Falhas de IA precisam saltar aos olhos — antes ficavam num cinza invisível.
     const alerta = entrada.texto.startsWith('IA ');
     return (
-      <TextoMono style={[styles.sistema, alerta && styles.sistemaAlerta]}>{entrada.texto}</TextoMono>
+      <>
+        {marca}
+        <TextoMono style={[styles.sistema, alerta && styles.sistemaAlerta]}>{entrada.texto}</TextoMono>
+      </>
     );
   }
   if (entrada.tipo === 'acao') {
-    return <Text style={styles.acao}>{entrada.texto}</Text>;
+    return (
+      <>
+        {marca}
+        <View style={styles.acaoCartao}>
+          <Text style={styles.acaoRotulo}>você</Text>
+          <TextoSerif style={styles.acaoTexto}>{entrada.texto}</TextoSerif>
+        </View>
+      </>
+    );
   }
   if (entrada.tipo === 'eco') {
-    return <Text style={styles.eco}>{entrada.texto}</Text>;
+    return (
+      <>
+        {marca}
+        <Text style={styles.eco}>{entrada.texto}</Text>
+      </>
+    );
   }
-  return <TextoSerif style={[styles.narracao, primeira ? styles.narracaoPrimeira : null]}>{entrada.texto}</TextoSerif>;
+
+  // Narração: vira parágrafos e falas separadas. Nada de parede de texto.
+  const blocos = emBlocos(entrada.texto, nomes);
+  return (
+    <>
+      {marca}
+      <View style={styles.narrBloco}>
+        {blocos.map((b, i) =>
+          b.tipo === 'fala' ? (
+            <View key={i} style={styles.falaWrap}>
+              {!!b.quem && <Text style={styles.falaQuem}>{b.quem}</Text>}
+              <TextoSerif style={styles.falaTexto}>{b.texto}</TextoSerif>
+            </View>
+          ) : (
+            <TextoSerif
+              key={i}
+              style={[styles.narracao, primeira && i === 0 ? styles.narracaoPrimeira : null]}
+            >
+              {b.texto}
+            </TextoSerif>
+          ),
+        )}
+      </View>
+    </>
+  );
 }
 
 function OpcaoCena({ op, onPress }: { op: OpcaoResolvida; onPress: () => void }) {
@@ -382,8 +453,58 @@ const styles = StyleSheet.create({
   faixaVida: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 12 },
   faixaData: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginTop: 2 },
   faixaMeta: { fontFamily: fontes.mono, color: cores.linha, fontSize: 10, marginTop: 1 },
-  narracao: { color: cores.vellum, marginBottom: esp.md, fontSize: 20, lineHeight: 30 },
+  narrBloco: { marginBottom: esp.lg },
+  narracao: { color: cores.vellum, marginBottom: esp.md, fontSize: 20, lineHeight: 31 },
   narracaoPrimeira: { fontSize: 21 },
+  // Fala: recuada, com o nome de quem falou acima. É o que separa boca de prosa.
+  falaWrap: {
+    marginLeft: esp.md,
+    marginBottom: esp.md,
+    paddingLeft: esp.md,
+    borderLeftWidth: 2,
+    borderLeftColor: cores.couro,
+  },
+  falaQuem: {
+    fontFamily: fontes.mono,
+    color: cores.ouro,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  falaTexto: { color: cores.vellum, fontSize: 20, lineHeight: 30, fontStyle: 'italic' },
+  // Régua que abre cada turno.
+  marcaTurno: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: esp.sm,
+    marginTop: esp.lg,
+    marginBottom: esp.md,
+  },
+  marcaRegua: { flex: 1, height: 1, backgroundColor: cores.fundo3 },
+  marcaTexto: {
+    fontFamily: fontes.mono,
+    color: cores.mudo,
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: 'lowercase',
+  },
+  // A escolha do jogador, como cartão da interface — nunca como texto narrado.
+  acaoCartao: {
+    borderLeftWidth: 2,
+    borderLeftColor: cores.verdigris,
+    paddingLeft: esp.md,
+    paddingVertical: esp.xs,
+    marginBottom: esp.md,
+  },
+  acaoRotulo: {
+    fontFamily: fontes.mono,
+    color: cores.verdigris,
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  acaoTexto: { color: cores.vellum, fontSize: 17, lineHeight: 24 },
   situacao: { color: cores.vellum, fontStyle: 'italic', fontSize: 19, lineHeight: 28 },
   iaAviso: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginBottom: esp.sm },
   iaErro: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 11, marginBottom: esp.sm },
@@ -397,7 +518,6 @@ const styles = StyleSheet.create({
     paddingLeft: esp.sm,
     textTransform: 'none',
   },
-  acao: { fontFamily: fontes.monoMedium, color: cores.verdigris, fontSize: 13, marginBottom: esp.sm },
   opcao: {
     borderWidth: 1,
     borderColor: cores.linha,

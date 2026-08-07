@@ -26,6 +26,9 @@ import {
   verificarQuests,
   aprenderArte as aprenderArteEngine,
   conjurarLivre,
+  chaveRotulo,
+  NOME_PERIODO,
+  PERIODOS,
   type OpcaoResolvida,
   type Contexto,
 } from '@/engine';
@@ -61,7 +64,15 @@ export type Tela =
   | 'missoes'
   | 'fimcapitulo';
 
-export type EntradaFeed = { id: string; texto: string; tipo: 'narracao' | 'eco' | 'sistema' | 'acao' };
+export type EntradaFeed = {
+  id: string;
+  texto: string;
+  tipo: 'narracao' | 'eco' | 'sistema' | 'acao';
+  // Abre um turno novo na tela: a interface desenha o separador e o cabeçalho.
+  // Sem isso o feed vira um rolo só e ninguém sabe onde uma ação terminou.
+  abreTurno?: boolean;
+  cabecalho?: string;
+};
 
 type Rascunho = {
   cenarioId?: string;
@@ -76,11 +87,44 @@ const ATTR_MAX = 16;
 const PONTOS_TOTAIS = 66; // 6×10 + 6 de distribuição
 
 let feedSeq = 0;
-const nf = (texto: string, tipo: EntradaFeed['tipo']): EntradaFeed => ({
+const nf = (
+  texto: string,
+  tipo: EntradaFeed['tipo'],
+  extra?: { abreTurno?: boolean; cabecalho?: string },
+): EntradaFeed => ({
   id: `f${feedSeq++}`,
   texto,
   tipo,
+  ...extra,
 });
+
+// Cabeçalho curto do turno: onde e quando aquilo aconteceu.
+function marcaDoTurno(content: ContentBundle, camp: Campaign): string {
+  const local = content.locais.find((l) => l.id === camp.localAtual);
+  return `${local?.nome ?? ''} · ${NOME_PERIODO[PERIODOS[camp.calendario.periodoIndex % PERIODOS.length]]}`;
+}
+
+// Guarda o que já foi oferecido para a IA nunca repetir uma opção (§18.2).
+function lembrarOpcao(camp: Campaign, rotulo: string) {
+  const lista = camp.opcoesUsadas ?? (camp.opcoesUsadas = []);
+  const chave = chaveRotulo(rotulo);
+  if (!lista.some((r) => chaveRotulo(r) === chave)) lista.push(rotulo);
+  if (lista.length > 60) lista.splice(0, lista.length - 60);
+}
+
+// A IA só sugere o id; quem entrega o item é a engine, e só se o id existir
+// mesmo na base. Assim o que aparece na narração é o que entra na bolsa.
+function entregarAchado(
+  content: ContentBundle,
+  camp: Campaign,
+  id?: string,
+): EntradaFeed | undefined {
+  if (!id) return undefined;
+  const item = content.itens.find((i) => i.id === id);
+  if (!item) return undefined;
+  camp.personagem.inventario[item.id] = (camp.personagem.inventario[item.id] ?? 0) + 1;
+  return nf(`Você guarda: ${item.nome}.`, 'sistema');
+}
 
 interface GameState {
   pronto: boolean;
@@ -191,8 +235,17 @@ export const useGame = create<GameState>((set, get) => ({
     if (!camp) return;
     const content = bundlePorId(camp.cenarioId);
     if (!content) return;
-    set({ camp, content, feed: [nf('Você retoma de onde parou.', 'sistema')], tela: 'jogo' });
+    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
+    set({
+      camp,
+      content,
+      feed: [nf('Você retoma de onde parou.', 'sistema', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
+      tela: 'jogo',
+      ocupado: usaIA,
+    });
     recomputarCena(get, set);
+    // Retomar também pede cena nova: nada de reaparecer com as opções velhas.
+    if (usaIA) await replanejarCena(get, set, 'Você retoma a jornada de onde parou.');
   },
 
   async aceitarAviso() {
@@ -239,15 +292,22 @@ export const useGame = create<GameState>((set, get) => ({
       origemId: r.origemId,
     });
     const cena = montarCena(content, camp);
+    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
     set({
       content,
       camp,
       cena,
       tela: 'jogo',
       temSave: true,
-      feed: [nf(cena.narracao, 'narracao')],
+      // Com IA ligada a abertura também é escrita por ela: as opções iniciais
+      // nunca podem ser as mesmas de sempre.
+      feed: usaIA ? [] : [nf(cena.narracao, 'narracao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
+      ocupado: usaIA,
     });
     await salvarCampanha(camp);
+    if (usaIA) {
+      await replanejarCena(get, set, `A história começa. ${cena.narracao}`);
+    }
   },
 
   async abandonar() {
@@ -432,15 +492,24 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     const t = texto.trim();
     if (!t) return;
-    set({ feed: [...get().feed, nf(`» ${t}`, 'acao')] });
     const cls = classificarAcaoLivre(t, content, get().cena?.contexto);
     if (cls) {
       await executar(get, set, { tipo: 'verbo', verboId: cls.verboId, alvoId: cls.alvoId }, undefined);
+      return;
+    }
+    // Não casou com nenhum verbo? A ação livre não pode morrer no ar: o
+    // narrador assume e escreve o que aconteceu, com opções novas depois.
+    set({
+      feed: [...get().feed, nf(t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
+    });
+    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
+    if (usaIA) {
+      await replanejarCena(get, set, `Você tenta o seguinte: ${t}`);
     } else {
       set({
         feed: [
           ...get().feed,
-          nf('Você tenta, mas o gesto se perde no ar — talvez precise ser mais direto, ou usar o menu de Ações.', 'sistema'),
+          nf('Você tenta — mas sem o narrador ligado, o gesto se perde. Ligue a IA em Configurações ou use o menu de Ações.', 'sistema'),
         ],
       });
     }
@@ -471,7 +540,10 @@ export const useGame = create<GameState>((set, get) => ({
       tela: 'jogo',
       feed: [
         ...get().feed,
-        nf(`Você segue para ${alvo?.nome ?? destino}.`, 'sistema'),
+        nf(`Você segue para ${alvo?.nome ?? destino}.`, 'sistema', {
+          abreTurno: true,
+          cabecalho: `${alvo?.nome ?? destino} · ${NOME_PERIODO[PERIODOS[camp.calendario.periodoIndex % PERIODOS.length]]}`,
+        }),
         ...(usaIA ? [] : [nf(cena.narracao, 'narracao')]),
       ],
     });
@@ -575,12 +647,24 @@ async function executar(
   // Trava o turno inteiro: nada de clicar em mais nada até a cena nova existir.
   set({ ocupado: true, iaStatus: usaIA ? 'pensando' : 'off', iaErro: undefined });
 
+  // O que o jogador escolheu vira um cartão próprio na interface — nunca texto
+  // solto no meio da narração, e nunca um rótulo tipo "Narrador:".
+  const rotuloEscolhido =
+    intencao.tipo === 'opcao'
+      ? intencao.opcao.rotulo
+      : content.verbos.find((v) => v.id === intencao.verboId)?.nome ?? '';
+  if (rotuloEscolhido) lembrarOpcao(camp, rotuloEscolhido);
+
   const r = resolverIntencao(content, camp, intencao);
   camp.capitulo.periodosDecorridos += r.custoPeriodos;
   talvezRevelarSegredo(camp, r.alvo);
 
   const { narracao, eco } = narrarResultado(camp, r);
   const cena = montarCena(content, { ...camp });
+
+  const abertura: EntradaFeed[] = rotuloEscolhido
+    ? [nf(rotuloEscolhido, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })]
+    : [];
 
   // Sem IA: o texto local entra na hora. Com IA: nada de texto provisório —
   // o rótulo da opção não deve aparecer como narração (era o "vai para o texto").
@@ -593,7 +677,7 @@ async function executar(
   set({
     camp: { ...camp },
     cena,
-    feed: [...get().feed, ...entradasLocais],
+    feed: [...get().feed, ...abertura, ...entradasLocais],
     ocupado: usaIA, // continua travado enquanto a IA escreve
   });
   await salvarCampanha(camp);
@@ -614,23 +698,13 @@ async function executar(
     );
     const cenaAtual = get().cena;
     if (res.texto) {
-      const opcoesIA: OpcaoResolvida[] = (res.opcoes ?? []).map((o, i) => ({
-        id: `ia_${camp.turno}_${i}`,
-        rotulo: o.rotulo,
-        dica: o.dica,
-        custoPeriodos: o.custoPeriodos,
-        teste: o.teste
-          ? {
-              atributo: o.teste.atributo as AttrKey,
-              pericia: o.teste.pericia,
-              dificuldade: o.teste.dificuldade,
-            }
-          : undefined,
-        origem: 'ia',
-      }));
+      const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}`);
       const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
       if (eco) extras.push(nf(eco, 'eco'));
+      const achado = entregarAchado(content, camp, res.achado);
+      if (achado) extras.push(achado);
       set({
+        camp: { ...camp },
         feed: [...get().feed, ...extras],
         cena:
           cenaAtual && opcoesIA.length > 0
@@ -639,6 +713,7 @@ async function executar(
         iaStatus: 'ok',
         ocupado: false,
       });
+      await salvarCampanha(camp);
     } else {
       // Falhou: o jogo não trava — entra o texto local e o motivo aparece (§20).
       const locais: EntradaFeed[] = [nf(narracao, 'narracao')];
@@ -662,6 +737,40 @@ async function executar(
 // Mantém só a opção canônica de "deixar o tempo correr" abaixo das da IA.
 function opcoesFixas(opcoes: OpcaoResolvida[]): OpcaoResolvida[] {
   return opcoes.filter((o) => o.id === 'deixar_correr');
+}
+
+// Converte as sugestões da IA em opções de cena, já filtrando repetição contra
+// tudo que o jogador viu antes — opção repetida nunca deve chegar à tela.
+function montarOpcoesIA(
+  brutas: { rotulo: string; dica?: string; custoPeriodos: number; teste?: { atributo: string; pericia?: string; dificuldade: number } }[] | undefined,
+  camp: Campaign,
+  sufixo: string,
+): OpcaoResolvida[] {
+  const vistas = new Set((camp.opcoesUsadas ?? []).map(chaveRotulo));
+  const out: OpcaoResolvida[] = [];
+  for (const o of brutas ?? []) {
+    const chave = chaveRotulo(o.rotulo);
+    if (vistas.has(chave)) continue;
+    vistas.add(chave);
+    out.push({
+      id: `ia_${sufixo}_${out.length}`,
+      rotulo: o.rotulo,
+      dica: o.dica,
+      custoPeriodos: o.custoPeriodos,
+      teste: o.teste
+        ? {
+            atributo: o.teste.atributo as AttrKey,
+            pericia: o.teste.pericia,
+            dificuldade: o.teste.dificuldade,
+          }
+        : undefined,
+      origem: 'ia',
+    });
+  }
+  // Oferecida já conta como usada: uma opção que apareceu uma vez não volta,
+  // mesmo que o jogador não a tenha escolhido.
+  for (const o of out) lembrarOpcao(camp, o.rotulo);
+  return out;
 }
 
 // Toda ação fora do turno normal (aprender, conjurar, viajar, sair do combate)
@@ -692,18 +801,13 @@ async function replanejarCena(
   );
   const cenaAtual = get().cena;
   if (res.texto) {
-    const opcoesIA: OpcaoResolvida[] = (res.opcoes ?? []).map((o, i) => ({
-      id: `ia_${camp.turno}_x${i}`,
-      rotulo: o.rotulo,
-      dica: o.dica,
-      custoPeriodos: o.custoPeriodos,
-      teste: o.teste
-        ? { atributo: o.teste.atributo as AttrKey, pericia: o.teste.pericia, dificuldade: o.teste.dificuldade }
-        : undefined,
-      origem: 'ia',
-    }));
+    const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}x`);
+    const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
+    const achado = entregarAchado(content, camp, res.achado);
+    if (achado) extras.push(achado);
     set({
-      feed: [...get().feed, nf(res.texto, 'narracao')],
+      camp: { ...camp },
+      feed: [...get().feed, ...extras],
       cena:
         cenaAtual && opcoesIA.length > 0
           ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
@@ -711,6 +815,7 @@ async function replanejarCena(
       iaStatus: 'ok',
       ocupado: false,
     });
+    await salvarCampanha(camp);
   } else {
     set({
       iaStatus: 'erro',
