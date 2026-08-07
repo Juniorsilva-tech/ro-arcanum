@@ -27,7 +27,7 @@ export type LlmConfig = {
 
 // Padrões. Slugs variam com o tempo — use o botão "Buscar modelos" nas
 // Configurações para pegar a lista atual e grátis direto da OpenRouter.
-export const MODELO_PADRAO_OPENROUTER = 'deepseek/deepseek-chat-v3-0324:free';
+export const MODELO_PADRAO_OPENROUTER = 'thedrummer/rocinante-12b';
 export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
@@ -41,29 +41,39 @@ export const SUGESTOES_OPENROUTER = [
   'meta-llama/llama-3.3-70b-instruct:free',
 ];
 
-// Atalho para quem quer cena adulta e não quer caçar slug. A ordem é a que eu
-// recomendaria: os de cima costumam escrever sem travar.
+// Atalho para quem quer cena adulta e não quer caçar slug.
 //
-// Por que é difícil achar um GRATUITO que narre sexo: o modelo é metade da
-// história. A outra metade é o provedor que serve aquele endpoint — muitos
-// endpoints :free são justamente os moderados, porque quem paga a conta filtra
-// para se proteger. Por isso o app etiqueta "provedor modera" separado de
-// "costuma recusar": são dois filtros diferentes, e o gratuito costuma ter os
-// dois. Um punhado de centavos em crédito abre a porta que a cota grátis fecha.
+// Duas verdades desagradáveis sobre o gratuito:
+//
+// 1. ":free" quase nunca é grátis de verdade. A OpenRouter derruba e recria
+//    esses endpoints o tempo todo, e os que sobrevivem vêm com teto diário
+//    baixo. Contar com eles é contar com sorte.
+// 2. Quando existem, costumam ser servidos por provedor que MODERA — porque
+//    quem banca inferência de graça se protege. Por isso um modelo permissivo
+//    pode recusar mesmo assim: são dois filtros, o do modelo e o do provedor.
+//
+// Os de baixo custam frações de centavo por cena. Dez dólares de crédito duram
+// muito e resolvem o problema de vez.
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
-  { id: 'cognitivecomputations/dolphin3.0-mistral-24b:free', nota: 'linhagem sem filtro; o melhor de graça', pago: false },
-  { id: 'deepseek/deepseek-chat-v3-0324:free', nota: 'ótima prosa; varia com o provedor do dia', pago: false },
-  { id: 'mistralai/mistral-nemo:free', nota: 'leve e pouco travado', pago: false },
-  { id: 'sao10k/l3.3-euryale-70b', nota: 'feito para interpretação adulta; barato', pago: true },
-  { id: 'thedrummer/rocinante-12b', nota: 'muito barato, escreve pesado sem reclamar', pago: true },
-  { id: 'sao10k/l3-lunaris-8b', nota: 'centavos por sessão; bom para cena longa', pago: true },
-  { id: 'nousresearch/hermes-3-llama-3.1-70b', nota: 'permissivo e articulado', pago: true },
-  { id: 'gryphe/mythomax-l2-13b', nota: 'clássico de RP; velho mas obediente', pago: true },
+  // ── Custam crédito, e é o que realmente funciona ──────────────────────────
+  { id: 'sao10k/l3.3-euryale-70b', nota: 'o melhor para cena adulta longa; escreve diálogo sozinho', pago: true },
+  { id: 'thedrummer/rocinante-12b', nota: 'baratíssimo e nunca trava; bom para começar', pago: true },
+  { id: 'sao10k/l3-lunaris-8b', nota: 'centavos por sessão inteira', pago: true },
+  { id: 'nousresearch/hermes-3-llama-3.1-70b', nota: 'permissivo e articulado; prosa acima da média', pago: true },
+  { id: 'thedrummer/anubis-pro-105b-v1', nota: 'pesado e explícito; para quando quiser o teto', pago: true },
+  { id: 'gryphe/mythomax-l2-13b', nota: 'clássico de interpretação; velho, obediente e barato', pago: true },
+  // ── Gratuitos: tente, mas não conte com eles ──────────────────────────────
+  { id: 'cognitivecomputations/dolphin3.0-mistral-24b:free', nota: 'quando está no ar, é o melhor de graça', pago: false },
+  { id: 'deepseek/deepseek-chat-v3-0324:free', nota: 'boa prosa; teto diário aperta rápido', pago: false },
+  { id: 'mistralai/mistral-nemo:free', nota: 'pequeno demais: escreve curto e sem diálogo', pago: false },
 ];
 
 // Teto de saída. O bug do "JSON cru na tela" era truncamento: o modelo estourava
 // o limite no meio do array de opções e a resposta virava lixo impossível de ler.
-const MAX_TOKENS = 2400;
+// Cena com diálogo de verdade ocupa bem mais que cena descritiva. O corte no
+// meio do JSON já é resgatado (ver interpretarResposta), então o teto pode ser
+// generoso sem risco de voltar a vazar texto cru na tela.
+const MAX_TOKENS = 4000;
 
 // ── Que modelo serve para narrar ───────────────────────────────────────────
 // A lista crua da OpenRouter mistura tudo: geradores de música, classificadores
@@ -191,6 +201,7 @@ export function montarPacote(
   camp: Campaign,
   ctx: Contexto,
   fato: string,
+  acao?: { verbo?: string; categoria?: string; alvo?: string; grau?: string },
 ) {
   const p = camp.personagem;
   const nomeItem = (id: string) => content.itens.find((i) => i.id === id)?.nome ?? id;
@@ -309,6 +320,10 @@ export function montarPacote(
     // Rótulos que já foram oferecidos — proibido repetir (nem reescritos).
     rotulosProibidos: (camp.opcoesUsadas ?? []).slice(-24),
     fatoConsumado: fato,
+    // Qual foi a ação, não só como terminou. Sem isto o modelo recebia
+    // "Você tentou elogiar Aldrica — deu certo" e não tinha como saber que o
+    // elogio precisava ser DITO em voz alta na cena.
+    acaoDoJogador: acao,
   };
 }
 
@@ -320,11 +335,28 @@ const INSTRUCAO_SISTEMA =
   '\nVOZ — escreva como um conto medieval, não como um relatório:\n' +
   '• Registro de fábula sombria: frases de fôlego, imagens concretas, o mundo antigo e ' +
   'cansado. Diga "a lâmina", "o pão preto", "a lama do pátio" — nunca abstrações vagas.\n' +
-  '• De 2 a 4 parágrafos curtos, SEPARADOS POR LINHA EM BRANCO. Nunca um bloco só.\n' +
-  '• Toda fala em linha própria, começando com travessão: — Assim, freguesa.\n' +
-  '  Diga quem falou na mesma linha ou na anterior. O leitor nunca deve se perder.\n' +
+  '• De 4 a 7 parágrafos, SEPARADOS POR LINHA EM BRANCO. Nunca um bloco só.\n' +
   '• Fale com o jogador em segunda pessoa ("você"). Os outros, pelo nome.\n' +
   '• Nada de rótulos como "Narrador:", "Opções:", "Cena:". A interface já cuida disso.\n' +
+  '\nDIÁLOGO — é aqui que a cena vive. A regra mais importante deste prompt:\n' +
+  '• Se há alguém presente, a cena TEM QUE TER FALA. Cena só de descrição está errada.\n' +
+  '• MOSTRE O QUE O JOGADOR DISSE. "acaoDoJogador" diz o que ele fez; se foi uma ação ' +
+  'de fala — elogiar, perguntar, mentir, ameaçar, flertar, consolar, barganhar — invente ' +
+  'a frase exata e ESCREVA ela como fala dele. Nunca resuma com "você a elogiou": o ' +
+  'jogador quer ler o elogio.\n' +
+  '• MOSTRE A RESPOSTA DELA, com a voz que está em "voz" e a índole que está em "indole". ' +
+  'Ninguém fica calado quando falam com ela.\n' +
+  '• De 3 a 6 falas por cena, alternando entre os dois. Deixe a conversa respirar: uma ' +
+  'fala, um gesto, outra fala.\n' +
+  '• Cada fala em LINHA PRÓPRIA começando com travessão, e o nome de quem falou na mesma ' +
+  'linha ou na anterior:\n' +
+  '    — Você tem mão boa para pão velho, Aldrica.\n' +
+  '\n' +
+  '    Ela não levanta os olhos do pano.\n' +
+  '\n' +
+  '    — Freguesa nova é sempre boa de língua. Isso passa.\n' +
+  '• O resultado da ação aparece NA FALA e no gesto, não num aviso. Se deu certo, ela ' +
+  'cede alguma coisa: uma informação, um sorriso, uma cadeira. Se falhou, ela corta.\n' +
   '\nVERDADE — a engine manda:\n' +
   '0) "mundo.premissa" é a lei deste lugar. Toda cena tem que caber nela: quem manda, ' +
   'quem trabalha, quem olha o jogador de que jeito. Nunca contrarie a premissa.\n' +
@@ -642,7 +674,12 @@ export async function narrarComModelo(
   ctx: Contexto,
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao> {
-  const pacote = montarPacote(content, camp, ctx, r.fato);
+  const pacote = montarPacote(content, camp, ctx, r.fato, {
+    verbo: r.verbo?.nome,
+    categoria: r.verbo?.categoria,
+    alvo: r.alvo?.nome,
+    grau: r.grau,
+  });
   const userMsg =
     'Pacote de contexto (JSON):\n' +
     JSON.stringify(pacote) +

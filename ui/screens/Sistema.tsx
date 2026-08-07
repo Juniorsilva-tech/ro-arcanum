@@ -286,8 +286,9 @@ export function Config() {
             </Pressable>
           ))}
           <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
-            Modelo gratuito costuma vir servido por provedor que modera — por isso trava. Uns
-            poucos centavos de crédito na OpenRouter destravam os de baixo.
+            Os ":free" vivem caindo e, quando existem, costumam vir de provedor que modera —
+            por isso travam. Os de cima custam frações de centavo por cena: dez dólares de
+            crédito duram muito e resolvem de vez.
           </TextoMono>
         </View>
       )}

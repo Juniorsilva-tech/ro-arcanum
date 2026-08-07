@@ -433,6 +433,57 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   ok(duplicadas.some((o) => o.id === 'deixar_correr'), 'Deixar o tempo correr fecha a grade');
 }
 
+// A cena precisa de fala. O pacote tem que dizer QUAL foi a ação, senão o
+// modelo recebe "você tentou elogiar Aldrica — deu certo" e escreve só
+// descrição, sem mostrar o elogio nem a resposta.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Falante',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'fala-1',
+  });
+  const res = resolverIntencao(conteudoVaelhorn, c, { tipo: 'verbo', verboId: 'elogiar', alvoId: 'aldrica' });
+  const cn = montarCena(conteudoVaelhorn, c);
+  const pk = montarPacote(conteudoVaelhorn, c, cn.contexto, res.fato, {
+    verbo: res.verbo?.nome,
+    categoria: res.verbo?.categoria,
+    alvo: res.alvo?.nome,
+    grau: res.grau,
+  }) as Record<string, unknown>;
+  const acao = pk.acaoDoJogador as { verbo?: string; categoria?: string; alvo?: string };
+  ok(acao?.verbo === 'Elogiar', 'O pacote diz qual verbo foi usado');
+  ok(acao?.categoria === 'social', 'O pacote diz que a ação foi social');
+  ok(acao?.alvo === 'Aldrica', 'O pacote diz em quem');
+
+  // E os presentes chegam com voz e índole, que é o que dá timbre à resposta.
+  const presentes = pk.presentes as { voz?: string; indole?: string }[];
+  ok(presentes.every((x) => !!x.voz && !!x.indole), 'Cada presente leva voz e índole');
+}
+
+// A tipografia tem que aguentar uma cena cheia de falas alternadas.
+{
+  const cena = [
+    'A Rês Enforcada está vazia, e o fogo range na lareira.',
+    '',
+    '— Você tem mão boa para pão velho, Aldrica.',
+    '',
+    'Ela não levanta os olhos do pano.',
+    '',
+    '— Freguesa nova é sempre boa de língua. Isso passa.',
+    '',
+    '— E se não passar?',
+    '',
+    '— Aí eu cobro pela conversa também.',
+  ].join('\n');
+  const blocos = emBlocos(cena, ['Aldrica']);
+  const falas = blocos.filter((b) => b.tipo === 'fala');
+  ok(falas.length === 4, `Quatro falas separadas (${falas.length})`);
+  ok(blocos.filter((b) => b.tipo === 'prosa').length === 2, 'A prosa entre as falas fica de fora');
+  ok(falas.every((f) => !f.texto.startsWith('—')), 'O travessão sai do texto e vira apresentação');
+}
+
 // Requisito de verbo tem que apontar para gente e flag que existem. Foi assim
 // que dois chefes ficaram inalcançáveis: os ids mudaram e 'segredo:sarn' ficou
 // para trás enquanto o NPC virava 'sarine'.

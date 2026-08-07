@@ -17,7 +17,7 @@ export type ConfigApp = {
 
 export const configPadrao: ConfigApp = {
   provider: 'openrouter',
-  modelo: 'deepseek/deepseek-chat-v3-0324:free',
+  modelo: 'thedrummer/rocinante-12b',
   usarModelo: true,
   avisoAceito: false,
 };
