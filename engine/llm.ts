@@ -201,7 +201,7 @@ export function montarPacote(
   camp: Campaign,
   ctx: Contexto,
   fato: string,
-  acao?: { verbo?: string; categoria?: string; alvo?: string; grau?: string },
+  acao?: { verbo?: string; categoria?: string; alvo?: string; grau?: string; livre?: string },
 ) {
   const p = camp.personagem;
   const nomeItem = (id: string) => content.itens.find((i) => i.id === id)?.nome ?? id;
@@ -209,7 +209,7 @@ export function montarPacote(
   // O que ele carrega, com o nome exato do catálogo.
   const inventario = Object.entries(p.inventario)
     .filter(([, q]) => q > 0)
-    .slice(0, 20)
+    .slice(0, 12)
     .map(([id, q]) => (q > 1 ? `${nomeItem(id)} (${q})` : nomeItem(id)));
 
   // O que pode ser achado aqui: só itens que a base realmente tem. O modelo
@@ -217,7 +217,7 @@ export function montarPacote(
   const achaveis = content.itens
     .filter((i) => i.raridade === 'comum' || i.raridade === 'notavel')
     .filter((i) => i.slot === 'material' || i.slot === 'consumivel' || i.slot === 'misc')
-    .slice(0, 24)
+    .slice(0, 10)
     .map((i) => ({ id: i.id, nome: i.nome }));
 
   const equipado = Object.entries(p.equipado)
@@ -262,7 +262,7 @@ export function montarPacote(
     oValeHoje: comoEstaOVale(camp),
     // O que rolou entre elas sem o jogador por perto — é o que a boca do povo
     // repete, e o que dá ao vale história própria.
-    boatosDoVale: ecosRecentes(camp, 4, ctx.local.id),
+    boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
     presentes: ctx.presentes.map((n) => ({
       nome: n.nome,
       idade: n.idade,
@@ -273,7 +273,7 @@ export function montarPacote(
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
       conheceHaDias: diasDeConvivio(camp, n.id),
-      lembraDeVoce: memoriaParaNarrador(camp, n.id, 5),
+      lembraDeVoce: memoriaParaNarrador(camp, n.id, 4),
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
       // não foi descoberto não entra no pacote — não se entrega de graça.
       segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
@@ -287,7 +287,7 @@ export function montarPacote(
         falta: q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto),
       })),
     // O que já ficou para trás e merece ser citado de novo.
-    jaAconteceu: marcosRecentes(camp, 8),
+    jaAconteceu: marcosRecentes(camp, 5),
     // Como o vale trata este forasteiro hoje.
     reputacao: Object.entries(camp.reputacao)
       .filter(([, v]) => v !== 0)
@@ -300,14 +300,14 @@ export function montarPacote(
     // dúvida, propõe o mais seguro — que é justamente o mais genérico.
     podeFazerAgora: content.verbos
       .filter((v) => disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]).disponivel)
-      .slice(0, 28)
+      .slice(0, 14)
       .map((v) => v.nome),
     // O que está trancado e por quê: dá caminhos que ainda não existem
     // ("arranjar uma gazua", "esperar a praça esvaziar").
     trancadoAgora: content.verbos
       .map((v) => ({ v, d: disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]) }))
       .filter((x) => !x.d.disponivel && !!x.d.motivo)
-      .slice(0, 10)
+      .slice(0, 5)
       .map((x) => `${x.v.nome}: ${x.d.motivo}`),
     // Substantivos concretos deste lugar. Opção boa aponta para uma coisa.
     coisasAqui: ctx.local.pontos ?? [],
@@ -332,6 +332,12 @@ export function montarPacote(
 const INSTRUCAO_SISTEMA =
   'Você é o narrador de ARCANUM, um romance de fantasia sombria em português do Brasil. ' +
   'A ENGINE decide o que aconteceu; você escreve a VOZ e propõe os próximos caminhos.\n' +
+  '\nREGRA NÚMERO UM, acima de todas as outras: a cena é sobre O QUE O JOGADOR ACABOU ' +
+  'DE FAZER. A mensagem começa com essa ação. Narre ELA acontecendo e a reação de quem ' +
+  'estava lá. Descrever o ambiente sem mostrar a ação é ERRO — o ambiente é moldura, ' +
+  'nunca o assunto. Se o jogador escreveu a ação com as próprias palavras, aquilo é ' +
+  'ordem literal: faça acontecer exatamente o que ele pediu, sem trocar por outra coisa ' +
+  'e sem desviar para descrição.\n' +
   '\nVOZ — escreva como um conto medieval, não como um relatório:\n' +
   '• Registro de fábula sombria: frases de fôlego, imagens concretas, o mundo antigo e ' +
   'cansado. Diga "a lâmina", "o pão preto", "a lama do pátio" — nunca abstrações vagas.\n' +
@@ -369,7 +375,10 @@ const INSTRUCAO_SISTEMA =
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +
   '5) Conteúdo adulto — sexo, violência, temas pesados — é permitido e pode ser ' +
-  'explícito quando a cena pedir, entre adultos e de forma consensual.\n' +
+  'explícito quando a cena pedir, entre adultos e de forma consensual. Se o jogador ' +
+  'PEDE uma cena explícita, escreva a cena explícita, com o corpo e os atos nomeados. ' +
+  'Não corte para o amanhecer, não troque por sugestão poética, não descreva a mobília ' +
+  'no lugar. Fugir do pedido é pior do que recusar.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens são adultos (18+). Jamais ' +
   'sexualize menores em nenhuma hipótese. Cada presente traz a idade — respeite-a.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
@@ -492,6 +501,28 @@ export function detectarRecusa(bruto: string): boolean {
   if (RECUSA_FORTE.some((m) => t.includes(m))) return true;
   const inicio = t.slice(0, 140);
   return t.length < 700 && RECUSA_FRACA.some((m) => inicio.includes(m));
+}
+
+// ── Resposta que não é desta cena ──────────────────────────────────────────
+// Modelo pequeno às vezes descarrila e devolve algo que não tem nada a ver:
+// uma frase solta, em inglês, sobre outra coisa. Isso não é narração e não pode
+// chegar à tela — vira erro, e o fallback troca de modelo.
+const PALAVRAS_INGLES = [
+  ' the ', ' and ', ' have ', ' this ', ' just ', ' with ', ' that ', ' your ',
+  ' from ', ' they ', ' what ', ' page ', ' dream ', ' words ', ' is ', ' of ',
+];
+const PALAVRAS_PORTUGUES = [
+  ' que ', ' não ', ' com ', ' uma ', ' para ', ' ela ', ' você ', ' dos ',
+  ' mas ', ' por ', ' seu ', ' sua ', ' está ', ' ele ', ' das ', ' num ',
+];
+
+export function foraDeContexto(bruto: string): boolean {
+  const t = ` ${bruto.toLowerCase().replace(/\s+/g, ' ')} `;
+  // Narração de verdade nunca cabe em duas linhas.
+  if (t.trim().length < 80) return true;
+  const en = PALAVRAS_INGLES.filter((w) => t.includes(w)).length;
+  const pt = PALAVRAS_PORTUGUES.filter((w) => t.includes(w)).length;
+  return en > pt;
 }
 
 export function pareceJson(t: string): boolean {
@@ -679,11 +710,24 @@ export async function narrarComModelo(
     categoria: r.verbo?.categoria,
     alvo: r.alvo?.nome,
     grau: r.grau,
+    livre: r.acaoLivre,
   });
+  // A ação do jogador vai PRIMEIRO, em texto puro, e é repetida no fim. Ela
+  // estava enterrada como um campo no meio do JSON, e modelo pequeno se afogava
+  // no contexto e narrava ambiente em vez de reagir ao que foi feito.
+  const ordem = r.acaoLivre
+    ? `O JOGADOR ESCREVEU, COM AS PALAVRAS DELE: "${r.acaoLivre}"\n` +
+      'Isto é uma ordem literal. A cena é sobre ISTO. Faça acontecer exatamente o que ele ' +
+      'descreveu — não desvie para o ambiente, não troque por outra coisa, não recuse.'
+    : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
+      'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.';
+
   const userMsg =
-    'Pacote de contexto (JSON):\n' +
+    `${ordem}\n\n` +
+    'Contexto do mundo (JSON, material de apoio — não é o assunto da cena):\n' +
     JSON.stringify(pacote) +
-    '\n\nNarre a cena a partir do fatoConsumado e proponha caminhos novos. Só o JSON.';
+    `\n\nAgora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
+    'Comece pela ação e pela reação. Só o JSON de resposta.';
   try {
     const bruto =
       cfg.provider === 'anthropic'
@@ -712,16 +756,23 @@ export function interpretarResposta(
     return id && idsValidos.has(id) ? id : undefined;
   };
 
-  // 0) O modelo saiu do personagem para recusar? Isso não é narração.
+  // 0) O modelo saiu do personagem para recusar? Isso não é narração — e a
+  // recusa é mais específica que o descarrilamento, então vem primeiro: o
+  // jogador precisa saber que o problema é filtro, não tamanho de modelo.
   if (detectarRecusa(bruto)) {
     return { erro: 'o modelo recusou a cena (filtro de conteúdo) — troque para um sem filtro' };
+  }
+
+  // Descarrilou de vez — outra língua, frase solta, nada a ver com a cena.
+  if (foraDeContexto(bruto) && !bruto.trim().startsWith('{')) {
+    return { erro: 'o modelo devolveu texto fora de contexto — troque para um modelo maior' };
   }
 
   // 1) Caminho feliz: JSON inteiro.
   const json = extrairJson(bruto);
   if (json && typeof json === 'object') {
     const narracao = limparNarracao(String(json.narracao ?? ''));
-    if (narracao && !pareceJson(narracao)) {
+    if (narracao && !pareceJson(narracao) && !foraDeContexto(narracao)) {
       return {
         texto: narracao,
         opcoes: validarOpcoesIA(json.opcoes, proibidos),
@@ -911,7 +962,7 @@ export async function narrarComFallback(
   const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
   if (primeira.texto || cfg.provider !== 'openrouter') return primeira;
 
-  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou/i.test(primeira.erro ?? '');
+  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou|fora de contexto/i.test(primeira.erro ?? '');
   if (!trocavel) return primeira;
 
   // A lista já vem ordenada com os permissivos na frente — é justamente o que

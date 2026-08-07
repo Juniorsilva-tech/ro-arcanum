@@ -146,7 +146,7 @@ interface GameState {
   iaErro?: string;
   // Turno já resolvido pela engine, esperando o narrador. Guardar isso é o que
   // permite tentar de novo sem repetir a ação nem gastar tempo do mundo.
-  pendente?: { fato: string };
+  pendente?: { fato: string; acaoLivre?: string };
 
   init: () => Promise<void>;
   irPara: (t: Tela) => void;
@@ -542,7 +542,7 @@ export const useGame = create<GameState>((set, get) => ({
     set({
       feed: [...get().feed, nf(t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
-    await narrar(get, set, `Você tenta o seguinte: ${t}`);
+    await narrar(get, set, `Você tenta o seguinte: ${t}`, t);
   },
 
   async viajar(destino) {
@@ -667,7 +667,7 @@ export const useGame = create<GameState>((set, get) => ({
   async tentarNarrarDeNovo() {
     const pend = get().pendente;
     if (!pend || get().ocupado) return;
-    await narrar(get, set, pend.fato);
+    await narrar(get, set, pend.fato, pend.acaoLivre);
   },
 }));
 
@@ -764,6 +764,7 @@ async function narrar(
   get: () => GameState,
   set: (p: Partial<GameState>) => void,
   fato: string,
+  acaoLivre?: string,
 ) {
   const { content, camp, config } = get();
   if (!content || !camp) return;
@@ -783,7 +784,7 @@ async function narrar(
 
   set({ ocupado: true, iaStatus: 'pensando', iaErro: undefined });
 
-  const pedido = { fato, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
+  const pedido = { fato, acaoLivre, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
     typeof narrarComFallback
   >[4];
   const cfg = { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo };

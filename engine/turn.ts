@@ -48,6 +48,9 @@ export type ResultadoTurno = {
   alvo?: NPC;
   // O "fato consumado" que a narração transforma em prosa (GDD §4.4).
   fato: string;
+  // Quando o jogador escreveu a ação com as próprias palavras, o texto CRU vem
+  // aqui. É ordem literal para o narrador, não material de apoio.
+  acaoLivre?: string;
   custoPeriodos: number;
   efeitosAplicados: Efeito[];
 };

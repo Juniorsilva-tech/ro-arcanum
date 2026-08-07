@@ -11,6 +11,7 @@ import {
   montarPacote,
   perfilDoModelo,
   detectarRecusa,
+  foraDeContexto,
 } from './llm';
 import { emBlocos } from './prosa';
 import {
@@ -375,8 +376,21 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   ok(!c.texto && !!c.erro, 'Resposta sem narração vira erro, não texto cru');
 
   // Prosa sem JSON continua servindo.
-  const d = interpretarResposta('A neblina desce sobre a ponte quebrada.', conteudoVaelhorn);
-  ok(d.texto === 'A neblina desce sobre a ponte quebrada.', 'Prosa pura é aceita');
+  const prosa =
+    'A neblina desce sobre a ponte quebrada e não sobe mais. Você fica na margem ' +
+    'com a lama até o tornozelo, ouvindo a água correr por baixo do que restou da ' +
+    'pedra, e ninguém vem atrás de você.';
+  const d = interpretarResposta(prosa, conteudoVaelhorn);
+  ok(d.texto === prosa, 'Prosa pura é aceita');
+
+  // Descarrilamento: outra língua, frase solta, nada a ver com a cena.
+  const fugiu = interpretarResposta(
+    "' not dream a dream. All i have is just the words on this page.'",
+    conteudoVaelhorn,
+  );
+  ok(!fugiu.texto && /fora de contexto/.test(fugiu.erro ?? ''), 'Resposta descarrilada vira erro');
+  ok(foraDeContexto('two words'), 'Texto curto demais não é narração');
+  ok(!foraDeContexto(prosa), 'Prosa legítima em português passa');
 
   // Id de item inventado não entra no jogo.
   const e = interpretarResposta(
