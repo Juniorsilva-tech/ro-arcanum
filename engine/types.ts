@@ -58,6 +58,16 @@ export const NOME_CATEGORIA: Record<CategoriaVerbo, string> = {
 
 export type AlvoTipo = 'nenhum' | 'pessoa' | 'objeto' | 'lugar' | 'si';
 
+// Que tipo de laço existe entre duas pessoas do vale.
+export type LacoTipo =
+  | 'aliada'
+  | 'rival'
+  | 'amante'
+  | 'devedora'
+  | 'protege'
+  | 'desconfia'
+  | 'sangue';
+
 // ── Efeitos: patches que a engine aplica ao estado.
 export type Efeito =
   | { tipo: 'recurso'; recurso: string; delta: number }
@@ -177,6 +187,10 @@ export type NPC = {
   // adulto isso é parte do retrato, na mesma linha da voz e da índole.
   corpo?: string;
   segredo?: { conteudo: string; comoDescobrir: string };
+  // Com quem ela tem história. É o que faz o vale ter vida própria: quando duas
+  // se encontram numa rotina, a relação entre elas produz acontecimento sem o
+  // jogador mexer um dedo (ver engine/convivio.ts).
+  relacoes?: { npc: string; tipo: LacoTipo; nota: string }[];
   ensinaMestre?: string; // id de mestre no Livro
   atributos?: Partial<Atributos>;
 };
@@ -431,6 +445,8 @@ export type Campaign = {
   marcos?: { turno: number; dia: number; texto: string }[];
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
+  // O que aconteceu entre elas enquanto você não estava olhando.
+  ecos?: { turno: number; dia: number; local: string; texto: string; npcs: string[] }[];
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };

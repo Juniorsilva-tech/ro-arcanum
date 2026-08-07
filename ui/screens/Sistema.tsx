@@ -11,6 +11,7 @@ import {
   MODELO_PADRAO_OPENROUTER,
   MODELO_PADRAO_ANTHROPIC,
   perfilDoModelo,
+  MODELOS_PARA_CENA_ADULTA,
 } from '@/engine';
 
 // As sugestões estáticas entram na mesma vitrine dos modelos vivos.
@@ -262,6 +263,36 @@ export function Config() {
         autoCorrect={false}
       />
       {ehOR && (
+        <View style={{ marginBottom: esp.md }}>
+          <TextoMono style={{ color: cores.mudo, marginBottom: esp.xs }}>
+            Para cena adulta (toque para usar):
+          </TextoMono>
+          {MODELOS_PARA_CENA_ADULTA.map((m) => (
+            <Pressable
+              key={m.id}
+              style={[styles.linhaRec, modelo === m.id && styles.linhaRecAtiva]}
+              onPress={() => {
+                setModelo(m.id);
+                setConfig({ modelo: m.id });
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recId}>{m.id.replace(':free', '')}</Text>
+                <Text style={styles.recNota}>{m.nota}</Text>
+              </View>
+              <Text style={[styles.recSelo, m.pago ? styles.recPago : styles.recGratis]}>
+                {m.pago ? 'crédito' : 'grátis'}
+              </Text>
+            </Pressable>
+          ))}
+          <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
+            Modelo gratuito costuma vir servido por provedor que modera — por isso trava. Uns
+            poucos centavos de crédito na OpenRouter destravam os de baixo.
+          </TextoMono>
+        </View>
+      )}
+
+      {ehOR && (
         <View style={{ marginBottom: esp.sm }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: esp.xs }}>
             <TextoMono style={{ color: cores.mudo, flex: 1 }}>
@@ -430,6 +461,23 @@ const styles = StyleSheet.create({
   provTxtAtivo: { color: cores.vellum },
   provSub: { fontFamily: fontes.mono, color: cores.linha, fontSize: 10, marginTop: 2 },
   chipsSug: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs },
+  linhaRec: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: esp.sm,
+    borderWidth: 1,
+    borderColor: cores.fundo3,
+    borderRadius: raio.sm,
+    paddingHorizontal: esp.sm,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  linhaRecAtiva: { borderColor: cores.ouro, backgroundColor: cores.fundo2 },
+  recId: { fontFamily: fontes.mono, color: cores.vellum, fontSize: 10 },
+  recNota: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 9, marginTop: 1 },
+  recSelo: { fontFamily: fontes.mono, fontSize: 9 },
+  recGratis: { color: cores.verdigris },
+  recPago: { color: cores.ouro },
   chipSug: {
     borderWidth: 1,
     borderColor: cores.linha,

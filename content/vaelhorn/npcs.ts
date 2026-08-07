@@ -27,6 +27,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'taverna',
     },
     vozNarrativa: 'Fala pouco, seco, com um humor cansado. Chama todo mundo de "freguesa" — e você também, de propósito.',
+    relacoes: [
+      { npc: 'vess', tipo: 'devedora', nota: 'Deve à Fiadora desde o inverno em que o telhado caiu.' },
+      { npc: 'elza', tipo: 'protege', nota: 'Trata Elza como a filha que a Leva não pôde levar.' },
+    ],
     personalidade: 'Pragmática, protetora com os seus, cega para o que não lhe convém ver.',
     corpo: 'Grande e sólida, ombros de quem rola barril sozinha. Seios pesados que ela prende alto sob o avental, quadris largos, braços marcados até o cotovelo pelo calor da cozinha.',
     segredo: {
@@ -50,6 +54,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'floresta',
     },
     vozNarrativa: 'Direta como flecha. Não desperdiça palavra nem confiança.',
+    relacoes: [
+      { npc: 'grimma', tipo: 'aliada', nota: 'Caçam e contrabandeiam pela mesma trilha.' },
+    ],
     personalidade: 'Solitária, leal a quem prova valor, desprezo por covardes.',
     corpo: 'Seca e comprida, toda tendão. Peito pequeno e alto sob o couro, bunda dura de quem sobe encosta o dia inteiro, uma cicatriz branca que desce do ombro ao seio esquerdo.',
     ensinaMestre: 'mestre_neve',
@@ -74,6 +81,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'cripta',
     },
     vozNarrativa: 'Voz de púlpito, macia e ameaçadora ao mesmo tempo. Cita escrituras que talvez invente.',
+    relacoes: [
+      { npc: 'irma_perla', tipo: 'desconfia', nota: 'Sabe que a irmã anda juntando papel.' },
+      { npc: 'sarine', tipo: 'rival', nota: 'Uma selou; a outra alimenta.' },
+    ],
     personalidade: 'Devota por fora, aterrorizada por dentro. Faz o mal achando que impede um pior.',
     corpo: 'Alta e reta como vela de altar. Magra de jejum, mãos de dedos longos, o hábito escondendo um corpo que já foi bonito e que ela decidiu esquecer.',
     segredo: {
@@ -97,6 +108,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'mercado',
     },
     vozNarrativa: 'Doce na frente, afiada por baixo. Vende cura e veneno da mesma cesta.',
+    relacoes: [
+      { npc: 'nadja', tipo: 'rival', nota: 'Herdou a banca que a outra perdeu, e sabe disso.' },
+      { npc: 'madre_corvane', tipo: 'aliada', nota: 'Vende à capela o pó que ninguém pergunta de onde vem.' },
+    ],
     personalidade: 'Ambiciosa, sobrevivente, incapaz de recusar um bom negócio.',
     corpo: 'Baixa e cheia, cintura curta entre um peito farto e um quadril redondo. Cheira a alecrim e a alguma coisa amarga por baixo. Manchas verdes permanentes nas pontas dos dedos.',
     segredo: {
@@ -120,6 +135,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'praca',
     },
     vozNarrativa: 'Autoridade gasta. Fala como quem já ouviu todas as desculpas, inclusive as boas.',
+    relacoes: [
+      { npc: 'ruvela', tipo: 'desconfia', nota: 'A desertora serviu sob o seu comando.' },
+      { npc: 'lunn', tipo: 'protege', nota: 'Cobriu o sono dela na noite da ponte.' },
+    ],
     personalidade: 'Corrompível, mas com uma linha que não cruza. Cansada da vila e de si.',
     corpo: 'Quadrada de ombro, coxa grossa de montaria, uma barriga que a cota já não disfarça. Corta o cabelo ela mesma, curto e torto. Nariz quebrado duas vezes.',
     segredo: {
@@ -143,6 +162,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'taverna',
     },
     vozNarrativa: 'Calma, cordial, aterrorizante na cortesia. Nunca ergue a voz porque nunca precisa.',
+    relacoes: [
+      { npc: 'grimma', tipo: 'aliada', nota: 'Financia a mercadoria que Grimma move.' },
+    ],
     personalidade: 'Paciente como dívida. Coleciona pessoas, não moedas.',
     corpo: 'Elegante de um jeito que não pertence a este vale. Magra, colo à mostra mesmo no frio, anéis em quase todos os dedos. Cabelo grisalho preso com uma agulha de prata que também serve de arma.',
     segredo: {
@@ -166,6 +188,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'praca',
     },
     vozNarrativa: 'Fala em enigmas que só fazem sentido depois. Ri quando não devia.',
+    relacoes: [
+      { npc: 'sarine', tipo: 'rival', nota: 'Diz que ele selou a porta errada.' },
+    ],
     personalidade: 'Meio vidente, meio louca. Vê mais do que quem tem casa.',
     corpo: 'Encolhida, pele de casca, um olho leitoso e o outro afiadíssimo. Sob os trapos, o corpo de alguém que já pariu muitas vezes e enterrou todas.',
     ensinaMestre: 'mestre_halda',
@@ -186,6 +211,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'mercado',
     },
     vozNarrativa: 'Ruidosa, generosa, opinião forte sobre metal e sobre gente.',
+    relacoes: [
+      { npc: 'duna', tipo: 'rival', nota: 'Duas bigornas na mesma praça.' },
+      { npc: 'borka', tipo: 'aliada', nota: 'Compra dela todo o minério que a mina cospe.' },
+    ],
     personalidade: 'Honesta ao ponto do incômodo. Ama o ofício mais que o lucro.',
     corpo: 'Enorme. Braços que fecham em torno de uma bigorna, peito largo e pesado que ela amarra com faixa para trabalhar, bunda e coxas de quem pisa fole desde menina. Queimaduras antigas salpicando os antebraços.',
     ensinaMestre: 'mestre_torana',
@@ -206,6 +235,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'taverna',
     },
     vozNarrativa: 'Fala baixo, observa muito. Sabe o nome de cada freguesa e o que cada uma esconde.',
+    relacoes: [
+      { npc: 'aldrica', tipo: 'sangue', nota: 'Aldrica a criou; é família sem ser.' },
+      { npc: 'madre_corvane', tipo: 'desconfia', nota: 'Viu a madre descer para a cripta e não esqueceu.' },
+    ],
     personalidade: 'Curiosa, ambiciosa em surdina, cansada de servir.',
     corpo: 'Miúda e rápida, cintura fina, quadril que ela usa para abrir caminho entre as mesas. Peito pequeno sob a camisa sempre um pouco aberta pelo calor do salão. Um dente lascado que ela esconde quando sorri.',
     segredo: {
@@ -229,6 +262,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'floresta',
     },
     vozNarrativa: 'Gíria de estrada, riso fácil, olho sempre na saída.',
+    relacoes: [
+      { npc: 'sargenta_bael', tipo: 'devedora', nota: 'Paga à guarda para a estrada ficar cega.' },
+      { npc: 'neve', tipo: 'aliada', nota: 'Confia nela mais do que em qualquer uma da praça.' },
+    ],
     personalidade: 'Oportunista leal — enquanto o preço compensar.',
     corpo: 'Comprida e desengonçada, toda cotovelo e joelho. Peito quase nada, bunda chata, e uma cara que fica bonita só quando ela ri — o que é sempre.',
     segredo: {
@@ -252,6 +289,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'capela',
     },
     vozNarrativa: 'Compassiva de verdade, o que a torna a pessoa mais perigosa da capela.',
+    relacoes: [
+      { npc: 'madre_corvane', tipo: 'desconfia', nota: 'Reúne prova contra a própria superiora.' },
+      { npc: 'oda', tipo: 'aliada', nota: 'Conferem juntas o registro dos enterros.' },
+    ],
     personalidade: 'Bondade genuína lutando contra a instituição que serve.',
     corpo: 'Cheia e macia, o tipo de corpo em que as pessoas encostam quando choram. Seios grandes sob o hábito de lã, mãos vermelhas de água fria, joelhos calejados de rezar em pedra.',
     segredo: {
@@ -275,6 +316,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'floresta',
     },
     vozNarrativa: 'Erudita e irônica. Responde perguntas com perguntas melhores.',
+    relacoes: [
+      { npc: 'halda', tipo: 'rival', nota: 'Duas leituras do mesmo abismo, e nenhuma cede.' },
+      { npc: 'vell', tipo: 'sangue', nota: 'Foi ela quem tirou Vell do fogo de Mir.' },
+    ],
     personalidade: 'Fugitiva de outra vida. Ensina por tédio e por culpa.',
     corpo: 'Sob o capuz, uma mulher que envelheceu bem e não agradece por isso. Ossos finos, peito murcho que ela não esconde nem exibe, e uma queimadura de mão inteira no antebraço direito, do dia em que selou a cripta.',
     ensinaMestre: 'mestre_sarine',
@@ -302,6 +347,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'moinho',
     },
     vozNarrativa: 'Fala como quem move pedra: devagar, e só o peso necessário. Mede tudo em sacas e estações.',
+    relacoes: [
+      { npc: 'serla', tipo: 'amante', nota: 'A única coisa que ainda gira no moinho.' },
+    ],
     personalidade: 'Teimosa, honesta até doer, incapaz de admitir que a roda não gira mais por culpa dela.',
     corpo: 'Robusta, coberta de farinha até nos cílios. Costas fortes, seios que ela nem lembra de ter, mãos com calo em cima de calo.',
     segredo: {
@@ -325,6 +373,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'cemiterio',
     },
     vozNarrativa: 'Conversa com as vivas do mesmo jeito que com os mortos: sem pressa e sem cerimônia.',
+    relacoes: [
+      { npc: 'irma_perla', tipo: 'aliada', nota: 'Conferem o registro dos enterros.' },
+      { npc: 'morda', tipo: 'aliada', nota: 'Levam pão uma para a outra.' },
+    ],
     personalidade: 'Bom humor macabro, memória de arquivista, nenhuma ilusão sobre a bondade humana.',
     corpo: 'Baixa, atarracada, braço de pá. Bunda larga e firme, peito caído que ela carrega sem nenhum pudor. Terra permanente sob as unhas.',
     segredo: {
@@ -348,6 +400,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'torre',
     },
     vozNarrativa: 'Nervosa, fala rápido demais e se corrige no meio da frase. Chama todo mundo de "senhora" — e você de "senhor", com um susto.',
+    relacoes: [
+      { npc: 'sargenta_bael', tipo: 'protege', nota: 'Deve a ela o posto e o silêncio.' },
+    ],
     personalidade: 'Consciente do dever, aterrorizada pelo escuro, incapaz de mentir sem gaguejar.',
     corpo: 'Magrinha, quase menina de corpo apesar dos vinte e quatro. Peito pequeno amassado sob a armadura mal ajustada, pernas compridas, sardas por toda parte que o sol alcança.',
     segredo: {
@@ -371,6 +426,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'casa_senhorial',
     },
     vozNarrativa: 'Cortesia de corte usada como lâmina. Nunca ergue a voz porque nunca precisou.',
+    relacoes: [
+      { npc: 'teoda', tipo: 'devedora', nota: 'Paga tarde e cobra pontualidade.' },
+      { npc: 'ysolde', tipo: 'sangue', nota: 'A herdeira que ela não escolheu.' },
+    ],
     personalidade: 'Calculista, orgulhosa de um nome que já não vale nada fora do vale, generosa quando isso lhe custa pouco.',
     corpo: 'Alta e magra, pescoço comprido carregado de colares que valem mais que a casa. Corpo seco de velhice bem tratada, costas retas por teimosia.',
     segredo: {
@@ -394,6 +453,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'casa_senhorial',
     },
     vozNarrativa: 'Escolhe cada palavra como quem escolhe onde pisar num assoalho que range.',
+    relacoes: [
+      { npc: 'dama_valda', tipo: 'sangue', nota: 'Espera. É o que ela faz melhor.' },
+      { npc: 'serla', tipo: 'aliada', nota: 'A lavadeira sabe de tudo e cobra barato.' },
+    ],
     personalidade: 'Inteligência afiada trancada numa casa pequena. Entediada, e o tédio a torna perigosa.',
     corpo: 'A beleza da casa e ela sabe. Ombros nus sempre que o frio deixa, peito alto de quem nunca amamentou, cintura apertada em veludo, quadril que ela move de propósito quando quer alguma coisa.',
     segredo: {
@@ -417,6 +480,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'mina',
     },
     vozNarrativa: 'Grita mesmo quando não precisa — o hábito da galeria. Xinga com carinho e elogia com insulto.',
+    relacoes: [
+      { npc: 'kesta', tipo: 'protege', nota: 'Desce com ela e sai com ela, sempre.' },
+      { npc: 'torana', tipo: 'aliada', nota: 'Vende o ferro antes de qualquer um.' },
+    ],
     personalidade: 'Bruta, justa à sua maneira, culpada por cada nome que a pedra levou.',
     corpo: 'Larga como porta. Coxas e bunda de quem carrega peso ladeira acima a vida toda, peito grande que ela amarra e xinga, pó de ferro na ruga de cada dedo.',
     segredo: {
@@ -440,6 +507,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'taverna',
     },
     vozNarrativa: 'Riso curto e frases mais curtas ainda. Encerra discussões com um gesto.',
+    relacoes: [
+      { npc: 'borka', tipo: 'desconfia', nota: 'Sabe do braço quebrado que ninguém comenta.' },
+    ],
     personalidade: 'Resolve com o corpo antes da palavra, leal a quem desce junto, incapaz de perdoar covardia.',
     corpo: 'Nada sobra e nada falta: ombro redondo, barriga rígida, coxa de pedra. Peito pequeno e alto, e ela luta sem camisa quando a aposta é boa. Nó dos dedos permanentemente inchado.',
     ensinaMestre: 'mestre_kesta',
@@ -464,6 +534,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'lago',
     },
     vozNarrativa: 'Fala baixo perto da água, como quem não quer acordar o fundo. Conta histórias sem dizer que são dela.',
+    relacoes: [
+      { npc: 'iva', tipo: 'aliada', nota: 'Ela leva o peixe até a estrada.' },
+    ],
     personalidade: 'Supersticiosa, paciente, generosa com peixe e mesquinha com verdade.',
     corpo: 'Curtida de sol e de vento, pele de couro velho. Magra em cima, pesada no quadril, e um cheiro de junco e escama que não sai por mais que ela se lave.',
     segredo: {
@@ -487,6 +560,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'estrada',
     },
     vozNarrativa: 'Tagarela profissional. Cada frase vem com uma notícia de três dias de estrada e um pedido de favor.',
+    relacoes: [
+      { npc: 'azira', tipo: 'devedora', nota: 'Carrega a carga dela e cobra em atraso.' },
+      { npc: 'ganta', tipo: 'aliada', nota: 'Sobe com o peixe dela toda semana.' },
+    ],
     personalidade: 'Simpática por ofício, medrosa por experiência, fiel à maior pagadora.',
     corpo: 'Corpo de estrada: ombro de rédea, bunda achatada de banco de carroça, panturrilha dura. Peito fartinho que ela usa sem cerimônia para fechar negócio.',
     segredo: {
@@ -510,6 +587,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'acampamento',
     },
     vozNarrativa: 'Educada de um jeito que assusta mais que grito. Trata ameaça e convite com o mesmo tom.',
+    relacoes: [
+      { npc: 'sargenta_bael', tipo: 'rival', nota: 'Saiu da tropa dela e levou metade junto.' },
+    ],
     personalidade: 'Ex-soldada com código próprio. Não mata quem não deve, e decide sozinha quem deve.',
     corpo: 'Alta, de ombro reto de quartel. Cicatriz de lança acima do seio direito, peito pequeno, cintura que ainda cabe na cota velha. Anda como quem espera ser atacada.',
     segredo: {
@@ -533,6 +613,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'acampamento',
     },
     vozNarrativa: 'Rouca de fumaça. Diz o preço antes do diagnóstico e nunca desconta.',
+    relacoes: [
+      { npc: 'mira', tipo: 'rival', nota: 'A vila escolheu a nova. Ela não perdoa.' },
+    ],
     personalidade: 'Prática ao ponto da crueldade. Salva corpos e cobra em segredos.',
     corpo: 'Enrugada e forte, cabelo branco cortado rente. Peito comprido e chato, barriga mole, mãos absolutamente firmes — as mãos são a única parte dela que não envelheceu.',
     ensinaMestre: 'mestre_nadja',
@@ -557,6 +640,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'ruinas',
     },
     vozNarrativa: 'Frases que começam no meio, como se a conversa já durasse anos. Ri de coisas que ninguém disse.',
+    relacoes: [
+      { npc: 'sarine', tipo: 'sangue', nota: 'Deve a vida a ela, e não sabe se agradece.' },
+    ],
     personalidade: 'Lucidez em lampejos entre longos desvios. Não mente — só nem sempre está no mesmo lugar que você.',
     corpo: 'Descalça em qualquer estação, cabelo em nós que ela não desfaz. Corpo jovem escondido sob camadas de trapo; quando o vento abre o pano, o que aparece é uma pele sem uma única cicatriz — e ela esteve dentro do fogo.',
     ensinaMestre: 'mestre_vell',
@@ -581,6 +667,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'ponte',
     },
     vozNarrativa: 'Anuncia quem chega antes de a pessoa falar. Cobra a informação em pão, nunca em moeda.',
+    relacoes: [
+      { npc: 'oda', tipo: 'aliada', nota: 'A coveira nunca a deixou passar fome.' },
+    ],
     personalidade: 'Orgulhosa da própria inutilidade aparente. Sabe tudo que atravessa e nada do que fica.',
     corpo: 'Sentada há tantos anos que o corpo criou a forma da pedra. Olhos brancos, mãos que leem rosto por toque, e ela pede para tocar o seu assim que você chega perto.',
     segredo: {
@@ -604,6 +693,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'moinho',
     },
     vozNarrativa: 'Fala das próprias tragédias no mesmo tom de quem lista preços de sabão.',
+    relacoes: [
+      { npc: 'heska', tipo: 'amante', nota: 'Dividem o moinho parado e mais do que isso.' },
+      { npc: 'ysolde', tipo: 'aliada', nota: 'Lava o que a casa de pedra prefere esquecer.' },
+    ],
     personalidade: 'Endurecida sem amargura. Vê tudo, comenta pouco, cobra na hora certa.',
     corpo: 'Braços vermelhos até acima do cotovelo, de água gelada. Corpo largo e quente, seios pesados sob a blusa sempre molhada na frente, e ela não se importa nem um pouco com isso.',
     segredo: {
@@ -627,6 +720,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'casa_senhorial',
     },
     vozNarrativa: 'Precisão de tabeliã até quando pede cerveja. Corrige gramática alheia sem perceber que ofende.',
+    relacoes: [
+      { npc: 'dama_valda', tipo: 'desconfia', nota: 'Escreve dois livros e teme o dia da conta.' },
+    ],
     personalidade: 'Vaidosa da própria inteligência, covarde no corpo, corajosa no papel.',
     corpo: 'Pálida de interior, míope, ombros curvados sobre a mesa. Corpo pequeno e esquecido dentro de um vestido bom demais para o trabalho. Tinta no canto da boca porque morde a pena.',
     segredo: {
@@ -650,6 +746,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'estrada',
     },
     vozNarrativa: 'Sotaque de longe, cortesia de perto. Chama todo mundo de "amiga" e cobra preço de inimiga.',
+    relacoes: [
+      { npc: 'iva', tipo: 'desconfia', nota: 'Sabe que a carreteira olha dentro da lona.' },
+    ],
     personalidade: 'Encantadora profissional. Nunca mente sobre a mercadoria, só sobre a origem.',
     corpo: 'Curvilínea e consciente disso, envolta em camadas de tecido tingido que valem uma vaca cada. Peito e quadril generosos, tornozelos tilintando de pulseira, olhos pintados de preto até a têmpora.',
     segredo: {
@@ -673,6 +772,10 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'mercado',
     },
     vozNarrativa: 'Rápida, atrevida, termina as frases dos outros. Preço fixo, sem negociação.',
+    relacoes: [
+      { npc: 'vess', tipo: 'devedora', nota: 'Vende recado à Fiadora e teme o dia da cobrança.' },
+      { npc: 'elza', tipo: 'aliada', nota: 'Trocam o que ouvem, sem cobrar.' },
+    ],
     personalidade: 'Esperta demais para a própria segurança. Leal a quem paga em dia e sumiu antes do troco.',
     corpo: 'Magra de correr o dia inteiro, joelho ralado permanente, cabelo curto para não dar o que segurar. Corpo de mulher nova que ela usa como ferramenta de fuga, não de encanto.',
     segredo: {
@@ -696,6 +799,9 @@ export const npcsVaelhorn: NPC[] = [
       noite: 'mercado',
     },
     vozNarrativa: 'Martela enquanto fala e para de martelar quando a coisa fica séria. Todo mundo aprendeu a temer o silêncio.',
+    relacoes: [
+      { npc: 'torana', tipo: 'rival', nota: 'Diz que a outra tempera mal e cobra caro.' },
+    ],
     personalidade: 'Orgulho de ofício acima de tudo. Recusa trabalho que ache indigno mesmo faminta.',
     corpo: 'Um braço bem mais curto que o outro, de nascença, e mesmo assim a melhor mão de aço do vale. Tronco grosso, peito baixo e largo, e um pescoço em que dá para ver a batida quando ela se irrita.',
     ensinaMestre: 'mestre_duna',

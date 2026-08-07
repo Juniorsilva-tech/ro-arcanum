@@ -25,6 +25,7 @@ import { avaliarOpcao, chanceDe } from './risco';
 import { montarGrade } from './grade';
 import { avancarMundo, multiplicadorDePreco, comoEstaOVale } from './mundo';
 import { recolherDespojos, despojosDe } from './despojos';
+import { ecosRecentes } from './convivio';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import * as narracaoMod from './narration';
@@ -429,6 +430,48 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   );
   ok(!duplicadas.some((o) => o.rotulo === 'Falar com Aldrica'), 'Segunda opção do mesmo eixo não entra');
   ok(duplicadas.some((o) => o.id === 'deixar_correr'), 'Deixar o tempo correr fecha a grade');
+}
+
+// As rotinas se cruzam: o vale produz história sem o jogador.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Ausente',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'convivio-1',
+  });
+
+  // Um mês fora. Alguma coisa tem que ter acontecido entre elas.
+  for (let d = 0; d < 30; d += 1) {
+    c.calendario = { ...c.calendario, dia: c.calendario.dia + 1 };
+    avancarMundo(conteudoVaelhorn, c);
+  }
+  const ecos = c.ecos ?? [];
+  ok(ecos.length > 0, `O vale gerou acontecimento sozinho (${ecos.length} ecos)`);
+  ok(ecos.length <= 12, 'O boato envelhece e sai da boca do povo');
+
+  // Todo eco cita duas pessoas que existem e um lugar que existe.
+  const idsNpc = new Set(conteudoVaelhorn.npcs.map((n) => n.id));
+  const idsLocal = new Set(conteudoVaelhorn.locais.map((l) => l.id));
+  ok(
+    ecos.every((e) => e.npcs.length === 2 && e.npcs.every((n) => idsNpc.has(n)) && idsLocal.has(e.local)),
+    'Todo eco aponta para gente e lugar reais',
+  );
+  ok(ecos.every((e) => !e.texto.includes('{')), 'Nenhum molde de texto escapa cru');
+  ok(ecosRecentes(c, 3).length > 0, 'Os boatos chegam ao narrador');
+
+  // Os laços do conteúdo apontam para gente que existe, nos dois sentidos.
+  const quebrados: string[] = [];
+  for (const n of conteudoVaelhorn.npcs) {
+    for (const l of n.relacoes ?? []) {
+      if (!idsNpc.has(l.npc)) quebrados.push(`${n.id} → ${l.npc}`);
+      if (l.npc === n.id) quebrados.push(`${n.id} tem laço consigo`);
+    }
+  }
+  ok(quebrados.length === 0, `Laços apontam para gente real (${quebrados.join(', ')})`);
+  const comLaco = conteudoVaelhorn.npcs.filter((n) => (n.relacoes ?? []).length > 0).length;
+  ok(comLaco >= 20, `O elenco está entrelaçado (${comLaco} com laço)`);
 }
 
 // O vale anda sem o jogador.

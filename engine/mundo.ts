@@ -10,6 +10,7 @@
 import type { Campaign, ContentBundle, Estacao } from './types';
 import { nextFloat, nextInt, pick } from './rng';
 import { registrarMarco } from './memoria';
+import { cruzarRotinas, periodoQualquer } from './convivio';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -141,10 +142,11 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
         din.eixos.disposicao = Math.max(-20, din.eixos.disposicao - 1);
       }
     }
-  }
 
-  // Carestia efetiva inclui o evento corrente.
-  void content;
+    // E elas se esbarram. Um período por dia basta para o vale ter história
+    // própria sem virar novela (ver convivio.ts).
+    cruzarRotinas(content, camp, periodoQualquer(camp));
+  }
 }
 
 // Preço que a loja deve cobrar hoje.

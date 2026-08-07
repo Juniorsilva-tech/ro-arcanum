@@ -14,6 +14,7 @@ import { dataPorExtenso, NOME_PERIODO } from './time';
 import { memoriaParaNarrador, diasDeConvivio, marcosRecentes } from './memoria';
 import { calcularRitmo } from './ritmo';
 import { comoEstaOVale } from './mundo';
+import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
@@ -38,6 +39,26 @@ export const SUGESTOES_OPENROUTER = [
   'deepseek/deepseek-r1:free',
   'mistralai/mistral-nemo:free',
   'meta-llama/llama-3.3-70b-instruct:free',
+];
+
+// Atalho para quem quer cena adulta e não quer caçar slug. A ordem é a que eu
+// recomendaria: os de cima costumam escrever sem travar.
+//
+// Por que é difícil achar um GRATUITO que narre sexo: o modelo é metade da
+// história. A outra metade é o provedor que serve aquele endpoint — muitos
+// endpoints :free são justamente os moderados, porque quem paga a conta filtra
+// para se proteger. Por isso o app etiqueta "provedor modera" separado de
+// "costuma recusar": são dois filtros diferentes, e o gratuito costuma ter os
+// dois. Um punhado de centavos em crédito abre a porta que a cota grátis fecha.
+export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
+  { id: 'cognitivecomputations/dolphin3.0-mistral-24b:free', nota: 'linhagem sem filtro; o melhor de graça', pago: false },
+  { id: 'deepseek/deepseek-chat-v3-0324:free', nota: 'ótima prosa; varia com o provedor do dia', pago: false },
+  { id: 'mistralai/mistral-nemo:free', nota: 'leve e pouco travado', pago: false },
+  { id: 'sao10k/l3.3-euryale-70b', nota: 'feito para interpretação adulta; barato', pago: true },
+  { id: 'thedrummer/rocinante-12b', nota: 'muito barato, escreve pesado sem reclamar', pago: true },
+  { id: 'sao10k/l3-lunaris-8b', nota: 'centavos por sessão; bom para cena longa', pago: true },
+  { id: 'nousresearch/hermes-3-llama-3.1-70b', nota: 'permissivo e articulado', pago: true },
+  { id: 'gryphe/mythomax-l2-13b', nota: 'clássico de RP; velho mas obediente', pago: true },
 ];
 
 // Teto de saída. O bug do "JSON cru na tela" era truncamento: o modelo estourava
@@ -228,6 +249,9 @@ export function montarPacote(
     },
     // O vale anda sozinho: tempo, evento corrente e carestia entram na cena.
     oValeHoje: comoEstaOVale(camp),
+    // O que rolou entre elas sem o jogador por perto — é o que a boca do povo
+    // repete, e o que dá ao vale história própria.
+    boatosDoVale: ecosRecentes(camp, 4, ctx.local.id),
     presentes: ctx.presentes.map((n) => ({
       nome: n.nome,
       idade: n.idade,
@@ -328,6 +352,9 @@ const INSTRUCAO_SISTEMA =
   '• Plante uma coisa que ainda não se explica. O mundo é mais velho que o jogador.\n' +
   '• "oValeHoje" traz o tempo e o que está acontecendo no vale sem o jogador. Faça a ' +
   'cena sentir isso: chuva molha, feira enche a praça, febre esvazia a taverna.\n' +
+  '• "boatosDoVale" é o que aconteceu ENTRE elas enquanto o jogador não olhava. ' +
+  'Deixe escapar num comentário, num olhar atravessado, numa mesa que ficou vazia. ' +
+  'O mundo tem assunto que não é sobre o jogador.\n' +
   '\nOPÇÕES — cada uma é uma decisão, não um verbo solto:\n' +
   '• De 3 a 5, SEMPRE INÉDITAS, nascidas do que acabou de acontecer e de quem está ali.\n' +
   '• Proibido repetir ou reescrever qualquer rótulo de "rotulosProibidos".\n' +
