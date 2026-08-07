@@ -3,6 +3,7 @@ import type { Campaign, ContentBundle, Atributos, NpcDinamico, LivroState } from
 import { createRng, seedFromString } from './rng';
 import { criarPersonagem } from './character';
 import { impulsosIniciais } from './impulsos';
+import { mundoInicial } from './mundo';
 
 export type EntradaCriacao = {
   nome: string;
@@ -74,6 +75,8 @@ export function criarCampanha(content: ContentBundle, entrada: EntradaCriacao): 
     questEstado,
   };
 
+  // O vale já começa com um tempo e um estado — nada nasce congelado.
+  camp.mundo = mundoInicial(camp);
   return camp;
 }
 

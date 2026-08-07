@@ -13,6 +13,7 @@ import { nextFloat, nextInt, pick } from './rng';
 import { modificador, clampRecursos } from './character';
 import { bonusDefesaEquip, armaEquipada } from './items';
 import { registrarMarco } from './memoria';
+import { recolherDespojos } from './despojos';
 
 export function criaturaPorId(content: ContentBundle, id: string): Criatura | undefined {
   return content.criaturas.find((c) => c.id === id);
@@ -336,6 +337,7 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
 
   if (resultado === 'vitoria' && content) {
     let xp = 0;
+    let moedasAchadas = 0;
     const loot: string[] = [];
     for (const a of s.atores) {
       if (a.ehJogador || vivo(a)) continue;
@@ -352,10 +354,16 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
           p.inventario[l.item] = (p.inventario[l.item] ?? 0) + 1;
         }
       }
+      // E o que ela carregava: bolso, embornal e a arma que estava usando.
+      const mochila = recolherDespojos(content, camp, c);
+      loot.push(...mochila.itens);
+      moedasAchadas += mochila.moedas;
     }
     p.xp += xp;
     s.recompensa = { xp, loot };
-    s.log.push(`Vitória. ${xp} de experiência${loot.length ? ` · saque: ${loot.join(', ')}` : ''}.`);
+    const nomes = loot.map((id) => content.itens.find((i) => i.id === id)?.nome ?? id);
+    const bolso = moedasAchadas > 0 ? ` · ${moedasAchadas} moedas` : '';
+    s.log.push(`Vitória. ${xp} de experiência${bolso}${nomes.length ? ` · saque: ${nomes.join(', ')}` : ''}.`);
   } else if (resultado === 'derrota') {
     // GDD §15: sobrevive com sequela; o inimigo leva algo seu.
     p.recursos.vida = 1;

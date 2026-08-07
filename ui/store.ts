@@ -27,6 +27,8 @@ import {
   aprenderArte as aprenderArteEngine,
   conjurarLivre,
   chaveRotulo,
+  montarGrade,
+  avancarMundo,
   registrarMarco,
   NOME_PERIODO,
   PERIODOS,
@@ -477,6 +479,7 @@ export const useGame = create<GameState>((set, get) => ({
       camp.calendario = avancarPeriodos(camp.calendario, 2);
       crescerImpulsos(camp, 2);
       camp.capitulo.periodosDecorridos += 2;
+      avancarMundo(content, camp);
       const arte = content.artes.find((a) => a.id === arteId);
       set({ camp: { ...camp }, feed: [...get().feed, nf(`Você aprendeu ${arte?.nome ?? arteId}.`, 'sistema')] });
       await salvarCampanha(camp);
@@ -512,6 +515,11 @@ export const useGame = create<GameState>((set, get) => ({
     await narrar(get, set, r.texto ?? `Você conjurou ${arte?.nome ?? 'uma arte'}.`);
   },
   async agirOpcao(op, alvoId) {
+    // Opção que é um verbo do catálogo roda como verbo, com os efeitos dele.
+    if (op.verboId) {
+      await get().agirVerbo(op.verboId, op.alvoId ?? alvoId);
+      return;
+    }
     await executar(get, set, { tipo: 'opcao', opcao: op, alvoId }, 'acao');
   },
 
@@ -544,6 +552,7 @@ export const useGame = create<GameState>((set, get) => ({
       camp.calendario = avancarPeriodos(camp.calendario, rota.periodos);
       crescerImpulsos(camp, rota.periodos);
       camp.capitulo.periodosDecorridos += rota.periodos;
+      avancarMundo(content, camp);
     }
     camp.localAtual = destino;
     if (!camp.locaisVisitados.includes(destino)) {
@@ -705,11 +714,6 @@ async function executar(
   checarCapitulo(get, set);
 }
 
-// Mantém só a opção canônica de "deixar o tempo correr" abaixo das da IA.
-function opcoesFixas(opcoes: OpcaoResolvida[]): OpcaoResolvida[] {
-  return opcoes.filter((o) => o.id === 'deixar_correr');
-}
-
 // Converte as sugestões da IA em opções de cena, já filtrando repetição contra
 // tudo que o jogador viu antes — opção repetida nunca deve chegar à tela.
 function montarOpcoesIA(
@@ -790,10 +794,14 @@ async function narrar(
     set({
       camp: { ...camp },
       feed: [...get().feed, ...extras],
-      cena:
-        cenaAtual && opcoesIA.length > 0
-          ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
-          : cenaAtual,
+      cena: cenaAtual
+        ? {
+            ...cenaAtual,
+            // Grade de posições fixas: a IA preenche o que consegue, a engine
+            // completa o resto com ações reais deste lugar.
+            opcoes: montarGrade(content, camp, cenaAtual.contexto, opcoesIA, cenaAtual.opcoes),
+          }
+        : cenaAtual,
       iaStatus: 'ok',
       ocupado: false,
       pendente: undefined,

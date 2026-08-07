@@ -22,6 +22,9 @@ import {
 } from './memoria';
 import { calcularRitmo } from './ritmo';
 import { avaliarOpcao, chanceDe } from './risco';
+import { montarGrade } from './grade';
+import { avancarMundo, multiplicadorDePreco, comoEstaOVale } from './mundo';
+import { recolherDespojos, despojosDe } from './despojos';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import * as narracaoMod from './narration';
@@ -386,6 +389,112 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     ['falar com Elza'],
   );
   ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// Grade: posições fixas. A engine completa o que a IA não entregou.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Grade',
+    atributos: atributosBase(),
+    classeId: 'batedor',
+    origemId: 'sem_nome',
+    seedString: 'grade-1',
+  });
+  const cn = montarCena(conteudoVaelhorn, c);
+
+  // A IA mandou só uma casa. A grade não pode entregar uma opção só.
+  const soUma = montarGrade(
+    conteudoVaelhorn,
+    c,
+    cn.contexto,
+    [{ id: 'ia_0', rotulo: 'Perguntar a Elza sobre a laje', natureza: 'aproximar', custoPeriodos: 0, origem: 'ia' }],
+    cn.opcoes,
+  );
+  ok(soUma.length >= 4, `A engine completa a grade (${soUma.length} casas)`);
+  ok(soUma[0].rotulo === 'Perguntar a Elza sobre a laje', 'A opção da IA fica na casa dela');
+  const eixos = soUma.map((o) => o.natureza);
+  ok(new Set(eixos).size >= 3, 'A grade cobre eixos diferentes');
+  ok(soUma.some((o) => o.origem === 'verbo' && !!o.verboId), 'As casas vazias viram verbos reais do jogo');
+
+  // Duas do mesmo eixo: a segunda não ocupa casa nenhuma.
+  const duplicadas = montarGrade(
+    conteudoVaelhorn,
+    c,
+    cn.contexto,
+    [
+      { id: 'a', rotulo: 'Falar com Elza', natureza: 'aproximar', custoPeriodos: 0, origem: 'ia' },
+      { id: 'b', rotulo: 'Falar com Aldrica', natureza: 'aproximar', custoPeriodos: 0, origem: 'ia' },
+    ],
+    cn.opcoes,
+  );
+  ok(!duplicadas.some((o) => o.rotulo === 'Falar com Aldrica'), 'Segunda opção do mesmo eixo não entra');
+  ok(duplicadas.some((o) => o.id === 'deixar_correr'), 'Deixar o tempo correr fecha a grade');
+}
+
+// O vale anda sem o jogador.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Parado',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'mundo-1',
+  });
+  ok(!!c.mundo, 'A campanha nasce com o vale montado');
+  const climaInicial = c.mundo!.clima;
+
+  // Duas semanas paradas: o mundo tem que ter mudado alguma coisa.
+  c.calendario = { ...c.calendario, dia: c.calendario.dia + 14 };
+  avancarMundo(conteudoVaelhorn, c);
+  const mudou =
+    c.mundo!.clima !== climaInicial || !!c.mundo!.evento || Math.abs(c.mundo!.carestia - 1) > 0.01;
+  ok(mudou, 'Duas semanas paradas mudam o vale');
+  ok(c.mundo!.diaProcessado === c.calendario.dia, 'O mundo não reprocessa o mesmo dia');
+
+  // Quem foi deixado de lado esfria.
+  ok(Object.values(c.npcState).some((d) => d.tensao > 0), 'A ausência pesa nas pessoas');
+
+  // O preço da praça responde ao vale.
+  const mult = multiplicadorDePreco(c);
+  ok(mult > 0.5 && mult < 2.5, `O multiplicador de preço fica em faixa sã (${mult.toFixed(2)})`);
+  const vale = comoEstaOVale(c);
+  ok(!!vale.clima && !!vale.estacao, 'O vale se descreve em palavras');
+}
+
+// Despojos: o inimigo deixa o que carregava.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Saqueador',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'despojos-1',
+  });
+  const bandido = conteudoVaelhorn.criaturas.find((x) => x.id === 'bandido')!;
+  const antes = c.personagem.dinheiro;
+  let achouAlgo = false;
+  for (let i = 0; i < 12; i += 1) {
+    const r = recolherDespojos(conteudoVaelhorn, c, bandido);
+    if (r.itens.length > 0 || r.moedas > 0) achouAlgo = true;
+  }
+  ok(achouAlgo, 'Gente armada deixa bolso e embornal');
+  ok(c.personagem.dinheiro > antes, 'As moedas do morto entram na bolsa');
+
+  // Bicho não carrega bolsa.
+  const rato = conteudoVaelhorn.criaturas.find((x) => x.id === 'rato_gigante')!;
+  const semBolso = recolherDespojos(conteudoVaelhorn, c, rato);
+  ok(semBolso.moedas === 0, 'Bicho não carrega moeda');
+
+  // Tudo que cai existe mesmo no catálogo.
+  const ids = new Set(conteudoVaelhorn.itens.map((i) => i.id));
+  const foragida = conteudoVaelhorn.criaturas.find((x) => x.id === 'foragido_veterano')!;
+  let todosValidos = true;
+  for (let i = 0; i < 20; i += 1) {
+    for (const a of despojosDe(conteudoVaelhorn, c, foragida)) {
+      if (a.itemId && !ids.has(a.itemId)) todosValidos = false;
+    }
+  }
+  ok(todosValidos, 'Nada que cai no chão é item inventado');
 }
 
 // Aposta: o que a tela mostra é a MESMA conta que resolve o turno.

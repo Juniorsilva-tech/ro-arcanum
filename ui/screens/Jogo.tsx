@@ -26,6 +26,8 @@ import {
   type Verbo,
   emBlocos,
   estadoDoNpc,
+  comoEstaOVale,
+  marcosRecentes,
   avaliarOpcao,
   NOME_NATUREZA,
   type Aposta,
@@ -81,6 +83,16 @@ export function Jogo() {
     return [...set].sort((a, b) => b.length - a.length);
   }, [content]);
 
+  // O que está aberto agora, sempre à vista: o jogador não devia precisar
+  // rolar o histórico para lembrar o que estava fazendo.
+  const objetivosAtivos = useMemo(() => {
+    if (!content || !camp) return [] as string[];
+    return content.quests
+      .filter((q) => camp.questEstado[q.id] === 'ativa')
+      .flatMap((q) => q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto))
+      .slice(0, 3);
+  }, [content, camp]);
+
   const porCategoria = useMemo(() => {
     const m = new Map<CategoriaVerbo, Verbo[]>();
     if (!content) return m;
@@ -133,6 +145,9 @@ export function Jogo() {
             testemunhas={ctx.testemunhas}
             vida={p.recursos.vida}
             vidaMax={p.recursosMax.vida}
+            vale={comoEstaOVale(camp)}
+            objetivos={objetivosAtivos}
+            aconteceu={marcosRecentes(camp, 2)}
           />
         </View>
 
@@ -296,7 +311,11 @@ function FaixaContexto(props: {
   testemunhas: number;
   vida: number;
   vidaMax: number;
+  vale: { clima: string; estacao: string; evento?: string; carestia?: string };
+  objetivos: string[];
+  aconteceu: string[];
 }) {
+  const [aberto, setAberto] = useState(true);
   return (
     <View style={styles.faixa}>
       <View style={styles.faixaLinha}>
@@ -306,11 +325,45 @@ function FaixaContexto(props: {
         </Text>
       </View>
       <Text style={styles.faixaData}>
-        {props.data} · {props.periodo}
+        {props.data} · {props.periodo} · {props.vale.clima}
       </Text>
       <Text style={styles.faixaMeta}>
         privacidade {props.privacidade} · {props.testemunhas === 0 ? 'ninguém te vê' : `${props.testemunhas} olhos`}
+        {props.vale.carestia ? ` · ${props.vale.carestia}` : ''}
       </Text>
+
+      {aberto && (
+        <>
+          {!!props.vale.evento && (
+            <Text style={styles.hudEvento} numberOfLines={2}>
+              {props.vale.evento}
+            </Text>
+          )}
+          {props.objetivos.length > 0 && (
+            <View style={styles.hudBloco}>
+              <Text style={styles.hudTitulo}>o que está aberto</Text>
+              {props.objetivos.map((o, i) => (
+                <Text key={i} style={styles.hudItem} numberOfLines={1}>
+                  · {o}
+                </Text>
+              ))}
+            </View>
+          )}
+          {props.aconteceu.length > 0 && (
+            <View style={styles.hudBloco}>
+              <Text style={styles.hudTitulo}>ficou para trás</Text>
+              {props.aconteceu.map((o, i) => (
+                <Text key={i} style={styles.hudItem} numberOfLines={1}>
+                  · {o}
+                </Text>
+              ))}
+            </View>
+          )}
+        </>
+      )}
+      <Pressable onPress={() => setAberto(!aberto)} hitSlop={8}>
+        <Text style={styles.hudPuxador}>{aberto ? '— recolher' : '+ o que está aberto'}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -524,6 +577,29 @@ const styles = StyleSheet.create({
   faixaVida: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 12 },
   faixaData: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginTop: 2 },
   faixaMeta: { fontFamily: fontes.mono, color: cores.linha, fontSize: 10, marginTop: 1 },
+  hudEvento: {
+    fontFamily: fontes.mono,
+    color: cores.ouro,
+    fontSize: 10,
+    marginTop: esp.xs,
+    lineHeight: 14,
+  },
+  hudBloco: { marginTop: esp.xs },
+  hudTitulo: {
+    fontFamily: fontes.mono,
+    color: cores.linha,
+    fontSize: 8,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  hudItem: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10, lineHeight: 14 },
+  hudPuxador: {
+    fontFamily: fontes.mono,
+    color: cores.linha,
+    fontSize: 9,
+    marginTop: esp.xs,
+    alignSelf: 'flex-end',
+  },
   narrBloco: { marginBottom: esp.lg },
   narracao: { color: cores.vellum, marginBottom: esp.md, fontSize: 20, lineHeight: 31 },
   narracaoPrimeira: { fontSize: 21 },

@@ -9,6 +9,7 @@ import {
   itemPorId,
   itensDaLoja,
   precoCompra,
+  multiplicadorDePreco,
   precoVenda,
   type Item,
 } from '@/engine';
@@ -22,6 +23,8 @@ export function Loja() {
 
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
   const desconto = camp.flags['desconto'] === true;
+  // Feira derruba o preço, escassez levanta: a praça responde ao vale.
+  const multMundo = multiplicadorDePreco(camp);
   const aVenda = itensDaLoja(content, local.id);
 
   const meus = Object.entries(p.inventario)
@@ -49,7 +52,7 @@ export function Loja() {
         <>
           <Divisor label="À venda" />
           {aVenda.map((item) => {
-            const preco = precoCompra(item, desconto);
+            const preco = precoCompra(item, desconto, multMundo);
             const podePagar = p.dinheiro >= preco;
             return (
               <View key={item.id} style={styles.row}>
@@ -87,7 +90,7 @@ export function Loja() {
             <TextoMono style={{ color: cores.linha }}>vale {item.valor}</TextoMono>
           </View>
           <Pressable style={[styles.precoBtn, { borderColor: cores.mudo }]} onPress={() => venderItem(id)}>
-            <Text style={[styles.precoTxt, { color: cores.mudo }]}>{precoVenda(item)}</Text>
+            <Text style={[styles.precoTxt, { color: cores.mudo }]}>{precoVenda(item, multMundo)}</Text>
             <Text style={styles.precoSub}>vender</Text>
           </Pressable>
         </View>

@@ -11,6 +11,7 @@ import type {
 } from './types';
 import { resolverTeste, type ResultadoTeste, NOME_GRAU } from './resolution';
 import { avancarPeriodos } from './time';
+import { avancarMundo } from './mundo';
 import { clampRecursos } from './character';
 import { crescerImpulsos, saciar } from './impulsos';
 import { penalidadeEstado } from './risco';
@@ -30,6 +31,10 @@ export type OpcaoResolvida = {
   efeitos?: Efeito[];
   impulsoQueSacia?: ImpulsoId;
   origem: 'cena' | 'verbo' | 'livre' | 'ia';
+  // Quando a opção É um verbo do catálogo, guarda a referência: assim ela roda
+  // com os efeitos reais do verbo em vez de virar uma opção genérica.
+  verboId?: string;
+  alvoId?: string;
 };
 
 export type Intencao =
@@ -178,6 +183,8 @@ export function resolverIntencao(
   if (custoPeriodos > 0) {
     camp.calendario = avancarPeriodos(camp.calendario, custoPeriodos);
     crescerImpulsos(camp, custoPeriodos);
+    // O vale não espera: o tempo cobra de todo mundo, não só do jogador.
+    avancarMundo(content, camp);
   }
 
   const fato = verbo

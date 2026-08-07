@@ -13,6 +13,7 @@ import { disponibilidadeVerbo, type Contexto } from './availability';
 import { dataPorExtenso, NOME_PERIODO } from './time';
 import { memoriaParaNarrador, diasDeConvivio, marcosRecentes } from './memoria';
 import { calcularRitmo } from './ritmo';
+import { comoEstaOVale } from './mundo';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
@@ -225,6 +226,8 @@ export function montarPacote(
       periodo: NOME_PERIODO[ctx.periodo],
       estacao: camp.calendario.estacao,
     },
+    // O vale anda sozinho: tempo, evento corrente e carestia entram na cena.
+    oValeHoje: comoEstaOVale(camp),
     presentes: ctx.presentes.map((n) => ({
       nome: n.nome,
       idade: n.idade,
@@ -323,6 +326,8 @@ const INSTRUCAO_SISTEMA =
   '• "ritmo.tom" manda no registro desta cena. Obedeça: se pede respiro, não ' +
   'invente ameaça; se pede clímax, não alivie.\n' +
   '• Plante uma coisa que ainda não se explica. O mundo é mais velho que o jogador.\n' +
+  '• "oValeHoje" traz o tempo e o que está acontecendo no vale sem o jogador. Faça a ' +
+  'cena sentir isso: chuva molha, feira enche a praça, febre esvazia a taverna.\n' +
   '\nOPÇÕES — cada uma é uma decisão, não um verbo solto:\n' +
   '• De 3 a 5, SEMPRE INÉDITAS, nascidas do que acabou de acontecer e de quem está ali.\n' +
   '• Proibido repetir ou reescrever qualquer rótulo de "rotulosProibidos".\n' +
@@ -331,9 +336,15 @@ const INSTRUCAO_SISTEMA =
   'Ruim: "Conversar com Elza". Bom: "Perguntar a Elza quem rabiscou a laje da cripta".\n' +
   '• "trancadoAgora" diz o que ainda não dá e por quê. Use isso para propor o passo ' +
   'que DESTRANCA — arranjar a ferramenta, esperar esvaziar, ganhar a confiança.\n' +
-  '• VARIEDADE OBRIGATÓRIA: cada opção traz "natureza" ∈ [avancar, arriscar, ' +
-  'aproximar, observar, ganhar], e o conjunto NÃO pode repetir natureza. Cinco jeitos ' +
-  'de conversar não são cinco escolhas.\n' +
+  '• GRADE FIXA: devolva as opções NESTA ORDEM, uma por casa, cada uma com o campo ' +
+  '"natureza" correspondente:\n' +
+  '   1) "aproximar" — chegar perto de alguém que está ali\n' +
+  '   2) "arriscar" — pôr a mão no fogo: transgressão, força, atrevimento\n' +
+  '   3) "observar" — olhar, escutar, ler antes de agir\n' +
+  '   4) "ganhar" — tirar proveito: ofício, troca, moeda\n' +
+  '   5) "avancar" — mudar de lugar ou empurrar um arco adiante\n' +
+  '  Se uma casa não fizer sentido nesta cena, pule — a engine preenche. Nunca mande ' +
+  'duas da mesma natureza: cinco jeitos de conversar não são cinco escolhas.\n' +
   '• Pelo menos uma deve poder dar errado de um jeito que custe caro.\n' +
   '• Não escreva chance nem risco na "dica" — a engine calcula e mostra. Use a "dica" ' +
   'para o que se GANHA ou o que se descobre.\n' +

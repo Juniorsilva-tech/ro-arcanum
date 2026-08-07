@@ -2,6 +2,7 @@
 import type { Campaign, ContentBundle, Item, ItemSlot, Personagem } from './types';
 import { aplicarEfeito } from './effects';
 import { clampRecursos } from './character';
+import { multiplicadorDePreco } from './mundo';
 
 export function itemPorId(content: ContentBundle, id: string): Item | undefined {
   return content.itens.find((i) => i.id === id);
@@ -68,12 +69,14 @@ export function usarConsumivel(
   return { ok: true };
 }
 
-export function precoCompra(item: Item, desconto = false): number {
-  return Math.max(1, Math.round(item.valor * (desconto ? 0.8 : 1)));
+// O preço do dia: base do catálogo, desconto de barganha e o que o vale está
+// vivendo (feira derruba, escassez levanta — ver mundo.ts).
+export function precoCompra(item: Item, desconto = false, multiplicadorMundo = 1): number {
+  return Math.max(1, Math.round(item.valor * (desconto ? 0.8 : 1) * multiplicadorMundo));
 }
 
-export function precoVenda(item: Item): number {
-  return Math.max(1, Math.floor(item.valor * 0.4));
+export function precoVenda(item: Item, multiplicadorMundo = 1): number {
+  return Math.max(1, Math.floor(item.valor * 0.4 * multiplicadorMundo));
 }
 
 // Itens à venda num local (GDD §7 serviços).
@@ -90,7 +93,7 @@ export function comprar(
   const p = camp.personagem;
   const item = itemPorId(content, itemId);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
-  const preco = precoCompra(item, desconto);
+  const preco = precoCompra(item, desconto, multiplicadorDePreco(camp));
   if (p.dinheiro < preco) return { ok: false, motivo: 'sem moedas suficientes' };
   p.dinheiro -= preco;
   p.inventario[itemId] = (p.inventario[itemId] ?? 0) + 1;
@@ -110,7 +113,7 @@ export function vender(
   (['arma', 'armadura', 'escudo', 'acessorio'] as const).forEach((s) => {
     if (p.equipado[s] === itemId && (p.inventario[itemId] ?? 0) <= 1) delete p.equipado[s];
   });
-  p.dinheiro += precoVenda(item);
+  p.dinheiro += precoVenda(item, multiplicadorDePreco(camp));
   p.inventario[itemId] = (p.inventario[itemId] ?? 0) - 1;
   if (p.inventario[itemId] <= 0) delete p.inventario[itemId];
   return { ok: true };

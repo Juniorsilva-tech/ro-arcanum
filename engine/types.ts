@@ -2,6 +2,7 @@
 import type { PerfilDano, Grau } from './resolution';
 import type { Periodo, Estacao, CalendarioState } from './time';
 import type { RngState } from './rng';
+import type { MundoState } from './mundo';
 
 // ── As seis posições de atributo. Mecânica fixa; o NOME vem do cenário (GDD §3.1).
 export type AttrKey =
@@ -428,6 +429,8 @@ export type Campaign = {
   // Os grandes acontecimentos da campanha, para o narrador poder citar o que
   // ficou para trás em vez de tratar cada turno como um episódio solto.
   marcos?: { turno: number; dia: number; texto: string }[];
+  // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
+  mundo?: MundoState;
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };
