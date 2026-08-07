@@ -21,6 +21,7 @@ import {
   estadoDoNpc,
 } from './memoria';
 import { calcularRitmo } from './ritmo';
+import { avaliarOpcao, chanceDe } from './risco';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import * as narracaoMod from './narration';
@@ -385,6 +386,87 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     ['falar com Elza'],
   );
   ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// Aposta: o que a tela mostra é a MESMA conta que resolve o turno.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Apostador',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'risco-1',
+  });
+
+  const facil = avaliarOpcao(conteudoVaelhorn, c, {
+    teste: { atributo: 'fisico', dificuldade: 6 },
+    custoPeriodos: 0,
+  });
+  const dificil = avaliarOpcao(conteudoVaelhorn, c, {
+    teste: { atributo: 'fisico', dificuldade: 26 },
+    custoPeriodos: 3,
+  });
+  ok(facil.chance === 'quase certo', `Dificuldade baixa lê como quase certo (${facil.chance})`);
+  ok(dificil.chance === 'quase impossível', `Dificuldade alta lê como quase impossível (${dificil.chance})`);
+  ok(!!dificil.perigo, 'Tentativa difícil avisa que pode desandar');
+  ok(dificil.custo === 'toma o dia', 'O custo de tempo aparece em palavra');
+  ok(!facil.perigo, 'Tentativa fácil não inventa perigo');
+
+  // Sem teste não há chance a mostrar — a ação simplesmente acontece.
+  const semTeste = avaliarOpcao(conteudoVaelhorn, c, { custoPeriodos: 0 });
+  ok(!semTeste.chance, 'Opção sem teste não mostra chance');
+
+  // A leitura tem que acompanhar o estado: ferido e exausto piora a mesma ação.
+  const antes = chanceDe(conteudoVaelhorn, c, { atributo: 'fisico', dificuldade: 14 });
+  c.personagem.condicoes.push('ferido', 'exausto');
+  const depois = chanceDe(conteudoVaelhorn, c, { atributo: 'fisico', dificuldade: 14 });
+  ok(depois < antes, 'Condição ruim derruba a chance mostrada');
+
+  // Nenhum número escapa para a tela (GDD §2.4).
+  const selos = [facil.chance, dificil.chance, dificil.custo, dificil.perigo].filter(Boolean);
+  ok(selos.every((t) => !/\d/.test(t as string)), 'Nenhuma aposta mostra número');
+}
+
+// Variedade: o conjunto de opções não pode ser cinco vezes o mesmo eixo.
+{
+  const mesmas = validarOpcoesIA([
+    { rotulo: 'Perguntar a Elza sobre a laje', natureza: 'aproximar', custoPeriodos: 0 },
+    { rotulo: 'Puxar conversa com Aldrica', natureza: 'aproximar', custoPeriodos: 0 },
+    { rotulo: 'Cortejar Mira no balcão', natureza: 'aproximar', custoPeriodos: 0 },
+  ]);
+  ok(mesmas.length === 1, 'Três opções do mesmo eixo viram uma');
+
+  const variadas = validarOpcoesIA([
+    { rotulo: 'Perguntar a Elza sobre a laje', natureza: 'aproximar', custoPeriodos: 0 },
+    { rotulo: 'Forçar a porta do porão', natureza: 'arriscar', custoPeriodos: 1 },
+    { rotulo: 'Ficar de olho em quem entra', natureza: 'observar', custoPeriodos: 1 },
+  ]);
+  ok(variadas.length === 3, 'Eixos diferentes convivem');
+  ok(variadas.every((o) => !!o.natureza), 'Toda opção sai com eixo definido');
+
+  // Sem declarar, a engine deduz pelo teste que o próprio modelo propôs.
+  const deduzida = validarOpcoesIA([
+    { rotulo: 'Ler a laje com calma', custoPeriodos: 1, teste: { atributo: 'percepcao', dificuldade: 12 } },
+  ]);
+  ok(deduzida[0].natureza === 'observar', 'Eixo é deduzido do teste quando falta');
+}
+
+// O pacote precisa dizer ao modelo o que é possível — sem isso ele chuta.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Curioso',
+    atributos: atributosBase(),
+    classeId: 'arcanista',
+    origemId: 'divida',
+    seedString: 'espaco-1',
+  });
+  const cn = montarCena(conteudoVaelhorn, c);
+  const pk = montarPacote(conteudoVaelhorn, c, cn.contexto, 'fato') as Record<string, unknown>;
+  ok(Array.isArray(pk.podeFazerAgora) && (pk.podeFazerAgora as string[]).length > 3, 'O pacote lista o que dá para fazer agora');
+  ok(Array.isArray(pk.trancadoAgora), 'O pacote lista o que está trancado e por quê');
+  ok(Array.isArray(pk.coisasAqui), 'O pacote lista as coisas concretas do lugar');
+  ok(Array.isArray(pk.ondeDaParaIr) && (pk.ondeDaParaIr as string[]).length > 0, 'O pacote lista para onde dá para ir');
+  ok(Array.isArray(pk.artesQueVoceSabe), 'O pacote lista as artes conhecidas');
 }
 
 // Memória: o que importa sobrevive, e chega ao narrador.

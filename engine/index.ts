@@ -18,3 +18,4 @@ export * from './llm';
 export * from './prosa';
 export * from './memoria';
 export * from './ritmo';
+export * from './risco';

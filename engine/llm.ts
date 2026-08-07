@@ -9,10 +9,11 @@
 // a modelos gratuitos e sem filtro. Anthropic segue disponível como opção.
 import type { Campaign, ContentBundle } from './types';
 import type { ResultadoTurno } from './turn';
-import type { Contexto } from './availability';
+import { disponibilidadeVerbo, type Contexto } from './availability';
 import { dataPorExtenso, NOME_PERIODO } from './time';
 import { memoriaParaNarrador, diasDeConvivio, marcosRecentes } from './memoria';
 import { calcularRitmo } from './ritmo';
+import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
 
@@ -257,6 +258,27 @@ export function montarPacote(
     ritmo: calcularRitmo(content, camp),
     // Vocabulário permitido: se citar objeto, tem que ser um destes nomes.
     catalogoDeItens: achaveis,
+    // O ESPAÇO DE AÇÃO. Sem isto o modelo adivinha o que é possível e, na
+    // dúvida, propõe o mais seguro — que é justamente o mais genérico.
+    podeFazerAgora: content.verbos
+      .filter((v) => disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]).disponivel)
+      .slice(0, 28)
+      .map((v) => v.nome),
+    // O que está trancado e por quê: dá caminhos que ainda não existem
+    // ("arranjar uma gazua", "esperar a praça esvaziar").
+    trancadoAgora: content.verbos
+      .map((v) => ({ v, d: disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]) }))
+      .filter((x) => !x.d.disponivel && !!x.d.motivo)
+      .slice(0, 10)
+      .map((x) => `${x.v.nome}: ${x.d.motivo}`),
+    // Substantivos concretos deste lugar. Opção boa aponta para uma coisa.
+    coisasAqui: ctx.local.pontos ?? [],
+    artesQueVoceSabe: p.artesConhecidas
+      .map((id) => content.artes.find((a) => a.id === id)?.nome)
+      .filter(Boolean),
+    ondeDaParaIr: ctx.local.rotas
+      .map((r) => content.locais.find((l) => l.id === r.destino)?.nome)
+      .filter(Boolean),
     // Rótulos que já foram oferecidos — proibido repetir (nem reescritos).
     rotulosProibidos: (camp.opcoesUsadas ?? []).slice(-24),
     fatoConsumado: fato,
@@ -304,12 +326,21 @@ const INSTRUCAO_SISTEMA =
   '\nOPÇÕES — cada uma é uma decisão, não um verbo solto:\n' +
   '• De 3 a 5, SEMPRE INÉDITAS, nascidas do que acabou de acontecer e de quem está ali.\n' +
   '• Proibido repetir ou reescrever qualquer rótulo de "rotulosProibidos".\n' +
-  '• Ruim: "Conversar com Elza". Bom: "Perguntar a Elza quem pagou pelo silêncio dela".\n' +
-  '• O rótulo diz a AÇÃO e o ALVO; a "dica" diz o que se arrisca ou se ganha.\n' +
-  '• Pelo menos uma opção deve poder dar errado de um jeito que custe caro.\n' +
+  '• O rótulo aponta para uma COISA ou uma PESSOA do pacote: use "coisasAqui", ' +
+  '"presentes", "podeFazerAgora", "artesQueVoceSabe", "ondeDaParaIr", "arcosAtivos". ' +
+  'Ruim: "Conversar com Elza". Bom: "Perguntar a Elza quem rabiscou a laje da cripta".\n' +
+  '• "trancadoAgora" diz o que ainda não dá e por quê. Use isso para propor o passo ' +
+  'que DESTRANCA — arranjar a ferramenta, esperar esvaziar, ganhar a confiança.\n' +
+  '• VARIEDADE OBRIGATÓRIA: cada opção traz "natureza" ∈ [avancar, arriscar, ' +
+  'aproximar, observar, ganhar], e o conjunto NÃO pode repetir natureza. Cinco jeitos ' +
+  'de conversar não são cinco escolhas.\n' +
+  '• Pelo menos uma deve poder dar errado de um jeito que custe caro.\n' +
+  '• Não escreva chance nem risco na "dica" — a engine calcula e mostra. Use a "dica" ' +
+  'para o que se GANHA ou o que se descobre.\n' +
   '\nFORMATO — responda SOMENTE com JSON válido, sem cercas de código, ' +
   'sem comentário antes ou depois, em UMA linha, neste formato:\n' +
-  '{"narracao":"…","opcoes":[{"rotulo":"…","dica":"…","custoPeriodos":0,' +
+  '{"narracao":"…","opcoes":[{"rotulo":"…","dica":"…","natureza":"aproximar",' +
+  '"custoPeriodos":0,' +
   '"teste":{"atributo":"social","pericia":"persuadir","dificuldade":13}}],"achado":null}\n' +
   '"rotulo" até 90 caracteres. "dica" até 12 palavras. "custoPeriodos" de 0 a 3. ' +
   '"teste" é opcional; se houver, "atributo" ∈ [fisico, precisao, resiliencia, ' +
@@ -320,6 +351,7 @@ const INSTRUCAO_SISTEMA =
 export type OpcaoIA = {
   rotulo: string;
   dica?: string;
+  natureza?: Natureza;
   custoPeriodos: number;
   teste?: { atributo: string; pericia?: string; dificuldade: number };
 };
@@ -504,6 +536,7 @@ export function limparNarracao(bruto: string): string {
 export function validarOpcoesIA(bruto: unknown, proibidos: string[] = []): OpcaoIA[] {
   if (!Array.isArray(bruto)) return [];
   const vetados = new Set(proibidos.map(chaveRotulo));
+  const eixos = new Set<Natureza>();
   const out: OpcaoIA[] = [];
   for (const o of bruto) {
     if (!o || typeof o !== 'object') continue;
@@ -533,7 +566,15 @@ export function validarOpcoesIA(bruto: unknown, proibidos: string[] = []): Opcao
         };
       }
     }
-    out.push({ rotulo, dica, custoPeriodos: custo, teste });
+    const bruta = (o as Record<string, unknown>).natureza;
+    const natureza: Natureza = ehNatureza(bruta)
+      ? bruta
+      : inferirNatureza({ teste: teste as never, custoPeriodos: custo });
+    // Um eixo por conjunto: cinco jeitos de conversar não são cinco escolhas.
+    if (eixos.has(natureza)) continue;
+    eixos.add(natureza);
+
+    out.push({ rotulo, dica, natureza, custoPeriodos: custo, teste });
     if (out.length >= 5) break;
   }
   return out;

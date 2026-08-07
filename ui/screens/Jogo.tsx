@@ -26,6 +26,9 @@ import {
   type Verbo,
   emBlocos,
   estadoDoNpc,
+  avaliarOpcao,
+  NOME_NATUREZA,
+  type Aposta,
   type OpcaoResolvida,
   type NPC,
   type Campaign,
@@ -184,8 +187,39 @@ export function Jogo() {
                 <Divisor label="o que você faz" />
                 <View style={{ marginTop: esp.md }}>
                   {cena.opcoes.map((op) => (
-                    <OpcaoCena key={op.id} op={op} onPress={() => agirOpcao(op, ctx.presentes[0]?.id)} />
+                    <OpcaoCena
+                      key={op.id}
+                      op={op}
+                      aposta={avaliarOpcao(content, camp, op, { testemunhas: ctx.testemunhas })}
+                      onPress={() => agirOpcao(op, ctx.presentes[0]?.id)}
+                    />
                   ))}
+                  {/* A ação livre é a última porta, e mora na mesma vitrine:
+                      para o jogador é tudo um sistema só. */}
+                  <View style={styles.livreCartao}>
+                    <Text style={styles.opcaoEixo}>escrever a sua</Text>
+                    <View style={styles.livreWrap}>
+                      <TextInput
+                        style={styles.livreInput}
+                        value={texto}
+                        onChangeText={setTexto}
+                        placeholder="descreva o que você faz…"
+                        placeholderTextColor={cores.linha}
+                        multiline
+                      />
+                      <Pressable
+                        style={styles.livreBtn}
+                        onPress={() => {
+                          if (texto.trim()) {
+                            acaoLivre(texto);
+                            setTexto('');
+                          }
+                        }}
+                      >
+                        <Text style={styles.livreBtnTxt}>Agir</Text>
+                      </Pressable>
+                    </View>
+                  </View>
                 </View>
               </>
             )
@@ -232,32 +266,6 @@ export function Jogo() {
             );
           })}
 
-          {/* PORTA 3 — ação livre */}
-          <Divisor label="ação livre" />
-          <View style={[styles.livreWrap, (ocupado || !podeAgir) && { opacity: 0.35 }]}>
-            <TextInput
-              style={styles.livreInput}
-              value={texto}
-              onChangeText={setTexto}
-              placeholder={
-                !podeAgir ? 'o narrador precisa voltar…' : ocupado ? 'aguarde a cena…' : 'descreva o que você faz…'
-              }
-              placeholderTextColor={cores.linha}
-              editable={!ocupado && podeAgir}
-              multiline
-            />
-            <Pressable
-              style={styles.livreBtn}
-              onPress={() => {
-                if (texto.trim() && !ocupado && podeAgir) {
-                  acaoLivre(texto);
-                  setTexto('');
-                }
-              }}
-            >
-              <Text style={styles.livreBtnTxt}>Agir</Text>
-            </Pressable>
-          </View>
           <View style={{ height: esp.xxl }} />
         </ScrollView>
       </View>
@@ -382,18 +390,46 @@ function EntradaNarrativa({
   );
 }
 
-function OpcaoCena({ op, onPress }: { op: OpcaoResolvida; onPress: () => void }) {
+function OpcaoCena({
+  op,
+  aposta,
+  onPress,
+}: {
+  op: OpcaoResolvida;
+  aposta: Aposta;
+  onPress: () => void;
+}) {
   const daIA = op.origem === 'ia';
+  // A aposta é a MESMA conta que resolve o turno, dita em palavra. Sem número
+  // na tela e sem mentira: se diz "no fio", a curva diz isso.
+  const selos = [aposta.chance, aposta.custo, aposta.perigo].filter(Boolean) as string[];
   return (
     <Pressable
       style={({ pressed }) => [styles.opcao, daIA && styles.opcaoIA, pressed && { opacity: 0.7 }]}
       onPress={onPress}
     >
+      {!!op.natureza && <Text style={styles.opcaoEixo}>{NOME_NATUREZA[op.natureza]}</Text>}
       <Text style={styles.opcaoRotulo}>
         {daIA && <Text style={styles.marcaIA}>✦ </Text>}
         {op.rotulo}
       </Text>
       {op.dica && <Text style={styles.opcaoDica}>{op.dica}</Text>}
+      {selos.length > 0 && (
+        <View style={styles.selos}>
+          {selos.map((t, i) => (
+            <Text
+              key={i}
+              style={[
+                styles.selo,
+                t === aposta.chance && styles.seloChance,
+                t === aposta.perigo && styles.seloPerigo,
+              ]}
+            >
+              {t}
+            </Text>
+          ))}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -622,6 +658,27 @@ const styles = StyleSheet.create({
   },
   botaoVazioTxt: { fontFamily: fontes.serifMedium, color: cores.mudo, fontSize: 17 },
   opcaoDica: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginTop: 2 },
+  opcaoEixo: {
+    fontFamily: fontes.mono,
+    color: cores.linha,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  selos: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs, marginTop: esp.sm },
+  selo: {
+    fontFamily: fontes.mono,
+    fontSize: 10,
+    color: cores.mudo,
+    borderWidth: 1,
+    borderColor: cores.fundo3,
+    borderRadius: raio.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  seloChance: { color: cores.vellum, borderColor: cores.linha },
+  seloPerigo: { color: cores.cinabrio, borderColor: cores.cinabrio },
   catCabecalho: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -642,6 +699,15 @@ const styles = StyleSheet.create({
   verboNome: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 17 },
   verboIndisp: { color: cores.linha, textDecorationLine: 'line-through' },
   verboMeta: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10, marginTop: 1, fontStyle: 'italic' },
+  livreCartao: {
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderStyle: 'dashed',
+    borderRadius: raio.md,
+    padding: esp.md,
+    marginBottom: esp.sm,
+    backgroundColor: cores.fundo2,
+  },
   livreWrap: { flexDirection: 'row', gap: esp.sm, alignItems: 'flex-end' },
   livreInput: {
     flex: 1,

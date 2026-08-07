@@ -12,8 +12,10 @@ import type {
 import { resolverTeste, type ResultadoTeste, NOME_GRAU } from './resolution';
 import { avancarPeriodos } from './time';
 import { clampRecursos } from './character';
-import { crescerImpulsos, saciar, penalidadePorImpulsos } from './impulsos';
+import { crescerImpulsos, saciar } from './impulsos';
+import { penalidadeEstado } from './risco';
 import { calcularContexto } from './availability';
+import type { Natureza } from './risco';
 import { aplicarEfeito, substituirAlvo } from './effects';
 import { lembrarDoTurno } from './memoria';
 
@@ -21,6 +23,8 @@ export type OpcaoResolvida = {
   id: string;
   rotulo: string;
   dica?: string;
+  // O eixo da escolha, para o conjunto nunca ser cinco vezes a mesma coisa.
+  natureza?: Natureza;
   custoPeriodos: number;
   teste?: { atributo: AttrKey; pericia?: string; dificuldade: number };
   efeitos?: Efeito[];
@@ -43,13 +47,6 @@ export type ResultadoTurno = {
   efeitosAplicados: Efeito[];
 };
 
-function penalidadeCondicoes(camp: Campaign): number {
-  let pen = 0;
-  if (camp.personagem.condicoes.includes('ferido')) pen += 2;
-  if (camp.personagem.condicoes.includes('exausto')) pen += 2;
-  if (camp.personagem.condicoes.includes('bebado')) pen += 3;
-  return pen;
-}
 
 function nomeAlvo(content: ContentBundle, alvoId?: string): NPC | undefined {
   if (!alvoId) return undefined;
@@ -151,7 +148,7 @@ export function resolverIntencao(
       atributo: p.atributos[teste.atributo],
       pericia: teste.pericia ? p.pericias[teste.pericia] ?? 0 : 0,
       circunstancia: 0,
-      penalidadeEstado: penalidadePorImpulsos(camp) + penalidadeCondicoes(camp),
+      penalidadeEstado: penalidadeEstado(camp),
       dificuldade: teste.dificuldade,
       k: cenario.k,
     });

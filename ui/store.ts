@@ -713,7 +713,7 @@ function opcoesFixas(opcoes: OpcaoResolvida[]): OpcaoResolvida[] {
 // Converte as sugestões da IA em opções de cena, já filtrando repetição contra
 // tudo que o jogador viu antes — opção repetida nunca deve chegar à tela.
 function montarOpcoesIA(
-  brutas: { rotulo: string; dica?: string; custoPeriodos: number; teste?: { atributo: string; pericia?: string; dificuldade: number } }[] | undefined,
+  brutas: import('@/engine').OpcaoIA[] | undefined,
   camp: Campaign,
   sufixo: string,
 ): OpcaoResolvida[] {
@@ -727,6 +727,7 @@ function montarOpcoesIA(
       id: `ia_${sufixo}_${out.length}`,
       rotulo: o.rotulo,
       dica: o.dica,
+      natureza: o.natureza,
       custoPeriodos: o.custoPeriodos,
       teste: o.teste
         ? {
