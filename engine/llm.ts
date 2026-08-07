@@ -29,36 +29,130 @@ export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 // substitui esta lista pela lista viva da sua conta.
 export const SUGESTOES_OPENROUTER = [
   'deepseek/deepseek-chat-v3-0324:free', // qualidade alta, pouco filtro em ficção
+  'cognitivecomputations/dolphin3.0-mistral-24b:free', // linhagem sem filtro
+  'nousresearch/hermes-3-llama-3.1-405b', // permissivo, bom em prosa
   'deepseek/deepseek-r1:free',
-  'nousresearch/hermes-3-llama-3.1-405b', // permissivo
-  'meta-llama/llama-3.3-70b-instruct:free',
   'mistralai/mistral-nemo:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
 ];
 
 // Teto de saída. O bug do "JSON cru na tela" era truncamento: o modelo estourava
 // o limite no meio do array de opções e a resposta virava lixo impossível de ler.
 const MAX_TOKENS = 2400;
 
-// Busca a lista de modelos da OpenRouter (opcionalmente só os gratuitos).
-// Assim o app nunca depende de um slug chumbado que pode ter saído do ar.
+// ── Que modelo serve para narrar ───────────────────────────────────────────
+// A lista crua da OpenRouter mistura tudo: geradores de música, classificadores
+// de censura, modelos de código, roteadores. Nada disso escreve uma cena. Pior:
+// entre os que escrevem, uns narram adulto e outros recusam — e o jogador não
+// tem como adivinhar pelo slug. Então a lista é filtrada e etiquetada aqui.
+
+// Nem sequer é um modelo de conversa: música, imagem, voz, código, moderação.
+const NAO_NARRA = [
+  'lyria', 'clip', 'whisper', 'tts', 'speech', 'audio', 'embed', 'rerank',
+  'guard', 'content-safety', 'moderation', 'shield', 'imagen', 'dall-e',
+  'stable-diffusion', 'sdxl', 'flux', 'veo-', 'video', 'coder', '-code',
+  'codestral', 'devstral', 'laguna', 'ocr',
+];
+const IDS_NAO_NARRA = ['openrouter/free', 'openrouter/auto'];
+
+// Linhagens conhecidas por escrever cena adulta sem travar. São finetunes de
+// interpretação e bases pouco alinhadas — o que este jogo pede.
+const PERMISSIVOS = [
+  'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
+  'toppy', 'rocinante', 'unslopnemo', 'magnum', 'midnight-rose', 'wizardlm',
+  'airoboros', 'xwin', 'anubis', 'cydonia', 'behemoth', 'sorcerer', 'lzlv',
+  'goliath', 'psyfighter', 'remm', 'weaver', 'tiefighter', 'fimbulvetr',
+  'stheno', 'lunaris', 'wayfarer', 'deepseek', 'mistral-nemo', 'mixtral',
+  'sao10k', 'thedrummer', 'undi95', 'neversleep', 'gryphe', 'nousresearch',
+  'latitudegames', 'infermatic',
+];
+
+// Linhagens alinhadas com força: costumam recusar ou cortar para o dia seguinte.
+const ESTRITOS = [
+  'nemotron', 'gemma', 'phi-', 'gpt-oss', 'command-', 'cohere', 'granite',
+  'olmo', 'sarvam', 'claude', 'gpt-4', 'gpt-5', 'gemini', 'palm', 'jamba',
+  'nova-', 'titan', 'o1-', 'o3-', 'o4-',
+];
+
+export type PerfilModelo = 'permissivo' | 'neutro' | 'estrito';
+
+export type ModeloOR = {
+  id: string;
+  nome: string;
+  free: boolean;
+  /** O provedor aplica uma camada extra de moderação sobre o modelo. */
+  moderado: boolean;
+  perfil: PerfilModelo;
+  contexto: number;
+};
+
+const contem = (id: string, lista: string[]) => lista.some((t) => id.includes(t));
+
+// Serve para narrar? Precisa cuspir texto e não pode ser classificador/código.
+export function serveParaNarrar(
+  id: string,
+  arq?: { modality?: string; output_modalities?: string[] },
+): boolean {
+  const alvo = id.toLowerCase();
+  if (IDS_NAO_NARRA.includes(alvo)) return false;
+  if (contem(alvo, NAO_NARRA)) return false;
+  // Campo estrutural da API, quando vier: a saída precisa incluir texto.
+  const saidas = arq?.output_modalities;
+  if (Array.isArray(saidas) && saidas.length > 0 && !saidas.includes('text')) return false;
+  if (arq?.modality && !arq.modality.includes('->text')) return false;
+  return true;
+}
+
+export function perfilDoModelo(id: string): PerfilModelo {
+  const alvo = id.toLowerCase();
+  if (contem(alvo, PERMISSIVOS)) return 'permissivo';
+  if (contem(alvo, ESTRITOS)) return 'estrito';
+  return 'neutro';
+}
+
+const ORDEM_PERFIL: Record<PerfilModelo, number> = { permissivo: 0, neutro: 1, estrito: 2 };
+
+// Busca a lista de modelos da OpenRouter (opcionalmente só os gratuitos), já
+// sem o que não narra, etiquetada e ordenada: quem escreve cena adulta primeiro.
 export async function listarModelosOpenRouter(
   apiKey?: string,
   apenasGratis = true,
-): Promise<{ id: string; free: boolean }[]> {
+): Promise<ModeloOR[]> {
   try {
     const resp = await fetch('https://openrouter.ai/api/v1/models', {
       headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
     });
     if (!resp.ok) return [];
     const data = (await resp.json()) as {
-      data?: { id: string; pricing?: { prompt?: string; completion?: string } }[];
+      data?: {
+        id: string;
+        name?: string;
+        context_length?: number;
+        architecture?: { modality?: string; output_modalities?: string[] };
+        pricing?: { prompt?: string; completion?: string };
+        top_provider?: { is_moderated?: boolean };
+      }[];
     };
-    const modelos = (data.data ?? []).map((m) => {
+    const modelos: ModeloOR[] = [];
+    for (const m of data.data ?? []) {
+      if (!serveParaNarrar(m.id, m.architecture)) continue;
       const free = m.pricing?.prompt === '0' && m.pricing?.completion === '0';
-      return { id: m.id, free };
+      if (apenasGratis && !free) continue;
+      modelos.push({
+        id: m.id,
+        nome: m.name ?? m.id,
+        free,
+        moderado: m.top_provider?.is_moderated === true,
+        perfil: perfilDoModelo(m.id),
+        contexto: m.context_length ?? 0,
+      });
+    }
+    return modelos.sort((a, b) => {
+      // Moderação do provedor pesa tanto quanto a linhagem do modelo.
+      const pa = ORDEM_PERFIL[a.perfil] + (a.moderado ? 1 : 0);
+      const pb = ORDEM_PERFIL[b.perfil] + (b.moderado ? 1 : 0);
+      return pa !== pb ? pa - pb : a.id.localeCompare(b.id);
     });
-    const filtrados = apenasGratis ? modelos.filter((m) => m.free) : modelos;
-    return filtrados.sort((a, b) => a.id.localeCompare(b.id));
   } catch {
     return [];
   }
@@ -234,6 +328,35 @@ const RE_DADO = /\bd\d+\b|\b\d+d\d+\b|\bCD\s?\d+/i;
 // Marcas de que o texto é JSON e não prosa. Se qualquer uma sobrar, o texto
 // NÃO vai para a tela — foi exatamente esse vazamento que o jogador viu.
 const RE_MARCA_JSON = /"(narracao|opcoes|rotulo|dica|custoPeriodos|dificuldade|achado)"\s*:/;
+
+// ── Recusa do modelo ───────────────────────────────────────────────────────
+// Um modelo filtrado não devolve erro: devolve um pedido de desculpas. Sem
+// detectar isso, "Sinto muito, não posso continuar" entraria na tela como se
+// fosse prosa do narrador. Aqui vira erro, e o fallback troca de modelo.
+
+// Marcas fortes: só aparecem quando o modelo sai do personagem.
+const RECUSA_FORTE = [
+  'como uma ia', 'como um modelo de linguagem', 'modelo de linguagem',
+  'minhas diretrizes', 'políticas de conteúdo', 'politica de conteudo',
+  'não é apropriado', 'nao e apropriado', 'conteúdo sexual explícito',
+  'as an ai', 'language model', 'my guidelines', 'content policy',
+  'i must decline', 'against my', 'i am unable to comply',
+];
+// Marcas fracas: só contam no começo de uma resposta curta — dentro de uma
+// cena longa, "não posso" pode ser fala de personagem.
+const RECUSA_FRACA = [
+  'não posso', 'nao posso', 'não vou', 'nao vou', 'sinto muito',
+  'desculpe, mas', 'prefiro não', 'não sou capaz',
+  "i can't", 'i cannot', "i won't", "i'm sorry", 'i am sorry',
+  "i'm not able", 'i apologize',
+];
+
+export function detectarRecusa(bruto: string): boolean {
+  const t = bruto.toLowerCase();
+  if (RECUSA_FORTE.some((m) => t.includes(m))) return true;
+  const inicio = t.slice(0, 140);
+  return t.length < 700 && RECUSA_FRACA.some((m) => inicio.includes(m));
+}
 
 export function pareceJson(t: string): boolean {
   const s = t.trim();
@@ -439,6 +562,11 @@ export function interpretarResposta(
     return id && idsValidos.has(id) ? id : undefined;
   };
 
+  // 0) O modelo saiu do personagem para recusar? Isso não é narração.
+  if (detectarRecusa(bruto)) {
+    return { erro: 'o modelo recusou a cena (filtro de conteúdo) — troque para um sem filtro' };
+  }
+
   // 1) Caminho feliz: JSON inteiro.
   const json = extrairJson(bruto);
   if (json && typeof json === 'object') {
@@ -473,7 +601,12 @@ export function interpretarResposta(
   return { erro: 'o modelo devolveu uma resposta malformada (JSON cortado)' };
 }
 
-async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<ResultadoNarracao> {
+async function chamarOpenRouter(
+  cfg: LlmConfig,
+  userMsg: string,
+  sistema: string = INSTRUCAO_SISTEMA,
+  teto: number = MAX_TOKENS,
+): Promise<ResultadoNarracao> {
   const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -484,10 +617,10 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<Result
     },
     body: JSON.stringify({
       model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
-      max_tokens: MAX_TOKENS,
+      max_tokens: teto,
       temperature: 0.9,
       messages: [
-        { role: 'system', content: INSTRUCAO_SISTEMA },
+        { role: 'system', content: sistema },
         { role: 'user', content: userMsg },
       ],
     }),
@@ -509,7 +642,12 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<Result
   return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
-async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<ResultadoNarracao> {
+async function chamarAnthropic(
+  cfg: LlmConfig,
+  userMsg: string,
+  sistema: string = INSTRUCAO_SISTEMA,
+  teto: number = MAX_TOKENS,
+): Promise<ResultadoNarracao> {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -520,8 +658,8 @@ async function chamarAnthropic(cfg: LlmConfig, userMsg: string): Promise<Resulta
     },
     body: JSON.stringify({
       model: cfg.modelo || MODELO_PADRAO_ANTHROPIC,
-      max_tokens: MAX_TOKENS,
-      system: INSTRUCAO_SISTEMA,
+      max_tokens: teto,
+      system: sistema,
       messages: [{ role: 'user', content: userMsg }],
     }),
   });
@@ -583,6 +721,33 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
   }
 }
 
+// Pergunta direta ao modelo: você narra sexo ou não? Em vez de o jogador
+// descobrir no meio da história, ele descobre aqui, em uma chamada barata.
+export async function testarCenaAdulta(
+  cfg: LlmConfig,
+): Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string }> {
+  const sistema =
+    'Você é narrador de um romance adulto em português do Brasil, para leitores maiores ' +
+    'de idade. Sexo explícito entre adultos consentindo é permitido e esperado. ' +
+    'Responda apenas com a prosa, sem comentário nem aviso.';
+  const pedido =
+    'Escreva um único parágrafo explícito: duas pessoas adultas, sozinhas num quarto de ' +
+    'estalagem, transando. Nomeie as partes do corpo sem eufemismo.';
+  try {
+    const r =
+      cfg.provider === 'anthropic'
+        ? await chamarAnthropic({ ...cfg }, pedido, sistema, 320)
+        : await chamarOpenRouter({ ...cfg }, pedido, sistema, 320);
+    if (r.erro) return { narra: false, recusou: false, erro: r.erro };
+    const texto = (r.texto ?? '').trim();
+    if (!texto) return { narra: false, recusou: false, erro: 'o modelo respondeu vazio' };
+    const recusou = detectarRecusa(texto);
+    return { narra: !recusou, recusou, amostra: texto.slice(0, 260) };
+  } catch (e) {
+    return { narra: false, recusou: false, erro: `rede: ${String(e).slice(0, 120)}` };
+  }
+}
+
 // Tenta o modelo configurado; se ele estiver fora do ar OU devolver resposta
 // malformada, cai para outro gratuito da lista viva — assim um slug morto ou um
 // modelo que não sabe fechar JSON não deixa o jogo sem narração.
@@ -596,11 +761,16 @@ export async function narrarComFallback(
   const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
   if (primeira.texto || cfg.provider !== 'openrouter') return primeira;
 
-  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada/i.test(primeira.erro ?? '');
+  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou/i.test(primeira.erro ?? '');
   if (!trocavel) return primeira;
 
+  // A lista já vem ordenada com os permissivos na frente — é justamente o que
+  // se quer quando o modelo atual recusou a cena.
   const vivos = await listarModelosOpenRouter(cfg.apiKey, true);
-  const candidatos = vivos.map((m) => m.id).filter((id) => id !== cfg.modelo).slice(0, 3);
+  const candidatos = vivos
+    .filter((m) => m.id !== cfg.modelo && m.perfil !== 'estrito' && !m.moderado)
+    .map((m) => m.id)
+    .slice(0, 3);
   for (const modelo of candidatos) {
     const tentativa = await narrarComModelo({ ...cfg, modelo }, content, camp, ctx, r);
     if (tentativa.texto) return { ...tentativa, modeloUsado: modelo };

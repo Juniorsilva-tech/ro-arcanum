@@ -4,7 +4,13 @@ import { probabilidade, resolverTeste } from './resolution';
 import { conteudoVaelhorn } from '../content/vaelhorn';
 import { encontrosPorTipo } from '../content/vaelhorn/bestiary';
 import { criarCampanha } from './campaign';
-import { validarOpcoesIA, interpretarResposta } from './llm';
+import {
+  validarOpcoesIA,
+  interpretarResposta,
+  serveParaNarrar,
+  perfilDoModelo,
+  detectarRecusa,
+} from './llm';
 import { emBlocos } from './prosa';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
@@ -370,6 +376,59 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     ['falar com Elza'],
   );
   ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// A lista de modelos não pode oferecer o que não narra (o jogador viu geradores
+// de música, classificadores de censura e modelos de código no seletor).
+{
+  const naoServem = [
+    'google/lyria-3-clip-preview',
+    'google/lyria-3-pro-preview',
+    'nvidia/nemotron-3.5-content-safety',
+    'cohere/north-mini-code',
+    'poolside/laguna-s-2.1',
+    'meta-llama/llama-guard-4-12b',
+    'openai/whisper-large-v3',
+    'mistralai/codestral-2501',
+    'openrouter/free',
+    'openrouter/auto',
+  ];
+  const ruins = naoServem.filter((id) => serveParaNarrar(id));
+  ok(ruins.length === 0, `Modelos que não narram são descartados (${ruins.join(', ')})`);
+
+  const servem = [
+    'deepseek/deepseek-chat-v3-0324:free',
+    'nousresearch/hermes-3-llama-3.1-405b',
+    'cognitivecomputations/dolphin3.0-mistral-24b:free',
+    'nvidia/nemotron-3-ultra-550b-a55b:free',
+  ];
+  const perdidos = servem.filter((id) => !serveParaNarrar(id));
+  ok(perdidos.length === 0, `Modelos de conversa passam pelo filtro (${perdidos.join(', ')})`);
+
+  // Saída não textual é barrada mesmo que o slug não denuncie.
+  ok(!serveParaNarrar('algum/modelo-x', { output_modalities: ['image'] }), 'Saída sem texto é barrada');
+  ok(serveParaNarrar('algum/modelo-y', { output_modalities: ['text'] }), 'Saída em texto passa');
+
+  ok(perfilDoModelo('cognitivecomputations/dolphin3.0-mistral-24b:free') === 'permissivo', 'Dolphin marcado como permissivo');
+  ok(perfilDoModelo('nvidia/nemotron-3-ultra-550b-a55b:free') === 'estrito', 'Nemotron marcado como estrito');
+  ok(perfilDoModelo('google/gemma-4-31b-it') === 'estrito', 'Gemma marcado como estrito');
+  ok(perfilDoModelo('meta-llama/llama-3.3-70b-instruct:free') === 'neutro', 'Llama fica em neutro');
+}
+
+// Recusa do modelo nunca pode virar narração na tela.
+{
+  ok(detectarRecusa('Sinto muito, não posso continuar com esse pedido.'), 'Recusa curta em português é pega');
+  ok(detectarRecusa("I'm sorry, but I can't write that."), 'Recusa curta em inglês é pega');
+  ok(detectarRecusa('Como um modelo de linguagem, devo recusar. ' + 'x'.repeat(900)), 'Marca forte vale mesmo em texto longo');
+
+  const cena =
+    'A chuva bate no telhado da estalagem. Elza fecha a porta com o quadril e o ' +
+    'ferrolho range. — Não posso ficar muito, freguês — ela diz, e mesmo assim ' +
+    'senta na beira da cama. ' + 'A vela derrete devagar no castiçal de estanho. '.repeat(20);
+  ok(!detectarRecusa(cena), 'Fala de personagem com "não posso" não é confundida com recusa');
+
+  const r = interpretarResposta('Desculpe, mas não posso escrever esse conteúdo.', conteudoVaelhorn);
+  ok(!r.texto && /recusou/.test(r.erro ?? ''), 'Recusa vira erro, e o jogo troca de modelo');
 }
 
 // O narrador local foi removido de vez: nada na engine escreve prosa de cena.

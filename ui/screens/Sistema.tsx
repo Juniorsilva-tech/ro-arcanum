@@ -5,11 +5,25 @@ import { Pagina, BarraVoltar } from './_layout';
 import { Titulo, TextoSerif, TextoMono, Botao, Card, Divisor, Rotulo, Carregando } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
+import type { ModeloOR } from '@/engine';
 import {
   SUGESTOES_OPENROUTER,
   MODELO_PADRAO_OPENROUTER,
   MODELO_PADRAO_ANTHROPIC,
+  perfilDoModelo,
 } from '@/engine';
+
+// As sugestões estáticas entram na mesma vitrine dos modelos vivos.
+function comoModelo(id: string): ModeloOR {
+  return {
+    id,
+    nome: id,
+    free: id.endsWith(':free'),
+    moderado: false,
+    perfil: perfilDoModelo(id),
+    contexto: 0,
+  };
+}
 
 // ─────────────────────────────────────────────── FIM DE CAPÍTULO
 export function FimCapitulo() {
@@ -81,13 +95,14 @@ export function Config() {
   const irPara = useGame((s) => s.irPara);
 
   const buscarModelos = useGame((s) => s.buscarModelosGratis);
+  const testarAdultoStore = useGame((s) => s.testarSeNarraAdulto);
   const testarNarr = useGame((s) => s.testarNarracaoReal);
   const [chave, setChave] = useState(config.apiKey ?? '');
   const [modelo, setModelo] = useState(config.modelo);
   const [testando, setTestando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
   const [confirmarApagar, setConfirmarApagar] = useState(false);
-  const [modelosVivos, setModelosVivos] = useState<string[] | null>(null);
+  const [modelosVivos, setModelosVivos] = useState<ModeloOR[] | null>(null);
   const [buscando, setBuscando] = useState(false);
 
   const provider = config.provider;
@@ -101,7 +116,11 @@ export function Config() {
       setResultado('Não consegui buscar a lista (sem rede ou chave inválida). Use as sugestões.');
     } else {
       setModelosVivos(lista);
-      setResultado(`${lista.length} modelos gratuitos encontrados.`);
+      const semFiltro = lista.filter((m) => m.perfil === 'permissivo' && !m.moderado).length;
+      setResultado(
+        `${lista.length} modelos que servem para narrar (música, código e classificadores ` +
+          `foram descartados). ${semFiltro} costumam escrever cena adulta — são os de cima.`,
+      );
     }
   }
 
@@ -123,6 +142,31 @@ export function Config() {
     const r = await testar();
     setTestando(false);
     setResultado(r.ok ? 'Chave válida — narração ao vivo pronta.' : `Falhou: ${r.erro}`);
+  }
+
+  // A pergunta que nenhum slug responde. Aqui a gente pergunta ao modelo.
+  async function testarAdulto() {
+    await salvarChave();
+    setTestando(true);
+    setResultado(null);
+    const r = await testarAdultoStore();
+    setTestando(false);
+    if (r.erro) {
+      setResultado(`NÃO DEU PARA TESTAR: ${r.erro}`);
+      return;
+    }
+    if (r.recusou) {
+      setResultado(
+        'ESTE MODELO RECUSA.\n\nEle respondeu com um pedido de desculpas em vez da cena:\n\n' +
+          `"${r.amostra}…"\n\n` +
+          'Escolha um modelo com a etiqueta verde "costuma narrar sexo" e teste de novo.',
+      );
+      return;
+    }
+    setResultado(
+      `ESTE MODELO NARRA. Ele escreveu a cena pedida:\n\n"${r.amostra}…"\n\n` +
+        'Pode voltar ao jogo.',
+    );
   }
 
   async function testarNarracao() {
@@ -228,27 +272,49 @@ export function Config() {
             </Pressable>
           </View>
           <View style={styles.chipsSug}>
-            {(modelosVivos ?? SUGESTOES_OPENROUTER).slice(0, 40).map((m) => (
-              <Pressable
-                key={m}
-                style={[styles.chipSug, modelo === m && styles.chipSugAtivo]}
-                onPress={() => {
-                  setModelo(m);
-                  setConfig({ modelo: m });
-                }}
-              >
-                <Text style={styles.chipSugTxt}>
-                  {m.replace(':free', '')}
-                  {m.endsWith(':free') ? ' ·free' : ''}
-                </Text>
-              </Pressable>
-            ))}
+            {(modelosVivos ?? SUGESTOES_OPENROUTER.map(comoModelo)).slice(0, 40).map((m) => {
+              const filtrado = m.perfil === 'estrito' || m.moderado;
+              return (
+                <Pressable
+                  key={m.id}
+                  style={[
+                    styles.chipSug,
+                    m.perfil === 'permissivo' && !m.moderado && styles.chipLivre,
+                    filtrado && styles.chipFiltrado,
+                    modelo === m.id && styles.chipSugAtivo,
+                  ]}
+                  onPress={() => {
+                    setModelo(m.id);
+                    setConfig({ modelo: m.id });
+                  }}
+                >
+                  <Text style={styles.chipSugTxt}>{m.id.replace(':free', '')}</Text>
+                  <Text
+                    style={[
+                      styles.chipEtiqueta,
+                      m.perfil === 'permissivo' && !m.moderado
+                        ? styles.etiquetaLivre
+                        : filtrado
+                          ? styles.etiquetaFiltrado
+                          : styles.etiquetaNeutro,
+                    ]}
+                  >
+                    {m.perfil === 'permissivo' && !m.moderado
+                      ? 'costuma narrar sexo'
+                      : filtrado
+                        ? m.moderado
+                          ? 'provedor modera'
+                          : 'costuma recusar'
+                        : 'não se sabe · teste'}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-          {!modelosVivos && (
-            <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
-              Se um modelo der 404, toque "Buscar modelos" para pegar a lista atual e grátis.
-            </TextoMono>
-          )}
+          <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
+            As etiquetas são um palpite pela linhagem do modelo. Quem responde de verdade é o
+            botão "Este modelo narra sexo?" — ele pergunta ao próprio modelo.
+          </TextoMono>
         </View>
       )}
 
@@ -265,6 +331,12 @@ export function Config() {
         sub="usa exatamente o mesmo caminho do jogo"
         variante="acento"
         onPress={testarNarracao}
+      />
+      <Botao
+        titulo="Este modelo narra sexo?"
+        sub="pede uma cena explícita e diz se ele escreveu ou recusou"
+        variante="acento"
+        onPress={testarAdulto}
       />
       {testando && <Carregando texto="testando…" />}
       {resultado && <TextoMono style={{ color: cores.ouro, marginTop: esp.sm }}>{resultado}</TextoMono>}
@@ -365,8 +437,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: esp.sm,
     paddingVertical: 4,
   },
-  chipSugAtivo: { borderColor: cores.ouro },
+  chipSugAtivo: { borderColor: cores.ouro, backgroundColor: cores.fundo3 },
+  chipLivre: { borderColor: cores.verdigris },
+  chipFiltrado: { borderColor: cores.linha, opacity: 0.65 },
   chipSugTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10 },
+  chipEtiqueta: { fontFamily: fontes.mono, fontSize: 8, letterSpacing: 0.5, marginTop: 1 },
+  etiquetaLivre: { color: cores.verdigris },
+  etiquetaFiltrado: { color: cores.cinabrio },
+  etiquetaNeutro: { color: cores.linha },
   buscarBtn: {
     borderWidth: 1,
     borderColor: cores.verdigris,

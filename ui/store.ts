@@ -1,6 +1,7 @@
 // ARCANUM · Store da aplicação (Zustand). Orquestra engine, narração e save.
 import { create } from 'zustand';
 import type { Campaign, ContentBundle, Atributos, AttrKey, NPC } from '@/engine/types';
+import type { ModeloOR } from '@/engine';
 import {
   criarCampanha,
   montarCena,
@@ -182,7 +183,8 @@ interface GameState {
   setConfig: (patch: Partial<ConfigApp>) => Promise<void>;
   proximoCapitulo: () => Promise<void>;
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
-  buscarModelosGratis: () => Promise<string[]>;
+  buscarModelosGratis: () => Promise<ModeloOR[]>;
+  testarSeNarraAdulto: () => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string }>;
   testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
   tentarNarrarDeNovo: () => Promise<void>;
 }
@@ -596,8 +598,16 @@ export const useGame = create<GameState>((set, get) => ({
   async buscarModelosGratis() {
     const { config } = get();
     const { listarModelosOpenRouter } = await import('@/engine');
-    const modelos = await listarModelosOpenRouter(config.apiKey, true);
-    return modelos.map((m) => m.id);
+    return listarModelosOpenRouter(config.apiKey, true);
+  },
+
+  // Responde de uma vez a pergunta que não se responde pelo slug: este modelo
+  // narra sexo, ou recusa?
+  async testarSeNarraAdulto() {
+    const { config } = get();
+    if (!config.apiKey) return { narra: false, recusou: false, erro: 'Sem chave salva.' };
+    const { testarCenaAdulta } = await import('@/engine');
+    return testarCenaAdulta({ provider: config.provider, apiKey: config.apiKey, modelo: config.modelo });
   },
 
   // Diagnóstico honesto: roda o MESMO caminho do jogo e mostra o que voltou.
