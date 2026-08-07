@@ -341,6 +341,8 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       const c = a.criaturaId ? criaturaPorId(content, a.criaturaId) : undefined;
       if (!c) continue;
       xp += c.xp;
+      // Marca a presa: missões podem exigir a queda de uma criatura específica.
+      camp.flags[`matou.${c.id}`] = true;
       for (const l of c.loot ?? []) {
         if (nextFloat(camp.rng) < l.chance) {
           loot.push(l.item);

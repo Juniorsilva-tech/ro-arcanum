@@ -2,6 +2,7 @@
 import { createRng } from './rng';
 import { probabilidade, resolverTeste } from './resolution';
 import { conteudoVaelhorn } from '../content/vaelhorn';
+import { encontrosPorTipo } from '../content/vaelhorn/bestiary';
 import { criarCampanha } from './campaign';
 import { validarOpcoesIA } from './llm';
 import { resolverIntencao } from './turn';
@@ -222,6 +223,95 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   const concl = verificarQuests(conteudoVaelhorn, c);
   ok(concl.includes('O edital novo'), 'Missão conclui quando o objetivo é cumprido');
   ok(c.personagem.dinheiro > dinAntes, 'Missão paga a recompensa');
+}
+
+// Integridade do conteúdo: nenhuma referência pode apontar para o vazio.
+{
+  const C = conteudoVaelhorn;
+  const idsLocais = new Set(C.locais.map((l) => l.id));
+  const idsItens = new Set(C.itens.map((i) => i.id));
+  const idsNpcs = new Set(C.npcs.map((n) => n.id));
+  const idsArtes = new Set(C.artes.map((a) => a.id));
+  const idsMestres = new Set(C.mestres.map((m) => m.id));
+  const idsCriaturas = new Set(C.criaturas.map((c) => c.id));
+  const idsFaccoes = new Set(C.faccoes.map((f) => f.id));
+  const idsVerbos = new Set(C.verbos.map((v) => v.id));
+
+  const quebras: string[] = [];
+  const exige = (cond: boolean, msg: string) => { if (!cond) quebras.push(msg); };
+
+  for (const l of C.locais) {
+    for (const r of l.rotas) exige(idsLocais.has(r.destino), `rota ${l.id} → ${r.destino}`);
+  }
+  for (const n of C.npcs) {
+    exige(idsLocais.has(n.localBase), `npc ${n.id} mora em ${n.localBase}`);
+    exige(idsFaccoes.has(n.faccaoId), `npc ${n.id} na facção ${n.faccaoId}`);
+    exige(n.idade >= 18, `npc ${n.id} tem idade ${n.idade}`);
+    for (const [per, loc] of Object.entries(n.rotina)) {
+      exige(idsLocais.has(loc as string), `rotina ${n.id}.${per} → ${loc}`);
+    }
+    if (n.ensinaMestre) exige(idsMestres.has(n.ensinaMestre), `npc ${n.id} ensina ${n.ensinaMestre}`);
+  }
+  for (const m of C.mestres) {
+    exige(idsLocais.has(m.localBase), `mestre ${m.id} em ${m.localBase}`);
+    for (const a of m.ensina) exige(idsArtes.has(a), `mestre ${m.id} ensina arte ${a}`);
+  }
+  for (const i of C.itens) {
+    for (const lj of i.lojas ?? []) exige(idsLocais.has(lj), `item ${i.id} vendido em ${lj}`);
+    if (i.concedeVerbo) exige(idsVerbos.has(i.concedeVerbo), `item ${i.id} concede ${i.concedeVerbo}`);
+  }
+  for (const c of C.criaturas) {
+    for (const l of c.loot ?? []) exige(idsItens.has(l.item), `criatura ${c.id} solta ${l.item}`);
+  }
+  for (const [tipo, lista] of Object.entries(encontrosPorTipo)) {
+    for (const cid of lista) exige(idsCriaturas.has(cid), `encontro ${tipo} → ${cid}`);
+  }
+  for (const q of C.quests) {
+    if (q.dador) exige(idsNpcs.has(q.dador), `missão ${q.id} dada por ${q.dador}`);
+    if (q.recompensa.item) exige(idsItens.has(q.recompensa.item), `missão ${q.id} paga ${q.recompensa.item}`);
+    for (const r of q.recompensa.reputacao ?? []) exige(idsFaccoes.has(r.faccaoId), `missão ${q.id} → facção ${r.faccaoId}`);
+  }
+  for (const r of C.reliquias) {
+    if (r.localAtual) exige(idsLocais.has(r.localAtual), `relíquia ${r.id} em ${r.localAtual}`);
+    if (r.donoAtual && r.donoAtual !== 'jogador') exige(idsNpcs.has(r.donoAtual), `relíquia ${r.id} de ${r.donoAtual}`);
+  }
+  for (const t of C.trabalhos) {
+    for (const r of t.reputacao ?? []) exige(idsFaccoes.has(r.faccaoId), `trabalho ${t.id} → facção ${r.faccaoId}`);
+  }
+  // Todo tipo de local sorteável precisa de uma tabela de encontros.
+  for (const l of C.locais) {
+    exige(!!encontrosPorTipo[l.tipo], `local ${l.id} (tipo ${l.tipo}) sem tabela de encontros`);
+  }
+  // Ids duplicados dentro de uma mesma lista quebram buscas por id.
+  const semDuplicata = (nome: string, ids: string[]) => {
+    const vistos = new Set<string>();
+    for (const id of ids) {
+      if (vistos.has(id)) quebras.push(`${nome}: id repetido ${id}`);
+      vistos.add(id);
+    }
+  };
+  semDuplicata('locais', C.locais.map((x) => x.id));
+  semDuplicata('npcs', C.npcs.map((x) => x.id));
+  semDuplicata('itens', C.itens.map((x) => x.id));
+  semDuplicata('criaturas', C.criaturas.map((x) => x.id));
+  semDuplicata('artes', C.artes.map((x) => x.id));
+  semDuplicata('verbos', C.verbos.map((x) => x.id));
+  semDuplicata('quests', C.quests.map((x) => x.id));
+  semDuplicata('mestres', C.mestres.map((x) => x.id));
+  semDuplicata('trabalhos', C.trabalhos.map((x) => x.id));
+  semDuplicata('reliquias', C.reliquias.map((x) => x.id));
+  semDuplicata('faccoes', C.faccoes.map((x) => x.id));
+
+  if (quebras.length) console.log('  referências quebradas:', quebras.slice(0, 12).join(' · '));
+  ok(quebras.length === 0, `Integridade do conteúdo (${quebras.length} referência(s) quebrada(s))`);
+
+  // Volume: o cenário precisa continuar grande.
+  ok(C.locais.length >= 16, `Mapa com ${C.locais.length} locais`);
+  ok(C.npcs.length >= 28, `Elenco com ${C.npcs.length} NPCs`);
+  ok(C.itens.length >= 110, `Catálogo com ${C.itens.length} itens`);
+  ok(C.criaturas.length >= 30, `Bestiário com ${C.criaturas.length} criaturas`);
+  ok(C.artes.length >= 55, `Livro com ${C.artes.length} artes`);
+  ok(C.quests.length >= 14, `${C.quests.length} missões`);
 }
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM.\n' : `\n${falhas} FALHA(S).\n`);

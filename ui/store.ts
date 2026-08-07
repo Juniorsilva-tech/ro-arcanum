@@ -140,6 +140,14 @@ interface GameState {
   testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
 }
 
+// Verbos que abrem direto a luta contra um chefe (GDD §17).
+const CHEFES_POR_VERBO: Record<string, string> = {
+  confrontar_vess: 'vess_fiador',
+  chamar_o_afogado: 'o_afogado_do_espelho',
+  encarar_a_que_queimou: 'a_que_queimou_mir',
+  romper_o_selo: 'o_selado',
+};
+
 function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => void) {
   const { content, camp } = get();
   if (!content || !camp) return;
@@ -258,8 +266,9 @@ export const useGame = create<GameState>((set, get) => ({
       get().iniciarLutaLocal();
       return;
     }
-    if (verboId === 'confrontar_vess') {
-      get().iniciarLuta(['vess_fiador']);
+    const chefe = CHEFES_POR_VERBO[verboId];
+    if (chefe) {
+      get().iniciarLuta([chefe]);
       return;
     }
     await executar(get, set, { tipo: 'verbo', verboId, alvoId }, 'acao');
@@ -451,6 +460,7 @@ export const useGame = create<GameState>((set, get) => ({
     }
     camp.localAtual = destino;
     if (!camp.locaisVisitados.includes(destino)) camp.locaisVisitados.push(destino);
+    camp.flags[`visitou.${destino}`] = true;
     const alvo = content.locais.find((l) => l.id === destino);
     const usaIA = !!(get().config.usarModelo && get().config.apiKey);
     const cena = montarCena(content, { ...camp });

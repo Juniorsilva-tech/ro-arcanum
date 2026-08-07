@@ -97,6 +97,16 @@ export function disponibilidadeVerbo(
     if (!camp.segredosRevelados.includes('vess')) {
       return { disponivel: false, motivo: 'você ainda não sabe o que ele guarda' };
     }
+  } else if (req.condicaoNecessaria?.startsWith('flag:')) {
+    // Exige uma flag da campanha (ex.: ter visitado um lugar, ter cumprido um passo).
+    if (!camp.flags[req.condicaoNecessaria.slice(5)]) {
+      return { disponivel: false, motivo: 'ainda não é hora disso' };
+    }
+  } else if (req.condicaoNecessaria?.startsWith('segredo:')) {
+    // Exige conhecer o segredo de um NPC específico.
+    if (!camp.segredosRevelados.includes(req.condicaoNecessaria.slice(8))) {
+      return { disponivel: false, motivo: 'você ainda não sabe o bastante' };
+    }
   } else if (req.condicaoNecessaria && !p.condicoes.includes(req.condicaoNecessaria)) {
     return { disponivel: false, motivo: `exige estar ${req.condicaoNecessaria}` };
   }

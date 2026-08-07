@@ -524,6 +524,34 @@ export const verbosVaelhorn: Verbo[] = [
     requisitos: { localTipo: ['taverna'], condicaoNecessaria: 'sabe_segredo_vess' },
     tabu: { faccoes: ['ladroes'], consequencia: 'inimizade dos ladrões' },
   }),
+  v({
+    id: 'chamar_o_afogado',
+    nome: 'Chamar pelo nome que o lago guarda',
+    categoria: 'transgressao',
+    descricao: 'Gant disse o nome uma vez. A água ouviu.',
+    alvo: 'nenhum',
+    custo: { periodos: 0 },
+    requisitos: { localTipo: ['lago'], condicaoNecessaria: 'segredo:gant' },
+  }),
+  v({
+    id: 'encarar_a_que_queimou',
+    nome: 'Ficar até ela aparecer',
+    categoria: 'transgressao',
+    descricao: 'As ruínas têm dona. Basta esperar sem sair.',
+    alvo: 'nenhum',
+    custo: { periodos: 0 },
+    requisitos: { localTipo: ['ruina'], condicaoNecessaria: 'segredo:vell' },
+  }),
+  v({
+    id: 'romper_o_selo',
+    nome: 'Romper o selo',
+    categoria: 'transgressao',
+    descricao: 'O que Sarn trancou. O que o padre alimenta. Acabar com isso.',
+    alvo: 'nenhum',
+    custo: { periodos: 0 },
+    requisitos: { localTipo: ['cripta'], condicaoNecessaria: 'segredo:sarn' },
+    tabu: { faccoes: ['igreja'], consequencia: 'a Igreja não perdoa quem abre o que ela fechou' },
+  }),
 
   // ─────────────────────────── CONCEDIDOS POR ITEM (GDD §13.6)
   v({
