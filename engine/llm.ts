@@ -145,6 +145,13 @@ export function explicarErroOpenRouter(status: number, corpo: string): string {
       '(prompt training). Ou toque em "Buscar modelos" e escolha outro.'
     );
   }
+  if (c.includes('request limit reached') || c.includes('rate limit')) {
+    return (
+      'limite de requisições da OpenRouter atingido neste modelo gratuito. ' +
+      'Espere alguns minutos, troque de modelo em "Buscar modelos", ou adicione ' +
+      'créditos na conta para liberar um limite maior.'
+    );
+  }
   if (status === 401) return 'chave inválida ou sem permissão (401). Confira a chave.';
   if (status === 402) return 'créditos insuficientes (402). Use um modelo :free.';
   if (status === 429) return 'limite de uso atingido (429). Espere um pouco ou troque de modelo.';
@@ -273,7 +280,8 @@ async function chamarOpenRouter(cfg: LlmConfig, userMsg: string): Promise<Result
   } catch {
     return { erro: 'resposta inválida da OpenRouter' };
   }
-  if (data.error?.message) return { erro: data.error.message.slice(0, 160) };
+  // Erro embutido num 200 (a OpenRouter faz isso com limite/roteamento).
+  if (data.error?.message) return { erro: explicarErroOpenRouter(200, data.error.message) };
   const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
   return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }

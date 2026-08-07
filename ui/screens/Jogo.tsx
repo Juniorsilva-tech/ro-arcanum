@@ -1,6 +1,14 @@
 // ARCANUM · A tela de jogo. As três portas: a cena, as ações, a ação livre (GDD §4, §31).
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CabecalhoJogo } from './_layout';
 import { TextoSerif, TextoMono, Divisor, Rotulo } from '../components';
@@ -128,18 +136,28 @@ export function Jogo() {
           )}
           <TextoSerif style={styles.situacao}>{cena.narracao}</TextoSerif>
 
-          {/* PORTA 1 — opções de cena */}
-          {cena.opcoes.length > 0 && (
-            <View style={{ marginTop: esp.md }}>
-              {cena.opcoes.map((op) => (
-                <OpcaoCena key={op.id} op={op} onPress={() => agirOpcao(op, ctx.presentes[0]?.id)} />
-              ))}
+          {/* Enquanto a cena nova não existe, nada de escolher: as opções somem
+              e um painel grande deixa claro que a IA está trabalhando. */}
+          {ocupado ? (
+            <View style={styles.gerandoBox}>
+              <ActivityIndicator color={cores.ouro} size="large" />
+              <Text style={styles.gerandoTitulo}>O narrador está escrevendo…</Text>
+              <Text style={styles.gerandoSub}>as novas opções aparecem em instantes</Text>
             </View>
+          ) : (
+            cena.opcoes.length > 0 && (
+              <View style={{ marginTop: esp.md }}>
+                {cena.opcoes.map((op) => (
+                  <OpcaoCena key={op.id} op={op} onPress={() => agirOpcao(op, ctx.presentes[0]?.id)} />
+                ))}
+              </View>
+            )
           )}
 
           {/* PORTA 2 — o catálogo de ações */}
           <Divisor label="ações" />
-          {ORDEM_CATEGORIAS.map((cat) => {
+          {ocupado && <Text style={styles.travado}>ações bloqueadas enquanto a cena é escrita</Text>}
+          {!ocupado && ORDEM_CATEGORIAS.map((cat) => {
             const verbos = porCategoria.get(cat);
             if (!verbos || verbos.length === 0) return null;
             const aberta = catAberta === cat;
@@ -175,13 +193,14 @@ export function Jogo() {
 
           {/* PORTA 3 — ação livre */}
           <Divisor label="ação livre" />
-          <View style={styles.livreWrap}>
+          <View style={[styles.livreWrap, ocupado && { opacity: 0.35 }]}>
             <TextInput
               style={styles.livreInput}
               value={texto}
               onChangeText={setTexto}
-              placeholder="descreva o que você faz…"
+              placeholder={ocupado ? 'aguarde a cena…' : 'descreva o que você faz…'}
               placeholderTextColor={cores.linha}
+              editable={!ocupado}
               multiline
             />
             <Pressable
@@ -262,9 +281,16 @@ function EntradaNarrativa({ entrada, primeira }: { entrada: EntradaFeed; primeir
 }
 
 function OpcaoCena({ op, onPress }: { op: OpcaoResolvida; onPress: () => void }) {
+  const daIA = op.origem === 'ia';
   return (
-    <Pressable style={({ pressed }) => [styles.opcao, pressed && { opacity: 0.7 }]} onPress={onPress}>
-      <Text style={styles.opcaoRotulo}>{op.rotulo}</Text>
+    <Pressable
+      style={({ pressed }) => [styles.opcao, daIA && styles.opcaoIA, pressed && { opacity: 0.7 }]}
+      onPress={onPress}
+    >
+      <Text style={styles.opcaoRotulo}>
+        {daIA && <Text style={styles.marcaIA}>✦ </Text>}
+        {op.rotulo}
+      </Text>
       {op.dica && <Text style={styles.opcaoDica}>{op.dica}</Text>}
     </Pressable>
   );
@@ -380,7 +406,23 @@ const styles = StyleSheet.create({
     marginBottom: esp.sm,
     backgroundColor: cores.fundo2,
   },
+  opcaoIA: { borderColor: cores.ouro, backgroundColor: cores.fundo3 },
+  marcaIA: { color: cores.ouro },
   opcaoRotulo: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 18 },
+  gerandoBox: {
+    marginTop: esp.lg,
+    paddingVertical: esp.xl,
+    paddingHorizontal: esp.lg,
+    borderWidth: 1,
+    borderColor: cores.ouro,
+    borderRadius: raio.md,
+    backgroundColor: cores.fundo2,
+    alignItems: 'center',
+    gap: esp.sm,
+  },
+  gerandoTitulo: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 22, marginTop: esp.sm },
+  gerandoSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
+  travado: { fontFamily: fontes.mono, color: cores.linha, fontSize: 11, paddingVertical: esp.md },
   opcaoDica: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginTop: 2 },
   catCabecalho: {
     flexDirection: 'row',

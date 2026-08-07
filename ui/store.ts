@@ -389,21 +389,30 @@ export const useGame = create<GameState>((set, get) => ({
       camp.capitulo.periodosDecorridos += 2;
       const arte = content.artes.find((a) => a.id === arteId);
       set({ camp: { ...camp }, feed: [...get().feed, nf(`Você aprendeu ${arte?.nome ?? arteId}.`, 'sistema')] });
-    } else {
-      set({ feed: [...get().feed, nf(`Não deu para aprender: ${r.motivo}.`, 'sistema')] });
+      await salvarCampanha(camp);
+      get().irPara('jogo');
+      // A cena precisa reagir: novas opções depois de aprender (§7.1).
+      await replanejarCena(get, set, `Você passou períodos aprendendo ${arte?.nome ?? arteId} com o mestre.`);
+      checarCapitulo(get, set);
+      return;
     }
+    set({ feed: [...get().feed, nf(`Não deu para aprender: ${r.motivo}.`, 'sistema')] });
     await salvarCampanha(camp);
     checarCapitulo(get, set);
   },
   async conjurarArteLivre(arteId) {
     const { content, camp } = get();
-    if (!content || !camp) return;
+    if (!content || !camp || get().ocupado) return;
     const r = conjurarLivre(content, camp, arteId);
     set({
       camp: { ...camp },
       feed: [...get().feed, nf(r.ok ? r.texto! : `Falha: ${r.motivo}.`, r.ok ? 'narracao' : 'sistema')],
     });
     await salvarCampanha(camp);
+    if (r.ok) {
+      get().irPara('jogo');
+      await replanejarCena(get, set, r.texto ?? 'Você conjurou uma arte.');
+    }
   },
   async agirOpcao(op, alvoId) {
     await executar(get, set, { tipo: 'opcao', opcao: op, alvoId }, 'acao');
@@ -443,19 +452,23 @@ export const useGame = create<GameState>((set, get) => ({
     camp.localAtual = destino;
     if (!camp.locaisVisitados.includes(destino)) camp.locaisVisitados.push(destino);
     const alvo = content.locais.find((l) => l.id === destino);
+    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
     const cena = montarCena(content, { ...camp });
     set({
       camp: { ...camp },
       cena,
-      ocupado: false,
+      ocupado: usaIA,
       tela: 'jogo',
       feed: [
         ...get().feed,
         nf(`Você segue para ${alvo?.nome ?? destino}.`, 'sistema'),
-        nf(cena.narracao, 'narracao'),
+        ...(usaIA ? [] : [nf(cena.narracao, 'narracao')]),
       ],
     });
     await salvarCampanha(camp);
+    if (usaIA) {
+      await replanejarCena(get, set, `Você chegou a ${alvo?.nome ?? destino}.`);
+    }
     checarCapitulo(get, set);
   },
 
@@ -547,42 +560,50 @@ async function executar(
 ) {
   const { content, camp, config } = get();
   if (!content || !camp || get().ocupado) return;
-  set({ ocupado: true });
+
+  const usaIA = !!(config.usarModelo && config.apiKey);
+  // Trava o turno inteiro: nada de clicar em mais nada até a cena nova existir.
+  set({ ocupado: true, iaStatus: usaIA ? 'pensando' : 'off', iaErro: undefined });
 
   const r = resolverIntencao(content, camp, intencao);
   camp.capitulo.periodosDecorridos += r.custoPeriodos;
-
-  const { narracao, eco } = narrarResultado(camp, r);
-  const novasEntradas: EntradaFeed[] = [nf(narracao, 'narracao')];
-  if (eco) novasEntradas.push(nf(eco, 'eco'));
-
-  // Revela segredo do alvo se o verbo/flag indicar (gatilho simples de descoberta).
   talvezRevelarSegredo(camp, r.alvo);
 
+  const { narracao, eco } = narrarResultado(camp, r);
   const cena = montarCena(content, { ...camp });
-  set({ camp: { ...camp }, cena, feed: [...get().feed, ...novasEntradas], ocupado: false });
-  await salvarCampanha(camp);
 
-  // Missões concluídas neste turno.
-  const concl = verificarQuests(content, camp);
-  if (concl.length) {
-    set({ camp: { ...camp }, feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
+  // Sem IA: o texto local entra na hora. Com IA: nada de texto provisório —
+  // o rótulo da opção não deve aparecer como narração (era o "vai para o texto").
+  const entradasLocais: EntradaFeed[] = [];
+  if (!usaIA) {
+    entradasLocais.push(nf(narracao, 'narracao'));
+    if (eco) entradasLocais.push(nf(eco, 'eco'));
   }
 
-  // Narração ao vivo pelo modelo: reescreve o texto E propõe as novas opções
-  // de cena (§18.2). O menu fixo de verbos continua embaixo, sempre.
-  if (config.usarModelo && config.apiKey && cena.contexto) {
-    const idAlvo = novasEntradas[0].id;
-    set({ iaStatus: 'pensando', iaErro: undefined });
+  set({
+    camp: { ...camp },
+    cena,
+    feed: [...get().feed, ...entradasLocais],
+    ocupado: usaIA, // continua travado enquanto a IA escreve
+  });
+  await salvarCampanha(camp);
+
+  const concl = verificarQuests(content, camp);
+  if (concl.length) {
+    set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
+  }
+
+  // Narração ao vivo: o modelo escreve o texto E propõe as opções novas (§18.2).
+  if (usaIA && cena.contexto) {
     const res = await narrarComFallback(
-      { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
+      { provider: config.provider, apiKey: config.apiKey!, modelo: config.modelo },
       content,
       camp,
       cena.contexto,
       r,
     );
+    const cenaAtual = get().cena;
     if (res.texto) {
-      const cenaAtual = get().cena;
       const opcoesIA: OpcaoResolvida[] = (res.opcoes ?? []).map((o, i) => ({
         id: `ia_${camp.turno}_${i}`,
         rotulo: o.rotulo,
@@ -595,22 +616,32 @@ async function executar(
               dificuldade: o.teste.dificuldade,
             }
           : undefined,
-        origem: 'cena',
+        origem: 'ia',
       }));
+      const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
+      if (eco) extras.push(nf(eco, 'eco'));
       set({
-        feed: get().feed.map((e) => (e.id === idAlvo ? { ...e, texto: res.texto! } : e)),
+        feed: [...get().feed, ...extras],
         cena:
           cenaAtual && opcoesIA.length > 0
             ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
             : cenaAtual,
         iaStatus: 'ok',
+        ocupado: false,
       });
-    } else if (res.erro) {
-      // Não silencia: mostra por que a IA não respondeu (§20 mantém o jogo de pé).
+    } else {
+      // Falhou: o jogo não trava — entra o texto local e o motivo aparece (§20).
+      const locais: EntradaFeed[] = [nf(narracao, 'narracao')];
+      if (eco) locais.push(nf(eco, 'eco'));
       set({
         iaStatus: 'erro',
         iaErro: res.erro,
-        feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro})`, 'sistema')],
+        ocupado: false,
+        feed: [
+          ...get().feed,
+          ...locais,
+          nf(`IA indisponível — narração local. (${res.erro ?? 'sem resposta'})`, 'sistema'),
+        ],
       });
     }
   }
@@ -621,6 +652,63 @@ async function executar(
 // Mantém só a opção canônica de "deixar o tempo correr" abaixo das da IA.
 function opcoesFixas(opcoes: OpcaoResolvida[]): OpcaoResolvida[] {
   return opcoes.filter((o) => o.id === 'deixar_correr');
+}
+
+// Toda ação fora do turno normal (aprender, conjurar, viajar, sair do combate)
+// também refaz a cena e pede opções novas à IA — nada fica parado.
+async function replanejarCena(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  fato: string,
+) {
+  const { content, camp, config } = get();
+  if (!content || !camp) return;
+  const usaIA = !!(config.usarModelo && config.apiKey);
+  const cena = montarCena(content, { ...camp });
+  set({ cena, iaStatus: usaIA ? 'pensando' : 'off', ocupado: usaIA });
+  if (!usaIA || !cena.contexto) {
+    set({ ocupado: false });
+    return;
+  }
+  const r = { fato, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
+    typeof narrarComFallback
+  >[4];
+  const res = await narrarComFallback(
+    { provider: config.provider, apiKey: config.apiKey!, modelo: config.modelo },
+    content,
+    camp,
+    cena.contexto,
+    r,
+  );
+  const cenaAtual = get().cena;
+  if (res.texto) {
+    const opcoesIA: OpcaoResolvida[] = (res.opcoes ?? []).map((o, i) => ({
+      id: `ia_${camp.turno}_x${i}`,
+      rotulo: o.rotulo,
+      dica: o.dica,
+      custoPeriodos: o.custoPeriodos,
+      teste: o.teste
+        ? { atributo: o.teste.atributo as AttrKey, pericia: o.teste.pericia, dificuldade: o.teste.dificuldade }
+        : undefined,
+      origem: 'ia',
+    }));
+    set({
+      feed: [...get().feed, nf(res.texto, 'narracao')],
+      cena:
+        cenaAtual && opcoesIA.length > 0
+          ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
+          : cenaAtual,
+      iaStatus: 'ok',
+      ocupado: false,
+    });
+  } else {
+    set({
+      iaStatus: 'erro',
+      iaErro: res.erro,
+      ocupado: false,
+      feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro ?? 'sem resposta'})`, 'sistema')],
+    });
+  }
 }
 
 // Descoberta de segredo: se o jogador vigiou/ouviu/ganhou confiança alta.

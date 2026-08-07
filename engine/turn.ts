@@ -24,7 +24,7 @@ export type OpcaoResolvida = {
   teste?: { atributo: AttrKey; pericia?: string; dificuldade: number };
   efeitos?: Efeito[];
   impulsoQueSacia?: ImpulsoId;
-  origem: 'cena' | 'verbo' | 'livre';
+  origem: 'cena' | 'verbo' | 'livre' | 'ia';
 };
 
 export type Intencao =
