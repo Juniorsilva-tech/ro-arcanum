@@ -54,7 +54,12 @@ export function Jogo() {
   const [catAberta, setCatAberta] = useState<CategoriaVerbo | null>(null);
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
   const iaStatus = useGame((s) => s.iaStatus);
-  const iaLigada = useGame((s) => s.config.usarModelo && !!s.config.apiKey);
+  const iaErro = useGame((s) => s.iaErro);
+  // O narrador é obrigatório: ter chave é ter jogo.
+  const iaLigada = useGame((s) => !!s.config.apiKey);
+  const tentarNarrarDeNovo = useGame((s) => s.tentarNarrarDeNovo);
+  // Turno resolvido esperando prosa: enquanto existir, ninguém age.
+  const pendente = useGame((s) => s.pendente);
   const irPara = useGame((s) => s.irPara);
 
   const ctx = cena?.contexto;
@@ -93,6 +98,8 @@ export function Jogo() {
   const p = camp.personagem;
   const local = ctx.local;
   const periodo = ctx.periodo;
+  // Sem narrador não se age: a engine resolveria, mas ninguém escreveria.
+  const podeAgir = iaLigada && !pendente;
 
   function executarVerbo(v: Verbo) {
     if (v.alvo === 'pessoa') {
@@ -134,43 +141,62 @@ export function Jogo() {
             <EntradaNarrativa key={e.id} entrada={e} primeira={i === 0} nomes={nomesConhecidos} />
           ))}
 
-          <Divisor label={iaStatus === 'pensando' ? 'a cena · a IA está escrevendo…' : 'a cena'} />
-          {!iaLigada && (
-            <Pressable onPress={() => irPara('config')}>
-              <Text style={styles.iaAviso}>
-                IA desligada — narração local. Toque para ligar em Configurações.
+          {/* O narrador é obrigatório: sem ele não há prosa nem escolha. */}
+          {!iaLigada ? (
+            <View style={styles.semNarradorBox}>
+              <Text style={styles.semNarradorTitulo}>A história está parada</Text>
+              <Text style={styles.semNarradorTexto}>
+                Quem escreve ARCANUM é o narrador. Sem uma chave de API salva, não existe
+                texto de reserva — o jogo espera.
               </Text>
-            </Pressable>
-          )}
-          {iaLigada && iaStatus === 'erro' && (
-            <Pressable onPress={() => irPara('config')}>
-              <Text style={styles.iaErro}>IA falhou — toque para revisar chave/modelo.</Text>
-            </Pressable>
-          )}
-          <TextoSerif style={styles.situacao}>{cena.narracao}</TextoSerif>
-
-          {/* Enquanto a cena nova não existe, nada de escolher: as opções somem
-              e um painel grande deixa claro que a IA está trabalhando. */}
-          {ocupado ? (
+              <Pressable style={styles.botaoOuro} onPress={() => irPara('config')}>
+                <Text style={styles.botaoOuroTxt}>Abrir Configurações</Text>
+              </Pressable>
+            </View>
+          ) : ocupado ? (
             <View style={styles.gerandoBox}>
               <ActivityIndicator color={cores.ouro} size="large" />
               <Text style={styles.gerandoTitulo}>O narrador está escrevendo…</Text>
               <Text style={styles.gerandoSub}>as novas opções aparecem em instantes</Text>
             </View>
+          ) : pendente ? (
+            <View style={styles.falhaBox}>
+              <Text style={styles.falhaTitulo}>O narrador não respondeu</Text>
+              <Text style={styles.falhaMotivo}>{iaErro ?? 'sem resposta'}</Text>
+              <Text style={styles.falhaTexto}>
+                Seu turno está guardado — nada se perdeu. Tente de novo, ou troque de modelo
+                em Configurações.
+              </Text>
+              <View style={styles.falhaBotoes}>
+                <Pressable style={styles.botaoOuro} onPress={() => tentarNarrarDeNovo()}>
+                  <Text style={styles.botaoOuroTxt}>Tentar de novo</Text>
+                </Pressable>
+                <Pressable style={styles.botaoVazio} onPress={() => irPara('config')}>
+                  <Text style={styles.botaoVazioTxt}>Configurações</Text>
+                </Pressable>
+              </View>
+            </View>
           ) : (
             cena.opcoes.length > 0 && (
-              <View style={{ marginTop: esp.md }}>
-                {cena.opcoes.map((op) => (
-                  <OpcaoCena key={op.id} op={op} onPress={() => agirOpcao(op, ctx.presentes[0]?.id)} />
-                ))}
-              </View>
+              <>
+                <Divisor label="o que você faz" />
+                <View style={{ marginTop: esp.md }}>
+                  {cena.opcoes.map((op) => (
+                    <OpcaoCena key={op.id} op={op} onPress={() => agirOpcao(op, ctx.presentes[0]?.id)} />
+                  ))}
+                </View>
+              </>
             )
           )}
 
-          {/* PORTA 2 — o catálogo de ações */}
+          {/* PORTA 2 — o catálogo de ações. Também trancado sem narrador: a
+              engine até resolveria, mas ninguém escreveria o que aconteceu. */}
           <Divisor label="ações" />
           {ocupado && <Text style={styles.travado}>ações bloqueadas enquanto a cena é escrita</Text>}
-          {!ocupado && ORDEM_CATEGORIAS.map((cat) => {
+          {!ocupado && !podeAgir && (
+            <Text style={styles.travado}>ações bloqueadas até o narrador voltar</Text>
+          )}
+          {!ocupado && podeAgir && ORDEM_CATEGORIAS.map((cat) => {
             const verbos = porCategoria.get(cat);
             if (!verbos || verbos.length === 0) return null;
             const aberta = catAberta === cat;
@@ -206,20 +232,22 @@ export function Jogo() {
 
           {/* PORTA 3 — ação livre */}
           <Divisor label="ação livre" />
-          <View style={[styles.livreWrap, ocupado && { opacity: 0.35 }]}>
+          <View style={[styles.livreWrap, (ocupado || !podeAgir) && { opacity: 0.35 }]}>
             <TextInput
               style={styles.livreInput}
               value={texto}
               onChangeText={setTexto}
-              placeholder={ocupado ? 'aguarde a cena…' : 'descreva o que você faz…'}
+              placeholder={
+                !podeAgir ? 'o narrador precisa voltar…' : ocupado ? 'aguarde a cena…' : 'descreva o que você faz…'
+              }
               placeholderTextColor={cores.linha}
-              editable={!ocupado}
+              editable={!ocupado && podeAgir}
               multiline
             />
             <Pressable
               style={styles.livreBtn}
               onPress={() => {
-                if (texto.trim() && !ocupado) {
+                if (texto.trim() && !ocupado && podeAgir) {
                   acaoLivre(texto);
                   setTexto('');
                 }
@@ -543,6 +571,49 @@ const styles = StyleSheet.create({
   gerandoTitulo: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 22, marginTop: esp.sm },
   gerandoSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
   travado: { fontFamily: fontes.mono, color: cores.linha, fontSize: 11, paddingVertical: esp.md },
+  semNarradorBox: {
+    marginTop: esp.lg,
+    padding: esp.lg,
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: raio.md,
+    backgroundColor: cores.fundo2,
+    gap: esp.sm,
+  },
+  semNarradorTitulo: { fontFamily: fontes.serifSemi, color: cores.vellum, fontSize: 21 },
+  semNarradorTexto: { fontFamily: fontes.serif, color: cores.mudo, fontSize: 16, lineHeight: 23 },
+  falhaBox: {
+    marginTop: esp.lg,
+    padding: esp.lg,
+    borderWidth: 1,
+    borderColor: cores.cinabrio,
+    borderRadius: raio.md,
+    backgroundColor: cores.fundo2,
+    gap: esp.sm,
+  },
+  falhaTitulo: { fontFamily: fontes.serifSemi, color: cores.cinabrio, fontSize: 21 },
+  falhaMotivo: { fontFamily: fontes.mono, color: cores.cinabrio, fontSize: 12, lineHeight: 17 },
+  falhaTexto: { fontFamily: fontes.serif, color: cores.mudo, fontSize: 16, lineHeight: 23 },
+  falhaBotoes: { flexDirection: 'row', gap: esp.sm, marginTop: esp.xs, flexWrap: 'wrap' },
+  botaoOuro: {
+    backgroundColor: cores.couro,
+    borderWidth: 1,
+    borderColor: cores.ouro,
+    borderRadius: raio.md,
+    paddingHorizontal: esp.lg,
+    paddingVertical: esp.md,
+    alignSelf: 'flex-start',
+  },
+  botaoOuroTxt: { fontFamily: fontes.serifMedium, color: cores.ouro, fontSize: 17 },
+  botaoVazio: {
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: raio.md,
+    paddingHorizontal: esp.lg,
+    paddingVertical: esp.md,
+    alignSelf: 'flex-start',
+  },
+  botaoVazioTxt: { fontFamily: fontes.serifMedium, color: cores.mudo, fontSize: 17 },
   opcaoDica: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, marginTop: 2 },
   catCabecalho: {
     flexDirection: 'row',

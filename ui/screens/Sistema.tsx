@@ -1,6 +1,6 @@
 // ARCANUM · Fim de capítulo (paywall diegético) e Configurações (GDD §26, §28, §33, §36).
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
 import { Titulo, TextoSerif, TextoMono, Botao, Card, Divisor, Rotulo, Carregando } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
@@ -147,24 +147,17 @@ export function Config() {
     <Pagina>
       <BarraVoltar titulo="Configurações" />
 
-      <Divisor label="Narração por IA" />
+      <Divisor label="O narrador" />
       <TextoSerif style={styles.explica}>
-        Por padrão, ARCANUM narra offline com a biblioteca canônica da engine. Ligue a narração ao
-        vivo usando a sua própria chave. Recomendado: OpenRouter, que dá acesso a modelos gratuitos
-        e sem filtro.
+        Quem escreve ARCANUM é o modelo — não existe narração de reserva. Sem uma chave
+        salva aqui, a história não anda. Recomendado: OpenRouter, que dá acesso a modelos
+        gratuitos e sem filtro. A chave fica só neste aparelho e nunca vai no APK.
       </TextoSerif>
 
-      <View style={styles.switchRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.switchNome}>Usar o modelo para narrar</Text>
-          <TextoMono>quando houver chave e internet</TextoMono>
-        </View>
-        <Switch
-          value={config.usarModelo}
-          onValueChange={(v) => setConfig({ usarModelo: v })}
-          trackColor={{ true: cores.verdigris, false: cores.linha }}
-          thumbColor={cores.vellum}
-        />
+      <View style={[styles.estadoBox, config.apiKey ? styles.estadoOk : styles.estadoFalta]}>
+        <Text style={[styles.estadoTxt, config.apiKey ? styles.estadoTxtOk : styles.estadoTxtFalta]}>
+          {config.apiKey ? 'Narrador ativo — a história pode andar.' : 'Sem chave: a história está parada.'}
+        </Text>
       </View>
 
       <Rotulo>Provedor</Rotulo>
@@ -319,8 +312,18 @@ const styles = StyleSheet.create({
   linhaVal: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 18 },
   planoNota: { marginTop: esp.xl, paddingTop: esp.md, borderTopWidth: 1, borderTopColor: cores.linha },
   explica: { color: cores.mudo, fontSize: 17, lineHeight: 25, marginBottom: esp.lg },
-  switchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: esp.lg, gap: esp.md },
-  switchNome: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 18 },
+  estadoBox: {
+    borderWidth: 1,
+    borderRadius: raio.md,
+    paddingHorizontal: esp.md,
+    paddingVertical: esp.sm,
+    marginBottom: esp.md,
+  },
+  estadoOk: { borderColor: cores.verdigris, backgroundColor: cores.fundo2 },
+  estadoFalta: { borderColor: cores.cinabrio, backgroundColor: cores.fundo2 },
+  estadoTxt: { fontFamily: fontes.monoMedium, fontSize: 12 },
+  estadoTxtOk: { color: cores.verdigris },
+  estadoTxtFalta: { color: cores.cinabrio },
   input: {
     fontFamily: fontes.mono,
     color: cores.vellum,

@@ -1,15 +1,17 @@
-// ARCANUM · Narração canônica de fallback (GDD §20, requisito P0).
-// Sem rede / com o modelo fora do ar, o jogo continua mais seco e NÃO trava.
+// ARCANUM · Montagem da cena.
+// Não existe mais narrador local: quem escreve é o modelo, sempre. Aqui só se
+// junta o material que ele recebe e as opções que servem de reserva quando ele
+// não devolve nenhuma.
 import type { Campaign, ContentBundle, NPC } from './types';
-import type { ResultadoTurno, OpcaoResolvida } from './turn';
+import type { OpcaoResolvida } from './turn';
 import { calcularContexto, type Contexto } from './availability';
-import { pick, type RngState } from './rng';
 import { NOME_PERIODO } from './time';
 
-// O jogo NARRA, não descreve: registro seco, concreto (GDD §0.2).
+// A cena não é texto de tela: é o MATERIAL que o narrador recebe (atmosfera do
+// lugar naquele período e quem está presente) mais as opções de reserva. Quem
+// escreve prosa é sempre o modelo — este arquivo não narra mais nada.
 export function montarCena(content: ContentBundle, camp: Campaign): {
   narracao: string;
-  eco?: string;
   opcoes: OpcaoResolvida[];
   contexto: Contexto;
 } {
@@ -29,68 +31,6 @@ export function montarCena(content: ContentBundle, camp: Campaign): {
   const narracao = `${atmosfera} ${presencaTxt}`;
   const opcoes = opcoesCanonicas(content, camp, ctx);
   return { narracao, opcoes, contexto: ctx };
-}
-
-// Narra o fato consumado devolvido pela engine (GDD §4.4).
-export function narrarResultado(camp: Campaign, r: ResultadoTurno): { narracao: string; eco?: string } {
-  const rng = camp.rng;
-  const base = r.fato;
-  const cor = corDaConsequencia(rng, r);
-  const eco = ecoDeConsequencia(rng, r);
-  return { narracao: `${base} ${cor}`.trim(), eco };
-}
-
-// Variações por grau: sem IA o registro continua seco, mas não vira disco riscado.
-const CORES_POR_GRAU: Record<string, string[]> = {
-  critico: [
-    'Por um momento, tudo se encaixa.',
-    'Sai melhor do que você tinha o direito de esperar.',
-    'A sorte, dessa vez, escolheu um lado.',
-    'Fica a sensação de ter roubado algo do acaso.',
-  ],
-  sucesso: [
-    '',
-    'Simples assim, e ninguém aplaude.',
-    'Feito. O mundo mal registra.',
-    'Sai como devia sair.',
-  ],
-  sucesso_com_custo: [
-    'Ficou uma conta em aberto.',
-    'Deu certo — e cobrou o troco na hora.',
-    'Você leva o que queria, e algo a mais que não pediu.',
-    'O preço vem depois, mas vem.',
-  ],
-  falha: [
-    'Nada acontece — e isso também é uma resposta.',
-    'A coisa escapa por entre os dedos.',
-    'Não pega. Fica o gesto no ar.',
-    'Faltou pouco, e pouco basta para não ser.',
-  ],
-  falha_grave: [
-    'O silêncio depois é pior que o erro.',
-    'Piora. Piora de um jeito que vai lembrar.',
-    'O estrago é maior que a tentativa.',
-    'Você entende, tarde demais, o tamanho do engano.',
-  ],
-};
-
-function corDaConsequencia(rng: RngState, r: ResultadoTurno): string {
-  if (!r.grau) return '';
-  return pick(rng, CORES_POR_GRAU[r.grau] ?? ['']);
-}
-
-function ecoDeConsequencia(rng: RngState, r: ResultadoTurno): string | undefined {
-  const ecos: string[] = [];
-  for (const ef of r.efeitosAplicados) {
-    if (ef.tipo === 'pressao' && ef.delta > 0) ecos.push(`Algo em você cede um pouco.`);
-    if (ef.tipo === 'dinheiro' && ef.delta > 0) ecos.push(`As moedas pesam no bolso agora.`);
-    if (ef.tipo === 'dinheiro' && ef.delta < 0) ecos.push(`O bolso ficou mais leve.`);
-    if (ef.tipo === 'relacao' && ef.delta < 0) ecos.push(`Ficou uma frieza no ar.`);
-    if (ef.tipo === 'danoJogador') ecos.push(`A dor chega depois, sempre depois.`);
-    if (ef.tipo === 'revelarSegredo') ecos.push(`Agora você sabe de algo que não devia.`);
-  }
-  if (ecos.length === 0) return undefined;
-  return pick(rng, ecos);
 }
 
 // Uma ação genérica não é uma escolha. Cada aproximação de um gancho tem um

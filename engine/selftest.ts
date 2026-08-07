@@ -8,6 +8,7 @@ import { validarOpcoesIA, interpretarResposta } from './llm';
 import { emBlocos } from './prosa';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
+import * as narracaoMod from './narration';
 import { atributosBase, derivados } from './character';
 import {
   comprar,
@@ -60,7 +61,7 @@ ok(Object.keys(camp.npcState).length === conteudoVaelhorn.npcs.length, 'Estado d
 
 // Montar cena não quebra.
 const cena = montarCena(conteudoVaelhorn, camp);
-ok(cena.narracao.length > 0, 'Cena inicial produz narração');
+ok(cena.narracao.length > 0, 'Cena inicial monta material para o narrador');
 ok(cena.opcoes.length > 0, 'Cena inicial produz opções');
 
 // Resolver um verbo simples avança o tempo.
@@ -369,6 +370,14 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     ['falar com Elza'],
   );
   ok(rep.length === 1 && rep[0].rotulo === 'Erguer o edital', 'Opção repetida é filtrada');
+}
+
+// O narrador local foi removido de vez: nada na engine escreve prosa de cena.
+{
+  ok(!('narrarResultado' in narracaoMod), 'A engine não tem mais narrador de reserva');
+  const c = montarCena(conteudoVaelhorn, camp);
+  ok(!('eco' in c), 'A cena não devolve mais eco local');
+  ok(typeof c.narracao === 'string', 'A cena ainda monta o material que o narrador recebe');
 }
 
 // Tipografia: o texto vira parágrafos e falas separadas.

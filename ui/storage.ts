@@ -10,6 +10,7 @@ export type ConfigApp = {
   provider: 'openrouter' | 'anthropic';
   apiKey?: string;
   modelo: string;
+  /** @deprecated o narrador é obrigatório; mantido só para saves antigos. */
   usarModelo: boolean;
   avisoAceito: boolean;
 };
@@ -17,7 +18,7 @@ export type ConfigApp = {
 export const configPadrao: ConfigApp = {
   provider: 'openrouter',
   modelo: 'deepseek/deepseek-chat-v3-0324:free',
-  usarModelo: false,
+  usarModelo: true,
   avisoAceito: false,
 };
 

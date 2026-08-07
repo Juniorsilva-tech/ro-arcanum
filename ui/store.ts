@@ -4,7 +4,6 @@ import type { Campaign, ContentBundle, Atributos, AttrKey, NPC } from '@/engine/
 import {
   criarCampanha,
   montarCena,
-  narrarResultado,
   resolverIntencao,
   avancarPeriodos,
   crescerImpulsos,
@@ -140,6 +139,9 @@ interface GameState {
   rascunho: Rascunho;
   iaStatus: 'off' | 'pensando' | 'ok' | 'erro';
   iaErro?: string;
+  // Turno já resolvido pela engine, esperando o narrador. Guardar isso é o que
+  // permite tentar de novo sem repetir a ação nem gastar tempo do mundo.
+  pendente?: { fato: string };
 
   init: () => Promise<void>;
   irPara: (t: Tela) => void;
@@ -182,6 +184,7 @@ interface GameState {
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
   buscarModelosGratis: () => Promise<string[]>;
   testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
+  tentarNarrarDeNovo: () => Promise<void>;
 }
 
 // Verbos que abrem direto a luta contra um chefe (GDD §17).
@@ -235,17 +238,16 @@ export const useGame = create<GameState>((set, get) => ({
     if (!camp) return;
     const content = bundlePorId(camp.cenarioId);
     if (!content) return;
-    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
     set({
       camp,
       content,
       feed: [nf('Você retoma de onde parou.', 'sistema', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
       tela: 'jogo',
-      ocupado: usaIA,
+      ocupado: true,
     });
     recomputarCena(get, set);
     // Retomar também pede cena nova: nada de reaparecer com as opções velhas.
-    if (usaIA) await replanejarCena(get, set, 'Você retoma a jornada de onde parou.');
+    await narrar(get, set, 'Você retoma a jornada de onde parou.');
   },
 
   async aceitarAviso() {
@@ -292,22 +294,19 @@ export const useGame = create<GameState>((set, get) => ({
       origemId: r.origemId,
     });
     const cena = montarCena(content, camp);
-    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
     set({
       content,
       camp,
       cena,
       tela: 'jogo',
       temSave: true,
-      // Com IA ligada a abertura também é escrita por ela: as opções iniciais
-      // nunca podem ser as mesmas de sempre.
-      feed: usaIA ? [] : [nf(cena.narracao, 'narracao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
-      ocupado: usaIA,
+      feed: [],
+      ocupado: true,
     });
     await salvarCampanha(camp);
-    if (usaIA) {
-      await replanejarCena(get, set, `A história começa. ${cena.narracao}`);
-    }
+    // A abertura também é escrita pelo narrador: o jogo nunca começa com um
+    // texto de reserva nem com as mesmas três opções de sempre.
+    await narrar(get, set, `A história começa. ${cena.narracao}`);
   },
 
   async abandonar() {
@@ -436,15 +435,34 @@ export const useGame = create<GameState>((set, get) => ({
     const resultado = camp.combate?.resultado;
     const rec = camp.combate?.recompensa;
     fecharCombate(camp);
-    const cena = montarCena(content, { ...camp });
-    const linhas: EntradaFeed[] = [];
-    if (resultado === 'vitoria') linhas.push(nf(`Você venceu o combate${rec?.xp ? ` (+${rec.xp} xp)` : ''}.`, 'sistema'));
-    else if (resultado === 'derrota') linhas.push(nf('Você foi derrotado, mas sobreviveu — ferido.', 'sistema'));
-    else if (resultado === 'fuga') linhas.push(nf('Você escapou do combate.', 'sistema'));
-    set({ camp: { ...camp }, cena, tela: 'jogo', feed: [...get().feed, ...linhas] });
+    const saque = rec?.loot?.length
+      ? ` Do chão você recolhe: ${rec.loot
+          .map((id) => content.itens.find((i) => i.id === id)?.nome ?? id)
+          .join(', ')}.`
+      : '';
+    const fato =
+      resultado === 'vitoria'
+        ? `A luta terminou e você ficou de pé.${saque}`
+        : resultado === 'derrota'
+          ? 'A luta terminou com você no chão. Você acorda depois, ferido, e mais pobre.'
+          : 'Você virou as costas e correu, e conseguiu.';
+    const linhas: EntradaFeed[] = [
+      nf(
+        resultado === 'vitoria'
+          ? `Combate vencido${rec?.xp ? ` · +${rec.xp} xp` : ''}`
+          : resultado === 'derrota'
+            ? 'Combate perdido'
+            : 'Fuga',
+        'acao',
+        { abreTurno: true, cabecalho: marcaDoTurno(content, camp) },
+      ),
+    ];
+    set({ camp: { ...camp }, tela: 'jogo', ocupado: true, feed: [...get().feed, ...linhas] });
     await salvarCampanha(camp);
     const concl = verificarQuests(content, camp);
     if (concl.length) set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
+    // Até o fim de um combate é narrado pelo modelo.
+    await narrar(get, set, fato);
   },
 
   // ── Magia ────────────────────────────────────────────────
@@ -461,7 +479,7 @@ export const useGame = create<GameState>((set, get) => ({
       await salvarCampanha(camp);
       get().irPara('jogo');
       // A cena precisa reagir: novas opções depois de aprender (§7.1).
-      await replanejarCena(get, set, `Você passou períodos aprendendo ${arte?.nome ?? arteId} com o mestre.`);
+      await narrar(get, set, `Você passou períodos aprendendo ${arte?.nome ?? arteId} com a mestra.`);
       checarCapitulo(get, set);
       return;
     }
@@ -473,15 +491,21 @@ export const useGame = create<GameState>((set, get) => ({
     const { content, camp } = get();
     if (!content || !camp || get().ocupado) return;
     const r = conjurarLivre(content, camp, arteId);
-    set({
-      camp: { ...camp },
-      feed: [...get().feed, nf(r.ok ? r.texto! : `Falha: ${r.motivo}.`, r.ok ? 'narracao' : 'sistema')],
-    });
+    const arte = content.artes.find((a) => a.id === arteId);
+    set({ camp: { ...camp } });
     await salvarCampanha(camp);
-    if (r.ok) {
-      get().irPara('jogo');
-      await replanejarCena(get, set, r.texto ?? 'Você conjurou uma arte.');
+    if (!r.ok) {
+      set({ feed: [...get().feed, nf(`Não deu: ${r.motivo}.`, 'sistema')] });
+      return;
     }
+    get().irPara('jogo');
+    set({
+      feed: [
+        ...get().feed,
+        nf(`Conjurar ${arte?.nome ?? 'a arte'}`, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) }),
+      ],
+    });
+    await narrar(get, set, r.texto ?? `Você conjurou ${arte?.nome ?? 'uma arte'}.`);
   },
   async agirOpcao(op, alvoId) {
     await executar(get, set, { tipo: 'opcao', opcao: op, alvoId }, 'acao');
@@ -502,17 +526,7 @@ export const useGame = create<GameState>((set, get) => ({
     set({
       feed: [...get().feed, nf(t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
-    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
-    if (usaIA) {
-      await replanejarCena(get, set, `Você tenta o seguinte: ${t}`);
-    } else {
-      set({
-        feed: [
-          ...get().feed,
-          nf('Você tenta — mas sem o narrador ligado, o gesto se perde. Ligue a IA em Configurações ou use o menu de Ações.', 'sistema'),
-        ],
-      });
-    }
+    await narrar(get, set, `Você tenta o seguinte: ${t}`);
   },
 
   async viajar(destino) {
@@ -531,12 +545,9 @@ export const useGame = create<GameState>((set, get) => ({
     if (!camp.locaisVisitados.includes(destino)) camp.locaisVisitados.push(destino);
     camp.flags[`visitou.${destino}`] = true;
     const alvo = content.locais.find((l) => l.id === destino);
-    const usaIA = !!(get().config.usarModelo && get().config.apiKey);
-    const cena = montarCena(content, { ...camp });
     set({
       camp: { ...camp },
-      cena,
-      ocupado: usaIA,
+      ocupado: true,
       tela: 'jogo',
       feed: [
         ...get().feed,
@@ -544,13 +555,10 @@ export const useGame = create<GameState>((set, get) => ({
           abreTurno: true,
           cabecalho: `${alvo?.nome ?? destino} · ${NOME_PERIODO[PERIODOS[camp.calendario.periodoIndex % PERIODOS.length]]}`,
         }),
-        ...(usaIA ? [] : [nf(cena.narracao, 'narracao')]),
       ],
     });
     await salvarCampanha(camp);
-    if (usaIA) {
-      await replanejarCena(get, set, `Você chegou a ${alvo?.nome ?? destino}.`);
-    }
+    await narrar(get, set, `Você chegou a ${alvo?.nome ?? destino}.`);
     checarCapitulo(get, set);
   },
 
@@ -568,17 +576,14 @@ export const useGame = create<GameState>((set, get) => ({
       titulo: `Capítulo ${romano(camp.capitulo.numero + 1)}`,
       periodosDecorridos: 0,
     };
-    const cena = montarCena(content, { ...camp });
     set({
       camp: { ...camp },
-      cena,
       tela: 'jogo',
-      feed: [
-        nf(`— ${camp.capitulo.titulo} —`, 'sistema'),
-        nf(cena.narracao, 'narracao'),
-      ],
+      ocupado: true,
+      feed: [nf(`— ${camp.capitulo.titulo} —`, 'sistema', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
     await salvarCampanha(camp);
+    await narrar(get, set, `Começa o ${camp.capitulo.titulo}.`);
   },
 
   async testarChaveApi() {
@@ -627,6 +632,14 @@ export const useGame = create<GameState>((set, get) => ({
     }
     return { ok: false, erro: res.erro ?? 'sem resposta' };
   },
+
+  // Sem narrador não há história: o turno fica guardado e o jogador reemite o
+  // pedido quando a chave ou a rede voltarem.
+  async tentarNarrarDeNovo() {
+    const pend = get().pendente;
+    if (!pend || get().ocupado) return;
+    await narrar(get, set, pend.fato);
+  },
 }));
 
 function romano(n: number): string {
@@ -640,12 +653,8 @@ async function executar(
   intencao: Parameters<typeof resolverIntencao>[2],
   _tipo?: string,
 ) {
-  const { content, camp, config } = get();
+  const { content, camp } = get();
   if (!content || !camp || get().ocupado) return;
-
-  const usaIA = !!(config.usarModelo && config.apiKey);
-  // Trava o turno inteiro: nada de clicar em mais nada até a cena nova existir.
-  set({ ocupado: true, iaStatus: usaIA ? 'pensando' : 'off', iaErro: undefined });
 
   // O que o jogador escolheu vira um cartão próprio na interface — nunca texto
   // solto no meio da narração, e nunca um rótulo tipo "Narrador:".
@@ -659,27 +668,15 @@ async function executar(
   camp.capitulo.periodosDecorridos += r.custoPeriodos;
   talvezRevelarSegredo(camp, r.alvo);
 
-  const { narracao, eco } = narrarResultado(camp, r);
-  const cena = montarCena(content, { ...camp });
-
-  const abertura: EntradaFeed[] = rotuloEscolhido
-    ? [nf(rotuloEscolhido, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })]
-    : [];
-
-  // Sem IA: o texto local entra na hora. Com IA: nada de texto provisório —
-  // o rótulo da opção não deve aparecer como narração (era o "vai para o texto").
-  const entradasLocais: EntradaFeed[] = [];
-  if (!usaIA) {
-    entradasLocais.push(nf(narracao, 'narracao'));
-    if (eco) entradasLocais.push(nf(eco, 'eco'));
+  if (rotuloEscolhido) {
+    set({
+      feed: [
+        ...get().feed,
+        nf(rotuloEscolhido, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) }),
+      ],
+    });
   }
-
-  set({
-    camp: { ...camp },
-    cena,
-    feed: [...get().feed, ...abertura, ...entradasLocais],
-    ocupado: usaIA, // continua travado enquanto a IA escreve
-  });
+  set({ camp: { ...camp } });
   await salvarCampanha(camp);
 
   const concl = verificarQuests(content, camp);
@@ -687,50 +684,8 @@ async function executar(
     set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
   }
 
-  // Narração ao vivo: o modelo escreve o texto E propõe as opções novas (§18.2).
-  if (usaIA && cena.contexto) {
-    const res = await narrarComFallback(
-      { provider: config.provider, apiKey: config.apiKey!, modelo: config.modelo },
-      content,
-      camp,
-      cena.contexto,
-      r,
-    );
-    const cenaAtual = get().cena;
-    if (res.texto) {
-      const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}`);
-      const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
-      if (eco) extras.push(nf(eco, 'eco'));
-      const achado = entregarAchado(content, camp, res.achado);
-      if (achado) extras.push(achado);
-      set({
-        camp: { ...camp },
-        feed: [...get().feed, ...extras],
-        cena:
-          cenaAtual && opcoesIA.length > 0
-            ? { ...cenaAtual, opcoes: [...opcoesIA, ...opcoesFixas(cenaAtual.opcoes)] }
-            : cenaAtual,
-        iaStatus: 'ok',
-        ocupado: false,
-      });
-      await salvarCampanha(camp);
-    } else {
-      // Falhou: o jogo não trava — entra o texto local e o motivo aparece (§20).
-      const locais: EntradaFeed[] = [nf(narracao, 'narracao')];
-      if (eco) locais.push(nf(eco, 'eco'));
-      set({
-        iaStatus: 'erro',
-        iaErro: res.erro,
-        ocupado: false,
-        feed: [
-          ...get().feed,
-          ...locais,
-          nf(`IA indisponível — narração local. (${res.erro ?? 'sem resposta'})`, 'sistema'),
-        ],
-      });
-    }
-  }
-
+  // Quem narra é o modelo. Sempre. Não existe texto local de reserva.
+  await narrar(get, set, r.fato);
   checarCapitulo(get, set);
 }
 
@@ -773,35 +728,45 @@ function montarOpcoesIA(
   return out;
 }
 
-// Toda ação fora do turno normal (aprender, conjurar, viajar, sair do combate)
-// também refaz a cena e pede opções novas à IA — nada fica parado.
-async function replanejarCena(
+// ÚNICO caminho de narração do jogo (GDD §18, com a Parte V endurecida a
+// pedido: sem modelo não há prosa). A engine resolve o que aconteceu; o
+// narrador escreve. Se ele não escrever, o turno fica pendente e o jogador
+// manda tentar de novo — o jogo NUNCA inventa um texto de reserva.
+async function narrar(
   get: () => GameState,
   set: (p: Partial<GameState>) => void,
   fato: string,
 ) {
   const { content, camp, config } = get();
   if (!content || !camp) return;
-  const usaIA = !!(config.usarModelo && config.apiKey);
+
   const cena = montarCena(content, { ...camp });
-  set({ cena, iaStatus: usaIA ? 'pensando' : 'off', ocupado: usaIA });
-  if (!usaIA || !cena.contexto) {
-    set({ ocupado: false });
+  set({ cena, pendente: { fato } });
+
+  if (!config.apiKey) {
+    set({
+      ocupado: false,
+      iaStatus: 'off',
+      iaErro: 'sem chave de API',
+      feed: [...get().feed, nf('Sem narrador: cole sua chave em Configurações para a história seguir.', 'sistema')],
+    });
     return;
   }
-  const r = { fato, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
+
+  set({ ocupado: true, iaStatus: 'pensando', iaErro: undefined });
+
+  const pedido = { fato, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
     typeof narrarComFallback
   >[4];
-  const res = await narrarComFallback(
-    { provider: config.provider, apiKey: config.apiKey!, modelo: config.modelo },
-    content,
-    camp,
-    cena.contexto,
-    r,
-  );
+  const cfg = { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo };
+
+  // Uma segunda tentativa automática: falha de rede não deve virar impasse.
+  let res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
+  if (!res.texto) res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
+
   const cenaAtual = get().cena;
   if (res.texto) {
-    const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}x`);
+    const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}_${feedSeq}`);
     const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
     const achado = entregarAchado(content, camp, res.achado);
     if (achado) extras.push(achado);
@@ -814,17 +779,16 @@ async function replanejarCena(
           : cenaAtual,
       iaStatus: 'ok',
       ocupado: false,
+      pendente: undefined,
     });
     await salvarCampanha(camp);
-  } else {
-    set({
-      iaStatus: 'erro',
-      iaErro: res.erro,
-      ocupado: false,
-      feed: [...get().feed, nf(`IA indisponível — narração local. (${res.erro ?? 'sem resposta'})`, 'sistema')],
-    });
+    return;
   }
+
+  // Falhou de novo: o turno fica guardado, esperando "tentar de novo".
+  set({ iaStatus: 'erro', iaErro: res.erro ?? 'sem resposta', ocupado: false });
 }
+
 
 // Descoberta de segredo: se o jogador vigiou/ouviu/ganhou confiança alta.
 function talvezRevelarSegredo(camp: Campaign, alvo?: NPC) {
