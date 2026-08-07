@@ -531,7 +531,7 @@ export const verbosVaelhorn: Verbo[] = [
     descricao: 'Ganta disse o nome uma vez. A água ouviu.',
     alvo: 'nenhum',
     custo: { periodos: 0 },
-    requisitos: { localTipo: ['lago'], condicaoNecessaria: 'segredo:gant' },
+    requisitos: { localTipo: ['lago'], condicaoNecessaria: 'segredo:ganta' },
   }),
   v({
     id: 'encarar_a_que_queimou',
@@ -549,7 +549,7 @@ export const verbosVaelhorn: Verbo[] = [
     descricao: 'O que Sarine trancou. O que a madre alimenta. Acabar com isso.',
     alvo: 'nenhum',
     custo: { periodos: 0 },
-    requisitos: { localTipo: ['cripta'], condicaoNecessaria: 'segredo:sarn' },
+    requisitos: { localTipo: ['cripta'], condicaoNecessaria: 'segredo:sarine' },
     tabu: { faccoes: ['igreja'], consequencia: 'a Igreja não perdoa quem abre o que ela fechou' },
   }),
 

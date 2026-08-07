@@ -29,6 +29,7 @@ import {
   chaveRotulo,
   montarGrade,
   avancarMundo,
+  normalizarCampanha,
   registrarMarco,
   NOME_PERIODO,
   PERIODOS,
@@ -239,10 +240,13 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   async continuar() {
-    const camp = await carregarCampanha();
-    if (!camp) return;
-    const content = bundlePorId(camp.cenarioId);
+    const bruto = await carregarCampanha();
+    if (!bruto) return;
+    const content = bundlePorId(bruto.cenarioId);
     if (!content) return;
+    // Save de uma versão anterior não pode virar tela branca: completa o que
+    // falta e descarta o que aponta para gente ou item que não existe mais.
+    const camp = normalizarCampanha(content, bruto);
     set({
       camp,
       content,
@@ -680,6 +684,9 @@ async function executar(
 ) {
   const { content, camp } = get();
   if (!content || !camp || get().ocupado) return;
+  // Tranca ANTES de qualquer await. O autosave é assíncrono: sem isto, um
+  // segundo toque durante a gravação executava um turno inteiro por cima.
+  set({ ocupado: true, iaStatus: 'pensando', iaErro: undefined });
 
   // O que o jogador escolheu vira um cartão próprio na interface — nunca texto
   // solto no meio da narração, e nunca um rótulo tipo "Narrador:".
@@ -701,7 +708,7 @@ async function executar(
       ],
     });
   }
-  set({ camp: { ...camp } });
+  set({ camp: { ...camp }, ocupado: true });
   await salvarCampanha(camp);
 
   const concl = verificarQuests(content, camp);

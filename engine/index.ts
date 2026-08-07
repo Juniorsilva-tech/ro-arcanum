@@ -22,4 +22,5 @@ export * from './risco';
 export * from './grade';
 export * from './mundo';
 export * from './convivio';
+export * from './migracao';
 export * from './despojos';

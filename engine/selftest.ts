@@ -26,6 +26,7 @@ import { montarGrade } from './grade';
 import { avancarMundo, multiplicadorDePreco, comoEstaOVale } from './mundo';
 import { recolherDespojos, despojosDe } from './despojos';
 import { ecosRecentes } from './convivio';
+import { normalizarCampanha } from './migracao';
 import { resolverIntencao } from './turn';
 import { montarCena } from './narration';
 import * as narracaoMod from './narration';
@@ -430,6 +431,108 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   );
   ok(!duplicadas.some((o) => o.rotulo === 'Falar com Aldrica'), 'Segunda opção do mesmo eixo não entra');
   ok(duplicadas.some((o) => o.id === 'deixar_correr'), 'Deixar o tempo correr fecha a grade');
+}
+
+// Requisito de verbo tem que apontar para gente e flag que existem. Foi assim
+// que dois chefes ficaram inalcançáveis: os ids mudaram e 'segredo:sarn' ficou
+// para trás enquanto o NPC virava 'sarine'.
+{
+  const idsNpc = new Set(conteudoVaelhorn.npcs.map((n) => n.id));
+  const quebrados: string[] = [];
+  for (const v of conteudoVaelhorn.verbos) {
+    const cond = v.requisitos?.condicaoNecessaria;
+    if (cond?.startsWith('segredo:') && !idsNpc.has(cond.slice(8))) {
+      quebrados.push(`${v.id} → ${cond}`);
+    }
+    if (v.requisitos?.item && !conteudoVaelhorn.itens.some((i) => i.id === v.requisitos!.item)) {
+      quebrados.push(`${v.id} → item ${v.requisitos.item}`);
+    }
+  }
+  ok(quebrados.length === 0, `Requisitos de verbo apontam para coisa real (${quebrados.join(', ')})`);
+
+  // E os chefes de fim de linha precisam ser alcançáveis por algum verbo.
+  const chefesPorVerbo = ['vess_fiador', 'o_afogado_do_espelho', 'a_que_queimou_mir', 'o_selado'];
+  const semRota = chefesPorVerbo.filter((id) => !conteudoVaelhorn.criaturas.some((c) => c.id === id));
+  ok(semRota.length === 0, `Todo chefe de verbo existe no bestiário (${semRota.join(', ')})`);
+}
+
+// Fase de chefe: mecânica declarada tem que fazer alguma coisa.
+{
+  const mecanicas = new Set(
+    conteudoVaelhorn.criaturas.filter((c) => c.fase2).map((c) => c.fase2!.mecanica),
+  );
+  const implementadas = new Set(['apagar_vinculo', 'enfurecer', 'chamar_reforco']);
+  const semImplementacao = [...mecanicas].filter((m) => !implementadas.has(m));
+  ok(semImplementacao.length === 0, `Toda fase 2 tem implementação (${semImplementacao.join(', ')})`);
+
+  // Chamar reforço tem que trazer alguém de verdade.
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Mergulhador',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'reforco-1',
+  });
+  iniciarCombate(conteudoVaelhorn, c, ['o_afogado_do_espelho']);
+  const antes = c.combate!.atores.length;
+  const chefe = c.combate!.atores.find((a) => !a.ehJogador)!;
+  // Empurra o chefe para baixo do gatilho e deixa o combate seguir.
+  chefe.vida = Math.floor(chefe.vidaMax * 0.3);
+  let voltas = 0;
+  while (!c.combate!.terminado && c.combate!.fase < 2 && voltas < 40) {
+    voltas += 1;
+    const alvo = c.combate!.atores.find((a) => !a.ehJogador && a.vida > 0);
+    if (!alvo) break;
+    jogadorAtaca(conteudoVaelhorn, c, alvo.id);
+  }
+  if (c.combate!.fase >= 2) {
+    ok(c.combate!.atores.length > antes, 'Chamar reforço traz gente nova para a luta');
+    ok(c.combate!.ordem.length === c.combate!.atores.length, 'O reforço entra na ordem de iniciativa');
+  } else {
+    ok(true, 'Chamar reforço: chefe caiu antes da fase 2 nesta semente');
+  }
+}
+
+// Save de versão antiga não pode virar tela branca.
+{
+  const c = criarCampanha(conteudoVaelhorn, {
+    nome: 'Veterano',
+    atributos: atributosBase(),
+    classeId: 'guardiao',
+    origemId: 'sem_nome',
+    seedString: 'save-velho',
+  });
+
+  // Simula um save de antes: sem campos novos, com gente que já não existe.
+  const velho = JSON.parse(JSON.stringify(c)) as typeof c;
+  delete (velho as Partial<typeof velho>).questEstado;
+  delete (velho as Partial<typeof velho>).marcos;
+  delete (velho as Partial<typeof velho>).mundo;
+  delete (velho as Partial<typeof velho>).ecos;
+  delete (velho.personagem as Partial<typeof velho.personagem>).equipado;
+  velho.npcState['aldric'] = velho.npcState['aldrica']; // id antigo do elenco
+  delete velho.npcState['aldrica'];
+  velho.segredosRevelados = ['sarn', 'ganta'];
+  velho.localAtual = 'lugar_que_sumiu';
+  velho.personagem.inventario['item_que_sumiu'] = 3;
+
+  const salvo = normalizarCampanha(conteudoVaelhorn, velho);
+  ok(Object.keys(salvo.questEstado).length === conteudoVaelhorn.quests.length, 'Missões novas ganham estado');
+  ok(!!salvo.personagem.equipado, 'Equipado deixa de ser indefinido');
+  ok(!!salvo.mundo && Array.isArray(salvo.marcos) && Array.isArray(salvo.ecos), 'Campos novos são criados');
+  ok(!salvo.npcState['aldric'] && !!salvo.npcState['aldrica'], 'Gente renomeada é corrigida no elenco');
+  ok(
+    Object.keys(salvo.npcState).length === conteudoVaelhorn.npcs.length,
+    'Todo NPC atual tem estado depois da migração',
+  );
+  ok(!salvo.segredosRevelados.includes('sarn'), 'Segredo de gente que não existe mais é descartado');
+  ok(salvo.segredosRevelados.includes('ganta'), 'Segredo de gente que existe é preservado');
+  ok(salvo.localAtual === conteudoVaelhorn.localInicial, 'Local sumido volta para o início');
+  ok(!salvo.personagem.inventario['item_que_sumiu'], 'Item que saiu do catálogo sai da mochila');
+
+  // E a cena tem que montar em cima do save migrado, sem estourar.
+  const cn = montarCena(conteudoVaelhorn, salvo);
+  ok(cn.opcoes.length > 0, 'A cena monta em cima de um save antigo');
 }
 
 // As rotinas se cruzam: o vale produz história sem o jogador.

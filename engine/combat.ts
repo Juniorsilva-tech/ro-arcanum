@@ -306,6 +306,17 @@ function moralQuebrada(camp: Campaign, s: CombatState): boolean {
 }
 
 // Fase de chefe (GDD §17).
+// Quem um chefe consegue chamar: gente da mesma laia, mais fraca que ele.
+function reforcosPara(content: ContentBundle, chefe: Criatura): Criatura[] {
+  const pares = content.criaturas.filter(
+    (x) => !x.chefe && x.faccaoId === chefe.faccaoId && x.nivel < chefe.nivel,
+  );
+  if (pares.length === 0) return [];
+  // Os dois mais fortes que ainda ficam abaixo dele: ajuda de verdade, sem
+  // transformar a fase 2 em uma parede intransponível.
+  return [...pares].sort((a, b) => b.nivel - a.nivel).slice(0, 2);
+}
+
 function checarFaseChefe(content: ContentBundle, camp: Campaign, ator: CombatActor): void {
   const s = camp.combate!;
   const c = ator.criaturaId ? criaturaPorId(content, ator.criaturaId) : undefined;
@@ -325,6 +336,34 @@ function checarFaseChefe(content: ContentBundle, camp: Campaign, ator: CombatAct
     } else if (c.fase2.mecanica === 'enfurecer') {
       ator.acerto += 3;
       s.log.push(`${c.nome} ataca com fúria renovada.`);
+    } else if (c.fase2.mecanica === 'chamar_reforco') {
+      // Chamar reforço tem que TRAZER alguém. Sem isto a mecânica declarada no
+      // conteúdo era só uma linha de log — o combate não mudava em nada.
+      const chamados = reforcosPara(content, c);
+      if (chamados.length === 0) {
+        s.log.push(`${c.nome} chama, e o que responde não chega a tempo.`);
+      }
+      for (const reforco of chamados) {
+        const novo: CombatActor = {
+          id: `reforco_${s.atores.length}_${reforco.id}`,
+          nome: reforco.nome,
+          ehJogador: false,
+          vida: reforco.vida,
+          vidaMax: reforco.vida,
+          defesa: reforco.defesa,
+          acerto: reforco.acerto,
+          dano: reforco.dano,
+          criaturaId: reforco.id,
+          condicoes: [],
+        };
+        s.atores.push(novo);
+        // Entra na roda logo depois de quem chamou, não no fim da fila.
+        const pos = s.ordem.indexOf(ator.id);
+        s.ordem.splice(pos >= 0 ? pos + 1 : s.ordem.length, 0, novo.id);
+        s.log.push(`${reforco.nome} atende ao chamado.`);
+      }
+      // Quem acabou de receber ajuda não debanda tão fácil.
+      s.moralInimiga = Math.min(100, s.moralInimiga + 20);
     }
   }
 }
