@@ -442,8 +442,12 @@ export function processarAptidao(content: ContentBundle, camp: Campaign): void {
     const alvo = a.reputacao[d] * alcance;
     a.fama[d] += (alvo - a.fama[d]) * (alvo > a.fama[d] ? 0.02 : 0.006);
     a.fama[d] = Math.max(0, Math.min(100, a.fama[d]));
-    // Exposição envelhece: façanha antiga vira história, não prova.
+    // Exposição envelhece: façanha antiga vira história, não prova. E a
+    // reputação não pode sobreviver à exposição que a sustentava — sem
+    // novidade, ela esfria junto. A fama é que fica para trás, e de propósito
+    // (é o que `picoReputacao` guarda).
     a.exposicao[d] = Math.max(0, a.exposicao[d] - 0.015);
+    a.reputacao[d] = Math.min(a.reputacao[d], a.exposicao[d]);
     reagirAoTalento(content, camp, d);
   }
 }

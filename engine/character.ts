@@ -100,7 +100,7 @@ export function criarPersonagem(
   };
 }
 
-function recursoMaximo(id: string, a: Atributos): number {
+export function recursoMaximo(id: string, a: Atributos): number {
   switch (id) {
     case 'mana':
       return 8 + modificador(a.raciocinio) * 3;

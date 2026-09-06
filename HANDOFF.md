@@ -484,3 +484,215 @@ Nenhuma regressão nas suítes anteriores.
 5. Os quatro achados de balanceamento da sessão anterior continuam abertos:
    Nemesis que só acumula, fome estrutural das cidades, prazo fixo de missão e
    taxa de vitória.
+---
+
+# SESSÃO 3 — Progressão de poder híbrida
+
+## Estado encontrado antes destas alterações
+
+Ponto de partida: commit `59d1692` (sistema de aptidão), typecheck limpo, cinco
+suítes passando, 6 campanhas × 10 anos sem violação.
+
+O defeito estava diagnosticado desde a sessão 1 e continuava intacto:
+
+- `processarSubidaDeNivel` só incrementava `p.nivel`.
+- `derivados()` ligava nível a `acerto`, `poder` e `dificuldadeImposta`, mas
+  **não** a `defesa`.
+- `danoJogador()` devolvia o dano da arma e nada mais — dois personagens com a
+  mesma espada batiam igual, viesse um do nível 1 e o outro do 25.
+- A vida máxima era carimbada em `criarPersonagem` (`20 + mod(resiliência)*4`) e
+  nunca mais mexia.
+
+Medição inicial com o banco de provas recém-construído, **antes de qualquer
+alteração de fórmula**:
+
+| perfil | vida | defesa | dano | poder efetivo |
+|---|---|---|---|---|
+| recruta (nível 1) | 20 | 13 | 9,0 | 4,2 |
+| veterano (nível 12) | 24 | 15 | 9,0 | 7,6 |
+| mestre (nível 25, maestria 80) | 28 | 17 | 9,0 | 9,9 |
+
+Vinte e cinco níveis e maestria 80 valiam **2,4× o recruta**. E na campanha
+longa a taxa de vitória por faixa de nível **descia**: 14,8% no nível 1-5 contra
+5,5% no 16-20.
+
+---
+
+## O que foi implementado
+
+### Régua de poder efetivo (`engine/poder.ts`)
+Ferramenta interna de balanceamento. Não é atributo, não aparece em tela, não
+entra no pacote do narrador.
+
+- `danoPorRodada(a, b)` e `rodadasParaDerrubar(a, b)` — a regeneração do oni
+  entra como dano negativo, que é como ela funciona no combate real; quem não
+  supera a regeneração nunca derruba, e o resultado é `Infinity`, honestamente.
+- `vantagemNoDuelo(a, b)` — quantas vezes A derruba B mais rápido do que B
+  derruba A. **É esta a razão que a tabela de referência usa.**
+- `podeDerrotar()` — um oni comum só morre por Nichirin. Sem a lâmina certa a
+  razão é 0: nenhuma quantidade de dano resolve. Não é desequilíbrio, é a regra
+  do mundo, e é o exemplo mais claro de por que poder não se mede por nível.
+- `adversarioNaRazao()` — adversário artificial na razão exata pedida.
+- `mensuravelPorDuelo()` — exclui alvos com regra de morte própria (gêmeos,
+  luz do sol); medi-los mediria a regra, não o balanço.
+
+Uma primeira versão media os dois lados contra um boneco fixo. Foi descartada:
+inflava absurdamente qualquer criatura com regeneração, porque contra o boneco
+fraco ela era imortal — mesmo sendo fácil para um caçador de verdade.
+
+### Nível → base (moderado)
+- **Vida** (`progresso.ts`): `VIDA_BASE + mod(resiliência)*4 + (nível-1) × (2 + mod(resiliência))`.
+  `VIDA_BASE` subiu de 20 para 44 **por medição**: com 20, um nível 1 morria em
+  dois golpes e todas as faixas colapsavam perto de 50% — não havia rodadas
+  suficientes para a diferença de poder aparecer.
+- **Defesa**: `+ floor(nível/3)`.
+- **Dano**: `+ floor(nível/3)`.
+- **Vigor e mana**: `+ floor(nível/2)`.
+- `recalcularRecursosMaximos()` roda a cada subida e preserva a proporção de
+  ferimento: ganhar nível não cura.
+
+### Maestria → técnica
+- **Eficiência com a arma**: o gume é multiplicado por `1 + maestria/200` (até +50%).
+- **Crítico**: janela de `0,25` para até `0,45` (`0,25 + maestria/500`).
+- **Aparadura**: defesa `+ floor(maestria/18)`.
+- **Precisão**: acerto `+ floor(maestria/25)`.
+
+### Equipamento continua importando, mas quem segura também
+`danoJogador()` passou a somar três frentes sobre a arma: eficiência técnica
+multiplica o gume, atributo de ataque e nível somam por cima.
+
+### Precisão satura
+`acerto` crescia +1 por nível sem contrapartida: por volta do nível 20 o jogador
+acertava 97,8% dos golpes e o combate deixava de ter erro — sem erro não há
+luta, só aritmética. O termo de nível ganhou teto em 15. Passado o teto, quem
+continua crescendo é dano, vida e defesa.
+
+### Banco de provas (`engine/balanco.ts`, `engine/simBalanco.ts`)
+`npm run balanco -- [combates]`. Roda combates reais contra adversários
+sintéticos na razão exata de cada faixa, e reporta à parte a **cobertura do
+bestiário**: quantas criaturas reais existem em cada faixa para aquele perfil.
+
+---
+
+## Resultados — antes e depois
+
+### Poder efetivo por perfil
+
+| perfil | antes | depois |
+|---|---|---|
+| recruta (nível 1) | vida 20 · dano 9,0 · **poder 4,2** | vida 44 · dano 9,2 · **poder 6,3** |
+| veterano (nível 12) | vida 24 · dano 9,0 · **poder 7,6** | vida 81 · dano 16,0 · **poder 33,2** |
+| mestre (nível 25) | vida 28 · dano 9,0 · **poder 9,9** | vida 148 · dano 22,6 · **poder 140,8** |
+
+O mestre saiu de 2,4× o recruta para **22× o recruta**.
+
+### Tabela de referência (400 combates por faixa)
+
+| perfil | faixas dentro do alvo |
+|---|---|
+| recruta | 3 de 5 |
+| veterano | 4 de 5 |
+| mestre | **5 de 5** |
+| caçador com Nichirin | **5 de 5** |
+
+**17 de 20.** Os três desvios são todos do lado "jogador superior" em níveis
+baixos, entre 2 e 5 pontos percentuais fora, e têm a mesma causa: luta curta
+tem variância demais para a razão se expressar.
+
+### Curva de vitória em campanha longa (10 anos, 6 sementes)
+
+| Nível | Antes | Depois |
+|---|---|---|
+| 1-5 | 14,8% | 27,9% |
+| 6-10 | 10,0% | 36,1% |
+| 11-15 | 5,7% | 34,4% |
+| 16-20 | 5,5% | 37,1% |
+| 21-25 | 10,3% | 42,2% |
+| 26+ | — | 61,9% |
+
+A curva deixou de descer. O platô entre 6 e 20 é o jogador acompanhando um mundo
+que também endurece (nemesis evolui, viagem leva a lugares piores); o salto em
+26+ é onde ele finalmente ultrapassa.
+
+---
+
+## Bugs encontrados pelo caminho
+
+1. **O mundo congelava durante lutas longas.** `avancaTurno` avança o calendário
+   a cada doze rodadas, mas nada tiquetaqueava o mundo: dias passavam sem cidade
+   produzir, sem NPC decidir e sem missão vencer. Ficava invisível enquanto o
+   jogador morria em duas rodadas; com a progressão corrigida as lutas ficaram
+   longas e o atraso apareceu como 1200 violações de `missao_vencida_ainda_aberta`.
+   `encerrar()` passou a chamar `avancarMundo` e recuperar os dias de uma vez.
+2. **Combates sem fim.** A medição registrou uma luta de **4498 rodadas** —
+   dois meses de calendário num confronto só — tipicamente contra um oni cuja
+   regeneração empata com o dano recebido. Criado `RODADAS_ATE_ROMPER = 150`:
+   passado o teto, os dois lados recuam.
+3. **Reputação sobrevivia à exposição.** A exposição esfria todo dia; a
+   reputação não acompanhava e ficava acima dela. Corrigido em
+   `processarAptidao`: sem novidade, a reputação esfria junto. A fama é que fica
+   para trás, e de propósito — é o que `picoReputacao` guarda.
+
+Além disso, um invariante meu estava mal escopado: cobrava prazo de missão com
+combate aberto, quando o atraso do mundo ali é legítimo. Passou a só valer fora
+de combate.
+
+---
+
+## Arquivos alterados
+
+### Criados
+- `engine/poder.ts` — régua de poder efetivo e duelo.
+- `engine/balanco.ts` — banco de provas contra a tabela de referência.
+- `engine/simBalanco.ts` — relatório de linha de comando.
+
+### Modificados
+- `engine/combat.ts` — `defesaJogador` e `janelaCriticaJogador` extraídas;
+  dano com contribuição do usuário; teto de precisão; `RODADAS_ATE_ROMPER`;
+  tique do mundo ao encerrar.
+- `engine/progresso.ts` — `recalcularRecursosMaximos`, `vidaMaxima`, `VIDA_BASE`,
+  `ganhoDeVidaPorNivel`.
+- `engine/character.ts` — `recursoMaximo` exportada.
+- `engine/types.ts` — `CombatActor.janelaCritica`.
+- `engine/aptidao.ts` — reputação esfria com a exposição.
+- `engine/campanhaLonga.ts` — invariante de missão escopado; métrica
+  `rodadaMaisLonga`.
+- `package.json` — script `balanco`.
+
+---
+
+## Testes executados
+
+- `npx tsc --noEmit` — limpo.
+- `engine/selftest.ts` — TODOS OS TESTES PASSARAM.
+- `engine/kimetsu.selftest.ts` — 18 testes de integração.
+- `engine/familia.selftest.ts` — família, infância e guerra.
+- `engine/aptidao.selftest.ts` — 40 asserções.
+- `engine/simLongo.ts 10 6` — **zero violações**, 48,5 s.
+- `engine/simBalanco.ts 400` — 17 de 20 faixas dentro do alvo.
+- `npx expo export --platform web` — build concluído.
+
+Nenhuma regressão.
+
+---
+
+## Pendências
+
+1. **O bestiário não cobre jogador de nível alto.** A criatura não-oni mais
+   forte é "O Selado" (nível 9). Para um veterano a razão contra ela já é 1,34;
+   para o mestre, 20,49. Fora dos onis, não existe adversário do tamanho de um
+   personagem maduro. É conteúdo, não fórmula, e o relatório de cobertura do
+   `balanco` mostra a lacuna faixa a faixa.
+2. **Faixas baixas ainda comprimidas** (3 de 20 fora, 2 a 5 pontos). Luta curta
+   é cara ou coroa. Só sai com mais vida inicial ou armas menos letais no começo
+   — as duas com efeito colateral no ritmo dos primeiros capítulos.
+3. **Aliados e NPCs não recebem a nova progressão.** `combatente` continua sendo
+   ficha fixa: um companheiro não fica mais forte com o tempo, e o Nemesis só
+   evolui pelo bônus antigo de `evolucao.nivel`.
+4. **A identidade rara ainda não gera salto.** Este commit estabilizou
+   `nível → atributos → combate → maestria → equipamento`, como combinado.
+   Marca, linhagem, pacto, despertar e técnica secreta continuam sem multiplicar
+   nada. `concederDespertar` (+3 níveis) é o único gancho existente.
+5. **CHIM intocado**, conforme pedido.
+6. Os achados de balanceamento das sessões anteriores continuam abertos: Nemesis
+   que só acumula, fome estrutural das cidades e prazo fixo de missão.

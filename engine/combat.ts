@@ -15,6 +15,7 @@ import { nextFloat, nextInt, pick } from './rng';
 import { modificador, clampRecursos } from './character';
 import { bonusDefesaEquip, armaEquipada } from './items';
 import { periodoAtual, avancarPeriodos } from './time';
+import { avancarMundo } from './mundo';
 import { aplicarFerimentoOni, haAbrigoSolar, obterRival, registrarConfronto, VERSAO_COMBATE } from './kimetsu';
 import { atualizarAmeacas } from './continuidade';
 import { npcPorId } from './elenco';
@@ -27,7 +28,7 @@ import { selarAlma, chimAlcancado } from './ascensao';
 import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
 import { calcularContexto } from './availability';
-import { dominioDaArte, registrarDemonstracao, treinar } from './aptidao';
+import { dominioDaArte, maestriaDe, registrarDemonstracao, treinar } from './aptidao';
 
 export function criaturaPorId(content: ContentBundle, id: string): Criatura | undefined {
   return content.criaturas.find((c) => c.id === id);
@@ -125,17 +126,51 @@ export function avaliarAmputacao(camp: Campaign, ator: CombatActor, danoRecebido
 }
 
 // Acerto de combate do jogador (escala comparável à defesa das criaturas).
+// Defesa do jogador. Estava embutida em iniciarCombate, o que impedia
+// qualquer ferramenta de medir o personagem fora de um combate aberto.
+export function defesaJogador(content: ContentBundle, camp: Campaign): number {
+  const p = camp.personagem;
+  // Tres fontes distintas, de proposito: corpo (atributos + nivel), tecnica
+  // (maestria, que e' onde mora a aparadura) e equipamento.
+  return 10 + modificador(p.atributos.precisao) + modificador(p.atributos.resiliencia)
+    + bonusDefesaEquip(content, p)
+    + Math.floor(p.nivel / 3)
+    + Math.floor(maestriaDe(camp, 'espada') / 18);
+}
+
+// Janela de critico: a fatia dos acertos que sai limpa. Aproveitar a abertura
+// e' tecnica, entao quem cresce aqui e' a maestria, nao o nivel.
+export function janelaCriticaJogador(camp: Campaign): number {
+  return Math.min(0.45, 0.25 + maestriaDe(camp, 'espada') / 500);
+}
+
 export function acertoJogador(content: ContentBundle, camp: Campaign): number {
   const p = camp.personagem;
   const arma = armaEquipada(content, p);
   const attr: AttrKey = arma?.atributoAtaque ?? 'fisico';
-  return 10 + p.nivel + modificador(p.atributos[attr]) + (arma ? 2 : 0);
+  // A precisao satura. Antes ela crescia +1 por nivel sem contrapartida, e a
+  // partir de uns 20 niveis o jogador acertava 98% dos golpes: o combate
+  // deixava de ter erro, e sem erro nao ha luta, so aritmetica. Passado o
+  // teto, quem continua crescendo e' dano, vida e defesa.
+  const TETO_NIVEL_ACERTO = 15;
+  return 10 + Math.min(TETO_NIVEL_ACERTO, p.nivel) + modificador(p.atributos[attr]) + (arma ? 2 : 0)
+    + Math.floor(maestriaDe(camp, 'espada') / 25);
 }
 
+// Dano do jogador. Antes era so' a arma — dois personagens com a mesma espada
+// batiam igual, viesse um do nivel 1 e o outro do 25. Agora a arma continua
+// sendo a maior parcela, mas quem a segura entra na conta em tres frentes:
+// eficiencia tecnica multiplica o gume, atributo e nivel somam por cima.
 export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano {
-  const arma = armaEquipada(content, camp.personagem);
-  if (arma?.dano) return arma.dano;
-  return { base: 3 + Math.max(0, modificador(camp.personagem.atributos.fisico)), dispersao: 0.4, tipo: 'desarmado' };
+  const p = camp.personagem;
+  const arma = armaEquipada(content, p);
+  const perfil: PerfilDano = arma?.dano ?? { base: 3, dispersao: 0.4, tipo: 'desarmado' };
+  const attr: AttrKey = arma?.atributoAtaque ?? 'fisico';
+  const eficiencia = 1 + maestriaDe(camp, 'espada') / 200;
+  const base = perfil.base * eficiencia
+    + Math.max(0, modificador(p.atributos[attr]))
+    + Math.floor(p.nivel / 3);
+  return { ...perfil, base };
 }
 
 export function iniciarCombate(
@@ -154,7 +189,8 @@ export function iniciarCombate(
     ehJogador: true,
     vida: p.recursos.vida,
     vidaMax: p.recursosMax.vida,
-    defesa: 10 + modificador(p.atributos.precisao) + modificador(p.atributos.resiliencia) + bonusDefesaEquip(content, p) + penMembros.defesa,
+    defesa: defesaJogador(content, camp) + penMembros.defesa,
+    janelaCritica: janelaCriticaJogador(camp),
     acerto: acertoJogador(content, camp) + penMembros.acerto,
     dano: danoJogador(content, camp),
     condicoes: [],
@@ -267,7 +303,7 @@ function resolverAtaque(
   const p = probabilidade(atacante.acerto + posicao, defEfetiva, 4);
   const r = nextFloat(camp.rng);
   if (r >= p) return `${atacante.nome} ataca ${alvo.nome} e erra.`;
-  const crit = r < p * 0.25;
+  const crit = r < p * (atacante.janelaCritica ?? 0.25);
   const dano = calcularDano(camp.rng, perfil, crit);
   if ((alvo.tatico?.guarda ?? 0) > 0) {
     dano.valor = Math.max(1, Math.round(dano.valor * .35));
@@ -648,9 +684,21 @@ function depoisDaAcaoDoJogador(content: ContentBundle, camp: Campaign): void {
     encerrar(camp, 'vitoria', content);
     return;
   }
+  if (s.rodada >= RODADAS_ATE_ROMPER) {
+    s.log.push('O confronto se arrasta sem desfecho. Os dois lados recuam, exaustos.');
+    encerrar(camp, 'fuga', content);
+    return;
+  }
   avancaTurno(s, camp);
   avancarAteJogador(content, camp);
 }
+
+// Teto de duracao de um combate. Sem ele, dois lados que nao conseguem se
+// finalizar — tipicamente um oni cuja regeneracao empata com o dano recebido —
+// ficavam trocando golpes indefinidamente: a medicao registrou uma luta de
+// 4498 rodadas, o equivalente a dois meses de calendario num confronto so.
+// Passado o teto, os dois recuam. Ninguem morre de cansaco em pe.
+export const RODADAS_ATE_ROMPER = 150;
 
 function avancaTurno(s: CombatState, camp: Campaign): void {
   s.turno += 1;
@@ -839,6 +887,13 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
   s.terminado = true;
   s.resultado = resultado;
   registrarConfronto(camp, resultado);
+  // O relogio do combate avanca o calendario a cada doze rodadas (ver
+  // avancaTurno), mas o mundo nao tiquetaqueava junto: uma luta longa fazia
+  // dias passarem sem cidade produzir, sem NPC decidir nada e sem missao
+  // vencer. Ficava invisivel enquanto o jogador morria em duas rodadas; com a
+  // progressao corrigida, as lutas ficaram longas e o mundo comecou a
+  // atrasar. Aqui ele recupera de uma vez os dias que passaram.
+  if (content) avancarMundo(content, camp);
   if (content) atualizarAmeacas(content, camp);
   if (content && camp.vivo) processarMissoesVivas(content, camp);
   const p = camp.personagem;

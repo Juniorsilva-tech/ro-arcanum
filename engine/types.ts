@@ -429,6 +429,8 @@ export type Criatura = {
 };
 
 export type CombatActor = {
+  // Fracao dos acertos que sai como critico. Ausente = 0,25 (regra base).
+  janelaCritica?: number;
   posicao?: 'frente' | 'flanco' | 'cobertura';
   retirado?: boolean;
   capturado?: boolean;

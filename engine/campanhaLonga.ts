@@ -50,6 +50,7 @@ export type Metricas = {
   passosSemVerbo: number;
   passosSemEfeito: number;
   conjuracoes: number;
+  rodadaMaisLonga: number;
   artesAprendidas: number;
   etapasDeInfancia: number;
   missoesGeradas: number;
@@ -108,6 +109,7 @@ function conferirInvariantes(
   idadeAnterior: number,
   fora: Violacao[],
 ): void {
+  const emCombateAgora = !!(camp.combate && !camp.combate.terminado);
   const dia = camp.calendario.dia;
   const viola = (regra: string, detalhe: string) => {
     if (fora.length < 200) fora.push({ dia, regra, detalhe });
@@ -141,8 +143,15 @@ function conferirInvariantes(
     if (v.fatos.length > 300) viola('historico_sem_teto', `${v.fatos.length} fatos`);
     const abertas = v.missoes.filter(q => q.estado === 'oferecida' || q.estado === 'aceita');
     if (abertas.length > 12) viola('missoes_abertas_acima_do_teto', `${abertas.length} abertas`);
-    for (const q of abertas) {
-      if (q.prazo < dia - 1) viola('missao_vencida_ainda_aberta', `${q.id} prazo ${q.prazo}`);
+    // Durante um combate o calendario anda (uma rodada a cada doze vira um
+    // periodo) mas o mundo NAO tiquetaqueia: nao da para uma cidade produzir
+    // no meio de uma troca de golpes. O mundo recupera os dias quando a luta
+    // acaba (ver encerrar(), em engine/combat.ts). Cobrar prazo de missao com
+    // combate aberto e' cobrar um atraso legitimo.
+    if (!emCombateAgora) {
+      for (const q of abertas) {
+        if (q.prazo < dia - 1) viola('missao_vencida_ainda_aberta', `${q.id} prazo ${q.prazo}`);
+      }
     }
     for (const [id, c] of Object.entries(v.cidades)) {
       for (const [k, n] of [['comida', c.comida], ['materiais', c.materiais], ['remedios', c.remedios], ['tesouro', c.tesouro]] as const) {
@@ -315,7 +324,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   const m: Metricas = {
     seed, dias: 0, anos: 0, causaFim: 'fim_do_prazo',
     acoes: 0, viagens: 0, combates: 0, combatesIniciados: 0, combatesPorViagem: 0, combatesPorPainel: 0, combatesPorVerbo: 0, vitorias: 0, derrotas: 0, fugas: 0,
-    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, artesAprendidas: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0,
+    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
     picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, idadeFinal: 20,
@@ -340,6 +349,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
       // Combate real, com as mesmas funções que a tela usa.
       const inimigos = s.atores.filter(a => !a.ehJogador && !a.ehAliado && a.vida > 0);
       const eu = s.atores.find(a => a.ehJogador);
+      m.rodadaMaisLonga = Math.max(m.rodadaMaisLonga, s.rodada);
       const antes = `${s.rodada}/${s.turno}/${s.log.length}`;
       if (!inimigos.length || !eu) {
         fecharCombate(camp);
@@ -559,6 +569,7 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     passosSemVerbo: Math.round(med(m => m.passosSemVerbo)),
     passosSemEfeito: Math.round(med(m => m.passosSemEfeito)),
     conjuracoes: Math.round(med(m => m.conjuracoes)),
+    rodadaMaisLonga: Math.round(med(m => m.rodadaMaisLonga)),
     artesAprendidas: +med(m => m.artesAprendidas).toFixed(1),
     historiasDistintas: distintas,
   };

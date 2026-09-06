@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "sim": "tsx engine/sim.ts",
     "test:engine": "tsx engine/selftest.ts && tsx engine/kimetsu.selftest.ts && tsx engine/familia.selftest.ts && tsx engine/aptidao.selftest.ts && tsx engine/simLongo.ts 10 6",
-    "sim:longo": "tsx engine/simLongo.ts"
+    "sim:longo": "tsx engine/simLongo.ts",
+    "balanco": "tsx engine/simBalanco.ts"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "0.4.1",
