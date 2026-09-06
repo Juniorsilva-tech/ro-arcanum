@@ -116,8 +116,18 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     }
     if (acao.escolha !== 'confrontar' || q.etapa < 1) return { ok: false, texto: 'Investigue os rastros primeiro.' };
     if (!encontrosElegiveis(content, camp, [rival.criaturaId]).length) return { ok: false, texto: 'O alvo se esconde do sol; aguarde a noite.' };
+    // Perseguir custa tempo como toda ação deste painel. Sem isso o confronto
+    // era a única saída que não movia o calendário: dava para repeti-lo
+    // infinitas vezes no mesmo instante, e o rival — que só recupera os
+    // ferimentos quando o dia vira (ver engine/kimetsu.ts) — era moído numa
+    // sequência de tentativas gratuitas.
+    const alcance = terminar(`Você alcançou ${rival.nome}.`);
+    // O período que passou pode ter trazido a luz do dia.
+    if (!encontrosElegiveis(content, camp, [rival.criaturaId]).length) {
+      return { ok: true, texto: 'Quando você chegou ao esconderijo, a luz já o protegia. Volte à noite.' };
+    }
     iniciarCombate(content, camp, [rival.criaturaId]);
-    return { ok: true, texto: `Você alcançou ${rival.nome}.`, combate: true };
+    return { ...alcance, combate: true };
   }
   if (q.tipo === 'escoltar') {
     if (q.etapa === 0) { q.etapa = 1; return terminar('As famílias se prepararam. Conduza-as até a comunidade de destino.'); }

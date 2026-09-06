@@ -3,11 +3,23 @@ import type { Campaign, ContentBundle, Arte, Mestre } from './types';
 import { clampRecursos } from './character';
 import { artePorId } from './fusao';
 import { calcularContexto } from './availability';
+import { avancarPeriodos } from './time';
+import { crescerImpulsos } from './impulsos';
+import { avancarMundo } from './mundo';
 
-function mestreDisponivel(content: ContentBundle, camp: Campaign, mestre: Mestre): boolean {
+// O contexto é caro: percorre o elenco inteiro, que cresce com os moradores
+// procedurais (ver engine/autonomia.ts). Calcular um por mestre fazia a
+// varredura custar N vezes o mesmo trabalho — daí ele entra pronto por
+// parâmetro e é calculado uma vez só por quem chama.
+function mestreDisponivel(
+  content: ContentBundle,
+  camp: Campaign,
+  mestre: Mestre,
+  ctx = calcularContexto(content, camp),
+): boolean {
   const vinculado = content.npcs.find(n => n.ensinaMestre === mestre.id);
   if (!vinculado) return mestre.localBase === camp.localAtual;
-  return calcularContexto(content, camp).presentes.some(n => n.id === vinculado.id);
+  return ctx.presentes.some(n => n.id === vinculado.id);
 }
 
 // Mestres que ensinam no local atual, com as artes que ainda dá para aprender.
@@ -16,8 +28,9 @@ export function mestresQueEnsinamAqui(
   camp: Campaign,
 ): { mestre: Mestre; artes: Arte[] }[] {
   const out: { mestre: Mestre; artes: Arte[] }[] = [];
+  const ctx = calcularContexto(content, camp);
   for (const m of content.mestres) {
-    if (!mestreDisponivel(content, camp, m)) continue;
+    if (!mestreDisponivel(content, camp, m, ctx)) continue;
     const artes = m.ensina
       .map((id) => content.artes.find((a) => a.id === id))
       .filter((a): a is Arte => !!a && !camp.personagem.artesConhecidas.includes(a.id));
@@ -32,8 +45,9 @@ export function podeAprender(
   arteId: string,
 ): { ok: boolean; motivo?: string } {
   if (camp.personagem.artesConhecidas.includes(arteId)) return { ok: false, motivo: 'você já sabe' };
+  const ctx = calcularContexto(content, camp);
   const ensinaAqui = content.mestres.some(
-    (m) => mestreDisponivel(content, camp, m) && m.ensina.includes(arteId),
+    (m) => m.ensina.includes(arteId) && mestreDisponivel(content, camp, m, ctx),
   );
   if (!ensinaAqui) return { ok: false, motivo: 'nenhum mestre ensina isto aqui' };
   const tecnica = content.artes.find(a => a.id === arteId)?.tecnica;
@@ -44,6 +58,11 @@ export function podeAprender(
   return { ok: true };
 }
 
+// Aprender custa os mesmos dois períodos que a tela sempre cobrou — o custo
+// morava em ui/store.ts, então qualquer outro chamador (simulador, um segundo
+// cliente) ganhava a arte de graça e sem o mundo andar.
+export const PERIODOS_PARA_APRENDER = 2;
+
 export function aprenderArte(
   content: ContentBundle,
   camp: Campaign,
@@ -52,6 +71,10 @@ export function aprenderArte(
   const pode = podeAprender(content, camp, arteId);
   if (!pode.ok) return pode;
   camp.personagem.artesConhecidas.push(arteId);
+  camp.calendario = avancarPeriodos(camp.calendario, PERIODOS_PARA_APRENDER);
+  crescerImpulsos(camp, PERIODOS_PARA_APRENDER);
+  camp.capitulo.periodosDecorridos += PERIODOS_PARA_APRENDER;
+  avancarMundo(content, camp);
   return { ok: true };
 }
 

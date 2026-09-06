@@ -497,6 +497,11 @@ export type ContentBundle = {
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.
   rivalidadesFaccoes?: [string, string][];
+  // Criaturas sorteáveis por tipo de local, usadas no encontro de estrada
+  // (ver engine/viagem.ts). Vivia só no bundle de conteúdo, o que obrigava a
+  // regra de viagem inteira a morar na UI — a engine não alcançava a tabela.
+  // Ausente = cenário sem encontro de viagem.
+  encontrosPorTipo?: Record<string, string[]>;
   localInicial: string;
 };
 

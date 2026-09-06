@@ -7,7 +7,7 @@ import { verbosVaelhorn } from './verbs';
 import { locaisVaelhorn } from './locations';
 import { npcsVaelhorn } from './npcs';
 import { itensVaelhorn } from './items';
-import { criaturasVaelhorn } from './bestiary';
+import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
 import { questsVaelhorn } from './quests';
 import { integrarKimetsu } from './kimetsu';
 import {
@@ -35,5 +35,6 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,
+  encontrosPorTipo,
   localInicial: 'taverna',
 });

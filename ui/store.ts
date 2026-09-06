@@ -34,8 +34,7 @@ import {
   tentarAscender,
   fatoDeAbertura,
   artePorId,
-  rolarEncontroDeViagem,
-  periodoAtual,
+  viajar,
   nextFloat,
   pick,
   chaveRotulo,
@@ -53,8 +52,6 @@ import {
   alternarCompanheiro,
   executarAcaoMundo,
   type AcaoMundo,
-  descobrirNoticias,
-  emboscadaNemesis,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -640,12 +637,9 @@ export const useGame = create<GameState>((set, get) => ({
   async aprenderArteAcao(arteId) {
     const { content, camp } = get();
     if (!content || !camp) return;
+    // O custo de tempo e o tique do mundo agora vivem na engine (magic.ts).
     const r = aprenderArteEngine(content, camp, arteId);
     if (r.ok) {
-      camp.calendario = avancarPeriodos(camp.calendario, 2);
-      crescerImpulsos(camp, 2);
-      camp.capitulo.periodosDecorridos += 2;
-      avancarMundo(content, camp);
       const arte = content.artes.find((a) => a.id === arteId);
       set({ camp: { ...camp }, feed: [...get().feed, nf(`Você aprendeu ${arte?.nome ?? arteId}.`, 'sistema')] });
       await salvarCampanha(camp);
@@ -783,32 +777,18 @@ export const useGame = create<GameState>((set, get) => ({
   async viajar(destino) {
     const { content, camp } = get();
     if (!content || !camp) return;
-    if (get().ocupado || (camp.combate && !camp.combate.terminado) || camp.personagem.condicoes.includes('cativo')) return;
-    const local = content.locais.find((l) => l.id === camp.localAtual);
-    const rota = local?.rotas.find((r) => r.destino === destino);
-    if (!rota) return;
+    if (get().ocupado) return;
     set({ ocupado: true });
-    if (rota.periodos > 0) {
-      camp.calendario = avancarPeriodos(camp.calendario, rota.periodos);
-      crescerImpulsos(camp, rota.periodos);
-      camp.capitulo.periodosDecorridos += rota.periodos;
-      avancarMundo(content, camp);
+    // A regra da viagem inteira vive na engine (engine/viagem.ts): custo de
+    // tempo, tique do mundo, primeiro pisar, notícias e sorteio de encontro —
+    // inclusive abrir o combate. Aqui fica só o que é tela.
+    const viagem = viajar(content, camp, destino);
+    if (!viagem.ok) {
+      set({ ocupado: false });
+      return;
     }
-    camp.localAtual = destino;
-    if (!camp.locaisVisitados.includes(destino)) {
-      camp.locaisVisitados.push(destino);
-      const nome = content.locais.find((l) => l.id === destino)?.nome ?? destino;
-      registrarMarco(camp, `você pisou em ${nome} pela primeira vez`);
-    }
-    camp.flags[`visitou.${destino}`] = true;
-    descobrirNoticias(content, camp);
-    const alvo = content.locais.find((l) => l.id === destino);
-
-    // Risco real na estrada: puxa do "perigo" que a rota já declara e do
-    // período do dia (engine/viagem.ts) — determinístico, sem grafo de
-    // waypoints novo, sem hora de relógio de parede.
-    const poolEncontro = encontrosElegiveis(content, camp, encontrosPorTipo[alvo?.tipo ?? ''] ?? []);
-    const encontro = emboscadaNemesis(content, camp) ?? rolarEncontroDeViagem(camp, periodoAtual(camp.calendario), rota.perigo, poolEncontro);
+    const alvo = viagem.destino;
+    const encontro = viagem.encontro;
 
     set({
       camp: { ...camp },
@@ -825,7 +805,6 @@ export const useGame = create<GameState>((set, get) => ({
     await salvarCampanha(camp);
 
     if (encontro) {
-      iniciarCombate(content, camp, encontro);
       set({
         camp: { ...camp },
         tela: 'combate',
