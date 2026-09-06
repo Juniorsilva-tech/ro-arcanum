@@ -6,6 +6,7 @@ import { calcularContexto } from './availability';
 import { avancarPeriodos } from './time';
 import { crescerImpulsos } from './impulsos';
 import { avancarMundo } from './mundo';
+import { dominioDaArte, treinar } from './aptidao';
 
 // O contexto é caro: percorre o elenco inteiro, que cresce com os moradores
 // procedurais (ver engine/autonomia.ts). Calcular um por mestre fazia a
@@ -71,6 +72,14 @@ export function aprenderArte(
   const pode = podeAprender(content, camp, arteId);
   if (!pode.ok) return pode;
   camp.personagem.artesConhecidas.push(arteId);
+  // Quem ensinou fica olhando o ritmo: e' assim que um mestre desconfia de
+  // talento antes de qualquer plateia (ver engine/aptidao.ts).
+  const arte = content.artes.find(a => a.id === arteId);
+  const mestreDaArte = content.mestres.find(m => m.ensina.includes(arteId));
+  const observador = content.npcs.find(n => n.ensinaMestre === mestreDaArte?.id);
+  treinar(content, camp, dominioDaArte(arte?.tecnica?.estilo), {
+    mestre: 0.85, esforco: 0.8, recursos: 0.7, observadorId: observador?.id,
+  });
   camp.calendario = avancarPeriodos(camp.calendario, PERIODOS_PARA_APRENDER);
   crescerImpulsos(camp, PERIODOS_PARA_APRENDER);
   camp.capitulo.periodosDecorridos += PERIODOS_PARA_APRENDER;

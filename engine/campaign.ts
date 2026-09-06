@@ -8,6 +8,7 @@ import { inicializarKimetsu } from './kimetsu';
 import { iniciarContinuidade } from './continuidade';
 import { iniciarFamilia } from './familia';
 import { iniciarMundoVivo } from './historiaViva';
+import { iniciarAptidao } from './aptidao';
 import { montarGenese, aplicarHeranca, cartaDeInfancia } from './genese';
 
 export type EntradaCriacao = {
@@ -104,6 +105,8 @@ export function criarCampanha(content: ContentBundle, entrada: EntradaCriacao): 
   iniciarContinuidade(content, camp);
   iniciarFamilia(content, camp);
   iniciarMundoVivo(content, camp);
+  // A aptidao nasce com a pessoa e fica oculta ate ser demonstrada.
+  camp.aptidao = iniciarAptidao(camp);
   return camp;
 }
 

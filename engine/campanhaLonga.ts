@@ -14,7 +14,7 @@
 // bug encontrado, com dia e detalhe, e não uma impressão.
 //
 // Uso: npm run sim:longo -- <anos> <campanhas>
-import type { Campaign, ContentBundle } from './types';
+import type { Campaign, ContentBundle, MarcaInfancia } from './types';
 import { criarCampanha } from './campaign';
 import { calcularContexto, disponibilidadeVerbo } from './availability';
 import { resolverIntencao } from './turn';
@@ -27,6 +27,8 @@ import { executarAcaoMundo } from './acoesMundo';
 import { resolverEtapaInfancia } from './familia';
 import { aprenderArte, mestresQueEnsinamAqui } from './magic';
 import { DIAS_POR_ANO } from './vidanpc';
+import { DOMINIOS } from './aptidaoTypes';
+import { contextoDeAptidao, maestriaDe } from './aptidao';
 
 export type Violacao = { dia: number; regra: string; detalhe: string };
 
@@ -69,6 +71,8 @@ export type Metricas = {
   idadeFinal: number;
   tiposDeFato: number;
   assinatura: string;
+  /** Vitorias, derrotas e fugas por faixa de nivel na hora do combate. */
+  porFaixa: Record<string, { v: number; d: number; f: number }>;
 };
 
 export type ResultadoSimulacao = { metricas: Metricas; violacoes: Violacao[] };
@@ -76,11 +80,20 @@ export type ResultadoSimulacao = { metricas: Metricas; violacoes: Violacao[] };
 export type OpcoesSimulacao = {
   seed: string;
   anos: number;
+  /** Marca de nascimento, para medir se a genese muda o desfecho. */
+  marca?: MarcaInfancia;
   /** De quantos em quantos dias fazer um ciclo salvar → carregar. */
   intervaloSave?: number;
   /** Teto de ações, para uma campanha travada não rodar para sempre. */
   maxAcoes?: number;
 };
+
+// A pergunta que importa nao e a taxa global de vitoria, e se a escada de
+// poder chega ao combate: um personagem de nivel 22 tem de ganhar mais do que
+// um de nivel 4. Sem isso, nascer prodigio tambem nao significaria nada.
+function faixaDeNivel(n: number): string {
+  return n <= 5 ? '01-05' : n <= 10 ? '06-10' : n <= 15 ? '11-15' : n <= 20 ? '16-20' : n <= 25 ? '21-25' : '26+';
+}
 
 const finito = (n: unknown): boolean => typeof n === 'number' && Number.isFinite(n);
 
@@ -164,6 +177,38 @@ function conferirInvariantes(
       if (a.mortoDefinitivo && a.vida > 0) viola('morto_definitivo_com_vida', `${a.id} vida ${a.vida}`);
       if (!finito(a.vida)) viola('vida_de_ator_nao_finita', `${a.id} = ${a.vida}`);
     }
+  }
+
+  // Aptidao: o mundo nunca pode saber mais do que foi mostrado, e o numero
+  // oculto nunca pode vazar para o pacote publico.
+  const apt = camp.aptidao;
+  if (apt) {
+    const publico = JSON.stringify(contextoDeAptidao(camp) ?? {});
+    for (const d of DOMINIOS) {
+      if (!finito(apt.aptidao[d]) || apt.aptidao[d] < 0 || apt.aptidao[d] > 100) {
+        viola('aptidao_fora_da_faixa', `${d} = ${apt.aptidao[d]}`);
+      }
+      if (apt.reputacao[d] > apt.exposicao[d] + 0.5) {
+        viola('reputacao_acima_da_exposicao', `${d} rep ${apt.reputacao[d].toFixed(1)} > exp ${apt.exposicao[d].toFixed(1)}`);
+      }
+      // A fama pode passar da reputacao ATUAL: gloria antiga esfria devagar.
+      // O que ela nunca pode ultrapassar e' o pico historico.
+      if (apt.fama[d] > (apt.picoReputacao[d] ?? 0) + 0.5) {
+        viola('fama_acima_do_pico', `${d} fama ${apt.fama[d].toFixed(1)} > pico ${(apt.picoReputacao[d] ?? 0).toFixed(1)}`);
+      }
+      const m = maestriaDe(camp, d);
+      if (m < 0 || m > 100 || !finito(m)) viola('maestria_fora_da_faixa', `${d} = ${m}`);
+      if (publico.includes(`"aptidaoReal"`)) viola('aptidao_vazou', d);
+    }
+    for (const [npcId, porDominio] of Object.entries(apt.crencas)) {
+      for (const [d, c] of Object.entries(porDominio)) {
+        if (!c) continue;
+        if (c.observacoes === 0 && c.valor !== 0) viola('crenca_sem_observacao', `${npcId}/${d}`);
+        if (!finito(c.valor) || c.valor < 0 || c.valor > 100) viola('crenca_fora_da_faixa', `${npcId}/${d} = ${c.valor}`);
+      }
+    }
+    const degraus = apt.reacoes.map(r => `${r.dominio}:${r.degrau}`);
+    if (new Set(degraus).size !== degraus.length) viola('degrau_repetido', degraus.join(','));
   }
 
   if (camp.mundo && camp.mundo.diaProcessado > dia) {
@@ -262,6 +307,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     classeId: 'batedor',
     origemId: 'foragido',
     seedString: seed,
+    marcaInfancia: opts.marca,
   });
 
   const violacoes: Violacao[] = [];
@@ -273,7 +319,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
     picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, idadeFinal: 20,
-    tiposDeFato: 0, assinatura: '',
+    tiposDeFato: 0, assinatura: '', porFaixa: {},
   };
 
   const vivosIniciais = contarVivos(camp);
@@ -328,9 +374,10 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
       if (camp.combate?.terminado) {
         m.combates++;
         const r = camp.combate.resultado;
-        if (r === 'vitoria') m.vitorias++;
-        else if (r === 'fuga') m.fugas++;
-        else m.derrotas++;
+        const cel = (m.porFaixa[faixaDeNivel(p.nivel)] ??= { v: 0, d: 0, f: 0 });
+        if (r === 'vitoria') { m.vitorias++; cel.v++; }
+        else if (r === 'fuga') { m.fugas++; cel.f++; }
+        else { m.derrotas++; cel.d++; }
         fecharCombate(camp);
       }
       m.acoes++;
@@ -450,15 +497,29 @@ export function simularLote(
   anos: number,
   campanhas: number,
   prefixo = 'longa',
+  marca?: MarcaInfancia,
 ): { resultados: ResultadoSimulacao[]; violacoes: Violacao[] } {
   const resultados: ResultadoSimulacao[] = [];
   const violacoes: Violacao[] = [];
   for (let i = 0; i < campanhas; i++) {
-    const r = simularCampanhaLonga(content, { seed: `${prefixo}-${i}`, anos });
+    const r = simularCampanhaLonga(content, { seed: `${prefixo}-${i}`, anos, marca });
     resultados.push(r);
     for (const x of r.violacoes) violacoes.push({ ...x, detalhe: `[${r.metricas.seed}] ${x.detalhe}` });
   }
   return { resultados, violacoes };
+}
+
+// Vitoria por faixa de nivel, somando todas as campanhas do lote.
+export function porFaixaAgregado(resultados: ResultadoSimulacao[]): Record<string, { v: number; d: number; f: number; taxa: number }> {
+  const out: Record<string, { v: number; d: number; f: number; taxa: number }> = {};
+  for (const r of resultados) {
+    for (const [faixa, c] of Object.entries(r.metricas.porFaixa)) {
+      const a = (out[faixa] ??= { v: 0, d: 0, f: 0, taxa: 0 });
+      a.v += c.v; a.d += c.d; a.f += c.f;
+    }
+  }
+  for (const a of Object.values(out)) a.taxa = a.v + a.d + a.f ? +(100 * a.v / (a.v + a.d + a.f)).toFixed(1) : 0;
+  return out;
 }
 
 export function resumir(resultados: ResultadoSimulacao[]): Record<string, number> {

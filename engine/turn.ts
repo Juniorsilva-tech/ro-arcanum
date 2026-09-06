@@ -20,6 +20,7 @@ import type { Natureza } from './risco';
 import { aplicarEfeito, substituirAlvo } from './effects';
 import { lembrarDoTurno } from './memoria';
 import { todosNpcs, npcPorId } from './elenco';
+import { dominioDaAcao, treinar, registrarDemonstracao } from './aptidao';
 
 export type OpcaoResolvida = {
   id: string;
@@ -198,6 +199,23 @@ export function resolverIntencao(
   const deuCerto = !resultado || resultado.sucesso;
   if (impulsoQueSacia && deuCerto) {
     saciar(camp, impulsoQueSacia, 60);
+  }
+
+  // Fazer é treinar, e fazer na frente dos outros é mostrar. O domínio sai da
+  // perícia testada (ou da categoria do verbo); as testemunhas são quem está
+  // presente AGORA, antes de o tempo andar e a cena mudar de gente.
+  if (teste) {
+    const dominio = dominioDaAcao(teste.pericia, verbo?.categoria);
+    if (dominio) {
+      const plateia = calcularContexto(content, camp).presentes;
+      treinar(content, camp, dominio, { mestre: 0.2, esforco: 0.5, recursos: 0.5 });
+      registrarDemonstracao(content, camp, {
+        dominio,
+        dificuldade: Math.min(100, teste.dificuldade * 4),
+        sucesso: !!resultado?.sucesso,
+        testemunhas: plateia,
+      });
+    }
   }
 
   // Avança o tempo e cresce impulsos (GDD §1, §5).

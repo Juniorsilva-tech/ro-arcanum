@@ -10,11 +10,12 @@ import { nextFloat } from './rng';
 import { iniciarCombate } from './combat';
 import { encontrosElegiveis } from './kimetsu';
 import { processarSubidaDeNivel } from './progresso';
+import { alternarOcultacao } from './aptidao';
 
 export type AcaoMundo =
   | { tipo: 'missao'; id: string; escolha: 'aceitar' | 'ajudar' | 'negociar' | 'investigar' | 'confrontar' }
   | { tipo: 'obra'; edificio: TipoEdificio }
-  | { tipo: 'trabalhar' | 'descansar' | 'noticias' | 'libertar_se' }
+  | { tipo: 'trabalhar' | 'descansar' | 'noticias' | 'libertar_se' | 'conter_se' }
   | { tipo: 'diplomacia'; a: string; b: string; escolha: 'mediar' | 'espionar' };
 export type ResultadoAcaoMundo = { ok: boolean; texto: string; combate?: boolean };
 
@@ -40,6 +41,17 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     if (escapou) p.condicoes = p.condicoes.filter(x => x !== 'cativo');
     registrarFato(camp, { tipo: escapou ? 'liberdade_jogador' : 'fuga_frustrada', local: camp.localAtual, texto: escapou ? 'Você recuperou a liberdade após o cativeiro.' : 'A tentativa de fuga falhou; os captores redobraram a atenção.', atores: ['jogador'], publico: false, conhecimento: 'testemunhado' });
     return terminar(escapou ? 'Você recuperou a liberdade.' : 'A tentativa falhou. Você aguarda outra oportunidade.', 3);
+  }
+  if (acao.tipo === 'conter_se') {
+    // Mostrar menos do que se sabe é jogada, não passividade: atrasa fama e
+    // reputação, e cobra o preço de aprender mais devagar (ver aptidao.ts).
+    const agora = alternarOcultacao(camp);
+    return terminar(
+      agora
+        ? 'Você decide medir o que mostra. Quem olhar vai ver menos do que existe.'
+        : 'Você para de se conter. Daqui para a frente, o que você sabe aparece.',
+      0,
+    );
   }
   if (acao.tipo === 'noticias') {
     const noticia = v.fatos.find(f => f.publico && f.conhecimento === 'oculto' && dia - f.dia >= 2);

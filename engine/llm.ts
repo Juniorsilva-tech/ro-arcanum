@@ -17,6 +17,8 @@ import { comoEstaOVale } from './mundo';
 import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 import { artesConhecidasResolvidas } from './fusao';
+import { contextoDeAptidao, leituraDoObservador } from './aptidao';
+import { DOMINIOS } from './aptidaoTypes';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
 
@@ -295,6 +297,13 @@ export function montarPacote(
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
       // não foi descoberto não entra no pacote — não se entrega de graça.
       segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
+      // O que ESTA pessoa acredita sobre a capacidade do protagonista. Sai da
+      // crenca dela (engine/aptidao.ts), formada pelo que ela viu e pela
+      // competencia dela no assunto. Pode estar errada, e e' de proposito.
+      oQueEleAchaDeVoce: DOMINIOS
+        .map(d => leituraDoObservador(camp, n.id, d))
+        .filter((x): x is string => !!x)
+        .slice(0, 2),
     })),
     // Os fios que estão abertos agora, com o objetivo que falta cumprir.
     arcosAtivos: content.quests
@@ -310,6 +319,11 @@ export function montarPacote(
     reputacao: Object.entries(camp.reputacao)
       .filter(([, v]) => v !== 0)
       .map(([id, v]) => `${content.faccoes.find((f) => f.id === id)?.nome ?? id}: ${v > 0 ? '+' : ''}${v}`),
+    // Como o mundo LE a capacidade do protagonista: maestria demonstrada,
+    // reputacao e alcance. A aptidao real nunca entra neste pacote — o
+    // narrador nao pode dizer que alguem reconheceu talento sem que a engine
+    // tenha registrado a crenca (ver engine/aptidao.ts).
+    talento: contextoDeAptidao(camp),
     // O diretor da campanha, calculado pela engine (ver ritmo.ts).
     ritmo: calcularRitmo(content, camp),
     // Vocabulário permitido: se citar objeto, tem que ser um destes nomes.

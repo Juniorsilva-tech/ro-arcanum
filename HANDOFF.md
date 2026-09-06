@@ -275,3 +275,212 @@ Antes de modificar o projeto:
 
 Se encontrar regressão causada pela sessão anterior, compare com o checkpoint Git
 antes de tentar reconstruir a funcionalidade.
+---
+
+# SESSÃO 2 — Aptidão, maestria, exposição, reputação e fama
+
+## Estado encontrado antes destas alterações
+
+Ponto de partida: commit `268dc79` (simulador de campanhas longas), com typecheck
+limpo, quatro suítes passando e 6 campanhas × 10 anos sem violação de invariante.
+
+O que existia sobre "talento" era uma coisa só e crua:
+
+- `genese.marca === 'genio'` dava **+1 em cada atributo** (`engine/genese.ts`,
+  `aplicarHeranca`) e nada mais. Num intervalo de 25 níveis, isso é ruído.
+- Não havia noção de domínio, de aprendizado por área, de exposição pública nem
+  de crença de terceiros. O mundo não tinha o que descobrir.
+- `personagem.pericias` (grau inteiro por perícia) e `camp.reputacao` (por
+  facção) eram os únicos vizinhos conceituais.
+
+Medição feita nesta sessão, antes de mexer em qualquer coisa, com o simulador:
+
+| Nível | Combates | Vitória |
+|---|---|---|
+| 1-5 | 196 | 14,8% |
+| 6-10 | 738 | 10,0% |
+| 11-15 | 1618 | 5,7% |
+| 16-20 | 2231 | 5,5% |
+| 21-25 | 768 | 10,3% |
+
+A curva **desce**. Causa localizada e confirmada por leitura de código:
+`processarSubidaDeNivel` só incrementa `p.nivel`; `derivados()` liga nível a
+`acerto`, `poder` e `dificuldadeImposta`, mas **não** a `defesa`; `danoJogador()`
+devolve só o dano da arma; e `recursoMaximo('vida')` cai no `default: return 10`,
+fixado na criação. Um personagem nível 25 tem a mesma vida e o mesmo dano de um
+nível 1 com o mesmo equipamento. Enquanto isso o bestiário vai até nível 20 e o
+Nemesis evolui. **O mundo sobe, o jogador não.** Isso está registrado como
+pendência: não foi corrigido nesta sessão porque o formato da escada é decisão de
+design do dono do projeto.
+
+---
+
+## O que foi implementado
+
+Sistema de aptidão em cinco conceitos separados, conforme especificado.
+
+### Conceitos
+- **APTIDÃO** — potencial de aprendizado por domínio, 0-100, **oculta**. Sorteada
+  no nascimento por RNG próprio derivado da semente da campanha.
+- **MAESTRIA** — habilidade real, derivada do esforço acumulado.
+- **EXPOSIÇÃO** — quanto já foi demonstrado na frente de testemunhas.
+- **REPUTAÇÃO** — o que as pessoas acreditam. Pode estar errada nos dois sentidos.
+- **FAMA** — alcance dessa crença pelo mundo.
+
+Nove domínios: espada, arcano, estratégia, alquimia, diplomacia, percepção,
+medicina, furtividade, ofício.
+
+### Curva de maestria (retorno decrescente)
+Maestria não é somada; é derivada do esforço por saturação exponencial,
+`100 * (1 - e^(-esforço/220))`. Isso produz a curva pedida sem tabela de faixas
+espalhada pelo código:
+
+| esforço | maestria |  | esforço | maestria |
+|---|---|---|---|---|
+| 70 | 27 | | 500 | 90 |
+| 170 | 54 | | 660 | 95 |
+| 350 | 80 | | 1010 | 99 |
+
+### Aprendizado
+`treinar()` combina qualidade do mestre, empenho, recursos, estado físico e
+mental (vida e sanidade entram de verdade) e aptidão. Aptidão é multiplicador
+**forte mas finito**: 0,5× a 2,5×. Acima do "teto confortável"
+(`55 + aptidão*0.45`) o ganho cai para 15% — freio, não muro: um teste confirma
+que aptidão 20 ainda passa de 85 com esforço suficiente.
+
+### Descoberta de talento
+Não existe `if (jogador.prodigio) npc.reagir()` em lugar nenhum. Existe
+`crencas[npcId][dominio]`, com `valor`, `confianca`, `suspeita` e `observacoes`,
+atualizada por:
+- **competência do observador** no domínio (mestre da área 0,9; combatente com
+  Nichirin 0,8; civil 0,15). Observador incompetente comprime tudo para o meio —
+  para ele todo espadachim bom parece igualmente bom;
+- **viés pessoal estável** derivado do id (`seedFromString`), mais a disposição
+  do NPC. A mesma façanha vale mais para quem gosta e menos para quem não gosta;
+- **suspeita por ritmo**: um especialista compara maestria alcançada com sessões
+  gastas e desconfia de quem aprendeu rápido demais. Um civil não mede ritmo.
+
+`leituraDoObservador()` transforma a crença em frase para cena e narrador.
+
+### Esconder-se
+`alternarOcultacao()`, exposto ao jogador como ação de painel `conter_se`.
+Reduz exposição a 20% e cobra o preço: treino rende 75%. Decisão estratégica com
+custo real, não botão grátis.
+
+### Reação do mundo
+Quatro degraus, cada um dispara **uma vez só** por domínio, com limiares
+combinados de reputação e fama: comentário nos treinos → casa de instrução
+convida → patrocínio e atrito com quem prefere o talento parado → tratamento de
+lenda. Cada degrau registra um `FatoHistorico` e um marco; os dois últimos mexem
+na reputação de facção.
+
+### Fama e glória antiga
+A fama persegue a reputação subindo rápido (2%/dia) e descendo devagar
+(0,6%/dia), limitada pelo alcance do mundo que o personagem percorreu. Foi
+preciso um campo novo, `picoReputacao`: a fama **pode** estar acima da reputação
+atual — quem já foi grande continua sendo lembrado — mas nunca acima do pico
+histórico. Esse invariante substituiu um mais ingênuo que o simulador reprovou
+1200 vezes; o código estava certo, o invariante é que estava errado.
+
+### Sigilo garantido por teste
+`contextoDeAptidao()` é o único caminho para fora e não inclui `aptidao`. Dois
+testes verificam que o número oculto não aparece nem no pacote público nem no
+contexto que vai para o narrador.
+
+---
+
+## Arquivos alterados
+
+### Criados
+- `engine/aptidaoTypes.ts` — tipos e domínios.
+- `engine/aptidao.ts` — núcleo: sorteio, curva, treino, observação, crença,
+  reputação, fama, reação do mundo, migração.
+- `engine/aptidao.selftest.ts` — 40 asserções.
+
+### Modificados
+- `engine/types.ts` — `Campaign.aptidao`.
+- `engine/campaign.ts` — aptidão nasce com o personagem.
+- `engine/migracao.ts` — chama `migrarAptidao`.
+- `engine/turn.ts` — toda ação testada treina o domínio e, com plateia, demonstra.
+- `engine/combat.ts` — vitória é demonstração; testemunhas são aliados mais
+  presentes no local.
+- `engine/magic.ts` — aprender arte é treino com o mestre observando o ritmo.
+- `engine/mundoVivo.ts` — `processarAptidao` no tique diário.
+- `engine/llm.ts` — narrador recebe talento **percebido** e a leitura de cada
+  NPC presente; nunca a aptidão.
+- `engine/acoesMundo.ts` — ação `conter_se`.
+- `engine/index.ts` — exporta o módulo.
+- `engine/campanhaLonga.ts` / `engine/simLongo.ts` — invariantes de aptidão e
+  relatório de vitória por faixa de nível.
+- `package.json` — `test:engine` inclui a suíte nova.
+
+---
+
+## Decisões tomadas
+
+1. **RNG próprio para a aptidão**, derivado de `camp.rng.seed` em vez do cursor
+   vivo. Duas razões: a mesma semente dá sempre a mesma aptidão, e migrar um save
+   antigo não empurra o cursor — o que mudaria todos os sorteios seguintes de uma
+   campanha em andamento.
+2. **Não substituir `pericias`.** Os verbos dependem delas. `sincronizarPericias`
+   faz a ponte: maestria alta eleva o grau da perícia correspondente, então
+   treinar um domínio abre os verbos que já existiam.
+3. **Migração reconstrói, não zera.** Um save antigo com perícia 3 e nível 12
+   volta com maestria compatível. Um veterano de dez anos não acorda sem saber
+   nada.
+4. **`picoReputacao` em vez de relaxar o invariante.** Ver acima.
+5. **Não mexi em `ascensao.ts` (CHIM) nem na escada de poder.** Ambos são decisão
+   de design pendente e nenhum dos dois foi pedido nesta tarefa.
+
+---
+
+## Testes executados
+
+- `npx tsc --noEmit` — limpo.
+- `engine/selftest.ts` — TODOS OS TESTES PASSARAM.
+- `engine/kimetsu.selftest.ts` — 18 testes de integração.
+- `engine/familia.selftest.ts` — família, infância e guerra.
+- `engine/aptidao.selftest.ts` — **40 asserções**, todas passando.
+- `engine/simLongo.ts 10 6` — 6 campanhas × 10 anos com os invariantes novos
+  (aptidão na faixa, reputação nunca acima da exposição, fama nunca acima do
+  pico, crença nunca sem observação, nenhum degrau repetido):
+  **zero violações**, 26,9 s.
+- `npx expo export --platform web` — **build concluído**, bundle 922 KB,
+  `Exported: dist`.
+
+Nenhuma regressão nas suítes anteriores.
+
+---
+
+## Problemas encontrados
+
+1. **O invariante de fama estava errado, não o código.** O simulador acusou 1200
+   violações de `fama_acima_da_reputacao`. Investigando, o comportamento estava
+   certo: glória antiga esfria devagar. Corrigido com `picoReputacao`.
+2. **A escada de poder está invertida** (medição acima). Não corrigido — é
+   decisão de design. Enquanto isso não for resolvido, o eixo de identidade que
+   este sistema cria não se traduz em desfecho de combate: a maestria melhora
+   `acerto` via perícia, mas vida e dano continuam parados.
+3. Heredocs com aspas triplas geraram arquivos de zero byte no diretório raiz
+   durante a sessão. Todos removidos; árvore verificada limpa antes do commit.
+
+---
+
+## Pendências
+
+1. **Escada de poder** (bloqueia o valor prático deste sistema): decidir se nível
+   dá vida e dano de forma linear, se os saltos vêm da identidade (marca,
+   despertares, mestre, linhagem), ou os dois. Sem isso, maestria 90 continua
+   perdendo para um oni nível 15.
+2. **UI**: nada foi criado. Maestria, reputação e fama existem no estado e no
+   pacote do narrador, mas o jogador não vê nada disso em tela, e a ação
+   `conter_se` não tem botão. `ui/screens/Paineis.tsx` é o lugar.
+3. **Aptidão de NPC**: só o jogador tem aptidão. Um irmão prodígio continua sendo
+   uma flag booleana em `familia.ts`. Estender `AptidaoState` a NPCs permitiria
+   rivais que crescem por talento próprio.
+4. **Reações de degrau são texto e reputação de facção.** Ainda não geram missão,
+   recrutamento, espionagem nem sequestro — os ganchos existem
+   (`oferecerMissao`), mas o conteúdo dessas missões não foi escrito.
+5. Os quatro achados de balanceamento da sessão anterior continuam abertos:
+   Nemesis que só acumula, fome estrutural das cidades, prazo fixo de missão e
+   taxa de vitória.

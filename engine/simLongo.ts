@@ -3,18 +3,31 @@
 //
 // Uso: npm run sim:longo -- <anos> <campanhas>
 import { conteudoVaelhorn } from '../content/vaelhorn';
-import { simularLote, resumir } from './campanhaLonga';
+import { simularLote, resumir, porFaixaAgregado } from './campanhaLonga';
+import type { MarcaInfancia } from './types';
 
 const anos = Number(process.argv[2] ?? 10);
 const campanhas = Number(process.argv[3] ?? 8);
+const marca = process.argv[4] as MarcaInfancia | undefined;
 
 console.log(`\n=== ARCANUM · campanhas longas · ${campanhas} campanhas × ${anos} anos ===\n`);
 const inicio = Date.now();
-const { resultados, violacoes } = simularLote(conteudoVaelhorn, anos, campanhas);
+const { resultados, violacoes } = simularLote(conteudoVaelhorn, anos, campanhas, 'longa', marca);
 const segundos = ((Date.now() - inicio) / 1000).toFixed(1);
 
 for (const [k, v] of Object.entries(resumir(resultados))) {
   console.log(`  ${k.padEnd(22)} ${String(v).padStart(10)}`);
+}
+
+// A pergunta não é a taxa global, é se a escada de poder chega ao combate.
+console.log('\n--- vitória por faixa de nível ---');
+for (const [faixa, c] of Object.entries(porFaixaAgregado(resultados)).sort()) {
+  const total = c.v + c.d + c.f;
+  console.log(
+    `  nível ${faixa.padEnd(6)} ${String(total).padStart(5)} combates` +
+      `   vitória ${String(c.taxa).padStart(5)}%` +
+      `   (v ${String(c.v).padStart(4)}  d ${String(c.d).padStart(4)}  f ${String(c.f).padStart(4)})`,
+  );
 }
 
 console.log('\n--- desfecho por campanha ---');

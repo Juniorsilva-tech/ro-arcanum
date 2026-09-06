@@ -8,6 +8,7 @@ import type {
   PerfilDano,
   AttrKey,
   MembroId,
+  NPC,
 } from './types';
 import { probabilidade, calcularDano } from './resolution';
 import { nextFloat, nextInt, pick } from './rng';
@@ -25,6 +26,8 @@ import { processarSubidaDeNivel, concederDespertar } from './progresso';
 import { selarAlma, chimAlcancado } from './ascensao';
 import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
+import { calcularContexto } from './availability';
+import { dominioDaArte, registrarDemonstracao, treinar } from './aptidao';
 
 export function criaturaPorId(content: ContentBundle, id: string): Criatura | undefined {
   return content.criaturas.find((c) => c.id === id);
@@ -886,6 +889,24 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     const nivelAntes = p.nivel;
     processarSubidaDeNivel(camp);
     if (p.nivel > nivelAntes) s.log.push(`Você subiu para o nível ${p.nivel}.`);
+    // Vencer e' a demonstracao mais legivel que existe. Quem viu forma a
+    // propria opiniao (ver engine/aptidao.ts); ninguem consulta a aptidao.
+    const inimigos = s.atores.filter(a => !a.ehJogador && !a.ehAliado);
+    const nivelMaior = Math.max(0, ...inimigos.map(a => (a.criaturaId ? criaturaPorId(content, a.criaturaId)?.nivel ?? 0 : 0)));
+    const tecnica = s.ultimaTecnica ? artePorId(content, camp, s.ultimaTecnica) : undefined;
+    const dominio = dominioDaArte(tecnica?.tecnica?.estilo);
+    const aliados = s.atores
+      .filter(a => a.ehAliado && a.npcId)
+      .map(a => npcPorId(content, camp, a.npcId!))
+      .filter((n): n is NPC => !!n);
+    const plateia = [...aliados, ...calcularContexto(content, camp).presentes];
+    treinar(content, camp, dominio, { mestre: 0.1, esforco: 0.9, recursos: 0.6 });
+    registrarDemonstracao(content, camp, {
+      dominio,
+      dificuldade: Math.min(100, nivelMaior * 5 + inimigos.length * 3),
+      sucesso: true,
+      testemunhas: [...new Map(plateia.map(n => [n.id, n])).values()],
+    });
     s.recompensa = { xp, loot };
     const nomes = loot.map((id) => content.itens.find((i) => i.id === id)?.nome ?? id);
     const bolso = moedasAchadas > 0 ? ` · ${moedasAchadas} moedas` : '';

@@ -15,6 +15,7 @@ import { inicializarKimetsu, VERSAO_COMBATE } from './kimetsu';
 import { iniciarContinuidade } from './continuidade';
 import { iniciarFamilia } from './familia';
 import { iniciarMundoVivo } from './historiaViva';
+import { migrarAptidao } from './aptidao';
 
 function novoNpcDinamico(content: ContentBundle): NpcDinamico {
   const eixos: Record<string, number> = {};
@@ -121,6 +122,8 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   );
 
   // ── O vale ───────────────────────────────────────────────────────────────
+  // Aptidao/maestria nasceram depois: reconstroi do que o save ja tinha.
+  migrarAptidao(camp);
   camp.mundo ??= mundoInicial(camp);
   iniciarContinuidade(content, camp);
   iniciarMundoVivo(content, camp);

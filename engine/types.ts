@@ -526,6 +526,9 @@ export type Campaign = {
   grupo?: string[];
   continuidade?: import('./continuidade').ContinuidadeState;
   kimetsu?: import('./kimetsuTypes').KimetsuState;
+  // Aptidao oculta, maestria, exposicao, reputacao e fama por dominio
+  // (ver engine/aptidao.ts). Ausente em saves antigos: migracao.ts cria.
+  aptidao?: import('./aptidaoTypes').AptidaoState;
   id: string;
   cenarioId: string;
   criadaEm: number;

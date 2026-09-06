@@ -6,6 +6,7 @@ import { processarPolitica } from './politica';
 import { processarNemesis } from './nemesis';
 import { processarMissoesVivas } from './missoesVivas';
 import { atualizarAmeacas } from './continuidade';
+import { processarAptidao } from './aptidao';
 
 // Called once for each elapsed calendar day, using the same campaign RNG as gameplay.
 export function processarMundoVivo(content: ContentBundle, camp: Campaign): void {
@@ -19,5 +20,7 @@ export function processarMundoVivo(content: ContentBundle, camp: Campaign): void
   processarMissoesVivas(content, camp);
   processarDiretor(content, camp);
   descobrirNoticias(content, camp);
+  // Fama persegue a reputacao com atraso, e esfria sem novidade.
+  processarAptidao(content, camp);
   v.ultimoDia = camp.calendario.dia;
 }

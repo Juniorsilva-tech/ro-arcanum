@@ -33,6 +33,8 @@ export * from './vidanpc';
 export * from './guerra';
 export * from './ascensao';
 export * from './kimetsu';
+export * from './aptidao';
+export * from './aptidaoTypes';
 export * from './continuidade';
 export * from './familia';
 export * from './elenco';
