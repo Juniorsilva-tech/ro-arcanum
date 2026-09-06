@@ -1,6 +1,8 @@
 // ARCANUM · Privacidade, testemunhas e disponibilidade de verbos (GDD §8, §4.3).
 import type { Campaign, ContentBundle, Verbo, NPC, Local } from './types';
 import { periodoAtual, NOME_PERIODO, type Periodo } from './time';
+import { todosNpcs } from './elenco';
+import { localEfetivo } from './historiaViva';
 
 export type Contexto = {
   local: Local;
@@ -18,10 +20,14 @@ export function calcularContexto(content: ContentBundle, camp: Campaign): Contex
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
   const periodo = periodoAtual(camp.calendario);
 
-  const presentes = content.npcs.filter((npc) => {
+  const presentes = todosNpcs(content, camp).filter((npc) => {
     const din = camp.npcState[npc.id];
     if (din && !din.vivo) return false;
-    return localDeNpcNoPeriodo(npc, periodo) === local.id;
+    // Quem aceitou viajar com o protagonista está onde ele está; a rotina
+    // normal volta a valer assim que a pessoa deixa o grupo.
+    if ((camp.grupo ?? []).includes(npc.id)) return true;
+    if (camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') return false;
+    return localEfetivo(camp, npc, periodo) === local.id;
   });
 
   let privacidade: 0 | 1 | 2 | 3 = local.privacidadeBase[periodo] ?? 0;
@@ -47,6 +53,7 @@ export function disponibilidadeVerbo(
   alvo?: NPC,
 ): Disponibilidade {
   const p = camp.personagem;
+  if (p.condicoes.includes('cativo')) return { disponivel: false, motivo: 'recupere a liberdade no painel do mundo' };
   const req = verbo.requisitos ?? {};
 
   if (ctx.local.verbosBloqueados?.includes(verbo.id)) {
@@ -119,6 +126,7 @@ export function disponibilidadeVerbo(
   }
 
   if (alvo) {
+    if (alvo.parentesco && verbo.id === 'flertar') return { disponivel: false, motivo: 'família não é alvo romântico' };
     const din = camp.npcState[alvo.id];
     if (din && !din.vivo) return { disponivel: false, motivo: `${alvo.nome} está morto` };
   }

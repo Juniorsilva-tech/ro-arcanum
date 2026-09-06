@@ -7,6 +7,7 @@ import { cores, fontes, esp } from '../theme';
 import { useGame } from '../store';
 import { cenariosDisponiveis, bundlePorId } from '@/content';
 import { ATTR_KEYS, type AttrKey } from '@/engine/types';
+import { MARCAS_INFANCIA, REACOES_INFANCIA } from '@/engine';
 
 export function EscolhaCenario() {
   const escolher = useGame((s) => s.escolherCenario);
@@ -75,6 +76,46 @@ export function EscolhaOrigem() {
           </View>
           <TextoSerif style={styles.desc}>{o.descricao}</TextoSerif>
           <TextoMono style={{ marginTop: esp.sm }}>Falta a você: {o.oQueFalta}</TextoMono>
+        </Card>
+      ))}
+    </Pagina>
+  );
+}
+
+// Dois passos numa tela só: primeiro a marca (o que definiu a infância),
+// depois a reação (como isso formou o personagem). Ambas pesam de verdade
+// nos atributos e na carta de memória inicial (ver engine/genese.ts) — não
+// é um modo de jogo à parte, só mais agência no momento da criação.
+export function EscolhaInfancia() {
+  const rascunho = useGame((s) => s.rascunho);
+  const escolherMarca = useGame((s) => s.escolherMarcaInfancia);
+  const escolherReacao = useGame((s) => s.escolherReacaoInfancia);
+
+  if (!rascunho.marcaInfancia) {
+    return (
+      <Pagina>
+        <BarraVoltar titulo="Como você cresceu" />
+        <TextoSerif style={styles.intro}>
+          Antes da primeira cena, alguma coisa já definiu quem você é. O que marcou a sua infância?
+        </TextoSerif>
+        {MARCAS_INFANCIA.map((m) => (
+          <Card key={m.id} onPress={() => escolherMarca(m.id)}>
+            <Titulo style={{ fontSize: 22 }}>{m.titulo}</Titulo>
+            <TextoSerif style={styles.desc}>{m.descricao}</TextoSerif>
+          </Card>
+        ))}
+      </Pagina>
+    );
+  }
+
+  return (
+    <Pagina>
+      <BarraVoltar titulo="Como isso te formou" />
+      <TextoSerif style={styles.intro}>Toda marca deixa alguém diferente. Como você reagiu?</TextoSerif>
+      {REACOES_INFANCIA.map((r) => (
+        <Card key={r.id} onPress={() => escolherReacao(r.id)}>
+          <Titulo style={{ fontSize: 22 }}>{r.titulo}</Titulo>
+          <TextoSerif style={styles.desc}>{r.descricao}</TextoSerif>
         </Card>
       ))}
     </Pagina>

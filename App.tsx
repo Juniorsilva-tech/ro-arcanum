@@ -9,13 +9,14 @@ import { useFonts } from 'expo-font';
 import { cores } from './ui/theme';
 import { useGame } from './ui/store';
 import { Entrada, Aviso17 } from './ui/screens/Onboarding';
-import { EscolhaCenario, EscolhaClasse, EscolhaOrigem, Criacao } from './ui/screens/Criacao';
+import { EscolhaCenario, EscolhaClasse, EscolhaOrigem, EscolhaInfancia, Criacao } from './ui/screens/Criacao';
 import { Jogo } from './ui/screens/Jogo';
 import { Ficha, Vinculos, Cronica, Mapa, Livro, Missoes } from './ui/screens/Paineis';
 import { FimCapitulo, Config } from './ui/screens/Sistema';
 import { Inventario } from './ui/screens/Inventario';
 import { Loja } from './ui/screens/Loja';
 import { Combate } from './ui/screens/Combate';
+import { PrologoInfancia } from './ui/screens/Prologo';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -68,8 +69,12 @@ function roteia(tela: string) {
       return <EscolhaClasse />;
     case 'origem':
       return <EscolhaOrigem />;
+    case 'infancia':
+      return <EscolhaInfancia />;
     case 'criacao':
       return <Criacao />;
+    case 'prologo':
+      return <PrologoInfancia />;
     case 'jogo':
       return <Jogo />;
     case 'mapa':

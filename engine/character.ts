@@ -96,6 +96,7 @@ export function criarPersonagem(
     alcunhas: [],
     cicatrizes: [],
     condicoes: [],
+    idade: 20,
   };
 }
 

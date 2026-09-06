@@ -1,6 +1,6 @@
 // ARCANUM · Store da aplicação (Zustand). Orquestra engine, narração e save.
 import { create } from 'zustand';
-import type { Campaign, ContentBundle, Atributos, AttrKey, NPC } from '@/engine/types';
+import type { Campaign, ContentBundle, Atributos, AttrKey, NPC, MarcaInfancia, ReacaoInfancia } from '@/engine/types';
 import type { ModeloOR } from '@/engine';
 import {
   criarCampanha,
@@ -19,6 +19,10 @@ import {
   iniciarCombate,
   jogadorAtaca,
   jogadorDefende,
+  jogadorAcaoTatica,
+  encontrosElegiveis,
+  type AcaoTatica,
+  ajudarReconstrucao,
   jogadorConjura,
   jogadorUsaItemCombate,
   jogadorFoge,
@@ -26,6 +30,14 @@ import {
   verificarQuests,
   aprenderArte as aprenderArteEngine,
   conjurarLivre,
+  fundirEscolas,
+  tentarAscender,
+  fatoDeAbertura,
+  artePorId,
+  rolarEncontroDeViagem,
+  periodoAtual,
+  nextFloat,
+  pick,
   chaveRotulo,
   montarGrade,
   avancarMundo,
@@ -35,12 +47,23 @@ import {
   PERIODOS,
   type OpcaoResolvida,
   type Contexto,
+  resolverEtapaInfancia,
+  resgatarParente,
+  intervirNaGuerra,
+  alternarCompanheiro,
+  executarAcaoMundo,
+  type AcaoMundo,
+  descobrirNoticias,
+  emboscadaNemesis,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
   salvarCampanha,
   carregarCampanha,
   apagarCampanha,
+  salvarSessao,
+  carregarSessao,
+  apagarSessao,
   salvarConfig,
   carregarConfig,
   configPadrao,
@@ -54,7 +77,9 @@ export type Tela =
   | 'cenario'
   | 'classe'
   | 'origem'
+  | 'infancia'
   | 'criacao'
+  | 'prologo'
   | 'jogo'
   | 'mapa'
   | 'livro'
@@ -78,12 +103,23 @@ export type EntradaFeed = {
   cabecalho?: string;
 };
 
+// O retrato exato da tela — feed e cena correntes — persistido à parte da
+// campanha (ver ui/storage.ts, K_SESSAO). É o que deixa "continuar" retomar
+// EXATAMENTE de onde parou, em vez de pedir pro narrador inventar uma cena
+// nova (o que às vezes saía até com fala inventada na boca do jogador).
+type SessaoSalva = {
+  feed: EntradaFeed[];
+  cena?: { narracao: string; opcoes: OpcaoResolvida[]; contexto: Contexto };
+};
+
 type Rascunho = {
   cenarioId?: string;
   classeId?: string;
   origemId?: string;
   nome: string;
   atributos: Atributos;
+  marcaInfancia?: MarcaInfancia;
+  reacaoInfancia?: ReacaoInfancia;
 };
 
 const ATTR_MIN = 8;
@@ -158,10 +194,16 @@ interface GameState {
   escolherCenario: (id: string) => void;
   escolherClasse: (id: string) => void;
   escolherOrigem: (id: string) => void;
+  escolherMarcaInfancia: (id: MarcaInfancia) => void;
+  escolherReacaoInfancia: (id: ReacaoInfancia) => void;
   ajustarAtributo: (k: AttrKey, delta: number) => void;
   setNome: (n: string) => void;
   pontosRestantes: () => number;
   iniciarCampanha: () => Promise<void>;
+  avancarInfancia: (opcaoId: string) => Promise<void>;
+  resgatarFamiliar: (id: string, modo: 'resgate' | 'infiltracao') => Promise<void>;
+  alternarCompanheiroAcao: (id: string) => Promise<string>;
+  apoiarFaccao: (id: string) => Promise<void>;
   abandonar: () => Promise<void>;
 
   agirVerbo: (verboId: string, alvoId?: string) => Promise<void>;
@@ -175,12 +217,19 @@ interface GameState {
   iniciarLuta: (criaturaIds: string[]) => void;
   combAtacar: (alvoId: string) => Promise<void>;
   combDefender: () => Promise<void>;
+  reconstruirLocal: () => Promise<void>;
+  acaoMundo: (acao: AcaoMundo) => Promise<void>;
+  cacarAmeaca: (id: string) => void;
+  combTatica: (acao: AcaoTatica, alvoId?: string) => Promise<void>;
   combConjurar: (arteId: string, alvoId?: string) => Promise<void>;
   combUsar: (itemId: string) => Promise<void>;
   combFugir: () => Promise<void>;
   fecharLuta: () => Promise<void>;
   aprenderArteAcao: (arteId: string) => Promise<void>;
   conjurarArteLivre: (arteId: string) => Promise<void>;
+  fundirEstilos: (escolaA: string, escolaB: string, nome: string) => Promise<void>;
+  ascender: () => Promise<void>;
+  jogarCartaMemoria: (id: string) => Promise<void>;
   acaoLivre: (texto: string) => Promise<void>;
   viajar: (destino: string) => Promise<void>;
 
@@ -234,8 +283,9 @@ export const useGame = create<GameState>((set, get) => ({
 
   novoJogo() {
     set({
-      rascunho: { nome: '', atributos: atributosBase() },
-      tela: get().config.avisoAceito ? 'cenario' : 'aviso17',
+      // Um mundo só, Vaelhorn: não passa mais pela tela de escolher cenário.
+      rascunho: { nome: '', atributos: atributosBase(), cenarioId: 'vaelhorn' },
+      tela: get().config.avisoAceito ? 'classe' : 'aviso17',
     });
   },
 
@@ -247,6 +297,28 @@ export const useGame = create<GameState>((set, get) => ({
     // Save de uma versão anterior não pode virar tela branca: completa o que
     // falta e descarta o que aponta para gente ou item que não existe mais.
     const camp = normalizarCampanha(content, bruto);
+    if (camp.familia && !camp.familia.prologoConcluido) {
+      set({ camp, content, feed: [], cena: undefined, tela: 'prologo', ocupado: false });
+      return;
+    }
+    if (camp.combate) {
+      const sessaoCombate = await carregarSessao<SessaoSalva>();
+      set({ camp, content, feed: sessaoCombate?.feed ?? [], cena: undefined, tela: 'combate', ocupado: false });
+      return;
+    }
+
+    // O retrato exato da tela (ver ui/storage.ts, K_SESSAO): se existe,
+    // retoma EXATAMENTE onde parou — mesmo texto, mesmas opções na tela,
+    // sem pedir pro narrador inventar uma cena nova (era isso que às vezes
+    // colocava fala na boca do jogador que ele nunca disse).
+    const sessao = await carregarSessao<SessaoSalva>();
+    if (sessao?.feed?.length) {
+      set({ camp, content, feed: sessao.feed, cena: sessao.cena, tela: 'jogo', ocupado: false });
+      return;
+    }
+
+    // Sem sessão salva (save de antes dessa funcionalidade existir, ou a
+    // sessão não sobreviveu): melhor esforço, do jeito antigo.
     set({
       camp,
       content,
@@ -255,14 +327,13 @@ export const useGame = create<GameState>((set, get) => ({
       ocupado: true,
     });
     recomputarCena(get, set);
-    // Retomar também pede cena nova: nada de reaparecer com as opções velhas.
     await narrar(get, set, 'Você retoma a jornada de onde parou.');
   },
 
   async aceitarAviso() {
     const config = { ...get().config, avisoAceito: true };
     await salvarConfig(config);
-    set({ config, tela: 'cenario' });
+    set({ config, tela: 'classe' });
   },
 
   escolherCenario(id) {
@@ -272,7 +343,14 @@ export const useGame = create<GameState>((set, get) => ({
     set({ rascunho: { ...get().rascunho, classeId: id }, tela: 'origem' });
   },
   escolherOrigem(id) {
-    set({ rascunho: { ...get().rascunho, origemId: id }, tela: 'criacao' });
+    set({ rascunho: { ...get().rascunho, origemId: id }, tela: 'infancia' });
+  },
+  escolherMarcaInfancia(id) {
+    // Fica na mesma tela: ela passa a mostrar o segundo passo (a reação).
+    set({ rascunho: { ...get().rascunho, marcaInfancia: id } });
+  },
+  escolherReacaoInfancia(id) {
+    set({ rascunho: { ...get().rascunho, reacaoInfancia: id }, tela: 'criacao' });
   },
 
   ajustarAtributo(k, delta) {
@@ -301,25 +379,72 @@ export const useGame = create<GameState>((set, get) => ({
       atributos: r.atributos,
       classeId: r.classeId,
       origemId: r.origemId,
+      marcaInfancia: r.marcaInfancia,
+      reacaoInfancia: r.reacaoInfancia,
     });
-    const cena = montarCena(content, camp);
     set({
       content,
       camp,
-      cena,
-      tela: 'jogo',
+      cena: undefined,
+      tela: 'prologo',
       temSave: true,
       feed: [],
-      ocupado: true,
+      ocupado: false,
     });
     await salvarCampanha(camp);
-    // A abertura também é escrita pelo narrador: o jogo nunca começa com um
-    // texto de reserva nem com as mesmas três opções de sempre.
-    await narrar(get, set, `A história começa. ${cena.narracao}`);
+  },
+
+  async avancarInfancia(opcaoId) {
+    const { content, camp } = get();
+    if (!content || !camp?.familia) return;
+    const resultado = resolverEtapaInfancia(content, camp, opcaoId);
+    if (!resultado.ok) return;
+    await salvarCampanha(camp);
+    if (!resultado.concluida) {
+      set({ camp: { ...camp } });
+      return;
+    }
+    const cena = montarCena(content, camp);
+    const memoria = camp.familia.historia.map(h => `Aos ${h.idade}: ${h.texto}`).join(' ');
+    set({ camp: { ...camp }, cena, tela: 'jogo', feed: [], ocupado: true });
+    const genesePrefacio = camp.genese ? fatoDeAbertura(camp.genese, camp.personagem.nome) + ' ' : '';
+    await narrar(get, set, `${genesePrefacio}${memoria} Aos dezoito anos, a vida adulta começa. ${cena.narracao}`);
+  },
+
+  async resgatarFamiliar(id, modo) {
+    const { camp } = get();
+    if (!camp) return;
+    const r = resgatarParente(camp, id, modo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')] });
+    await salvarCampanha(camp);
+  },
+
+  async alternarCompanheiroAcao(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return '';
+    const npc = [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id);
+    const r = alternarCompanheiro(content, camp, id);
+    const texto = r.ok
+      ? `${npc?.nome ?? id} ${r.entrou ? 'passou a acompanhar você' : 'deixou o grupo'}.`
+      : r.motivo ?? 'Não foi possível mudar o grupo.';
+    set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
+    await salvarCampanha(camp);
+    return texto;
+  },
+
+  async apoiarFaccao(id) {
+    const { content, camp } = get();
+    if (!content || !camp) return;
+    const r = intervirNaGuerra(content, camp, id);
+    const nome = content.faccoes.find(f => f.id === id)?.nome ?? id;
+    const texto = r.ok ? `Você entrou na frente ao lado de ${nome}. O resultado ainda dependerá dos dias seguintes.` : r.motivo ?? 'Não foi possível intervir.';
+    set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
+    await salvarCampanha(camp);
   },
 
   async abandonar() {
     await apagarCampanha();
+    await apagarSessao();
     set({ camp: undefined, content: undefined, cena: undefined, feed: [], temSave: false, tela: 'entrada' });
   },
 
@@ -370,26 +495,55 @@ export const useGame = create<GameState>((set, get) => ({
     const { content, camp } = get();
     if (!content || !camp) return;
     const desconto = camp.flags['desconto'] === true;
-    comprarEngine(content, camp, id, desconto);
+    const resultado = comprarEngine(content, camp, id, desconto);
+    if (!resultado.ok) set({ feed: [...get().feed, nf(resultado.motivo ?? 'Compra indisponível.', 'sistema')] });
     set({ camp: { ...camp } });
     await salvarCampanha(camp);
   },
   async venderItem(id) {
     const { content, camp } = get();
     if (!content || !camp) return;
-    venderEngine(content, camp, id);
+    const resultado = venderEngine(content, camp, id);
+    if (!resultado.ok) set({ feed: [...get().feed, nf(resultado.motivo ?? 'Venda indisponível.', 'sistema')] });
     set({ camp: { ...camp } });
     await salvarCampanha(camp);
   },
 
   // ── Combate ──────────────────────────────────────────────
+  async acaoMundo(acao) {
+    const { camp, content, ocupado } = get();
+    if (!camp || !content || ocupado) return;
+    const r = executarAcaoMundo(content, camp, acao);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')], ...(r.combate ? { tela: 'combate' as const } : {}) });
+    await salvarCampanha(camp);
+  },
+  async reconstruirLocal() {
+    const { camp } = get();
+    if (!camp) return;
+    const r = ajudarReconstrucao(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.ok ? 'Você contribuiu com materiais para a reconstrução.' : r.motivo ?? 'Não foi possível.', 'sistema')] });
+    await salvarCampanha(camp);
+  },
+  cacarAmeaca(id) {
+    const { camp, content } = get();
+    if (!camp || !content) return;
+    const ameaca = camp.continuidade?.ameacas.find(a => a.id === id && a.estado !== 'resolvida' && a.descoberta);
+    if (!ameaca || ameaca.local !== camp.localAtual) return;
+    if (!encontrosElegiveis(content, camp, [ameaca.criaturaId]).length) {
+      set({ feed: [...get().feed, nf('A criatura se esconde da luz. Retorne durante a noite.', 'sistema')] }); return;
+    }
+    get().iniciarLuta([ameaca.criaturaId]);
+  },
   iniciarLutaLocal() {
     const { content, camp } = get();
     if (!content || !camp) return;
     const local = content.locais.find((l) => l.id === camp.localAtual);
-    const pool = encontrosPorTipo[local?.tipo ?? ''] ?? ['cao_selvagem'];
-    const count = 1 + (Math.random() < 0.4 ? 1 : 0);
-    const ids = Array.from({ length: count }, () => pool[Math.floor(Math.random() * pool.length)]);
+    const pool = encontrosElegiveis(content, camp, encontrosPorTipo[local?.tipo ?? ''] ?? ['cao_selvagem']);
+    if (!pool.length) { set({ feed: [...get().feed, nf('Não há uma ameaça acessível aqui agora.', 'sistema')] }); return; }
+    // RNG determinístico da campanha, não Math.random() — senão o mesmo
+    // save/seed produz combates diferentes a cada vez que você tenta de novo.
+    const count = 1 + (nextFloat(camp.rng) < 0.4 ? 1 : 0);
+    const ids = Array.from({ length: count }, () => pick(camp.rng, pool));
     iniciarCombate(content, camp, ids);
     set({ camp: { ...camp }, tela: 'combate' });
     void salvarCampanha(camp);
@@ -412,6 +566,13 @@ export const useGame = create<GameState>((set, get) => ({
     const { content, camp } = get();
     if (!content || !camp?.combate) return;
     jogadorDefende(content, camp);
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+  },
+  async combTatica(acao, alvoId) {
+    const { content, camp } = get();
+    if (!content || !camp?.combate) return;
+    jogadorAcaoTatica(content, camp, acao, alvoId);
     set({ camp: { ...camp } });
     await salvarCampanha(camp);
   },
@@ -444,6 +605,7 @@ export const useGame = create<GameState>((set, get) => ({
     const resultado = camp.combate?.resultado;
     const rec = camp.combate?.recompensa;
     fecharCombate(camp);
+    avancarMundo(content, camp);
     const saque = rec?.loot?.length
       ? ` Do chão você recolhe: ${rec.loot
           .map((id) => content.itens.find((i) => i.id === id)?.nome ?? id)
@@ -498,11 +660,75 @@ export const useGame = create<GameState>((set, get) => ({
     await salvarCampanha(camp);
     checarCapitulo(get, set);
   },
+  // Funde duas escolas dominadas num estilo original (engine/fusao.ts,
+  // GDD original: até 3 criações de assinatura por vida).
+  async fundirEstilos(escolaA, escolaB, nome) {
+    const { content, camp } = get();
+    if (!content || !camp || get().ocupado) return;
+    const r = fundirEscolas(content, camp, escolaA, escolaB, nome);
+    if (!r.ok || !r.arte) {
+      set({ feed: [...get().feed, nf(`Não deu para fundir: ${r.motivo}.`, 'sistema')] });
+      return;
+    }
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+    get().irPara('jogo');
+    set({
+      feed: [
+        ...get().feed,
+        nf(`Fundir estilo: ${r.arte.nome}`, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) }),
+      ],
+    });
+    await narrar(
+      get,
+      set,
+      `Você passou a fundir ${escolaA} e ${escolaB} num estilo só seu: ${r.arte.nome}.`,
+    );
+  },
+
+  // Tentativa de Ascensão (engine/ascensao.ts) — só funciona quando os três
+  // pilares reais já estão cumpridos (nível, idade, almas seladas).
+  async ascender() {
+    const { content, camp } = get();
+    if (!content || !camp || get().ocupado) return;
+    const r = tentarAscender(camp);
+    if (!r.ok) {
+      set({ feed: [...get().feed, nf(`Ainda não: ${r.motivo}.`, 'sistema')] });
+      return;
+    }
+    set({ camp: { ...camp } });
+    await salvarCampanha(camp);
+    get().irPara('jogo');
+    set({
+      feed: [
+        ...get().feed,
+        nf('Ascensão', 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) }),
+      ],
+    });
+    await narrar(get, set, `Você rompeu a barreira entre o mortal e o que vem depois — o CHIM despertou em você.`);
+  },
+
+  // Ativa uma carta de memória de infância (engine/genese.ts) para o
+  // próximo teste — o bônus só é gasto quando um teste de fato acontece
+  // (ver engine/turn.ts, resolverIntencao).
+  async jogarCartaMemoria(id) {
+    const { camp } = get();
+    if (!camp) return;
+    const carta = camp.memoriasInfancia?.find((c) => c.id === id);
+    if (!carta || carta.usosRestantes <= 0) return;
+    camp.cartaAtiva = id;
+    set({
+      camp: { ...camp },
+      feed: [...get().feed, nf(`Memória jogada: ${carta.titulo}.`, 'sistema')],
+    });
+    await salvarCampanha(camp);
+  },
+
   async conjurarArteLivre(arteId) {
     const { content, camp } = get();
     if (!content || !camp || get().ocupado) return;
     const r = conjurarLivre(content, camp, arteId);
-    const arte = content.artes.find((a) => a.id === arteId);
+    const arte = artePorId(content, camp, arteId);
     set({ camp: { ...camp } });
     await salvarCampanha(camp);
     if (!r.ok) {
@@ -534,6 +760,15 @@ export const useGame = create<GameState>((set, get) => ({
     if (!t) return;
     const cls = classificarAcaoLivre(t, content, get().cena?.contexto);
     if (cls) {
+      // 'cacar' e os verbos de chefe abrem combate estruturado de verdade
+      // (tela de PV, dano, vitoria/derrota) — agirVerbo ja sabe disso.
+      // Chamar executar() direto aqui pulava essa checagem: a acao livre
+      // ('matar os bandidos') nunca abria o combate real, so a narracao
+      // livre, que nao tem vida nem fim — o combate parecia nao terminar.
+      if (cls.verboId === 'cacar' || CHEFES_POR_VERBO[cls.verboId]) {
+        await get().agirVerbo(cls.verboId, cls.alvoId);
+        return;
+      }
       await executar(get, set, { tipo: 'verbo', verboId: cls.verboId, alvoId: cls.alvoId }, undefined);
       return;
     }
@@ -548,6 +783,7 @@ export const useGame = create<GameState>((set, get) => ({
   async viajar(destino) {
     const { content, camp } = get();
     if (!content || !camp) return;
+    if (get().ocupado || (camp.combate && !camp.combate.terminado) || camp.personagem.condicoes.includes('cativo')) return;
     const local = content.locais.find((l) => l.id === camp.localAtual);
     const rota = local?.rotas.find((r) => r.destino === destino);
     if (!rota) return;
@@ -565,7 +801,15 @@ export const useGame = create<GameState>((set, get) => ({
       registrarMarco(camp, `você pisou em ${nome} pela primeira vez`);
     }
     camp.flags[`visitou.${destino}`] = true;
+    descobrirNoticias(content, camp);
     const alvo = content.locais.find((l) => l.id === destino);
+
+    // Risco real na estrada: puxa do "perigo" que a rota já declara e do
+    // período do dia (engine/viagem.ts) — determinístico, sem grafo de
+    // waypoints novo, sem hora de relógio de parede.
+    const poolEncontro = encontrosElegiveis(content, camp, encontrosPorTipo[alvo?.tipo ?? ''] ?? []);
+    const encontro = emboscadaNemesis(content, camp) ?? rolarEncontroDeViagem(camp, periodoAtual(camp.calendario), rota.perigo, poolEncontro);
+
     set({
       camp: { ...camp },
       ocupado: true,
@@ -579,6 +823,19 @@ export const useGame = create<GameState>((set, get) => ({
       ],
     });
     await salvarCampanha(camp);
+
+    if (encontro) {
+      iniciarCombate(content, camp, encontro);
+      set({
+        camp: { ...camp },
+        tela: 'combate',
+        ocupado: false,
+        feed: [...get().feed, nf('No caminho, alguém — ou algo — te alcança.', 'sistema')],
+      });
+      await salvarCampanha(camp);
+      return;
+    }
+
     await narrar(get, set, `Você chegou a ${alvo?.nome ?? destino}.`);
     checarCapitulo(get, set);
   },
@@ -670,6 +927,18 @@ export const useGame = create<GameState>((set, get) => ({
     await narrar(get, set, pend.fato, pend.acaoLivre);
   },
 }));
+
+// Persiste o retrato da tela (feed + cena) toda vez que ele muda, enquanto
+// houver uma campanha em andamento — é o que faz "continuar" retomar
+// exatamente de onde parou (ver K_SESSAO em ui/storage.ts) em vez de perder
+// a conversa a cada fechamento do app. Fica de fora de toda ação individual
+// de propósito: mais seguro que espalhar salvarSessao(...) por dezenas de
+// pontos de set() e arriscar esquecer um.
+useGame.subscribe((state, anterior) => {
+  if (!state.camp) return;
+  if (state.feed === anterior.feed && state.cena === anterior.cena) return;
+  void salvarSessao({ feed: state.feed, cena: state.cena } satisfies SessaoSalva);
+});
 
 function romano(n: number): string {
   const m = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -773,12 +1042,23 @@ async function narrar(
   set({ cena, pendente: { fato } });
 
   if (!config.apiKey) {
+    // Narrador canônico local (GDD §20, P0: o jogo tem que rodar sem rede e
+    // sem modelo). As peças já existiam — 'fato' é a frase que a própria
+    // engine escreve reagindo ao grau do teste (construirFato em turn.ts), e
+    // montarGrade(...) com lista de IA vazia já preenche as cinco casas com
+    // ações reais do jogo. Isto só estava sendo descartado por um retorno
+    // antecipado aqui, que travava o jogo pedindo chave.
+    const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
     set({
-      ocupado: false,
+      camp: { ...camp },
+      feed: [...get().feed, nf(fato, 'narracao')],
+      cena: { ...cena, opcoes: grade },
       iaStatus: 'off',
-      iaErro: 'sem chave de API',
-      feed: [...get().feed, nf('Sem narrador: cole sua chave em Configurações para a história seguir.', 'sistema')],
+      iaErro: undefined,
+      ocupado: false,
+      pendente: undefined,
     });
+    await salvarCampanha(camp);
     return;
   }
 

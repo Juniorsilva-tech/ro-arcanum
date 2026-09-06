@@ -12,6 +12,8 @@
 import type { Campaign, ContentBundle, LacoTipo, NPC } from './types';
 import { nextFloat, pick } from './rng';
 import { PERIODOS, type Periodo } from './time';
+import { todosNpcs } from './elenco';
+import { localEfetivo } from './historiaViva';
 
 // Onde cada uma está num período (mesma regra da disponibilidade — GDD §10.3).
 function ondeEsta(npc: NPC, periodo: Periodo): string {
@@ -103,9 +105,10 @@ function registrarEco(camp: Campaign, local: string, texto: string, npcs: string
 // não precisa simular as vinte e quatro horas para parecer vivo.
 export function cruzarRotinas(content: ContentBundle, camp: Campaign, periodo: Periodo): void {
   const porLocal = new Map<string, NPC[]>();
-  for (const npc of content.npcs) {
+  for (const npc of todosNpcs(content, camp)) {
     if (!camp.npcState[npc.id]?.vivo) continue;
-    const onde = ondeEsta(npc, periodo);
+    const onde = localEfetivo(camp, npc, periodo);
+    if (!onde || camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') continue;
     const arr = porLocal.get(onde) ?? [];
     arr.push(npc);
     porLocal.set(onde, arr);

@@ -1,6 +1,7 @@
 // ARCANUM · Aplicação de efeitos no estado da campanha (compartilhado por turno e itens).
 import type { Campaign, Efeito } from './types';
 import { calcularDano } from './resolution';
+import { processarSubidaDeNivel } from './progresso';
 
 function clamp100(v: number): number {
   return Math.max(0, Math.min(100, v));
@@ -31,6 +32,7 @@ export function aplicarEfeito(camp: Campaign, ef: Efeito): void {
       break;
     case 'xp':
       p.xp += ef.delta;
+      processarSubidaDeNivel(camp);
       break;
     case 'flag':
       camp.flags[ef.chave] = ef.valor;

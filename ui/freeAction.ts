@@ -27,6 +27,7 @@ const MAPA: { verbo: string; palavras: string[] }[] = [
   { verbo: 'bater_carteira', palavras: ['carteira', 'batedor de carteira', 'punga'] },
   { verbo: 'arrombar', palavras: ['arrombar', 'forçar a fechadura', 'forcar a fechadura', 'gazua'] },
   { verbo: 'agredir', palavras: ['agredir', 'bater', 'socar', 'atacar', 'brigar'] },
+  { verbo: 'cacar', palavras: ['caçar', 'cacar', 'procurar briga', 'arrumar briga'] },
   { verbo: 'subornar', palavras: ['subornar', 'suborno', 'comprar o silêncio', 'comprar o silencio'] },
   { verbo: 'chantagear', palavras: ['chantagear', 'chantagem'] },
   { verbo: 'estudar', palavras: ['estudar', 'ler', 'livro', 'grimório', 'grimorio'] },
@@ -47,6 +48,21 @@ function normalizar(s: string): string {
   return s.toLowerCase();
 }
 
+// Luta de verdade nao e a mesma coisa que um soco. 'agredir' e um verbo
+// social: um golpe, medo, reputacao com a guarda — e o turno acaba ali.
+// Quem escreve 'matar' ou 'lutar' quer combate com vida, dano e fim.
+// Sem esta separacao, 'matar os bandidos' nao casava com verbo nenhum,
+// caia na narracao livre e a cena girava no vazio para sempre.
+const LETAIS = [
+  'matar', 'mato ', 'matando', 'lutar', 'luta', 'duelar', 'duelo',
+  'enfrentar', 'combate', 'combater', 'batalha', 'exterminar',
+  'acabar com', 'partir para cima', 'meter a mao', 'meter a mão',
+];
+
+function temIntencaoLetal(t: string): boolean {
+  return LETAIS.some((p) => t.includes(p));
+}
+
 export function classificarAcaoLivre(
   texto: string,
   content: ContentBundle,
@@ -63,6 +79,18 @@ export function classificarAcaoLivre(
       }
     }
   }
+  // Intencao letal abre combate de verdade, mesmo que nenhuma palavra do
+  // mapa acima tenha casado ('matar os bandidos' nao casava com nada).
+  if (temIntencaoLetal(t) && (!melhor || melhor.verbo === 'agredir')) {
+    melhor = { verbo: 'cacar', peso: 99 };
+  }
+
+  // Agredir precisa de alguem na frente. Sem ninguem presente, quem manda
+  // 'atacar' esta procurando briga, nao batendo em ninguem em especifico.
+  if (melhor?.verbo === 'agredir' && ctx && ctx.presentes.length === 0) {
+    melhor = { verbo: 'cacar', peso: melhor.peso };
+  }
+
   if (!melhor) return null;
 
   const verbo = content.verbos.find((v) => v.id === melhor!.verbo);

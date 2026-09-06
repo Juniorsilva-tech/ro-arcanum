@@ -37,6 +37,11 @@ export const itensVaelhorn: Item[] = [
   it({ id: 'montante', nome: 'Montante', descricao: 'Espada enorme; abre espaço onde havia gente.', slot: 'arma', alcance: 'corpo', peso: 6, valor: 70, dano: { base: 18, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'cajado_de_carvalho', nome: 'Cajado de carvalho', descricao: 'Apoio na estrada, arma no aperto — e foco para a arte.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 14, dano: { base: 7, dispersao: 0.3, tipo: 'contusão' }, lojas: MERC }),
   it({ id: 'adaga_de_prata', nome: 'Adaga de prata', descricao: 'A prata morde o que a noite cospe.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 60, raridade: 'notavel', dano: { base: 9, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+  // Antes só saía de saque de chefe oni — agora também se forja de verdade,
+  // na Vila que Ninguém Encontra Duas Vezes (content/vaelhorn/locations.ts,
+  // vila_ferreiros), pela mão de Hotaru Haganezuka. O preço alto continua
+  // fazendo sentido: não é um item de loja qualquer.
+  it({ id: 'lamina_nichirin', nome: 'Lâmina Nichirin', descricao: 'Aço que muda de cor na mão de quem a empunha. Contra carne que se recompõe sozinha, é a única resposta que fica.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 120, raridade: 'notavel', dano: { base: 11, dispersao: 0.3, tipo: 'cortante' }, contraOni: true, lojas: ['vila_ferreiros'] }),
 
   // ───────────────────────────── ARMAS à distância
   it({ id: 'funda', nome: 'Funda', descricao: 'Uma pedra, um giro, um estalo seco.', slot: 'arma', alcance: 'distancia', peso: 1, valor: 6, dano: { base: 6, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),

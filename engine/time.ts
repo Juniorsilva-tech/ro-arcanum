@@ -50,7 +50,13 @@ export function avancarPeriodos(cal: CalendarioState, n: number): CalendarioStat
       dia += 1;
     }
   }
-  return { ...cal, dia, periodoIndex: idx };
+  return { ...cal, dia, periodoIndex: idx, estacao: estacaoNoDia(cal, dia) };
+}
+
+export function estacaoNoDia(cal: CalendarioState, dia: number): Estacao {
+  const estacoes: Estacao[] = ['primavera', 'verao', 'outono', 'inverno'];
+  const avancos = Math.floor(dia * 4 / 365) - Math.floor(cal.dia * 4 / 365);
+  return estacoes[((estacoes.indexOf(cal.estacao) + avancos) % 4 + 4) % 4];
 }
 
 // Custo de tempo NUNCA é exibido como número — sempre como horário de chegada (GDD §1.2).

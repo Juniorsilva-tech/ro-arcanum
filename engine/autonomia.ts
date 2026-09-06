@@ -1,0 +1,119 @@
+import type { Campaign, ContentBundle, NPC } from './types';
+import { cidadeIdDoLocal, localEfetivo, proximoPasso, registrarFato } from './historiaViva';
+import { nextFloat, pick } from './rng';
+import { oferecerMissao, encerrarMissao } from './missoesVivas';
+import { registrarMorteFamiliar } from './familia';
+
+export function processarAutonomia(content: ContentBundle, camp: Campaign): void {
+  const v = camp.vivo!, dia = camp.calendario.dia;
+  const elenco = [...content.npcs, ...(camp.npcsProcedurais ?? [])];
+  for (const npc of elenco) {
+    const p = v.pessoas[npc.id], din = camp.npcState[npc.id];
+    if (!p || !din?.vivo || npc.especie === 'oni') continue;
+    if ((din.idade ?? npc.idade) < 18) {
+      const tutor = p.tutores?.find(id => camp.npcState[id]?.vivo);
+      if (tutor) { p.local = v.pessoas[tutor].local; p.casa = v.pessoas[tutor].casa; }
+      continue;
+    }
+    if ((camp.grupo ?? []).includes(npc.id)) { p.local = camp.localAtual; p.viagem = undefined; continue; }
+    if (p.objetivo === 'cativo') {
+      const parente = camp.familia?.membros.find(m => m.id === npc.id);
+      if (parente?.condicao === 'livre') { p.objetivo = 'rotina'; p.local = npc.localBase; }
+      else if (p.cativoAte !== undefined && dia >= p.cativoAte) {
+        p.objetivo = 'trabalhar'; p.cativoAte = undefined; p.deslocado = true;
+        if (parente) parente.condicao = 'livre';
+        registrarFato(camp, { tipo: 'fuga_cativeiro', local: p.local, texto: `${npc.nome} escapou do cativeiro e procura recompor a vida.`, atores: [npc.id], publico: true });
+      } else continue;
+    }
+    if (p.viagem) {
+      if (dia < p.viagem.chegada) continue;
+      const destinoFinal = p.viagem.destino;
+      const passo = proximoPasso(content, p.local, destinoFinal);
+      if (!passo) { p.viagem = undefined; continue; }
+      p.local = passo; p.deslocado = true;
+      if (p.local !== destinoFinal) { p.viagem.chegada = dia + 1; continue; }
+      p.viagem = undefined;
+      if (p.objetivo !== 'cacar') p.casa = p.local;
+      registrarFato(camp, { tipo: 'mudanca', local: p.local, texto: `${npc.nome} chegou e estabeleceu uma nova moradia.`, atores: [npc.id], publico: true });
+    }
+    const local = localEfetivo(camp, npc) ?? p.local;
+    const cidadeId = cidadeIdDoLocal(content, camp, local), c = cidadeId && v.cidades[cidadeId];
+    if (!c) continue;
+    p.fome = Math.max(0, Math.min(100, p.fome + (c.fomeDias ? 6 : -12)));
+    p.saude = Math.max(0, Math.min(100, p.saude + (c.doenca > 30 ? -1.5 : .8) - (p.fome > 80 ? 2 : 0)));
+    if (p.saude <= 0) {
+      din.vivo = false; registrarMorteFamiliar(camp, npc.id);
+      registrarFato(camp, { tipo: 'morte_doenca', local, texto: `${npc.nome} não resistiu à doença e à falta de cuidados.`, atores: [npc.id], publico: true }); continue;
+    }
+    if (dia < p.proximaDecisao) continue;
+    p.proximaDecisao = dia + 3;
+    const ameaca = camp.continuidade?.ameacas.find(a => a.estado !== 'resolvida' && camp.kimetsu?.rivais[a.rivalId]?.vivo && proximoPasso(content, local, a.local));
+    if (npc.combatente?.nichirin && ameaca && p.saude >= 65 && p.fome < 45) {
+      p.objetivo = 'cacar'; p.local = local; p.deslocado = true;
+      if (local !== ameaca.local) p.viagem = { destino: ameaca.local, chegada: dia + 1 };
+      continue;
+    }
+    if (p.saude < 65 && c.remedios >= 2) {
+      p.objetivo = 'tratar'; c.remedios -= 2; p.saude = Math.min(100, p.saude + 12);
+    } else if (p.fome > 45 || c.inseguranca > 65) {
+      const destino = Object.keys(v.cidades).filter(id => id !== cidadeId && v.cidades[id].fomeDias === 0 && v.cidades[id].inseguranca < 40 && proximoPasso(content, local, id))[0];
+      if (destino) {
+        p.objetivo = 'migrar'; p.local = local; p.viagem = { destino, chegada: dia + 1 };
+        registrarFato(camp, { tipo: 'partida_npc', local, texto: `${npc.nome} partiu em busca de segurança e alimento.`, atores: [npc.id], publico: true });
+      }
+    } else if (p.moedas < 40) {
+      p.objetivo = 'trabalhar';
+      const salario = Math.min(c.tesouro, 3 + Math.floor(p.habilidade / 3));
+      c.tesouro -= salario; p.moedas = Math.min(250, p.moedas + salario); c.materiais = Math.min(250, c.materiais + 2);
+    } else if (npc.combatente && nextFloat(camp.rng) < .5) {
+      p.objetivo = 'treinar'; p.habilidade = Math.min(20, p.habilidade + .2); p.moedas -= 1;
+    } else {
+      p.objetivo = 'rotina';
+      const conhecida = elenco.find(n => n.id !== npc.id && camp.npcState[n.id]?.vivo && (camp.npcState[n.id]?.idade ?? n.idade) >= 18 && n.especie !== 'oni' && localEfetivo(camp, n) === local && !n.parentesco && !npc.parentesco);
+      if (conhecida) {
+        p.parceiros[conhecida.id] = Math.min(100, (p.parceiros[conhecida.id] ?? 0) + 3);
+        const outra = v.pessoas[conhecida.id];
+        if (outra && p.parceiros[conhecida.id] >= 30 && !p.conjuge && !outra.conjuge && npc.relacoes?.some(r => r.npc === conhecida.id && r.tipo === 'amante')) {
+          p.conjuge = conhecida.id; outra.conjuge = npc.id;
+          registrarFato(camp, { tipo: 'uniao', local, texto: `${npc.nome} e ${conhecida.nome} formaram uma casa em comum.`, atores: [npc.id, conhecida.id], publico: true });
+        }
+      }
+    }
+    // Captivity follows actual insecurity and poverty; it is not a global random death roll.
+    if (c.inseguranca > 75 && p.moedas < 10 && !npc.combatente && nextFloat(camp.rng) < .02) {
+      p.objetivo = 'cativo'; p.cativoAte = dia + 25; p.deslocado = true;
+      const parente = camp.familia?.membros.find(m => m.id === npc.id);
+      if (parente) parente.condicao = 'cativo';
+      const fato = registrarFato(camp, { tipo: 'captura', local, texto: `${npc.nome} foi levado por captores que exploram a desordem local.`, atores: [npc.id], publico: true });
+      oferecerMissao(camp, 'resgatar', fato, { ator: npc.id });
+    }
+    // NPCs can finish civic work; the protagonist never receives their reward.
+    if (p.objetivo === 'trabalhar' && p.habilidade >= 3 && nextFloat(camp.rng) < .15) {
+      const q = v.missoes.find(q => q.local === cidadeId && q.estado === 'oferecida' && ['tratar', 'reconstruir'].includes(q.tipo));
+      if (q?.tipo === 'tratar' && c.remedios >= 5) { c.remedios -= 5; c.doenca = Math.max(0, c.doenca - 20); }
+      if (q?.tipo === 'reconstruir' && c.materiais >= 8) { c.materiais -= 8; camp.continuidade!.locais[cidadeId!].integridade = Math.min(100, camp.continuidade!.locais[cidadeId!].integridade + 10); }
+      if (q && ((q.tipo === 'tratar' && c.doenca === 0) || (q.tipo === 'reconstruir' && camp.continuidade!.locais[cidadeId!].integridade >= 95))) {
+        p.prestigio = Math.min(100, p.prestigio + 5);
+        encerrarMissao(camp, q, 'resolvida_por_outros', `${npc.nome} organizou a ajuda e resolveu ${q.titulo.toLowerCase()}.`);
+      }
+    }
+  }
+  // New residents keep the world populated over decades. Children stay out of adult interactions.
+  if (dia % 90 === 0 && (camp.npcsProcedurais?.length ?? 0) < 160) {
+    const casas = elenco.filter(n => camp.npcState[n.id]?.vivo && n.especie !== 'oni' && !n.parentesco && (v.pessoas[n.id]?.moedas ?? 0) >= 30 && v.pessoas[n.id].filhos.length < 2 && !v.pessoas[n.id].viagem && v.pessoas[n.id].objetivo !== 'cativo');
+    if (casas.length) {
+      const tutor = pick(camp.rng, casas), casa = v.pessoas[tutor.id];
+      const cidade = cidadeIdDoLocal(content, camp, casa.local);
+      if (cidade && v.cidades[cidade].fomeDias === 0) {
+        const id = `residente_${++v.sequencia}`;
+        const nome = `${pick(camp.rng, ['Ari', 'Neri', 'Lian', 'Sora', 'Ren', 'Yuna'])} ${v.sequencia}`;
+        const novo: NPC = { id, nome, idade: 0, especie: 'humano', ocupacao: 'criança acolhida', faccaoId: tutor.faccaoId, localBase: casa.local, rotina: {}, vozNarrativa: 'curiosa e direta', personalidade: pick(camp.rng, ['observadora e paciente', 'impulsiva e leal', 'reservada e inventiva']), corpo: 'Aparência registrada conforme cresce.', relacoes: [{ npc: tutor.id, tipo: 'sangue', nota: 'família por acolhimento' }] };
+        (camp.npcsProcedurais ??= []).push(novo);
+        camp.npcState[id] = { vivo: true, idade: 0, tensao: 0, eixos: {}, memoria: [] };
+        v.pessoas[id] = { casa: casa.local, local: casa.local, deslocado: true, objetivo: 'rotina', moedas: 0, fome: 0, saude: 100, habilidade: nextFloat(camp.rng) < .05 ? 8 : 1, prestigio: 0, proximaDecisao: dia + 3, parceiros: {}, filhos: [], tutores: [tutor.id] };
+        casa.filhos.push(id); casa.moedas -= 10;
+        registrarFato(camp, { tipo: 'acolhimento', local: casa.local, texto: `${tutor.nome} acolheu ${nome}, uma criança recém-chegada à comunidade.`, atores: [tutor.id, id], publico: true });
+      }
+    }
+  }
+}

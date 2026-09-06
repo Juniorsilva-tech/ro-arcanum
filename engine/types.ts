@@ -142,6 +142,8 @@ export type Item = {
   concedeVerbo?: string;
   // onde é vendido (ids de local). Ausente = não vendido em loja.
   lojas?: string[];
+  // Arma capaz de suprimir a regeneração de um oni (engine/combat.ts).
+  contraOni?: boolean;
 };
 
 export type Equipado = {
@@ -167,13 +169,67 @@ export type Personagem = {
   inventario: Record<string, number>;
   equipado: Equipado;
   artesConhecidas: string[];
+  // Fusões de estilo já criadas nesta vida — limite de 3 (ver engine/fusao.ts).
+  fusoesFeitas?: number;
   alcunhas: string[];
   cicatrizes: string[];
   condicoes: string[];
+  // Amputações permanentes (engine/combat.ts) — nascem de um golpe severo
+  // contra quem já está quase caindo, não de um tipo de inimigo específico.
+  membrosPerdidos?: MembroId[];
+  // Idade real do jogador — envelhece de verdade, do mesmo jeito que as NPCs
+  // (ver engine/vidanpc.ts e engine/ascensao.ts). Ausente em saves antigos:
+  // cai no padrão de 20 (ver engine/migracao.ts).
+  idade?: number;
+};
+
+export type MembroId = 'braco_esquerdo' | 'braco_direito' | 'perna_esquerda' | 'perna_direita';
+
+// ── Gênese (documento original, seção 2: pais procedurais e herança
+// genética antes da primeira cena — ver engine/genese.ts). Pais e irmãos
+// continuam sorteados; a MARCA e a REAÇÃO da infância deixaram de ser dado
+// (era RNG puro antes) e viraram escolha do jogador na criação de
+// personagem (ver engine/character.ts, ui/screens/Criacao.tsx) — mais
+// agência sem abrir um segundo modo de jogo pra infância.
+export type MarcaInfancia = 'tragedia' | 'genio' | 'indigno' | 'comum';
+export type ReacaoInfancia = 'sozinho' | 'apoio' | 'entendimento';
+
+export type GeneseResultado = {
+  paiNome: string;
+  maeNome: string;
+  paiAtributos: Atributos;
+  maeAtributos: Atributos;
+  marca: MarcaInfancia;
+  reacao: ReacaoInfancia;
+  motivoTragedia?: string;
+  irmaos: number;
+};
+
+// ── Carta de memória de infância (documento de dinastia, seção 5, recortado:
+// sem baralho tático de combate — só um bônus de circunstância que o jogador
+// escolhe jogar antes de um teste, gasto de um punhado de usos por campanha).
+export type CartaMemoria = {
+  id: string;
+  titulo: string;
+  tipo: 'vitoria' | 'trauma';
+  descricao: string;
+  bonusCircunstancia: number;
+  usosRestantes: number;
 };
 
 // ── NPC estático.
 export type NPC = {
+  especie?: 'humano' | 'oni' | 'espirito';
+  parentesco?: 'pai' | 'mae' | 'irmao' | 'irma';
+  combatente?: {
+    vida: number;
+    defesa: number;
+    acerto: number;
+    dano: PerfilDano;
+    tecnicas: string[];
+    nichirin?: boolean;
+    suporte?: boolean;
+  };
   id: string;
   nome: string;
   idade: number;
@@ -193,6 +249,11 @@ export type NPC = {
   relacoes?: { npc: string; tipo: LacoTipo; nota: string }[];
   ensinaMestre?: string; // id de mestre no Livro
   atributos?: Partial<Atributos>;
+  // Participa de um embate de fundo contra uma ameaça rival, resolvido sem
+  // o jogador estar presente (ver engine/duelo.ts). `grupo` agrupa aliados
+  // que contam como reforço um do outro; `forca` é o poder dela nesse
+  // embate; `rivalNome`/`rivalForca` descrevem o que ela enfrenta.
+  duelo?: { grupo: string; forca: number; rivalNome: string; rivalForca: number; faccaoGanho?: string };
 };
 
 // ── Estado dinâmico de NPC por campanha (GDD §10.1).
@@ -200,6 +261,11 @@ export type NpcDinamico = {
   eixos: Record<string, number>; // disposicao/confianca/medo, ou desejo/confianca/conforto
   vivo: boolean;
   tensao: number; // sobe com negligência (GDD §10.4)
+  // Idade efetiva NESTA campanha — diverge da idade estática do conteúdo
+  // conforme o calendário anda (ver engine/vidanpc.ts). Ausente = ainda não
+  // envelheceu nenhum ano; usa a idade do conteúdo estático.
+  idade?: number;
+  vida?: number;
   // Lembranças tipadas, retidas por peso (ver engine/memoria.ts). Os campos
   // novos são opcionais para não invalidar save antigo.
   memoria: {
@@ -304,6 +370,7 @@ export type Trabalho = {
 };
 
 export type Arte = {
+  tecnica?: import('./kimetsuTypes').TecnicaCombate;
   id: string;
   nome: string;
   escola: string;
@@ -312,6 +379,10 @@ export type Arte = {
   efeito: string;
   pressaoGerada?: { medidor: string; valor: number };
   tabu?: string;
+  // 'fusao': arte original, criada pelo jogador fundindo duas escolas
+  // dominadas (ver engine/fusao.ts). Ausente = veio do conteúdo estático.
+  origem?: 'fusao';
+  escolasOrigem?: [string, string];
 };
 
 export type Reliquia = {
@@ -334,6 +405,7 @@ export type LivroState = {
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.
 export type Criatura = {
+  perfilOni?: import('./kimetsuTypes').PerfilOni;
   id: string;
   nome: string;
   descricao: string;
@@ -350,12 +422,28 @@ export type Criatura = {
   chefe?: boolean;
   // Fase de chefe: dispara quando a vida cai abaixo do gatilho (0..1).
   fase2?: { gatilhoPct: number; descricao: string; mecanica: 'apagar_vinculo' | 'chamar_reforco' | 'enfurecer' };
+  // Endurance and regeneration are separate from definitive oni death.
+  oni?: boolean;
+  // Explicit acquired exception; strength alone never grants solar immunity.
+  imuneLuz?: boolean;
 };
 
 export type CombatActor = {
+  posicao?: 'frente' | 'flanco' | 'cobertura';
+  retirado?: boolean;
+  capturado?: boolean;
+  rivalId?: string;
+  perfilOni?: import('./kimetsuTypes').PerfilOni;
+  mortoDefinitivo?: boolean;
+  decapitadoAte?: number;
+  faseAtivada?: boolean;
+  tatico?: import('./kimetsuTypes').EstadoTatico;
+  recargas?: Record<string, number>;
   id: string;
   nome: string;
   ehJogador: boolean;
+  ehAliado?: boolean;
+  npcId?: string;
   vida: number;
   vidaMax: number;
   defesa: number;
@@ -363,10 +451,20 @@ export type CombatActor = {
   dano?: PerfilDano;
   criaturaId?: string;
   condicoes: string[];
+  // Turnos restantes em que a regeneração de oni fica suprimida, contados a
+  // partir de um golpe com arma `contraOni`.
+  imuneRegenTurnos?: number;
+  oni?: boolean;
+  imuneLuz?: boolean;
   defendendo?: boolean;
+  membrosPerdidos?: MembroId[];
 };
 
 export type CombatState = {
+  ordemGrupo?: 'livre' | 'proteger' | 'focar';
+  versaoRegras?: number;
+  ambiente?: { abrigoSolar: boolean };
+  ultimaTecnica?: string;
   rodada: number;
   atores: CombatActor[];
   ordem: string[]; // ids na ordem de iniciativa
@@ -395,6 +493,10 @@ export type ContentBundle = {
   criaturas: Criatura[];
   quests: Quest[];
   faccoes: { id: string; nome: string }[];
+  // Pares de facções com rivalidade de fundo real o bastante pra às vezes
+  // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
+  // cenário sem esse tipo de tensão política.
+  rivalidadesFaccoes?: [string, string][];
   localInicial: string;
 };
 
@@ -413,6 +515,12 @@ export type QuestEstado = 'desconhecida' | 'ativa' | 'concluida' | 'falhada';
 
 // ── Estado serializável de uma campanha (GDD §34).
 export type Campaign = {
+  vivo?: import('./vivoTypes').MundoVivo;
+  familia?: import('./familia').FamiliaState;
+  npcsProcedurais?: NPC[];
+  grupo?: string[];
+  continuidade?: import('./continuidade').ContinuidadeState;
+  kimetsu?: import('./kimetsuTypes').KimetsuState;
   id: string;
   cenarioId: string;
   criadaEm: number;
@@ -426,6 +534,23 @@ export type Campaign = {
   flags: Record<string, boolean | number | string>;
   reputacao: Record<string, number>;
   livro: LivroState;
+  // Artes originais criadas por fusão nesta campanha — não vivem no
+  // ContentBundle estático porque são específicas de cada personagem.
+  artesCriadas?: Arte[];
+  // Gênese: pais gerados proceduralmente e o que aconteceu com eles antes
+  // da primeira cena (ver engine/genese.ts). Ausente em saves anteriores a
+  // essa funcionalidade — tratado como opcional por isso.
+  genese?: GeneseResultado;
+  // Cartas de memória de infância e qual está "jogada" para o próximo teste
+  // (consumida no teste seguinte que de fato rolar — ver engine/turn.ts).
+  memoriasInfancia?: CartaMemoria[];
+  cartaAtiva?: string;
+  // Luas Superiores (ou Muzan) vencidas em combate — um dos três pilares
+  // reais da Ascensão (ver engine/ascensao.ts, engine/combat.ts).
+  almasSeladas?: string[];
+  // O CHIM foi alcançado — imortalidade biológica real e anulação real da
+  // penalidade de membro amputado (ver engine/ascensao.ts).
+  ascensao?: { chim: true; dia: number };
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
   locaisVisitados: string[];
   segredosRevelados: string[];
@@ -447,6 +572,9 @@ export type Campaign = {
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.
   ecos?: { turno: number; dia: number; local: string; texto: string; npcs: string[] }[];
+  // Avanços de poder raros e ganhos, acima da curva normal de nível — ver
+  // engine/progresso.ts. Ids dos que já foram concedidos, pra não repetir.
+  despertares?: string[];
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };

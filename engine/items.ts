@@ -3,6 +3,15 @@ import type { Campaign, ContentBundle, Item, ItemSlot, Personagem } from './type
 import { aplicarEfeito } from './effects';
 import { clampRecursos } from './character';
 import { multiplicadorDePreco } from './mundo';
+import { cidadeDoLocal, cidadeIdDoLocal } from './historiaViva';
+
+export function estoqueNaLoja(content: ContentBundle, camp: Campaign, itemId: string): number {
+  const item = itemPorId(content, itemId);
+  if (!item?.lojas?.includes(camp.localAtual)) return 0;
+  const id = cidadeIdDoLocal(content, camp, camp.localAtual);
+  if (id && ((camp.continuidade?.locais[id]?.integridade ?? 100) <= 20 || camp.continuidade?.locais[id]?.populacao === 0)) return 0;
+  return cidadeDoLocal(content, camp, camp.localAtual)?.estoque[itemId] ?? (camp.vivo ? 0 : 12);
+}
 
 export function itemPorId(content: ContentBundle, id: string): Item | undefined {
   return content.itens.find((i) => i.id === id);
@@ -94,8 +103,12 @@ export function comprar(
   const item = itemPorId(content, itemId);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   const preco = precoCompra(item, desconto, multiplicadorDePreco(camp));
+  if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
+  if (estoqueNaLoja(content, camp, itemId) <= 0) return { ok: false, motivo: 'item indisponível nesta loja ou serviço interrompido' };
   if (p.dinheiro < preco) return { ok: false, motivo: 'sem moedas suficientes' };
   p.dinheiro -= preco;
+  const cidade = cidadeDoLocal(content, camp, camp.localAtual);
+  if (cidade) { cidade.estoque[itemId]--; cidade.tesouro = Math.min(800, cidade.tesouro + preco); }
   p.inventario[itemId] = (p.inventario[itemId] ?? 0) + 1;
   return { ok: true };
 }
@@ -110,6 +123,12 @@ export function vender(
   const item = itemPorId(content, itemId);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   // desequipa se estiver vendendo o último equipado
+  if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
+  if (!itensDaLoja(content, camp.localAtual).length) return { ok: false, motivo: 'não há comerciante aqui' };
+  const cidade = cidadeDoLocal(content, camp, camp.localAtual);
+  const preco = precoVenda(item, multiplicadorDePreco(camp));
+  if (cidade && cidade.tesouro < preco) return { ok: false, motivo: 'o mercado não tem moedas para essa compra' };
+  if (cidade) { cidade.tesouro -= preco; if (item.lojas?.includes(camp.localAtual)) cidade.estoque[itemId] = Math.min(20, (cidade.estoque[itemId] ?? 0) + 1); }
   (['arma', 'armadura', 'escudo', 'acessorio'] as const).forEach((s) => {
     if (p.equipado[s] === itemId && (p.inventario[itemId] ?? 0) <= 1) delete p.equipado[s];
   });

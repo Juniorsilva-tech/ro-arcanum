@@ -1,10 +1,11 @@
 // ARCANUM · Painéis: Ficha, Vínculos, Crônica, Mapa e o Livro (GDD §13, §31, §32).
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
 import { TextoSerif, TextoMono, Card, Medidor, Divisor, Rotulo, Selo, Botao } from '../components';
 import { cores, fontes, esp, corPressao, corImpulso } from '../theme';
 import { useGame } from '../store';
+import { ComunidadeViva, CompromissosVivos, HistoriaViva } from './MundoVivo';
 import {
   derivados,
   modificador,
@@ -14,14 +15,21 @@ import {
   armaEquipada,
   itemPorId,
   mestresQueEnsinamAqui,
+  escolasDominadas,
+  podeFundir,
+  artesConhecidasResolvidas,
+  LIMITE_FUSOES,
   type AttrKey,
   type EstadoEntrada,
+  todosNpcs,
+  calcularContexto,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
 export function Ficha() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
+  const jogarCarta = useGame((s) => s.jogarCartaMemoria);
   const p = camp.personagem;
   const nomes = content.cenario.nomesAtributos;
   const d = derivados(p, bonusDefesaEquip(content, p));
@@ -33,8 +41,45 @@ export function Ficha() {
       <BarraVoltar titulo="Ficha" />
       <TextoSerif style={{ fontSize: 30, color: cores.ouro }}>{p.nome}</TextoSerif>
       <TextoMono style={{ marginBottom: esp.md }}>
-        {classe?.nome} · nível {p.nivel} · {p.xp} xp · {p.dinheiro} moedas
+        {classe?.nome} · {p.idade ?? 18} anos · nível {p.nivel} · {p.xp} xp · {p.dinheiro} moedas
       </TextoMono>
+      {camp.genese && (
+        <TextoMono style={{ color: cores.linha, marginBottom: esp.md, fontStyle: 'italic' }}>
+          {camp.genese.marca === 'tragedia'
+            ? `órfão de ${camp.genese.paiNome} e ${camp.genese.maeNome}`
+            : `filho de ${camp.genese.paiNome} e ${camp.genese.maeNome}`}
+          {camp.genese.marca === 'genio'
+            ? ' · gênio precoce'
+            : camp.genese.marca === 'indigno'
+              ? ' · aprendeu tudo devagar'
+              : ''}
+        </TextoMono>
+      )}
+
+      {camp.memoriasInfancia && camp.memoriasInfancia.length > 0 && (
+        <>
+          <Divisor label="memórias de infância" />
+          {camp.memoriasInfancia.map((c) => (
+            <Card key={c.id}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18 }}>{c.titulo}</TextoSerif>
+                <Selo texto={c.tipo === 'trauma' ? 'TRAUMA' : 'VITÓRIA'} cor={c.tipo === 'trauma' ? cores.cinabrio : cores.ouro} />
+              </View>
+              <TextoMono style={{ color: cores.linha, marginTop: 2 }}>{c.descricao}</TextoMono>
+              <TextoMono style={{ marginTop: 4 }}>
+                +{c.bonusCircunstancia} no próximo teste · {c.usosRestantes} uso{c.usosRestantes === 1 ? '' : 's'} restante{c.usosRestantes === 1 ? '' : 's'}
+                {camp.cartaAtiva === c.id ? ' · ativa agora' : ''}
+              </TextoMono>
+              <Botao
+                titulo={camp.cartaAtiva === c.id ? 'Ativa' : 'Jogar'}
+                variante="fantasma"
+                disabled={camp.cartaAtiva === c.id || c.usosRestantes <= 0}
+                onPress={() => jogarCarta(c.id)}
+              />
+            </Card>
+          ))}
+        </>
+      )}
 
       <Divisor label="atributos" />
       {ATTR_KEYS.map((k: AttrKey) => {
@@ -143,12 +188,24 @@ export function Vinculos() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
   const eixos = content.cenario.eixosRelacao;
+  const resgatar = useGame(s => s.resgatarFamiliar);
+  const alternarCompanheiro = useGame(s => s.alternarCompanheiroAcao);
+  const [avisoGrupo, setAvisoGrupo] = useState('');
 
-  const conhecidos = content.npcs.filter((n) => {
+  const elenco = todosNpcs(content, camp);
+  const familiares = elenco.filter(n => !!n.parentesco);
+  const conhecidos = elenco.filter((n) => {
     const din = camp.npcState[n.id];
     return din && din.memoria.length > 0;
   });
-  const lista = conhecidos.length > 0 ? conhecidos : content.npcs.slice(0, 3);
+  const combatentesPresentes = calcularContexto(content, camp).presentes.filter(n => !!n.combatente);
+  const idsVisiveis = new Set<string>();
+  const lista = [...familiares, ...combatentesPresentes, ...conhecidos].filter(n => {
+    if (idsVisiveis.has(n.id)) return false;
+    idsVisiveis.add(n.id);
+    return true;
+  });
+  if (lista.length === 0) lista.push(...elenco.slice(0, 3));
 
   return (
     <Pagina>
@@ -156,9 +213,13 @@ export function Vinculos() {
       <TextoSerif style={styles.intro}>
         Afeto não é confiança. Alguém pode te amar e não te confiar nada.
       </TextoSerif>
+      {!!avisoGrupo && <TextoMono style={{ color: cores.ouro, marginBottom: esp.md }}>{avisoGrupo}</TextoMono>}
       {lista.map((n) => {
         const din = camp.npcState[n.id];
         const sabeSegredo = camp.segredosRevelados.includes(n.id);
+        const parente = camp.familia?.membros.find(m => m.id === n.id);
+        const noGrupo = (camp.grupo ?? []).includes(n.id);
+        const presente = combatentesPresentes.some(p => p.id === n.id);
         return (
           <Card key={n.id}>
             <View style={styles.linhaTitulo}>
@@ -166,6 +227,9 @@ export function Vinculos() {
               {din.tensao >= 60 && <Selo texto="afastando-se" cor={cores.cinabrio} />}
             </View>
             <TextoMono style={{ marginBottom: esp.sm }}>{n.ocupacao}</TextoMono>
+            {n.parentesco && <Selo texto={n.parentesco.toUpperCase()} cor={cores.ouro} />}
+            {parente && parente.condicao !== 'livre' && <Selo texto={parente.condicao.toUpperCase()} cor={cores.cinabrio} />}
+            {n.combatente && <Selo texto={noGrupo ? 'NO GRUPO' : 'COMBATENTE'} cor={noGrupo ? cores.verdigris : cores.mudo} />}
             {eixos.map((e) => {
               const v = din.eixos[e.id] ?? 0;
               const cor = e.id === 'medo' ? cores.cinabrio : e.id === 'confianca' ? cores.verdigris : cores.ouro;
@@ -181,6 +245,21 @@ export function Vinculos() {
                 </TextoSerif>
               </View>
             )}
+            {parente?.condicao === 'cativo' && camp.localAtual === 'acampamento' && (
+              <View style={{ gap: esp.sm, marginTop: esp.md }}>
+                <Botao titulo="Pagar resgate · 50 moedas" onPress={() => resgatar(n.id, 'resgate')} />
+                <Botao titulo="Tentar infiltração" variante="perigo" onPress={() => resgatar(n.id, 'infiltracao')} />
+              </View>
+            )}
+            {n.combatente && din.vivo && (presente || noGrupo) && (
+              <View style={{ marginTop: esp.md }}>
+                <Botao
+                  titulo={noGrupo ? 'Dispensar do grupo' : `Convidar para o grupo · ${(camp.grupo ?? []).length}/2`}
+                  variante="fantasma"
+                  onPress={async () => setAvisoGrupo(await alternarCompanheiro(n.id))}
+                />
+              </View>
+            )}
           </Card>
         );
       })}
@@ -190,11 +269,21 @@ export function Vinculos() {
 
 // ─────────────────────────────────────────────── CRÔNICA
 export function Cronica() {
+  const camp = useGame((s) => s.camp);
   const feed = useGame((s) => s.feed);
   const narrativas = feed.filter((e) => e.tipo === 'narracao' || e.tipo === 'eco');
   return (
     <Pagina>
       <BarraVoltar titulo="Crônica" />
+      {camp && <HistoriaViva />}
+      {Object.values(camp?.kimetsu?.rivais ?? {}).filter(r => r.reencontros > 0).map(r => (
+        <Card key={r.id}>
+          <TextoSerif>{r.nome} · {r.vivo ? 'sobreviveu' : 'morto'}</TextoSerif>
+          <TextoMono>{r.reencontros} confronto(s) · venceu você {r.vitorias} vez(es) · suas fugas: {r.fugas}</TextoMono>
+          <TextoMono>Último confronto: dia {r.ultimoDia}. {r.vivo && r.memoria.at(-1)?.tecnica ? 'Pode reconhecer uma técnica que já enfrentou.' : ''}</TextoMono>
+          {r.evolucao && <TextoMono>Comportamento observado: {r.evolucao.plano} · evolução {r.evolucao.nivel}.</TextoMono>}
+        </Card>
+      ))}
       {narrativas.length === 0 && <TextoMono>Sua história ainda não começou.</TextoMono>}
       {narrativas.map((e) => (
         <TextoSerif
@@ -215,6 +304,7 @@ export function Cronica() {
 export function Mapa() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
+  const reconstruir = useGame((s) => s.reconstruirLocal);
   const viajar = useGame((s) => s.viajar);
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
 
@@ -224,6 +314,7 @@ export function Mapa() {
       <Rotulo cor={cores.ouro}>{local.regiao}</Rotulo>
       <TextoSerif style={{ fontSize: 26, marginTop: 2 }}>{local.nome}</TextoSerif>
       <TextoMono style={{ marginBottom: esp.lg }}>você está aqui · perigo {local.perigo}/10</TextoMono>
+      <ComunidadeViva />
 
       <Divisor label="para onde ir" />
       {local.rotas.map((r) => {
@@ -245,6 +336,13 @@ export function Mapa() {
       })}
 
       <Divisor label="lugares que você conhece" />
+      {Object.entries(camp.continuidade?.locais ?? {}).filter(([id]) => camp.locaisVisitados.includes(id)).map(([id, estado]) => (
+        <Card key={`estado_${id}`}>
+          <TextoSerif>{content.locais.find(l => l.id === id)?.nome}</TextoSerif>
+          <TextoMono>Estruturas: {estado.integridade}% · moradores: {estado.populacao} · expansão: {estado.nivel} · obra: {estado.obra}/90 dias</TextoMono>
+          {id === camp.localAtual && estado.integridade < 100 && <Botao titulo="Ajudar a reconstruir · 20 moedas" onPress={reconstruir} />}
+        </Card>
+      ))}
       <View style={styles.chips}>
         {camp.locaisVisitados.map((id) => {
           const l = content.locais.find((x) => x.id === id);
@@ -259,6 +357,9 @@ export function Mapa() {
 export function Missoes() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
+  const cacarAmeaca = useGame((s) => s.cacarAmeaca);
+  const apoiar = useGame(s => s.apoiarFaccao);
+  const guerra = camp.mundo?.guerraAtiva;
 
   const ativas = content.quests.filter((q) => camp.questEstado[q.id] === 'ativa');
   const feitas = content.quests.filter((q) => camp.questEstado[q.id] === 'concluida');
@@ -268,8 +369,29 @@ export function Missoes() {
     <Pagina>
       <BarraVoltar titulo="Missões" />
       <TextoSerif style={styles.intro}>O que o mundo espera de você — e o que você prometeu.</TextoSerif>
+      <CompromissosVivos />
 
       <Divisor label="em andamento" />
+      {guerra && (
+        <Card acento={cores.cinabrio}>
+          <TextoSerif>Frente de guerra · {content.locais.find(l => l.id === guerra.local)?.nome ?? 'local incerto'}</TextoSerif>
+          <TextoMono>{content.faccoes.find(f => f.id === guerra.a)?.nome} contra {content.faccoes.find(f => f.id === guerra.b)?.nome} · cerca de {guerra.diasRestantes} dia(s) restantes.</TextoMono>
+          {guerra.local === camp.localAtual && !guerra.apoiou && (
+            <View style={{ gap: esp.sm, marginTop: esp.sm }}>
+              <Botao titulo={`Apoiar ${content.faccoes.find(f => f.id === guerra.a)?.nome}`} onPress={() => apoiar(guerra.a)} />
+              <Botao titulo={`Apoiar ${content.faccoes.find(f => f.id === guerra.b)?.nome}`} onPress={() => apoiar(guerra.b)} />
+            </View>
+          )}
+          {guerra.apoiou && <Selo texto={`APOIANDO ${content.faccoes.find(f => f.id === guerra.apoiou)?.nome ?? guerra.apoiou}`} cor={cores.ouro} />}
+        </Card>
+      )}
+      {(camp.continuidade?.ameacas ?? []).filter(a => a.descoberta).map(a => (
+        <Card key={a.id} acento={a.estado === 'ativa' ? cores.cinabrio : cores.mudo}>
+          <TextoSerif>Desaparecimentos · {content.locais.find(l => l.id === a.local)?.nome}</TextoSerif>
+          <TextoMono>{a.estado === 'ativa' ? `A ameaça continua. ${Math.max(0, a.prazo - camp.calendario.dia)} dia(s) antes do ataque previsto.` : a.estado === 'resolvida' ? 'A criatura foi eliminada. A comunidade está livre desta ameaça.' : 'O ataque aconteceu e deixou danos na comunidade.'}</TextoMono>
+          {a.estado !== 'resolvida' && a.local === camp.localAtual && <Botao titulo="Rastrear a ameaça" onPress={() => cacarAmeaca(a.id)} />}
+        </Card>
+      ))}
       {ativas.length === 0 && <TextoMono>Nada em aberto por ora.</TextoMono>}
       {ativas.map((q) => (
         <Card key={q.id} acento={cores.ouro}>
@@ -324,7 +446,21 @@ export function Livro() {
   const content = useGame((s) => s.content)!;
   const aprender = useGame((s) => s.aprenderArteAcao);
   const conjurar = useGame((s) => s.conjurarArteLivre);
+  const fundir = useGame((s) => s.fundirEstilos);
   const p = camp.personagem;
+
+  const [escolhidas, setEscolhidas] = useState<string[]>([]);
+  const [nomeFusao, setNomeFusao] = useState('');
+  const elegiveis = escolasDominadas(content, camp);
+  const fusoesFeitas = p.fusoesFeitas ?? 0;
+  function alternarEscola(e: string) {
+    setEscolhidas((atual) =>
+      atual.includes(e) ? atual.filter((x) => x !== e) : atual.length < 2 ? [...atual, e] : [atual[1], e],
+    );
+  }
+  const podeMandar =
+    escolhidas.length === 2 && nomeFusao.trim().length > 0 &&
+    podeFundir(content, camp, escolhidas[0], escolhidas[1]).ok;
 
   const ensinamAqui = mestresQueEnsinamAqui(content, camp);
   const localNome = content.locais.find((l) => l.id === camp.localAtual)?.nome ?? '';
@@ -358,19 +494,62 @@ export function Livro() {
         <>
           <Divisor label="conjurar" />
           <View style={styles.chips}>
-            {p.artesConhecidas.map((id) => {
-              const a = content.artes.find((x) => x.id === id);
-              if (!a) return null;
-              return (
-                <Pressable key={id} style={styles.chipConjurar} onPress={() => conjurar(id)}>
-                  <Text style={styles.chipAprenderTxt}>{a.nome}</Text>
-                  <Text style={styles.chipAprenderSub}>
-                    {a.custo.valor} {a.custo.recurso}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {/* artesConhecidasResolvidas ja inclui as artes fundidas — o
+                content.artes.find(...) antigo nao as achava, e a arte
+                recem-fundida nunca aparecia aqui pra ser conjurada. */}
+            {artesConhecidasResolvidas(content, camp).map((a) => (
+              <Pressable key={a.id} style={styles.chipConjurar} onPress={() => conjurar(a.id)}>
+                <Text style={styles.chipAprenderTxt}>
+                  {a.origem === 'fusao' ? '⟡ ' : ''}
+                  {a.nome}
+                </Text>
+                <Text style={styles.chipAprenderSub}>
+                  {a.custo.valor} {a.custo.recurso}
+                </Text>
+              </Pressable>
+            ))}
           </View>
+        </>
+      )}
+
+      {/* Fundir estilos: combina duas escolas dominadas (2+ artes conhecidas
+          em cada) num estilo original — limite de 3 por vida (documento
+          original de design, adaptado às escolas do Vaelhorn). */}
+      {elegiveis.length >= 2 && fusoesFeitas < LIMITE_FUSOES && (
+        <>
+          <Divisor label={`fundir estilos · ${LIMITE_FUSOES - fusoesFeitas} restantes`} />
+          <TextoMono style={{ color: cores.mudo, marginBottom: esp.sm }}>
+            escolha duas escolas que você domina e dê um nome ao estilo novo.
+          </TextoMono>
+          <View style={styles.chips}>
+            {elegiveis.map((e) => (
+              <Pressable
+                key={e}
+                style={[styles.chipAprender, escolhidas.includes(e) && styles.chipEscolaAtiva]}
+                onPress={() => alternarEscola(e)}
+              >
+                <Text style={styles.chipAprenderTxt}>{e}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            style={styles.inputFusao}
+            value={nomeFusao}
+            onChangeText={setNomeFusao}
+            placeholder="nome do estilo novo…"
+            placeholderTextColor={cores.linha}
+          />
+          <Pressable
+            style={[styles.chipConjurar, !podeMandar && styles.chipDesabilitado]}
+            disabled={!podeMandar}
+            onPress={() => {
+              fundir(escolhidas[0], escolhidas[1], nomeFusao);
+              setEscolhidas([]);
+              setNomeFusao('');
+            }}
+          >
+            <Text style={styles.chipAprenderTxt}>Fundir</Text>
+          </Pressable>
         </>
       )}
 
@@ -395,13 +574,14 @@ export function Livro() {
       ))}
 
       <Divisor label="III · Artes" />
-      {content.artes.map((a) => {
+      {[...content.artes, ...(camp.artesCriadas ?? [])].map((a) => {
         const conhecida = p.artesConhecidas.includes(a.id);
         return (
           <View key={a.id} style={styles.livroLinha}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.livroNome, conhecida ? { color: cores.verdigris } : null]}>
                 {conhecida ? '✦ ' : ''}
+                {a.origem === 'fusao' ? '⟡ ' : ''}
                 {a.nome}
               </Text>
               <TextoMono>{a.escola} · {a.efeito}</TextoMono>
@@ -467,6 +647,20 @@ const styles = StyleSheet.create({
   derivVal: { fontFamily: fontes.monoMedium, color: cores.ouro, fontSize: 22 },
   derivNome: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm },
+  chipEscolaAtiva: { backgroundColor: cores.verdigris + '33', borderColor: cores.ouro },
+  chipDesabilitado: { opacity: 0.35 },
+  inputFusao: {
+    fontFamily: fontes.serif,
+    color: cores.vellum,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: 6,
+    paddingHorizontal: esp.md,
+    paddingVertical: esp.sm,
+    marginTop: esp.sm,
+    marginBottom: esp.sm,
+  },
   linhaTitulo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: esp.sm },
   segredo: { marginTop: esp.md, paddingTop: esp.md, borderTopWidth: 1, borderTopColor: cores.linha },
   mestreMec: { fontFamily: fontes.serif, color: cores.ouro, fontSize: 16, marginTop: esp.sm, fontStyle: 'italic' },

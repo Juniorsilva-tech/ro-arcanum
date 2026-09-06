@@ -12,6 +12,7 @@ import {
   MODELO_PADRAO_ANTHROPIC,
   perfilDoModelo,
   MODELOS_PARA_CENA_ADULTA,
+  todosNpcs,
 } from '@/engine';
 
 // As sugestões estáticas entram na mesma vitrine dos modelos vivos.
@@ -34,7 +35,7 @@ export function FimCapitulo() {
   const irPara = useGame((s) => s.irPara);
   const p = camp.personagem;
 
-  const conhecidos = content.npcs.filter((n) => (camp.npcState[n.id]?.memoria.length ?? 0) > 0);
+  const conhecidos = todosNpcs(content, camp).filter((n) => (camp.npcState[n.id]?.memoria.length ?? 0) > 0);
 
   return (
     <Pagina>

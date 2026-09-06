@@ -9,15 +9,17 @@ import { npcsVaelhorn } from './npcs';
 import { itensVaelhorn } from './items';
 import { criaturasVaelhorn } from './bestiary';
 import { questsVaelhorn } from './quests';
+import { integrarKimetsu } from './kimetsu';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
   artesVaelhorn,
   reliquiasVaelhorn,
   faccoesVaelhorn,
+  rivalidadesVaelhorn,
 } from './book';
 
-export const conteudoVaelhorn: ContentBundle = {
+export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   cenario: vaelhorn,
   classes: classesVaelhorn,
   origens: origensVaelhorn,
@@ -32,5 +34,6 @@ export const conteudoVaelhorn: ContentBundle = {
   criaturas: criaturasVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
+  rivalidadesFaccoes: rivalidadesVaelhorn,
   localInicial: 'taverna',
-};
+});

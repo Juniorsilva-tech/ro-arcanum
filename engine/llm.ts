@@ -16,6 +16,7 @@ import { calcularRitmo } from './ritmo';
 import { comoEstaOVale } from './mundo';
 import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
+import { artesConhecidasResolvidas } from './fusao';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
 
@@ -241,6 +242,9 @@ export function montarPacote(
       pressoes: p.pressoes,
       alcunhas: p.alcunhas,
       condicoes: p.condicoes,
+      // Lesões permanentes (amputação em combate — engine/combat.ts) e outras
+      // marcas de vida: sem isso o narrador esquece que o corpo mudou.
+      cicatrizes: p.cicatrizes,
       moedas: p.dinheiro,
       equipado,
       inventario,
@@ -259,17 +263,31 @@ export function montarPacote(
       estacao: camp.calendario.estacao,
     },
     // O vale anda sozinho: tempo, evento corrente e carestia entram na cena.
-    oValeHoje: comoEstaOVale(camp),
+    oValeHoje: comoEstaOVale(camp, content),
+    comunidadeLocal: camp.continuidade?.locais[ctx.local.id],
+    mundoPersistente: {
+      fatos: camp.vivo?.fatos.filter(f => f.conhecimento !== 'oculto').slice(-6).map(f => ({ dia: f.dia, texto: f.texto, fonte: f.conhecimento, causa: f.causa?.texto })),
+      compromissos: camp.vivo?.missoes.filter(q => q.conhecida && q.estado === 'aceita').map(q => ({ titulo: q.titulo, local: q.local, prazo: q.prazo, etapa: q.etapa })),
+      cidade: camp.vivo?.cidades[ctx.local.id] && { edificios: camp.vivo.cidades[ctx.local.id].edificios, obra: camp.vivo.cidades[ctx.local.id].projeto, fome: camp.vivo.cidades[ctx.local.id].fomeDias > 0, epidemia: camp.vivo.cidades[ctx.local.id].doenca > 30 },
+      regra: 'Rumor é informação não verificada pelo protagonista. Fatos ocultos não foram fornecidos. Não invente conclusão de obra, missão, morte ou parentesco: use somente o estado confirmado.',
+    },
+    ocorrenciasConfirmadas: camp.continuidade?.eventos.filter(e => e.local === ctx.local.id).slice(-3),
+    ameacasConhecidas: camp.continuidade?.ameacas.filter(a => a.descoberta && a.estado === 'ativa').slice(-3)
+      .map(a => ({ local: content.locais.find(l => l.id === a.local)?.nome, diasAteAtaque: a.prazo - camp.calendario.dia })),
+    rivaisEncontrados: Object.values(camp.kimetsu?.rivais ?? {}).filter(r => r.reencontros > 0 && r.local === ctx.local.id).slice(-3)
+      .map(r => ({ nome: r.nome, vivo: r.vivo, encontros: r.reencontros, ultimoConfronto: r.memoria.at(-1) })),
     // O que rolou entre elas sem o jogador por perto — é o que a boca do povo
     // repete, e o que dá ao vale história própria.
     boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
     presentes: ctx.presentes.map((n) => ({
       nome: n.nome,
-      idade: n.idade,
+      idade: camp.npcState[n.id]?.idade ?? n.idade,
       ocupacao: n.ocupacao,
       voz: n.vozNarrativa,
       indole: n.personalidade,
       corpo: n.corpo,
+      parentesco: n.parentesco,
+      situacaoCivil: camp.vivo?.pessoas[n.id] && { atividade: camp.vivo.pessoas[n.id].objetivo, prestigio: camp.vivo.pessoas[n.id].prestigio },
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
       conheceHaDias: diasDeConvivio(camp, n.id),
@@ -311,9 +329,7 @@ export function montarPacote(
       .map((x) => `${x.v.nome}: ${x.d.motivo}`),
     // Substantivos concretos deste lugar. Opção boa aponta para uma coisa.
     coisasAqui: ctx.local.pontos ?? [],
-    artesQueVoceSabe: p.artesConhecidas
-      .map((id) => content.artes.find((a) => a.id === id)?.nome)
-      .filter(Boolean),
+    artesQueVoceSabe: artesConhecidasResolvidas(content, camp).map((a) => a.nome),
     ondeDaParaIr: ctx.local.rotas
       .map((r) => content.locais.find((l) => l.id === r.destino)?.nome)
       .filter(Boolean),
@@ -343,6 +359,16 @@ const INSTRUCAO_SISTEMA =
   'cansado. Diga "a lâmina", "o pão preto", "a lama do pátio" — nunca abstrações vagas.\n' +
   '• De 4 a 7 parágrafos, SEPARADOS POR LINHA EM BRANCO. Nunca um bloco só.\n' +
   '• Fale com o jogador em segunda pessoa ("você"). Os outros, pelo nome.\n' +
+  '• O JOGADOR É HOMEM. Todo termo que se refira a ele — como substantivo/adjetivo de ' +
+  'tratamento ("forasteiro", "freguês", "viajante", "estranho") ou descrição do corpo — ' +
+  'concorda no MASCULINO. Nunca "freguesa", "forasteira", "estranha" nem qualquer forma ' +
+  'feminina para ele, em hipótese nenhuma — mesmo que uma cena anterior tenha errado isso.\n' +
+  '• NOME DO JOGADOR — "personagem.nome" está no pacote pra você narrar em segunda ' +
+  'pessoa, não pra qualquer NPC saber de cor. Uma NPC só o chama pelo nome se ' +
+  '"jaAconteceu" ou "arcosAtivos" já mostrarem uma apresentação de verdade (ele se ' +
+  'apresentou, alguém o apresentou, ela ouviu de outra pessoa). Sem isso registrado, ela ' +
+  'não sabe — trate-o por "você" na fala dela, ou por um termo genérico no masculino ' +
+  '(acima), e é ótimo se ela perguntar o nome dele como parte da cena.\n' +
   '• Nada de rótulos como "Narrador:", "Opções:", "Cena:". A interface já cuida disso.\n' +
   '\nDIÁLOGO — é aqui que a cena vive. A regra mais importante deste prompt:\n' +
   '• Se há alguém presente, a cena TEM QUE TER FALA. Cena só de descrição está errada.\n' +
@@ -360,7 +386,7 @@ const INSTRUCAO_SISTEMA =
   '\n' +
   '    Ela não levanta os olhos do pano.\n' +
   '\n' +
-  '    — Freguesa nova é sempre boa de língua. Isso passa.\n' +
+  '    — Freguês novo é sempre bom de língua. Isso passa.\n' +
   '• O resultado da ação aparece NA FALA e no gesto, não num aviso. Se deu certo, ela ' +
   'cede alguma coisa: uma informação, um sorriso, uma cadeira. Se falhou, ela corta.\n' +
   '\nVERDADE — a engine manda:\n' +
@@ -371,6 +397,7 @@ const INSTRUCAO_SISTEMA =
   'com "voz", "indole" e "corpo" — use os três: é assim que ela vira gente e não ficha. ' +
   'Descreva corpo com franqueza adulta quando a cena chegar perto, sem eufemismo covarde ' +
   'e sem virar catálogo.\n' +
+  '2a) "parentesco" é uma barreira absoluta: pai, mãe, irmão e irmã jamais entram em romance ou sexo com o protagonista.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +

@@ -12,6 +12,7 @@ import {
   multiplicadorDePreco,
   precoVenda,
   type Item,
+  estoqueNaLoja,
 } from '@/engine';
 
 export function Loja() {
@@ -53,7 +54,8 @@ export function Loja() {
           <Divisor label="À venda" />
           {aVenda.map((item) => {
             const preco = precoCompra(item, desconto, multMundo);
-            const podePagar = p.dinheiro >= preco;
+            const estoque = estoqueNaLoja(content, camp, item.id);
+            const podePagar = p.dinheiro >= preco && estoque > 0;
             return (
               <View key={item.id} style={styles.row}>
                 <View style={{ flex: 1 }}>
@@ -63,6 +65,7 @@ export function Loja() {
                     {item.dano ? `dano ${item.dano.base} · ` : ''}
                     {item.defesa ? `+${item.defesa} def · ` : ''}
                     peso {item.peso}
+                    {` · estoque ${estoque}`}
                   </TextoMono>
                 </View>
                 <Pressable

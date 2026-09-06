@@ -33,6 +33,7 @@ import {
   type Aposta,
   type OpcaoResolvida,
   type NPC,
+  todosNpcs,
   type Campaign,
 } from '@/engine';
 
@@ -62,7 +63,8 @@ export function Jogo() {
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
   const iaStatus = useGame((s) => s.iaStatus);
   const iaErro = useGame((s) => s.iaErro);
-  // O narrador é obrigatório: ter chave é ter jogo.
+  // Ter chave liga a IA; sem chave, o narrador local (engine) assume — o
+  // jogo nunca fica parado por falta de chave (GDD §20, P0).
   const iaLigada = useGame((s) => !!s.config.apiKey);
   const tentarNarrarDeNovo = useGame((s) => s.tentarNarrarDeNovo);
   // Turno resolvido esperando prosa: enquanto existir, ninguém age.
@@ -72,16 +74,23 @@ export function Jogo() {
   const ctx = cena?.contexto;
 
   // Nomes que o narrador pode citar — servem para saber de quem é cada fala.
+  // O seu próprio nome entra aqui também: sem isso, uma fala sua narrada em
+  // prosa (não digitada por você) nunca era atribuída a ninguém.
   const nomesConhecidos = useMemo(() => {
     if (!content) return [] as string[];
     const set = new Set<string>();
-    for (const n of content.npcs) {
+    for (const n of todosNpcs(content, camp!)) {
       set.add(n.nome);
       const primeiro = n.nome.split(/[,\s]/)[0];
       if (primeiro.length > 2) set.add(primeiro);
     }
+    if (camp?.personagem.nome) {
+      set.add(camp.personagem.nome);
+      const primeiro = camp.personagem.nome.split(/[,\s]/)[0];
+      if (primeiro.length > 2) set.add(primeiro);
+    }
     return [...set].sort((a, b) => b.length - a.length);
-  }, [content]);
+  }, [content, camp]);
 
   // O que está aberto agora, sempre à vista: o jogador não devia precisar
   // rolar o histórico para lembrar o que estava fazendo.
@@ -115,8 +124,10 @@ export function Jogo() {
   const p = camp.personagem;
   const local = ctx.local;
   const periodo = ctx.periodo;
-  // Sem narrador não se age: a engine resolveria, mas ninguém escreveria.
-  const podeAgir = iaLigada && !pendente;
+  // Sem chave, o narrador local resolve na hora — nunca fica pendente.
+  // 'pendente' só existe de verdade quando uma chamada de IA falhou e
+  // espera nova tentativa (ver narrar() em store.ts).
+  const podeAgir = !pendente;
 
   function executarVerbo(v: Verbo) {
     if (v.alvo === 'pessoa') {
@@ -145,7 +156,7 @@ export function Jogo() {
             testemunhas={ctx.testemunhas}
             vida={p.recursos.vida}
             vidaMax={p.recursosMax.vida}
-            vale={comoEstaOVale(camp)}
+            vale={comoEstaOVale(camp, content)}
             objetivos={objetivosAtivos}
             aconteceu={marcosRecentes(camp, 2)}
           />
@@ -158,22 +169,25 @@ export function Jogo() {
           showsVerticalScrollIndicator={false}
         >
           {feed.map((e, i) => (
-            <EntradaNarrativa key={e.id} entrada={e} primeira={i === 0} nomes={nomesConhecidos} />
+            <EntradaNarrativa
+              key={e.id}
+              entrada={e}
+              primeira={i === 0}
+              nomes={nomesConhecidos}
+              nomeJogador={camp?.personagem.nome}
+            />
           ))}
 
-          {/* O narrador é obrigatório: sem ele não há prosa nem escolha. */}
-          {!iaLigada ? (
-            <View style={styles.semNarradorBox}>
-              <Text style={styles.semNarradorTitulo}>A história está parada</Text>
-              <Text style={styles.semNarradorTexto}>
-                Quem escreve ARCANUM é o narrador. Sem uma chave de API salva, não existe
-                texto de reserva — o jogo espera.
+          {/* Sem chave: aviso pequeno, não bloqueia nada — o narrador local
+              já escreveu o que aconteceu no feed acima. */}
+          {!iaLigada && !ocupado && !pendente && (
+            <Pressable style={styles.modoLocalAviso} onPress={() => irPara('config')}>
+              <Text style={styles.modoLocalTexto}>
+                modo local — narração determinística, sem IA · toque para ligar IA em Configurações
               </Text>
-              <Pressable style={styles.botaoOuro} onPress={() => irPara('config')}>
-                <Text style={styles.botaoOuroTxt}>Abrir Configurações</Text>
-              </Pressable>
-            </View>
-          ) : ocupado ? (
+            </Pressable>
+          )}
+          {ocupado ? (
             <View style={styles.gerandoBox}>
               <ActivityIndicator color={cores.ouro} size="large" />
               <Text style={styles.gerandoTitulo}>O narrador está escrevendo…</Text>
@@ -372,10 +386,12 @@ function EntradaNarrativa({
   entrada,
   primeira,
   nomes,
+  nomeJogador,
 }: {
   entrada: EntradaFeed;
   primeira: boolean;
   nomes: string[];
+  nomeJogador?: string;
 }) {
   // Cada ação abre um bloco visível: o jogador precisa ver onde um turno
   // terminou e o outro começou.
@@ -402,7 +418,7 @@ function EntradaNarrativa({
       <>
         {marca}
         <View style={styles.acaoCartao}>
-          <Text style={styles.acaoRotulo}>você</Text>
+          <Text style={styles.acaoRotulo}>{nomeJogador || 'você'}</Text>
           <TextoSerif style={styles.acaoTexto}>{entrada.texto}</TextoSerif>
         </View>
       </>
@@ -418,7 +434,7 @@ function EntradaNarrativa({
   }
 
   // Narração: vira parágrafos e falas separadas. Nada de parede de texto.
-  const blocos = emBlocos(entrada.texto, nomes);
+  const blocos = emBlocos(entrada.texto, nomes, nomeJogador);
   return (
     <>
       {marca}
@@ -701,6 +717,16 @@ const styles = StyleSheet.create({
   },
   semNarradorTitulo: { fontFamily: fontes.serifSemi, color: cores.vellum, fontSize: 21 },
   semNarradorTexto: { fontFamily: fontes.serif, color: cores.mudo, fontSize: 16, lineHeight: 23 },
+  modoLocalAviso: {
+    marginTop: esp.sm,
+    paddingVertical: esp.sm,
+    paddingHorizontal: esp.md,
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: raio.sm,
+    alignSelf: 'flex-start',
+  },
+  modoLocalTexto: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11 },
   falhaBox: {
     marginTop: esp.lg,
     padding: esp.lg,

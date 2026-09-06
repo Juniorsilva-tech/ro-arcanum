@@ -11,6 +11,10 @@
 // um campo que ainda não existia quando ele começou.
 import type { Campaign, ContentBundle, NpcDinamico } from './types';
 import { mundoInicial } from './mundo';
+import { inicializarKimetsu, VERSAO_COMBATE } from './kimetsu';
+import { iniciarContinuidade } from './continuidade';
+import { iniciarFamilia } from './familia';
+import { iniciarMundoVivo } from './historiaViva';
 
 function novoNpcDinamico(content: ContentBundle): NpcDinamico {
   const eixos: Record<string, number> = {};
@@ -23,6 +27,13 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
 
   // ── Campos que nasceram depois ──────────────────────────────────────────
   camp.flags ??= {};
+  inicializarKimetsu(camp);
+  camp.npcsProcedurais ??= [];
+  camp.npcState ??= {};
+  camp.grupo = (camp.grupo ?? []).filter(id => {
+    const n = [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id);
+    return !!n?.combatente && camp.npcState?.[id]?.vivo !== false;
+  }).slice(0, 2);
   camp.reputacao ??= {};
   camp.segredosRevelados ??= [];
   camp.locaisVisitados ??= [];
@@ -50,6 +61,17 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   p.condicoes ??= [];
   p.pressoes ??= {};
   for (const pr of content.cenario.pressoes) p.pressoes[pr.id] ??= 0;
+  p.idade ??= 20;
+  camp.almasSeladas ??= [];
+
+  // Save de antes da infância virar escolha do jogador guardava
+  // genio/indigno/tragedia como booleans soltos em vez de marca+reacao (ver
+  // engine/genese.ts). Traduz o que já tinha em vez de perder a gênese.
+  if (camp.genese && !(camp.genese as unknown as Record<string, unknown>).marca) {
+    const g = camp.genese as unknown as { genio?: boolean; indigno?: boolean; tragedia?: boolean };
+    camp.genese.marca = g.tragedia ? 'tragedia' : g.genio ? 'genio' : g.indigno ? 'indigno' : 'comum';
+    camp.genese.reacao ??= 'entendimento';
+  }
   // Equipamento que aponta para item apagado do catálogo sai do slot.
   for (const slot of ['arma', 'armadura', 'escudo', 'acessorio'] as const) {
     const id = p.equipado[slot];
@@ -63,9 +85,8 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   // ── Elenco ───────────────────────────────────────────────────────────────
   // O nome dos NPCs mudou quando o vale foi reescrito. Quem sumiu, sai; quem
   // chegou, entra zerado. Sem isso, um save velho procura gente que não existe.
-  camp.npcState ??= {};
   for (const id of Object.keys(camp.npcState)) {
-    if (!content.npcs.some((n) => n.id === id)) delete camp.npcState[id];
+    if (![...content.npcs, ...(camp.npcsProcedurais ?? [])].some((n) => n.id === id)) delete camp.npcState[id];
   }
   for (const n of content.npcs) {
     camp.npcState[n.id] ??= novoNpcDinamico(content);
@@ -74,8 +95,21 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
     din.eixos ??= {};
     for (const e of content.cenario.eixosRelacao) din.eixos[e.id] ??= 0;
   }
+  if (camp.familia) {
+    iniciarFamilia(content, camp);
+    for (const n of camp.npcsProcedurais ?? []) camp.npcState[n.id] ??= novoNpcDinamico(content);
+  }
+  if (camp.cenarioId === 'vaelhorn' && !camp.flags['versao.idades_kimetsu']) {
+    const basesAntigas: Record<string, number> = { tanjiro: 26, nezuko: 23, giyu: 21, shinobu: 24, rengoku: 24, muichiro: 22, mitsuri: 21, obanai: 25, sanemi: 26, tengen: 27 };
+    for (const [id, base] of Object.entries(basesAntigas)) {
+      const din = camp.npcState[id];
+      const npc = content.npcs.find(n => n.id === id);
+      if (din?.idade !== undefined && npc) din.idade = npc.idade + Math.max(0, din.idade - base);
+    }
+    camp.flags['versao.idades_kimetsu'] = 1;
+  }
   camp.segredosRevelados = camp.segredosRevelados.filter((id) =>
-    content.npcs.some((n) => n.id === id),
+    [...content.npcs, ...(camp.npcsProcedurais ?? [])].some((n) => n.id === id),
   );
 
   // ── Onde ele está ────────────────────────────────────────────────────────
@@ -88,10 +122,21 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
 
   // ── O vale ───────────────────────────────────────────────────────────────
   camp.mundo ??= mundoInicial(camp);
+  iniciarContinuidade(content, camp);
+  iniciarMundoVivo(content, camp);
+  // Older builds could start a public war involving a clandestine group.
+  if (camp.mundo.guerraAtiva && [camp.mundo.guerraAtiva.a, camp.mundo.guerraAtiva.b].some(f => ['onis', 'cacadores'].includes(f))) {
+    camp.mundo.guerraAtiva = undefined;
+  }
+  // Populate newly added catalogue entries without losing discovery status.
+  for (const chave of ['mestres', 'artes', 'trabalhos', 'reliquias'] as const) {
+    camp.livro[chave] ??= {};
+    for (const item of content[chave]) camp.livro[chave][item.id] ??= 'desconhecida';
+  }
 
   // Combate a meio caminho de uma versão antiga não sobrevive a mudança de
   // regra: melhor fechar do que resolver com metade dos campos.
-  if (camp.combate && !Array.isArray(camp.combate.atores)) camp.combate = null;
+  if (camp.combate && (!Array.isArray(camp.combate.atores) || camp.combate.versaoRegras !== VERSAO_COMBATE)) camp.combate = null;
 
   return camp;
 }

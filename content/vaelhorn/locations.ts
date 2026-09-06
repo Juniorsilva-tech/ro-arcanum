@@ -163,6 +163,9 @@ export const locaisVaelhorn: Local[] = [
       { destino: 'ruinas', periodos: 1, perigo: 6 },
       { destino: 'acampamento', periodos: 1, perigo: 5 },
       { destino: 'lago', periodos: 1, perigo: 3 },
+      // Só se revela pra quem já ganhou a confiança de quem vaga por aqui —
+      // a trilha oculta que os ganchos da floresta já sugerem.
+      { destino: 'mansao_ubuyashiki', periodos: 1, perigo: 2 },
     ],
   },
 
@@ -281,6 +284,9 @@ export const locaisVaelhorn: Local[] = [
     rotas: [
       { destino: 'floresta', periodos: 1, perigo: 6 },
       { destino: 'mina', periodos: 1, perigo: 7 },
+      // A casa que não queimou. A porta que "trancada por dentro" nunca fez
+      // sentido — até você entender o que estava do outro lado dela.
+      { destino: 'castelo_infinito', periodos: 1, perigo: 10 },
     ],
   },
 
@@ -366,7 +372,40 @@ export const locaisVaelhorn: Local[] = [
       'Um túnel mais novo que os outros, escavado de dentro para fora',
     ],
     pontos: ['boca da mina', 'galeria principal', 'poço inundado', 'túnel novo'],
-    rotas: [{ destino: 'ruinas', periodos: 1, perigo: 7 }],
+    rotas: [
+      { destino: 'ruinas', periodos: 1, perigo: 7 },
+      // Um túnel novo demais, escavado de dentro pra fora — leva a algum
+      // lugar que ninguém no vale sabe que existe.
+      { destino: 'vila_ferreiros', periodos: 1, perigo: 3 },
+    ],
+  },
+
+  // ─────────────────────────── VILA DOS FERREIROS (escondida, forja o aço nichirim)
+  {
+    id: 'vila_ferreiros',
+    nome: 'A Vila que Ninguém Encontra Duas Vezes',
+    regiao: 'Fora do Mundo',
+    tipo: 'forja',
+    descricaoBase:
+      'Casas de pedra em volta de forjas que nunca esfriam, escondidas numa dobra da montanha que muda de lugar — ou é você que nunca acha o mesmo caminho duas vezes. O barulho do martelo não para, dia ou noite. É aqui que nasce o aço que muda de cor.',
+    atmosferaPorPeriodo: {
+      madrugada: 'As forjas já estão acesas. Ninguém aqui parece dormir de verdade.',
+      manha: 'Fumaça de carvão e o cheiro de metal quente em toda parte.',
+      tarde: 'O martelo bate num ritmo que você sente no peito antes de ouvir.',
+      entardecer: 'As sombras das forjas dançam nas paredes de pedra.',
+      anoitecer: 'Ainda tem gente trabalhando — aqui o expediente não segue o sol.',
+      noite: 'O brilho laranja das forjas é a única luz que a montanha admite.',
+    },
+    privacidadeBase: P(3),
+    perigo: 2,
+    ganchos: [
+      'Uma lâmina recém-forjada não muda de cor na mão de ninguém — o ferreiro se recusa a entregá-la assim',
+      'Uma pilha de espadas quebradas, cada uma com uma marca de dente grande demais pra ser de fera',
+    ],
+    pontos: ['forja principal', 'depósito de minério', 'casa do ferreiro-chefe', 'pátio de teste'],
+    rotas: [
+      { destino: 'mina', periodos: 1, perigo: 3 },
+    ],
   },
 
   // ─────────────────────────── TORRE DO VIGIA
@@ -450,6 +489,67 @@ export const locaisVaelhorn: Local[] = [
     rotas: [
       { destino: 'floresta', periodos: 1, perigo: 5 },
       { destino: 'estrada', periodos: 1, perigo: 5 },
+    ],
+  },
+
+  // ─────────────────────────── MANSÃO ESCONDIDA (protegida, fora do fluxo comum)
+  {
+    id: 'mansao_ubuyashiki',
+    nome: 'A Casa Sem Nome na Névoa',
+    regiao: 'Fora do Vale',
+    tipo: 'mansao',
+    descricaoBase:
+      'Ninguém chega aqui por acaso — a trilha some e reaparece sozinha, e a névoa entre os pinheiros nunca levanta de todo. Uma casa baixa, cercada, guardada por gente que você nunca vê chegar. Quem mora aqui não recebe visita — recebe quem prova que merece confiança.',
+    atmosferaPorPeriodo: {
+      madrugada: 'A névoa está mais baixa que o normal, e mesmo assim você sente que é observado.',
+      manha: 'O silêncio aqui não é vazio — é de gente quieta de propósito.',
+      tarde: 'Alguém treina nos fundos, sem barulho de metal, só de respiração controlada.',
+      entardecer: 'A luz não entra direito por entre os pinheiros. A casa fica cor de cinza.',
+      anoitecer: 'Tochas se acendem sem que ninguém pareça acendê-las.',
+      noite: 'Se você está aqui à noite e não foi convidado, já errou.',
+    },
+    privacidadeBase: P(3),
+    perigo: 1,
+    ganchos: [
+      'Uma respiração diferente ecoa do outro lado da casa — alguém pratica uma forma que você nunca viu',
+      'Um mapa na parede principal marca pontos pelo mundo todo, cada um com uma data ao lado',
+    ],
+    pontos: ['pátio de treino', 'sala do mapa', 'jardim cercado', 'trilha que some'],
+    rotas: [
+      { destino: 'floresta', periodos: 1, perigo: 2 },
+    ],
+  },
+
+  // ─────────────────────────── CASTELO INFINITO (o fim de tudo, tardio de propósito)
+  // Não é um lugar no mapa comum — é o que existe do outro lado de uma porta
+  // que só as Ruínas de Mir guardam, e só abre pra quem já provou, matando o
+  // que é velho demais pra ter nome (oni_ancestral), que aguenta o que mora
+  // aqui dentro. O perigo alto da rota não é acidente: ninguém deveria chegar
+  // aqui sem já ter se preparado pra valer.
+  {
+    id: 'castelo_infinito',
+    nome: 'O Castelo Infinito',
+    regiao: 'Fora do Mundo',
+    tipo: 'castelo',
+    descricaoBase:
+      'Corredores que não deviam se dobrar do jeito que se dobram. Uma escada sobe para uma porta que dá na mesma escada. Aqui dentro, cima e baixo são sugestões — e alguma coisa decide, todo santo dia, se as paredes vão ficar quietas ou não.',
+    atmosferaPorPeriodo: {
+      madrugada: 'Não há madrugada aqui dentro. Só a sensação de que já é tarde demais.',
+      manha: 'A luz que entra pelas frestas não vem de lugar nenhum que faça sentido.',
+      tarde: 'Silêncio grosso, do tipo que parece estar esperando alguma coisa de você.',
+      entardecer: 'Os corredores parecem mais curtos do que estavam há um momento.',
+      anoitecer: 'Você ouve passos que não são seus, num andar que não devia existir.',
+      noite: 'Aqui dentro a noite não muda nada — já estava escuro assim o tempo todo.',
+    },
+    privacidadeBase: P(3),
+    perigo: 10,
+    ganchos: [
+      'Uma sala cheia de espelhos que não refletem o corredor por onde você entrou',
+      'Uma cadeira, sozinha, num salão grande demais pra fazer sentido — como se alguém a esperasse ali há muito tempo',
+    ],
+    pontos: ['corredor que se dobra', 'salão da cadeira', 'sala de espelhos'],
+    rotas: [
+      { destino: 'ruinas', periodos: 1, perigo: 10 },
     ],
   },
 ];

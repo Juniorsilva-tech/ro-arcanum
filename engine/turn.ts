@@ -19,6 +19,7 @@ import { calcularContexto } from './availability';
 import type { Natureza } from './risco';
 import { aplicarEfeito, substituirAlvo } from './effects';
 import { lembrarDoTurno } from './memoria';
+import { todosNpcs, npcPorId } from './elenco';
 
 export type OpcaoResolvida = {
   id: string;
@@ -56,9 +57,9 @@ export type ResultadoTurno = {
 };
 
 
-function nomeAlvo(content: ContentBundle, alvoId?: string): NPC | undefined {
+function nomeAlvo(content: ContentBundle, camp: Campaign, alvoId?: string): NPC | undefined {
   if (!alvoId) return undefined;
-  return content.npcs.find((n) => n.id === alvoId);
+  return npcPorId(content, camp, alvoId);
 }
 
 // Constrói o "fato consumado" seco que a narração recebe (GDD §4.4).
@@ -91,7 +92,7 @@ function atualizarNpcs(
   grau: Grau | undefined,
   rotulo: string,
 ): void {
-  for (const npc of content.npcs) {
+  for (const npc of todosNpcs(content, camp)) {
     const din = camp.npcState[npc.id];
     if (!din || !din.vivo) continue;
     if (alvo && npc.id === alvo.id) {
@@ -111,6 +112,7 @@ export function resolverIntencao(
   intencao: Intencao,
 ): ResultadoTurno {
   const p = camp.personagem;
+  if (p.condicoes.includes('cativo')) return { fato: 'Você continua cativo; precisa recuperar a liberdade antes de agir fora do cativeiro.', custoPeriodos: 0, efeitosAplicados: [] };
   camp.turno += 1;
 
   let verbo: Verbo | undefined;
@@ -146,20 +148,36 @@ export function resolverIntencao(
     if (o.efeitos) efeitosPorGrau = { critico: o.efeitos, sucesso: o.efeitos, sucesso_com_custo: o.efeitos };
   }
 
-  const alvo = nomeAlvo(content, intencao.alvoId);
+  const alvo = nomeAlvo(content, camp, intencao.alvoId);
   const cenario = content.cenario;
 
-  // Resolve o teste, se houver.
+  // Resolve o teste, se houver. Uma carta de memória "jogada" (ver
+  // engine/genese.ts, cartaDeInfancia) entra como bônus de circunstância
+  // pontual e é consumida — só quando um teste de fato acontece.
   let resultado: ResultadoTeste | undefined;
+  let cartaUsada: string | undefined;
   if (teste) {
+    let bonusCarta = 0;
+    if (camp.cartaAtiva) {
+      const carta = camp.memoriasInfancia?.find((c) => c.id === camp.cartaAtiva);
+      if (carta && carta.usosRestantes > 0) {
+        bonusCarta = carta.bonusCircunstancia;
+        cartaUsada = carta.titulo;
+      }
+    }
     resultado = resolverTeste(camp.rng, {
       atributo: p.atributos[teste.atributo],
       pericia: teste.pericia ? p.pericias[teste.pericia] ?? 0 : 0,
-      circunstancia: 0,
+      circunstancia: bonusCarta,
       penalidadeEstado: penalidadeEstado(camp),
       dificuldade: teste.dificuldade,
       k: cenario.k,
     });
+    if (cartaUsada) {
+      const carta = camp.memoriasInfancia!.find((c) => c.id === camp.cartaAtiva)!;
+      carta.usosRestantes -= 1;
+    }
+    camp.cartaAtiva = undefined;
   }
 
   const grau: Grau | undefined = resultado?.grau;
@@ -190,9 +208,10 @@ export function resolverIntencao(
     avancarMundo(content, camp);
   }
 
-  const fato = verbo
+  const fatoBase = verbo
     ? construirFato(verbo, alvo, resultado)
     : `${rotulo}${resultado ? ` — ${NOME_GRAU[resultado.grau]}` : ''}.`;
+  const fato = cartaUsada ? `${fatoBase} (a memória de "${cartaUsada}" pesou na hora.)` : fatoBase;
 
   atualizarNpcs(camp, content, alvo, verbo, grau, rotulo);
 

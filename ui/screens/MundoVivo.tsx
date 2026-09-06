@@ -1,0 +1,104 @@
+import React from 'react';
+import { View } from 'react-native';
+import { useGame } from '../store';
+import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, type TipoEdificio } from '@/engine';
+
+export function ComunidadeViva() {
+  const camp = useGame(s => s.camp)!;
+  const content = useGame(s => s.content)!;
+  const agir = useGame(s => s.acaoMundo);
+  const ultima = useGame(s => s.feed.at(-1));
+  const c = camp.vivo?.cidades[camp.localAtual];
+  const governo = c?.governo && camp.vivo?.governos[c.governo];
+  const nome = (id: string) => [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id)?.nome ?? id;
+  return <>
+    <Divisor label="vida na comunidade" />
+    {ultima?.tipo === 'sistema' && <TextoMono>{ultima.texto}</TextoMono>}
+    <View style={{ gap: 8, marginVertical: 10 }}>
+      {camp.personagem.condicoes.includes('cativo') ? <Botao titulo="Buscar liberdade · resgate de 20 moedas ou tentativa de fuga" onPress={() => agir({ tipo: 'libertar_se' })} /> : <>
+        <Botao titulo="Trabalhar · receber 6 moedas" onPress={() => agir({ tipo: 'trabalhar' })} />
+        <Botao titulo="Descansar · hospedagem de 3 moedas na comunidade" onPress={() => agir({ tipo: 'descansar' })} />
+        <Botao titulo="Ouvir notícias" onPress={() => agir({ tipo: 'noticias' })} />
+      </>}
+    </View>
+    {c && <Card>
+      <TextoSerif>Abastecimento e serviços</TextoSerif>
+      <TextoMono>Alimentos: {Math.floor(c.comida)} · materiais: {Math.floor(c.materiais)} · remédios: {Math.floor(c.remedios)}</TextoMono>
+      <TextoMono>{c.fomeDias ? `Fome há ${c.fomeDias} dias.` : 'A comunidade está alimentada.'} {c.doenca > 0 ? `Doença: ${Math.ceil(c.doenca)}%.` : ''} Insegurança: {Math.ceil(c.inseguranca)}%.</TextoMono>
+      <TextoMono>{c.governo ? `Governo: ${content.faccoes.find(f => f.id === c.governo)?.nome}.` : 'Comunidade autônoma.'} {governo && governo.lider ? `Liderança: ${nome(governo.lider)} · legitimidade ${Math.round(governo.legitimidade)}%.` : ''}</TextoMono>
+      {c.projeto && <TextoMono>Em construção: {EDIFICIOS[c.projeto.tipo].nome} · {Math.floor(c.projeto.progresso)}/{Math.ceil(c.projeto.necessario)}. Fome, guerra e ameaças interrompem a obra.</TextoMono>}
+      {(Object.keys(EDIFICIOS) as TipoEdificio[]).map(tipo => <View key={tipo} style={{ marginTop: 10 }}>
+        <TextoSerif>{EDIFICIOS[tipo].nome} · nível {c.edificios[tipo]}</TextoSerif>
+        <TextoMono>{EDIFICIOS[tipo].efeito}</TextoMono>
+        {!c.projeto && c.edificios[tipo] < 5 && <Botao titulo={`Propor expansão · 15 moedas + ${EDIFICIOS[tipo].materiais} materiais públicos`} onPress={() => agir({ tipo: 'obra', edificio: tipo })} />}
+      </View>)}
+    </Card>}
+    {c?.governo && <>
+      <Divisor label="relações políticas" />
+      {Object.entries(camp.vivo?.governos[c.governo]?.relacoes ?? {}).map(([outra, relacao]) => <Card key={outra}>
+        <TextoSerif>{content.faccoes.find(f => f.id === outra)?.nome} · {relacao < -50 ? 'à beira de guerra' : relacao < 0 ? 'hostilidade' : 'cooperação'}</TextoSerif>
+        <TextoMono>Mediação pode encerrar uma frente e abrir trégua. Cada intervenção custa 10 moedas; nova tentativa após uma semana.</TextoMono>
+        <Botao titulo="Mediar trégua" onPress={() => agir({ tipo: 'diplomacia', a: c.governo!, b: outra, escolha: 'mediar' })} />
+        <Botao titulo="Buscar informações nos bastidores" onPress={() => agir({ tipo: 'diplomacia', a: c.governo!, b: outra, escolha: 'espionar' })} />
+      </Card>)}
+    </>}
+  </>;
+}
+
+export function CompromissosVivos() {
+  const camp = useGame(s => s.camp)!;
+  const content = useGame(s => s.content)!;
+  const agir = useGame(s => s.acaoMundo);
+  const ultima = useGame(s => s.feed.at(-1));
+  const lista = camp.vivo?.missoes.filter(q => q.conhecida) ?? [];
+  const abertas = lista.filter(q => ['oferecida', 'aceita'].includes(q.estado));
+  return <>
+    <Divisor label="histórias nascidas do mundo" />
+    {ultima?.tipo === 'sistema' && <TextoMono>{ultima.texto}</TextoMono>}
+    {abertas.length === 0 && <TextoMono>Nenhum pedido novo conhecido. Viaje ou ouça as notícias na comunidade.</TextoMono>}
+    {abertas.map(q => <Card key={q.id}>
+      <TextoSerif>{q.titulo} · {q.estado === 'aceita' ? 'compromisso assumido' : 'pedido de ajuda'}</TextoSerif>
+      <TextoMono>{q.causa.texto}</TextoMono>
+      <TextoMono>{content.locais.find(l => l.id === q.local)?.nome} · restam {Math.max(0, q.prazo - camp.calendario.dia)} dias · recompensa: {q.recompensa} moedas e 15 XP.</TextoMono>
+      {q.destino && <TextoMono>Destino: {content.locais.find(l => l.id === q.destino)?.nome}.</TextoMono>}
+      {q.estado === 'oferecida' ? <Botao titulo="Aceitar compromisso" onPress={() => agir({ tipo: 'missao', id: q.id, escolha: 'aceitar' })} /> : <View style={{ gap: 8, marginTop: 8 }}>
+        {q.tipo === 'investigar' ? <Botao titulo={q.etapa ? 'Confrontar o alvo · risco de combate' : 'Investigar os rastros'} onPress={() => agir({ tipo: 'missao', id: q.id, escolha: q.etapa ? 'confrontar' : 'investigar' })} /> : <>
+          <Botao titulo={q.tipo === 'escoltar' ? q.etapa ? 'Entregar a escolta no destino' : 'Preparar a escolta' : 'Fornecer ajuda · 30 moedas'} onPress={() => agir({ tipo: 'missao', id: q.id, escolha: 'ajudar' })} />
+          {q.tipo !== 'escoltar' && q.tentativas < 2 && <Botao titulo="Mobilizar contatos · pode falhar" onPress={() => agir({ tipo: 'missao', id: q.id, escolha: 'negociar' })} />}
+        </>}
+      </View>}
+    </Card>)}
+    {lista.filter(q => !['oferecida', 'aceita'].includes(q.estado)).slice(-6).map(q => <Card key={q.id}>
+      <TextoSerif>{q.titulo} · {q.estado.replaceAll('_', ' ')}</TextoSerif>
+      <TextoMono>{q.desfecho}</TextoMono>
+    </Card>)}
+  </>;
+}
+
+export function HistoriaViva() {
+  const camp = useGame(s => s.camp)!;
+  return <>
+    <Divisor label="acontecimentos e consequências" />
+    {fatosConhecidos(camp, 25).reverse().map(f => <Card key={f.id}>
+      <TextoMono>Dia {f.dia} · {f.conhecimento}</TextoMono>
+      <TextoSerif>{f.texto}</TextoSerif>
+      {f.causa && <TextoMono>Origem: {f.causa.texto}</TextoMono>}
+    </Card>)}
+  </>;
+}
+
+export function BiografiaViva({ id }: { id: string }) {
+  const camp = useGame(s => s.camp)!;
+  const content = useGame(s => s.content)!;
+  const p = camp.vivo?.pessoas[id];
+  if (!p) return null;
+  const nomes = (ids: string[]) => ids.map(id => [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id)?.nome ?? id).join(', ');
+  return <>
+    <TextoMono>Atividade: {p.objetivo} · prestígio: {p.prestigio}. {p.viagem ? 'Está viajando.' : ''}</TextoMono>
+    {!!p.conjuge && <TextoMono>Casa compartilhada com {nomes([p.conjuge])}.</TextoMono>}
+    {!!p.filhos.length && <TextoMono>Crianças sob seus cuidados: {nomes(p.filhos)}.</TextoMono>}
+    {!!p.tutores?.length && <TextoMono>Família de acolhimento: {nomes(p.tutores)}.</TextoMono>}
+    {biografiaCivil(camp, id).map((texto, i) => <TextoMono key={i}>{texto}</TextoMono>)}
+  </>;
+}

@@ -79,7 +79,7 @@ const camp = criarCampanha(conteudoVaelhorn, {
 ok(camp.personagem.recursos.vida > 0, 'Personagem nasce com vida');
 ok(camp.personagem.recursos.mana > 0, 'Arcanista nasce com mana');
 ok(camp.localAtual === 'taverna', 'Começa na taverna');
-ok(Object.keys(camp.npcState).length === conteudoVaelhorn.npcs.length, 'Estado de todos os NPCs inicializado');
+ok(Object.keys(camp.npcState).length === conteudoVaelhorn.npcs.length + (camp.npcsProcedurais?.length ?? 0), 'Estado de todos os NPCs inicializado');
 
 // Montar cena não quebra.
 const cena = montarCena(conteudoVaelhorn, camp);
@@ -148,6 +148,7 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   ok(bonusDefesaEquip(conteudoVaelhorn, c.personagem) > 0, 'Armadura+escudo dão bônus de defesa');
 
   // Compra encolhe a bolsa e enche a mochila.
+  c.localAtual = conteudoVaelhorn.itens.find(i => i.id === 'pocao_cura_menor')!.lojas![0];
   const antesDinheiro = c.personagem.dinheiro;
   const compra = comprar(conteudoVaelhorn, c, 'pocao_cura_menor');
   ok(compra.ok && c.personagem.dinheiro < antesDinheiro, 'Comprar debita moedas');
@@ -160,6 +161,7 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
 
   // Equipar troca a defesa derivada.
   c.personagem.dinheiro = 500; // bolsa cheia para o teste de compra cara
+  c.localAtual = conteudoVaelhorn.itens.find(i => i.id === 'cota_de_malha')!.lojas![0];
   comprar(conteudoVaelhorn, c, 'cota_de_malha');
   const defAntes = derivados(c.personagem, bonusDefesaEquip(conteudoVaelhorn, c.personagem)).defesa;
   equipar(conteudoVaelhorn, c, 'cota_de_malha');
@@ -218,9 +220,10 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
     origemId: 'divida',
     seedString: 'magia-1',
   });
-  // Sarn ensina na taverna, onde a campanha começa.
+  // Sarine returns to the tavern in the afternoon; a mentor must be present.
+  c.calendario.periodoIndex = 2;
   const disp = mestresQueEnsinamAqui(conteudoVaelhorn, c);
-  ok(disp.length > 0, 'Há mestre ensinando no local inicial');
+  ok(disp.length > 0, 'Há mestre ensinando quando sua rotina o traz ao local');
   const arte = disp[0].artes[0];
   const ap = aprenderArte(conteudoVaelhorn, c, arte.id);
   ok(ap.ok && c.personagem.artesConhecidas.includes(arte.id), `Aprendeu ${arte.nome}`);
@@ -301,6 +304,10 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   }
   for (const t of C.trabalhos) {
     for (const r of t.reputacao ?? []) exige(idsFaccoes.has(r.faccaoId), `trabalho ${t.id} → facção ${r.faccaoId}`);
+  }
+  for (const [a, b] of C.rivalidadesFaccoes ?? []) {
+    exige(idsFaccoes.has(a), `rivalidade de facção → ${a}`);
+    exige(idsFaccoes.has(b), `rivalidade de facção → ${b}`);
   }
   // Todo tipo de local sorteável precisa de uma tabela de encontros.
   for (const l of C.locais) {
@@ -587,7 +594,7 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   ok(!!salvo.mundo && Array.isArray(salvo.marcos) && Array.isArray(salvo.ecos), 'Campos novos são criados');
   ok(!salvo.npcState['aldric'] && !!salvo.npcState['aldrica'], 'Gente renomeada é corrigida no elenco');
   ok(
-    Object.keys(salvo.npcState).length === conteudoVaelhorn.npcs.length,
+    Object.keys(salvo.npcState).length === conteudoVaelhorn.npcs.length + (salvo.npcsProcedurais?.length ?? 0),
     'Todo NPC atual tem estado depois da migração',
   );
   ok(!salvo.segredosRevelados.includes('sarn'), 'Segredo de gente que não existe mais é descartado');
