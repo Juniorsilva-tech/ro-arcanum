@@ -24,6 +24,8 @@ import { registrarMarco } from './memoria';
 import { recolherDespojos } from './despojos';
 import { artePorId } from './fusao';
 import { processarSubidaDeNivel, concederDespertar } from './progresso';
+import { multiplicadoresDeIdentidade } from './identidade';
+import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
 import { selarAlma, chimAlcancado } from './ascensao';
 import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
@@ -170,13 +172,14 @@ export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano 
   const base = perfil.base * eficiencia
     + Math.max(0, modificador(p.atributos[attr]))
     + Math.floor(p.nivel / 3);
-  return { ...perfil, base };
+  return { ...perfil, base: base * multiplicadoresDeIdentidade(camp).dano };
 }
 
 export function iniciarCombate(
   content: ContentBundle,
   camp: Campaign,
   criaturaIds: string[],
+  rivalAlvo?: string,
 ): CombatState {
   if (camp.combate && !camp.combate.terminado) return camp.combate;
   const p = camp.personagem;
@@ -200,11 +203,12 @@ export function iniciarCombate(
   const aliados: CombatActor[] = (camp.grupo ?? []).map(npcId => npcPorId(content, camp, npcId))
     .filter((n): n is NonNullable<typeof n> => !!n?.combatente && camp.npcState[n.id]?.vivo)
     .map(n => {
-      const ficha = n.combatente!;
+      inicializarProgressaoNpc(camp, n);
+      const ficha = fichaCombatente(camp, n)!;
       return {
         id: `aliado_${n.id}`, nome: n.nome, ehJogador: false, ehAliado: true, npcId: n.id,
         vida: Math.min(ficha.vida, camp.npcState[n.id].vida ?? ficha.vida), vidaMax: ficha.vida,
-        defesa: ficha.defesa, acerto: ficha.acerto + Math.floor((camp.vivo?.pessoas[n.id]?.habilidade ?? 5) / 5) - 1, dano: ficha.dano, condicoes: [], tatico: {},
+        defesa: ficha.defesa, acerto: ficha.acerto, dano: ficha.dano, condicoes: [], tatico: {},
       };
     });
 
@@ -218,13 +222,14 @@ export function iniciarCombate(
   const inimigos: CombatActor[] = ids.filter(cid => {
     const c = criaturaPorId(content, cid);
     if (!c) return false;
+    if (content.desafios?.some(d => d.criaturaId === cid && camp.flags[`desafio.concluido.${d.id}`])) return false;
     const unico = c.perfilOni?.identidade;
     if (unico && (vistos.has(unico) || camp.flags[`matou.${cid}`] || camp.kimetsu?.rivais[unico]?.vivo === false)) return false;
     if (unico) vistos.add(unico);
     return true;
   }).map((cid, i) => {
     const c = criaturaPorId(content, cid)!;
-    const rival = obterRival(camp, c, ocupados);
+    const rival = obterRival(camp, c, ocupados, camp.localAtual, rivalAlvo);
     if (rival) ocupados.push(rival.id);
     return {
       id: `inim_${i}_${cid}`,
@@ -397,7 +402,7 @@ export function jogadorConjura(
         const ataque = { ...jog, acerto: jog.acerto + (tecnica.modo === 'precisao' ? 5 : 0) };
         const r = a.rivalId ? camp.kimetsu?.rivais[a.rivalId] : undefined;
         if (r?.memoria.slice(-2).some(m => m.tecnica === arteId)) ataque.acerto -= r.evolucao?.adaptacoes[arteId] ?? 2;
-        s.log.push(resolverAtaque(camp, ataque, a, { base: tecnica.potencia + modificador(p.atributos.precisao), dispersao: .2, tipo: 'corte' }, !!armaEquipada(content, p)?.contraOni));
+        s.log.push(resolverAtaque(camp, ataque, a, { base: (tecnica.potencia + modificador(p.atributos.precisao)) * multiplicadoresDeIdentidade(camp).dano, dispersao: .2, tipo: 'corte' }, !!armaEquipada(content, p)?.contraOni));
         if (tecnica.modo === 'veneno' && a.vida < antes && a.oni && vivo(a)) {
           a.imuneRegenTurnos = 3;
           (a.tatico ??= {}).veneno = 3;
@@ -421,7 +426,7 @@ export function jogadorConjura(
   } else if (ofensiva) {
     const alvo = s.atores.find((a) => a.id === alvoId && !a.ehJogador && vivo(a)) ?? inimigosVivos(s)[0];
     if (alvo) {
-      const perfil: PerfilDano = { base: 6 + grauBase(arte.grau) + modificador(p.atributos.raciocinio), dispersao: 0.3, tipo: 'arcano' };
+      const perfil: PerfilDano = { base: (6 + grauBase(arte.grau) + modificador(p.atributos.raciocinio)) * multiplicadoresDeIdentidade(camp).dano, dispersao: 0.3, tipo: 'arcano' };
       const jogMag = { ...jog, acerto: 10 + p.nivel + modificador(p.atributos.raciocinio) };
       s.log.push(`Você conjura ${arte.nome}. ` + resolverAtaque(camp, jogMag, alvo, perfil));
     }
@@ -495,7 +500,7 @@ function processarVeneno(camp: Campaign, a: CombatActor): void {
 function executarTurnoAliado(content: ContentBundle, camp: Campaign, aliado: CombatActor): void {
   const s = camp.combate!;
   const npc = aliado.npcId ? npcPorId(content, camp, aliado.npcId) : undefined;
-  const ficha = npc?.combatente;
+  const ficha = npc && fichaCombatente(camp, npc);
   if (!ficha) return;
   const jogador = jogadorAtor(s);
   if (s.ordemGrupo === 'proteger') {
@@ -523,7 +528,8 @@ function executarTurnoAliado(content: ContentBundle, camp: Campaign, aliado: Com
   if (tecnica?.modo === 'esquiva') (aliado.tatico ??= {}).esquiva = 2;
   const alvos = tecnica?.modo === 'area' ? inimigosVivos(s) : [alvo];
   for (const inimigo of alvos) {
-    const potencia = tecnica?.potencia || ficha.dano.base;
+    const proporcao = ficha.dano.base / Math.max(1, npc!.combatente!.dano.base);
+    const potencia = tecnica?.potencia ? tecnica.potencia * proporcao : ficha.dano.base;
     const atacante = tecnica?.modo === 'precisao' ? { ...aliado, acerto: aliado.acerto + 5 } : aliado;
     for (let golpe = 0; golpe < (tecnica?.golpes ?? 1) && vivo(inimigo); golpe++) {
       s.log.push(resolverAtaque(camp, atacante, inimigo, { ...ficha.dano, base: potencia }, !!ficha.nichirin));
@@ -632,7 +638,7 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
       s.log.push(`Você retira ${aliado.nome} da linha de combate. Os ferimentos permanecem.`);
     } else if (acao === 'capturar') {
       const criatura = alvo?.criaturaId && criaturaPorId(content, alvo.criaturaId);
-      if (!alvo || !criatura || alvo.oni || !criatura.faccaoId || alvo.vida > alvo.vidaMax * .2) { s.log.push('Só é possível render um adversário humano enfraquecido.'); return; }
+      if (!alvo || !criatura || alvo.oni || criatura.humano === false || !criatura.faccaoId || alvo.vida > alvo.vidaMax * .2) { s.log.push('Só é possível render um adversário humano enfraquecido.'); return; }
       alvo.capturado = true;
       s.log.push(`${alvo.nome} se rendeu e foi desarmado.`);
     } else if (acao === 'libertar') {
@@ -906,6 +912,12 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       if (a.ehJogador || a.ehAliado || vivo(a)) continue;
       const c = a.criaturaId ? criaturaPorId(content, a.criaturaId) : undefined;
       if (!c) continue;
+      const desafio = content.desafios?.find(d => d.criaturaId === c.id);
+      if (desafio) {
+        camp.flags[`desafio.concluido.${desafio.id}`] = true;
+        registrarMarco(camp, `você superou a expedição ${desafio.titulo}`);
+        if (c.id === 'cavaleira_do_eclipse' && maestriaDe(camp, 'espada') >= 80) concederDespertar(camp, 'dominou_prova_eclipse', 'a prova do eclipse consolidou sua maestria');
+      }
       if (a.capturado) {
         xp += Math.floor(c.xp / 2);
         if (camp.vivo) registrarFato(camp, { tipo: 'rendicao', local: camp.localAtual, texto: `${a.nome} se rendeu a você e foi entregue à custódia local.`, atores: ['jogador'], publico: true });
@@ -972,7 +984,10 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     if (!p.condicoes.includes('ferido')) p.condicoes.push('ferido');
     const perda = Math.min(p.dinheiro, Math.round(p.dinheiro * 0.3));
     p.dinheiro -= perda;
-    if (camp.vivo && s.atores.some(a => !a.ehJogador && !a.ehAliado && !a.oni && !!criaturaPorId(content!, a.criaturaId ?? '')?.faccaoId) && nextFloat(camp.rng) < .2) {
+    if (camp.vivo && s.atores.some(a => {
+      const criatura = criaturaPorId(content!, a.criaturaId ?? '');
+      return !a.ehJogador && !a.ehAliado && !a.oni && criatura?.humano !== false && !!criatura?.faccaoId;
+    }) && nextFloat(camp.rng) < .2) {
       if (!p.condicoes.includes('cativo')) p.condicoes.push('cativo');
       registrarFato(camp, { tipo: 'cativeiro_jogador', local: camp.localAtual, texto: 'Seus adversários pouparam sua vida e o mantiveram cativo.', atores: ['jogador'], publico: false, conhecimento: 'testemunhado' });
       s.log.push('Você foi mantido em cativeiro. Procure uma oportunidade de recuperar a liberdade.');
@@ -982,6 +997,11 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
   for (const a of s.atores.filter(a => a.ehAliado && a.npcId)) {
     const din = camp.npcState[a.npcId!];
     if (din) din.vida = Math.max(0, a.vida);
+    if (content && din?.vivo && a.vida > 0) {
+      const npc = npcPorId(content, camp, a.npcId!);
+      const nivelMaior = Math.max(1, ...s.atores.filter(i => !i.ehJogador && !i.ehAliado).map(i => criaturaPorId(content, i.criaturaId ?? '')?.nivel ?? 1));
+      if (npc) treinarNpc(camp, npc, a.retirado ? .25 : 1, resultado === 'vitoria' ? nivelMaior * 2 : nivelMaior * .5);
+    }
   }
   clampRecursos(p);
 }

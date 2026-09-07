@@ -18,6 +18,7 @@ import { processarEnvelhecimentoJogador } from './ascensao';
 import { estacaoNoDia } from './time';
 import { processarContinuidade } from './continuidade';
 import { todosNpcs } from './elenco';
+import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
@@ -182,8 +183,9 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     for (const npc of todosNpcs(content, camp)) {
       const din = camp.npcState[npc.id];
       if (!npc.combatente || !din?.vivo) continue;
-      const atual = din.vida ?? npc.combatente.vida;
-      din.vida = Math.min(npc.combatente.vida, atual + Math.max(2, Math.ceil(npc.combatente.vida * .08)));
+      const ficha = fichaCombatente(camp, npc)!;
+      const atual = din.vida ?? ficha.vida;
+      din.vida = Math.min(ficha.vida, atual + Math.max(2, Math.ceil(ficha.vida * .08)));
     }
 
     // E elas se esbarram. Um período por dia basta para o vale ter história

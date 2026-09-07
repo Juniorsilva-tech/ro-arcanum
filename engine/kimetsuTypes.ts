@@ -32,7 +32,8 @@ export type RivalPersistente = {
   vitorias: number;
   fugas: number;
   rancor: number;
-  memoria: { dia: number; resultado: 'vitoria' | 'derrota' | 'fuga'; tecnica?: string }[];
+  memoria: { dia: number; resultado: 'vitoria' | 'derrota' | 'fuga'; tecnica?: string; local?: string; testemunhas?: string[] }[];
+  comportamento?: { recuperarAte: number; pista?: string; pistaAte: number; ultimoFeito: number; ultimaAmeacaPessoal: number };
 };
 
 export type KimetsuState = {

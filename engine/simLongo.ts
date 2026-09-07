@@ -9,10 +9,13 @@ import type { MarcaInfancia } from './types';
 const anos = Number(process.argv[2] ?? 10);
 const campanhas = Number(process.argv[3] ?? 8);
 const marca = process.argv[4] as MarcaInfancia | undefined;
+const politica = process.argv[5] ?? 'exploratoria';
+if (!Number.isInteger(anos) || anos < 1 || !Number.isInteger(campanhas) || campanhas < 1 || !['exploratoria', 'objetivos'].includes(politica)) throw new Error('Use anos e campanhas inteiros positivos; política exploratoria ou objetivos.');
 
 console.log(`\n=== ARCANUM · campanhas longas · ${campanhas} campanhas × ${anos} anos ===\n`);
 const inicio = Date.now();
-const { resultados, violacoes } = simularLote(conteudoVaelhorn, anos, campanhas, 'longa', marca);
+console.log(`Política: ${politica}`);
+const { resultados, violacoes } = simularLote(conteudoVaelhorn, anos, campanhas, 'longa', marca, politica as 'exploratoria' | 'objetivos');
 const segundos = ((Date.now() - inicio) / 1000).toFixed(1);
 
 for (const [k, v] of Object.entries(resumir(resultados))) {

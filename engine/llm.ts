@@ -18,6 +18,7 @@ import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 import { artesConhecidasResolvidas } from './fusao';
 import { contextoDeAptidao, leituraDoObservador } from './aptidao';
+import { legadosConquistados } from './identidade';
 import { DOMINIOS } from './aptidaoTypes';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
@@ -324,6 +325,7 @@ export function montarPacote(
     // narrador nao pode dizer que alguem reconheceu talento sem que a engine
     // tenha registrado a crenca (ver engine/aptidao.ts).
     talento: contextoDeAptidao(camp),
+    legados: legadosConquistados(camp).map(l => ({ nome: l.nome, descricao: l.descricao })),
     // O diretor da campanha, calculado pela engine (ver ritmo.ts).
     ritmo: calcularRitmo(content, camp),
     // Vocabulário permitido: se citar objeto, tem que ser um destes nomes.

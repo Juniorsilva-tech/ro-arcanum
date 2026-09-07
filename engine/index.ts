@@ -39,6 +39,8 @@ export * from './continuidade';
 export * from './familia';
 export * from './elenco';
 export * from './grupo';
+export * from './progressaoNpc';
+export * from './identidade';
 export * from './vivoTypes';
 export * from './historiaViva';
 export * from './acoesMundo';

@@ -14,6 +14,7 @@
 import type { Campaign } from './types';
 import { registrarMarco } from './memoria';
 import { modificador, recursoMaximo } from './character';
+import { multiplicadoresDeIdentidade } from './identidade';
 
 // Curva simples e crescente — cada nível pede mais que o anterior.
 export function xpParaProximoNivel(nivelAtual: number): number {
@@ -31,7 +32,7 @@ export function recalcularRecursosMaximos(camp: Campaign): void {
   const proporcao = Math.min(1, (p.recursos.vida ?? antes) / antes);
   p.recursosMax.vida = vidaMaxima(camp);
   // Ferido continua ferido na mesma proporcao; ganhar nivel nao cura.
-  p.recursos.vida = Math.max(1, Math.round(p.recursosMax.vida * proporcao));
+  p.recursos.vida = p.recursos.vida <= 0 ? 0 : Math.max(1, Math.round(p.recursosMax.vida * proporcao));
   // Vigor e mana tambem acompanham o nivel, de forma mais discreta.
   for (const id of Object.keys(p.recursosMax)) {
     if (id === 'vida') continue;
@@ -54,8 +55,8 @@ export function ganhoDeVidaPorNivel(camp: Campaign): number {
 }
 export function vidaMaxima(camp: Campaign): number {
   const p = camp.personagem;
-  return VIDA_BASE + modificador(p.atributos.resiliencia) * 4
-    + (p.nivel - 1) * ganhoDeVidaPorNivel(camp);
+  return Math.round((VIDA_BASE + modificador(p.atributos.resiliencia) * 4
+    + (p.nivel - 1) * ganhoDeVidaPorNivel(camp)) * multiplicadoresDeIdentidade(camp).vida);
 }
 
 export function processarSubidaDeNivel(camp: Campaign): void {
@@ -89,6 +90,7 @@ export function concederDespertar(camp: Campaign, id: string, motivo: string): b
   if (lista.includes(id)) return false;
   lista.push(id);
   camp.personagem.nivel += BONUS_POR_DESPERTAR;
+  recalcularRecursosMaximos(camp);
   registrarMarco(camp, `despertar: ${motivo}`);
   return true;
 }

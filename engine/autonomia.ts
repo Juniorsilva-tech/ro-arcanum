@@ -3,10 +3,13 @@ import { cidadeIdDoLocal, localEfetivo, proximoPasso, registrarFato } from './hi
 import { nextFloat, pick } from './rng';
 import { oferecerMissao, encerrarMissao } from './missoesVivas';
 import { registrarMorteFamiliar } from './familia';
+import { treinarNpc } from './progressaoNpc';
+import { processarFormacao } from './formacao';
 
 export function processarAutonomia(content: ContentBundle, camp: Campaign): void {
   const v = camp.vivo!, dia = camp.calendario.dia;
   const elenco = [...content.npcs, ...(camp.npcsProcedurais ?? [])];
+  camp.grupo = (camp.grupo ?? []).filter(id => camp.npcState[id]?.vivo);
   for (const npc of elenco) {
     const p = v.pessoas[npc.id], din = camp.npcState[npc.id];
     if (!p || !din?.vivo || npc.especie === 'oni') continue;
@@ -15,7 +18,14 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
       if (tutor) { p.local = v.pessoas[tutor].local; p.casa = v.pessoas[tutor].casa; }
       continue;
     }
-    if ((camp.grupo ?? []).includes(npc.id)) { p.local = camp.localAtual; p.viagem = undefined; continue; }
+    if ((camp.grupo ?? []).includes(npc.id)) {
+      p.local = camp.localAtual; p.viagem = undefined;
+      // Respect decisions only between fights, never remove an actor mid-turn.
+      if ((!camp.combate || camp.combate.terminado) && (din.eixos.confianca ?? 0) < -5) {
+        camp.grupo = camp.grupo!.filter(id => id !== npc.id); p.deslocado = true;
+        registrarFato(camp, { tipo: 'ruptura_grupo', local: p.local, texto: `${npc.nome} deixou o grupo após perder a confiança em você.`, atores: [npc.id, 'jogador'], publico: false, conhecimento: 'testemunhado' });
+      } else continue;
+    }
     if (p.objetivo === 'cativo') {
       const parente = camp.familia?.membros.find(m => m.id === npc.id);
       if (parente?.condicao === 'livre') { p.objetivo = 'rotina'; p.local = npc.localBase; }
@@ -47,6 +57,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
     }
     if (dia < p.proximaDecisao) continue;
     p.proximaDecisao = dia + 3;
+    if (processarFormacao(content, camp, npc)) continue;
     const ameaca = camp.continuidade?.ameacas.find(a => a.estado !== 'resolvida' && camp.kimetsu?.rivais[a.rivalId]?.vivo && proximoPasso(content, local, a.local));
     if (npc.combatente?.nichirin && ameaca && p.saude >= 65 && p.fome < 45) {
       p.objetivo = 'cacar'; p.local = local; p.deslocado = true;
@@ -67,6 +78,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
       c.tesouro -= salario; p.moedas = Math.min(250, p.moedas + salario); c.materiais = Math.min(250, c.materiais + 2);
     } else if (npc.combatente && nextFloat(camp.rng) < .5) {
       p.objetivo = 'treinar'; p.habilidade = Math.min(20, p.habilidade + .2); p.moedas -= 1;
+      treinarNpc(camp, npc, 1);
     } else {
       p.objetivo = 'rotina';
       const conhecida = elenco.find(n => n.id !== npc.id && camp.npcState[n.id]?.vivo && (camp.npcState[n.id]?.idade ?? n.idade) >= 18 && n.especie !== 'oni' && localEfetivo(camp, n) === local && !n.parentesco && !npc.parentesco);

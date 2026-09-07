@@ -14,6 +14,12 @@ export function ComunidadeViva() {
   const nome = (id: string) => [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id)?.nome ?? id;
   return <>
     <Divisor label="vida na comunidade" />
+    {(content.desafios ?? []).filter(d => d.local === camp.localAtual).map(d => <Card key={d.id}>
+      <TextoSerif>{d.titulo}</TextoSerif>
+      <TextoMono>{d.descricao}</TextoMono>
+      <TextoMono>{d.aviso}</TextoMono>
+      {camp.flags[`desafio.concluido.${d.id}`] ? <TextoMono>Expedição superada. O desfecho permanece nesta campanha.</TextoMono> : <Botao titulo="Aceitar o risco e iniciar expedição" onPress={() => agir({ tipo: 'desafio', id: d.id })} />}
+    </Card>)}
     {ultima?.tipo === 'sistema' && <TextoMono>{ultima.texto}</TextoMono>}
     <View style={{ gap: 8, marginVertical: 10 }}>
       {camp.personagem.condicoes.includes('cativo') ? <Botao titulo="Buscar liberdade · resgate de 20 moedas ou tentativa de fuga" onPress={() => agir({ tipo: 'libertar_se' })} /> : <>
@@ -60,6 +66,7 @@ export function CompromissosVivos() {
     {abertas.map(q => <Card key={q.id}>
       <TextoSerif>{q.titulo} · {q.estado === 'aceita' ? 'compromisso assumido' : 'pedido de ajuda'}</TextoSerif>
       <TextoMono>{q.causa.texto}</TextoMono>
+      {!!q.motivoPrazo && <TextoMono>{q.motivoPrazo}</TextoMono>}
       <TextoMono>{content.locais.find(l => l.id === q.local)?.nome} · restam {Math.max(0, q.prazo - camp.calendario.dia)} dias · recompensa: {q.recompensa} moedas e 15 XP.</TextoMono>
       {q.destino && <TextoMono>Destino: {content.locais.find(l => l.id === q.destino)?.nome}.</TextoMono>}
       {q.estado === 'oferecida' ? <Botao titulo="Aceitar compromisso" onPress={() => agir({ tipo: 'missao', id: q.id, escolha: 'aceitar' })} /> : <View style={{ gap: 8, marginTop: 8 }}>
@@ -96,6 +103,7 @@ export function BiografiaViva({ id }: { id: string }) {
   const nomes = (ids: string[]) => ids.map(id => [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id)?.nome ?? id).join(', ');
   return <>
     <TextoMono>Atividade: {p.objetivo} · prestígio: {p.prestigio}. {p.viagem ? 'Está viajando.' : ''}</TextoMono>
+    {!!p.formacao && <TextoMono>{p.formacao.caminho === 'civil' ? 'Prefere a vida civil.' : p.formacao.concluida ? 'Formação básica de defesa concluída.' : `Aprendizado de defesa: ${p.formacao.sessoes}/20 sessões. Exige mentor presente, saúde e sustento.`}</TextoMono>}
     {!!p.conjuge && <TextoMono>Casa compartilhada com {nomes([p.conjuge])}.</TextoMono>}
     {!!p.filhos.length && <TextoMono>Crianças sob seus cuidados: {nomes(p.filhos)}.</TextoMono>}
     {!!p.tutores?.length && <TextoMono>Família de acolhimento: {nomes(p.tutores)}.</TextoMono>}

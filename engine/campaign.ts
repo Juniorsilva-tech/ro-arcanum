@@ -7,6 +7,8 @@ import { mundoInicial } from './mundo';
 import { inicializarKimetsu } from './kimetsu';
 import { iniciarContinuidade } from './continuidade';
 import { iniciarFamilia } from './familia';
+import { migrarProgressaoNpcs } from './progressaoNpc';
+import { recalcularRecursosMaximos } from './progresso';
 import { iniciarMundoVivo } from './historiaViva';
 import { iniciarAptidao } from './aptidao';
 import { montarGenese, aplicarHeranca, cartaDeInfancia } from './genese';
@@ -107,6 +109,9 @@ export function criarCampanha(content: ContentBundle, entrada: EntradaCriacao): 
   iniciarMundoVivo(content, camp);
   // A aptidao nasce com a pessoa e fica oculta ate ser demonstrada.
   camp.aptidao = iniciarAptidao(camp);
+  migrarProgressaoNpcs(content, camp);
+  recalcularRecursosMaximos(camp);
+  camp.flags['versao.legados'] = 1;
   return camp;
 }
 

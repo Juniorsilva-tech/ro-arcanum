@@ -31,7 +31,9 @@ export function processarCidades(content: ContentBundle, camp: Campaign): void {
     const guerra = camp.mundo?.guerraAtiva?.local === id;
     const condicao = Math.max(.15, povo.integridade / 100);
     const fertilidade = c.secaAte > dia ? .15 : camp.calendario.estacao === 'inverno' ? .8 : 1.1;
-    const producao = povo.populacao > 0 ? (8 + c.edificios.lavoura * 4) * fertilidade * condicao : 0;
+    // Residents also farm for subsistence; public farms improve their surplus.
+    // Disease, damaged infrastructure and war reduce actual labour/output.
+    const producao = povo.populacao * .20 * (1 + c.edificios.lavoura * .04) * fertilidade * condicao * (1 - c.doenca / 150) * (guerra ? .6 : 1);
     const consumo = povo.populacao * .15;
     c.comida = Math.max(0, Math.min(600, c.comida + producao - consumo - (guerra ? 5 : 0)));
     c.materiais = Math.min(250, c.materiais + (povo.populacao > 0 && !guerra ? condicao : 0));

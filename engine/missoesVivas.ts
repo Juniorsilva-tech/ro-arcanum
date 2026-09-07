@@ -1,18 +1,47 @@
 import type { Campaign, ContentBundle } from './types';
 import type { FatoHistorico, MissaoViva } from './vivoTypes';
 import { registrarFato } from './historiaViva';
+import { PERIODOS } from './time';
+
+// Shortest travel time, not player level. Unreachable destinations offer no mission.
+export function periodosDeViagem(content: ContentBundle, origem: string, destino: string): number {
+  const dist = new Map([[origem, 0]]), visitados = new Set<string>();
+  while (true) {
+    const atual = [...dist].filter(([id]) => !visitados.has(id)).sort((a, b) => a[1] - b[1])[0];
+    if (!atual) return Infinity;
+    const [id, custo] = atual;
+    if (id === destino) return custo;
+    visitados.add(id);
+    for (const rota of content.locais.find(l => l.id === id)?.rotas ?? []) {
+      const novo = custo + Math.max(1, rota.periodos);
+      if (novo < (dist.get(rota.destino) ?? Infinity)) dist.set(rota.destino, novo);
+    }
+  }
+}
+
+export function janelaMissao(camp: Campaign, tipo: MissaoViva['tipo'], local: string, viagem = 0) {
+  const c = camp.vivo?.cidades[local];
+  const urgente = tipo === 'resgatar' || (tipo === 'tratar' && (c?.doenca ?? 0) > 60) || (tipo === 'abastecer' && (c?.fomeDias ?? 0) > 2);
+  const diasViagem = Math.ceil(viagem / PERIODOS.length);
+  const dias = (urgente ? 6 : tipo === 'reconstruir' ? 24 : tipo === 'escoltar' ? 12 : 14) + diasViagem;
+  return { dias, motivo: `${urgente ? 'Crise urgente' : tipo === 'reconstruir' ? 'Obra de recuperação' : 'Janela de organização'}; inclui ${diasViagem} dias de deslocamento previsto. O prazo corre mesmo sem sua participação.` };
+}
 
 const TITULOS: Record<MissaoViva['tipo'], string> = {
   abastecer: 'Pão antes do êxodo', tratar: 'Conter a febre', escoltar: 'Uma casa em outro lugar',
   reconstruir: 'Erguer de novo', resgatar: 'Uma pessoa levada', investigar: 'Rastros sob a noite',
 };
-export function oferecerMissao(camp: Campaign, tipo: MissaoViva['tipo'], fato: FatoHistorico, extra: Partial<Pick<MissaoViva, 'ator' | 'destino' | 'rival'>> = {}): MissaoViva | undefined {
+export function oferecerMissao(camp: Campaign, tipo: MissaoViva['tipo'], fato: FatoHistorico, extra: Partial<Pick<MissaoViva, 'ator' | 'destino' | 'rival'>> = {}, content?: ContentBundle): MissaoViva | undefined {
   const v = camp.vivo!;
   const abertas = v.missoes.filter(q => ['oferecida', 'aceita'].includes(q.estado));
-  if (abertas.some(q => q.tipo === tipo && q.local === fato.local && q.ator === extra.ator) || abertas.length >= 12) return;
+  if (abertas.some(q => q.tipo === tipo && q.local === fato.local && q.ator === extra.ator && q.rival === extra.rival) || abertas.length >= 12) return;
+  const viagem = content && extra.destino ? periodosDeViagem(content, fato.local, extra.destino) : 0;
+  if (!Number.isFinite(viagem)) return;
+  const janela = janelaMissao(camp, tipo, fato.local, viagem);
   const q: MissaoViva = {
     id: `missao_${++v.sequencia}`, tipo, titulo: TITULOS[tipo], local: fato.local,
-    causa: { id: fato.id, texto: fato.texto }, prazo: camp.calendario.dia + (tipo === 'escoltar' ? 16 : 10),
+    causa: { id: fato.id, texto: fato.texto }, prazo: camp.calendario.dia + janela.dias,
+    criadaEm: camp.calendario.dia, motivoPrazo: janela.motivo,
     estado: 'oferecida', etapa: 0, conhecida: fato.conhecimento !== 'oculto', tentativas: 0,
     recompensa: tipo === 'investigar' || tipo === 'resgatar' ? 35 : 20, ...extra,
   };
@@ -24,6 +53,10 @@ export function oferecerMissao(camp: Campaign, tipo: MissaoViva['tipo'], fato: F
 export function encerrarMissao(camp: Campaign, q: MissaoViva, estado: MissaoViva['estado'], texto: string): void {
   if (!['oferecida', 'aceita'].includes(q.estado)) return;
   const participou = q.estado === 'aceita' && estado === 'concluida';
+  if (estado === 'falhada') {
+    const chave = q.estado === 'aceita' ? 'compromissosFalhados' : 'oportunidadesExpiradas';
+    camp.vivo!.contadores[chave] = (camp.vivo!.contadores[chave] ?? 0) + 1;
+  }
   q.estado = estado; q.desfecho = texto;
   if (participou) {
     camp.personagem.dinheiro += q.recompensa;
@@ -43,7 +76,7 @@ export function processarMissoesVivas(content: ContentBundle, camp: Campaign): v
     const rival = q.rival ? camp.kimetsu?.rivais[q.rival] : undefined;
     if (q.tipo === 'investigar' && rival && !rival.vivo) {
       // Participation is checked against the real confrontation record.
-      const matou = q.estado === 'aceita' && rival.memoria.at(-1)?.resultado === 'vitoria' && rival.ultimoDia >= q.prazo - 10;
+      const matou = q.estado === 'aceita' && rival.memoria.at(-1)?.resultado === 'vitoria' && rival.ultimoDia >= (q.aceitaEm ?? q.criadaEm ?? q.prazo - 10);
       encerrarMissao(camp, q, matou ? 'concluida' : 'resolvida_por_outros', `${rival.nome} foi eliminado; a origem dos desaparecimentos acabou.`); continue;
     }
     const civil = q.ator && v.pessoas[q.ator];
@@ -61,7 +94,7 @@ export function processarMissoesVivas(content: ContentBundle, camp: Campaign): v
       if (q.tipo === 'abastecer' && cidade && cidade.fomeDias > 0) {
         const fato = registrarFato(camp, { tipo: 'exodo', local: q.local, texto: 'Sem abastecimento, famílias passaram a procurar uma saída da vila.', atores: [], causa: q.causa, publico: true });
         const destino = Object.keys(v.cidades).find(id => id !== q.local && v.cidades[id].comida > 100);
-        if (destino) oferecerMissao(camp, 'escoltar', fato, { destino });
+        if (destino) oferecerMissao(camp, 'escoltar', fato, { destino }, content);
       }
     }
   }

@@ -258,6 +258,7 @@ export type NPC = {
 
 // ── Estado dinâmico de NPC por campanha (GDD §10.1).
 export type NpcDinamico = {
+  progressao?: import('./progressaoNpc').ProgressaoNpc;
   eixos: Record<string, number>; // disposicao/confianca/medo, ou desejo/confianca/conforto
   vivo: boolean;
   tensao: number; // sobe com negligência (GDD §10.4)
@@ -405,6 +406,7 @@ export type LivroState = {
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.
 export type Criatura = {
+  humano?: boolean;
   perfilOni?: import('./kimetsuTypes').PerfilOni;
   id: string;
   nome: string;
@@ -481,6 +483,7 @@ export type CombatState = {
 
 // ── Pacote completo de conteúdo de um cenário.
 export type ContentBundle = {
+  desafios?: Desafio[];
   cenario: Cenario;
   classes: Classe[];
   origens: Origem[];
@@ -517,6 +520,8 @@ export type Quest = {
   recompensa: { dinheiro?: number; xp?: number; item?: string; reputacao?: { faccaoId: string; delta: number }[] };
   prazoDias?: number;
 };
+
+export type Desafio = { id: string; criaturaId: string; local: string; titulo: string; descricao: string; aviso: string };
 
 export type QuestEstado = 'desconhecida' | 'ativa' | 'concluida' | 'falhada';
 

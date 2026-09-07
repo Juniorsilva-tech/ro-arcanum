@@ -28,13 +28,14 @@ export function encontrosElegiveis(content: ContentBundle, camp: Campaign, pool:
   });
 }
 
-export function obterRival(camp: Campaign, c: Criatura, ocupados: string[], local = camp.localAtual): RivalPersistente | undefined {
+export function obterRival(camp: Campaign, c: Criatura, ocupados: string[], local = camp.localAtual, alvoId?: string): RivalPersistente | undefined {
   if (!c.oni) return undefined;
   inicializarKimetsu(camp);
   const estado = camp.kimetsu!;
   const unico = c.perfilOni?.identidade;
   const ameaca = camp.continuidade?.ameacas.find(a => a.local === local && a.criaturaId === c.id && a.estado !== 'resolvida');
-  const preferido = ameaca && estado.rivais[ameaca.rivalId];
+  const alvo = alvoId && estado.rivais[alvoId];
+  const preferido = alvo && alvo.vivo && alvo.local === local && alvo.criaturaId === c.id ? alvo : ameaca && estado.rivais[ameaca.rivalId];
   let rival = unico ? estado.rivais[unico] : preferido && preferido.vivo && !ocupados.includes(preferido.id) ? preferido : Object.values(estado.rivais).find(r =>
     r.vivo && r.criaturaId === c.id && r.local === local && !ocupados.includes(r.id));
   if (!rival) {
@@ -65,7 +66,12 @@ export function registrarConfronto(camp: Campaign, resultado: 'vitoria' | 'derro
     if (r.vivo) r.rancor = Math.min(10, r.rancor + 1);
     if (resultado === 'derrota' && r.vivo) r.vitorias++;
     if (resultado === 'fuga') r.fugas++;
-    r.memoria.push({ dia: camp.calendario.dia, resultado, tecnica: s.ultimaTecnica });
+    r.memoria.push({ dia: camp.calendario.dia, resultado, tecnica: s.ultimaTecnica, local: camp.localAtual,
+      testemunhas: s.atores.filter(x => x.ehAliado && x.npcId && x.vida > 0).map(x => x.npcId!) });
+    r.comportamento ??= { recuperarAte: 0, pistaAte: 0, ultimoFeito: 0, ultimaAmeacaPessoal: -100 };
+    r.comportamento.pista = camp.localAtual;
+    r.comportamento.pistaAte = camp.calendario.dia + 14;
+    if (r.vivo && a.vida < a.vidaMax * .4) r.comportamento.recuperarAte = camp.calendario.dia + 7;
     r.memoria = r.memoria.slice(-12);
     if (!r.vivo && a.perfilOni?.identidade) camp.flags[`matou.${a.criaturaId}`] = true;
   }

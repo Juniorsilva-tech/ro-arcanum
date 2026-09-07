@@ -11,8 +11,16 @@ import { iniciarCombate } from './combat';
 import { encontrosElegiveis } from './kimetsu';
 import { processarSubidaDeNivel } from './progresso';
 import { alternarOcultacao } from './aptidao';
+import { maestriaDe, treinar } from './aptidao';
+import { npcPorId } from './elenco';
+import { localEfetivo } from './historiaViva';
+import { treinarNpc } from './progressaoNpc';
+import { concederDespertar } from './progresso';
 
 export type AcaoMundo =
+  | { tipo: 'desafio'; id: string }
+  | { tipo: 'treinar_companheiro'; npcId: string }
+  | { tipo: 'consolidar_legado' }
   | { tipo: 'missao'; id: string; escolha: 'aceitar' | 'ajudar' | 'negociar' | 'investigar' | 'confrontar' }
   | { tipo: 'obra'; edificio: TipoEdificio }
   | { tipo: 'trabalhar' | 'descansar' | 'noticias' | 'libertar_se' | 'conter_se' }
@@ -33,6 +41,27 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     processarSubidaDeNivel(camp);
     return { ok: true, texto };
   };
+  if (acao.tipo === 'desafio') {
+    const desafio = content.desafios?.find(d => d.id === acao.id && d.local === camp.localAtual);
+    if (!desafio || camp.flags[`desafio.concluido.${desafio.id}`]) return { ok: false, texto: 'Esta expedição não está disponível aqui.' };
+    const r = terminar(`Você se prepara para enfrentar ${desafio.titulo}.`, 1);
+    iniciarCombate(content, camp, [desafio.criaturaId]);
+    return { ...r, combate: true };
+  }
+  if (acao.tipo === 'treinar_companheiro') {
+    const npc = npcPorId(content, camp, acao.npcId);
+    if (!npc?.combatente || !camp.grupo?.includes(npc.id) || !camp.npcState[npc.id]?.vivo || localEfetivo(camp, npc) !== camp.localAtual) return { ok: false, texto: 'Convide um combatente presente para o grupo primeiro.' };
+    if (p.dinheiro < 5) return { ok: false, texto: 'O treino exige 5 moedas em alimentação e material.' };
+    if (!treinarNpc(camp, npc, 3)) return { ok: false, texto: 'Esse companheiro não pode treinar agora.' };
+    p.dinheiro -= 5;
+    treinar(content, camp, 'espada', { mestre: .5, esforco: .8, recursos: .7, observadorId: npc.id });
+    return terminar(`Você e ${npc.nome} treinaram juntos. A prática melhora a capacidade de ambos.`, 2);
+  }
+  if (acao.tipo === 'consolidar_legado') {
+    if (!camp.flags['desafio.concluido.expedicao_cavaleira_do_eclipse'] || maestriaDe(camp, 'espada') < 80) return { ok: false, texto: 'Supere a prova do eclipse e alcance maestria 80 na lâmina.' };
+    if (!concederDespertar(camp, 'dominou_prova_eclipse', 'você consolidou o legado da prova do eclipse')) return { ok: false, texto: 'Esse legado já faz parte de você.' };
+    return terminar('O legado do eclipse se consolidou no seu corpo e na sua técnica.', 2);
+  }
   if (acao.tipo === 'libertar_se') {
     if (!p.condicoes.includes('cativo')) return { ok: false, texto: 'Você já está livre.' };
     const pagar = p.dinheiro >= 20;
@@ -110,7 +139,7 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
   if (!q || !q.conhecida || !['oferecida', 'aceita'].includes(q.estado) || dia > q.prazo) return { ok: false, texto: 'Essa missão não está disponível.' };
   if (acao.escolha === 'aceitar') {
     if (q.estado !== 'oferecida') return { ok: false, texto: 'Você já aceitou esse compromisso.' };
-    q.estado = 'aceita';
+    q.estado = 'aceita'; q.aceitaEm = dia;
     return terminar(`Você aceitou: ${q.titulo}.`);
   }
   if (q.estado !== 'aceita') return { ok: false, texto: 'Aceite o compromisso primeiro.' };
@@ -127,6 +156,10 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
       return terminar(`Os rastros levam a ${rival.nome}. Retorne à noite para confrontá-lo.`);
     }
     if (acao.escolha !== 'confrontar' || q.etapa < 1) return { ok: false, texto: 'Investigue os rastros primeiro.' };
+    if (rival.local !== camp.localAtual) {
+      q.local = rival.local; q.etapa = 0;
+      return terminar('O esconderijo está vazio. Novos rastros indicam outra região; será preciso investigar novamente.');
+    }
     if (!encontrosElegiveis(content, camp, [rival.criaturaId]).length) return { ok: false, texto: 'O alvo se esconde do sol; aguarde a noite.' };
     // Perseguir custa tempo como toda ação deste painel. Sem isso o confronto
     // era a única saída que não movia o calendário: dava para repeti-lo
@@ -134,11 +167,12 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     // ferimentos quando o dia vira (ver engine/kimetsu.ts) — era moído numa
     // sequência de tentativas gratuitas.
     const alcance = terminar(`Você alcançou ${rival.nome}.`);
+    if (!rival.vivo || rival.local !== camp.localAtual || !['oferecida', 'aceita'].includes(q.estado)) return { ok: true, texto: 'Durante a aproximação, a situação mudou. Consulte o compromisso e os novos rastros.' };
     // O período que passou pode ter trazido a luz do dia.
     if (!encontrosElegiveis(content, camp, [rival.criaturaId]).length) {
       return { ok: true, texto: 'Quando você chegou ao esconderijo, a luz já o protegia. Volte à noite.' };
     }
-    iniciarCombate(content, camp, [rival.criaturaId]);
+    iniciarCombate(content, camp, [rival.criaturaId], rival.id);
     return { ...alcance, combate: true };
   }
   if (q.tipo === 'escoltar') {

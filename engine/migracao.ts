@@ -14,6 +14,8 @@ import { mundoInicial } from './mundo';
 import { inicializarKimetsu, VERSAO_COMBATE } from './kimetsu';
 import { iniciarContinuidade } from './continuidade';
 import { iniciarFamilia } from './familia';
+import { migrarProgressaoNpcs } from './progressaoNpc';
+import { recalcularRecursosMaximos } from './progresso';
 import { iniciarMundoVivo } from './historiaViva';
 import { migrarAptidao } from './aptidao';
 
@@ -127,6 +129,12 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   camp.mundo ??= mundoInicial(camp);
   iniciarContinuidade(content, camp);
   iniciarMundoVivo(content, camp);
+  migrarProgressaoNpcs(content, camp);
+  // One-time migration, deferred during a saved combat so actors stay coherent.
+  if (!camp.flags['versao.legados'] && (!camp.combate || camp.combate.terminado)) {
+    recalcularRecursosMaximos(camp);
+    camp.flags['versao.legados'] = 1;
+  }
   // Older builds could start a public war involving a clandestine group.
   if (camp.mundo.guerraAtiva && [camp.mundo.guerraAtiva.a, camp.mundo.guerraAtiva.b].some(f => ['onis', 'cacadores'].includes(f))) {
     camp.mundo.guerraAtiva = undefined;

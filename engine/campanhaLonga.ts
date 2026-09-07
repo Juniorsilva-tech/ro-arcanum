@@ -29,6 +29,7 @@ import { aprenderArte, mestresQueEnsinamAqui } from './magic';
 import { DIAS_POR_ANO } from './vidanpc';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoDeAptidao, maestriaDe } from './aptidao';
+import { planejarMissao } from './planejadorSim';
 
 export type Violacao = { dia: number; regra: string; detalhe: string };
 
@@ -36,7 +37,7 @@ export type Metricas = {
   seed: string;
   dias: number;
   anos: number;
-  causaFim: 'idade' | 'morte' | 'fim_do_prazo' | 'sem_saida' | 'travado_em_combate';
+  causaFim: 'idade' | 'morte' | 'fim_do_prazo' | 'limite_acoes' | 'travado_em_combate';
   acoes: number;
   viagens: number;
   combates: number;
@@ -56,6 +57,8 @@ export type Metricas = {
   missoesGeradas: number;
   missoesConcluidas: number;
   missoesFalhadas: number;
+  compromissosFalhados: number;
+  oportunidadesExpiradas: number;
   missoesResolvidasPorOutros: number;
   npcsMortos: number;
   npcsNascidos: number;
@@ -87,6 +90,7 @@ export type OpcoesSimulacao = {
   intervaloSave?: number;
   /** Teto de ações, para uma campanha travada não rodar para sempre. */
   maxAcoes?: number;
+  politica?: 'exploratoria' | 'objetivos';
 };
 
 // A pergunta que importa nao e a taxa global de vitoria, e se a escada de
@@ -244,7 +248,7 @@ function contarVivos(camp: Campaign): number {
 // e as missões vivas só existem por ali (ver engine/acoesMundo.ts). Um agente
 // que só aperta verbos joga um jogo que nenhum jogador joga — e mede errado.
 // Devolve true quando gastou o passo aqui.
-function acaoDeMundo(content: ContentBundle, camp: Campaign, m: Metricas): boolean {
+function acaoDeMundo(content: ContentBundle, camp: Campaign, m: Metricas, objetivos = false): boolean | 'viagem' {
   const p = camp.personagem;
   // A campanha começa no nascimento: o prólogo dos 0 aos 18 anos tranca todo o
   // resto até acabar (ver engine/familia.ts e a guarda em acoesMundo.ts).
@@ -271,6 +275,14 @@ function acaoDeMundo(content: ContentBundle, camp: Campaign, m: Metricas): boole
     if (executarAcaoMundo(content, camp, { tipo: 'trabalhar' }).ok) return true;
   }
 
+  if (objetivos) {
+    const plano = planejarMissao(content, camp);
+    if (plano?.tipo === 'viajar') {
+      const r = viajar(content, camp, plano.destino);
+      if (r.ok) { m.viagens++; return 'viagem'; }
+    } else if (plano && executarAcaoMundo(content, camp, plano.acao).ok) return true;
+  }
+
   // Um mestre por perto que ensina algo alcançável é oportunidade que ninguém
   // deixa passar — e é o único caminho para as respirações entrarem em jogo.
   for (const { artes } of mestresQueEnsinamAqui(content, camp)) {
@@ -283,7 +295,7 @@ function acaoDeMundo(content: ContentBundle, camp: Campaign, m: Metricas): boole
   }
 
   const v = camp.vivo;
-  if (v) {
+  if (v && !objetivos) {
     const conhecidas = v.missoes.filter(q => q.conhecida && camp.calendario.dia <= q.prazo);
     const aceitar = conhecidas.find(q => q.estado === 'oferecida');
     if (aceitar && nextFloat(camp.rng) < 0.7) {
@@ -324,7 +336,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   const m: Metricas = {
     seed, dias: 0, anos: 0, causaFim: 'fim_do_prazo',
     acoes: 0, viagens: 0, combates: 0, combatesIniciados: 0, combatesPorViagem: 0, combatesPorPainel: 0, combatesPorVerbo: 0, vitorias: 0, derrotas: 0, fugas: 0,
-    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0,
+    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
     picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, idadeFinal: 20,
@@ -340,6 +352,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   let combateAnterior = false;
   let ultimoDiaContado = 0;
   while (camp.calendario.dia < diaAlvo && m.acoes < maxAcoes) {
+    let origemAcao: boolean | 'viagem' = false;
     const emCombate = !!(camp.combate && !camp.combate.terminado);
     if (emCombate && !combateAnterior) m.combatesIniciados++;
     combateAnterior = emCombate;
@@ -391,8 +404,10 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
         fecharCombate(camp);
       }
       m.acoes++;
-    } else if (acaoDeMundo(content, camp, m)) {
-      if (camp.combate && !camp.combate.terminado) m.combatesPorPainel++;
+    } else if ((origemAcao = acaoDeMundo(content, camp, m, opts.politica === 'objetivos'))) {
+      if (camp.combate && !camp.combate.terminado) {
+        if (origemAcao === 'viagem') m.combatesPorViagem++; else m.combatesPorPainel++;
+      }
       m.acoes++;
     } else {
       const ctx = calcularContexto(content, camp);
@@ -472,7 +487,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   m.anos = Math.floor(m.dias / DIAS_POR_ANO);
   m.nivelFinal = camp.personagem.nivel;
   m.idadeFinal = camp.personagem.idade ?? 20;
-  if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'sem_saida';
+  if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'limite_acoes';
   if (m.causaFim === 'morte' && m.idadeFinal >= 65) m.causaFim = 'idade';
   if (v) {
     m.missoesGeradas = v.contadores.missoesGeradas ?? 0;
@@ -480,6 +495,8 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     // por ali subestima a campanha inteira. Os contadores não são podados.
     m.missoesConcluidas = v.contadores.missao_concluida ?? 0;
     m.missoesFalhadas = v.contadores.missao_falhada ?? 0;
+    m.compromissosFalhados = v.contadores.compromissosFalhados ?? 0;
+    m.oportunidadesExpiradas = v.contadores.oportunidadesExpiradas ?? 0;
     m.missoesResolvidasPorOutros = v.contadores.missao_resolvida_por_outros ?? 0;
     m.emboscadas = v.contadores.emboscada ?? 0;
     m.picoDeFome = Math.max(0, ...Object.values(v.cidades).map(c => c.fomeDias));
@@ -508,11 +525,12 @@ export function simularLote(
   campanhas: number,
   prefixo = 'longa',
   marca?: MarcaInfancia,
+  politica: OpcoesSimulacao['politica'] = 'exploratoria',
 ): { resultados: ResultadoSimulacao[]; violacoes: Violacao[] } {
   const resultados: ResultadoSimulacao[] = [];
   const violacoes: Violacao[] = [];
   for (let i = 0; i < campanhas; i++) {
-    const r = simularCampanhaLonga(content, { seed: `${prefixo}-${i}`, anos, marca });
+    const r = simularCampanhaLonga(content, { seed: `${prefixo}-${i}`, anos, marca, politica });
     resultados.push(r);
     for (const x of r.violacoes) violacoes.push({ ...x, detalhe: `[${r.metricas.seed}] ${x.detalhe}` });
   }
@@ -552,6 +570,8 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     missoesGeradas: +med(m => m.missoesGeradas).toFixed(1),
     missoesConcluidas: +med(m => m.missoesConcluidas).toFixed(1),
     missoesFalhadas: +med(m => m.missoesFalhadas).toFixed(1),
+    compromissosFalhados: +med(m => m.compromissosFalhados).toFixed(1),
+    oportunidadesExpiradas: +med(m => m.oportunidadesExpiradas).toFixed(1),
     resolvidasPorOutros: +med(m => m.missoesResolvidasPorOutros).toFixed(1),
     npcsMortos: +med(m => m.npcsMortos).toFixed(1),
     npcsNascidos: +med(m => m.npcsNascidos).toFixed(1),

@@ -10,6 +10,7 @@ import { itensVaelhorn } from './items';
 import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
 import { questsVaelhorn } from './quests';
 import { integrarKimetsu } from './kimetsu';
+import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -31,7 +32,8 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   artes: artesVaelhorn,
   reliquias: reliquiasVaelhorn,
   itens: itensVaelhorn,
-  criaturas: criaturasVaelhorn,
+  criaturas: [...criaturasVaelhorn, ...criaturasDeDesafio],
+  desafios: desafiosVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,

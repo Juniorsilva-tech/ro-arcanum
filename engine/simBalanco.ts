@@ -26,6 +26,8 @@ for (const { rotulo, opts } of PERFIS) {
         `   razão ${r.razaoMedia.toFixed(2)}   vs ${r.exemplo}`,
     );
   }
+  console.log('\n  Cobertura do bestiário (estimativa de duelo, não taxa de vitória):');
+  for (const linha of cobertura(conteudoVaelhorn, opts)) console.log(`    ${linha}`);
 }
 
 console.log(`\n${foraDaFaixa} de ${PERFIS.length * 5} faixas fora do alvo.\n`);

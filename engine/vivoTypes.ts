@@ -18,6 +18,7 @@ export type MissaoViva = {
   id: string; tipo: 'abastecer' | 'tratar' | 'escoltar' | 'reconstruir' | 'resgatar' | 'investigar';
   titulo: string; local: string; destino?: string; ator?: string; rival?: string;
   causa: { id: string; texto: string }; prazo: number;
+  criadaEm?: number; aceitaEm?: number; motivoPrazo?: string;
   estado: 'oferecida' | 'aceita' | 'concluida' | 'falhada' | 'resolvida_por_outros';
   etapa: number; conhecida: boolean; tentativas: number;
   recompensa: number; desfecho?: string;
@@ -29,6 +30,7 @@ export type VidaCivil = {
   moedas: number; fome: number; saude: number; habilidade: number; prestigio: number;
   proximaDecisao: number; parceiros: Record<string, number>;
   conjuge?: string; filhos: string[]; tutores?: string[]; cativoAte?: number;
+  formacao?: { caminho: 'civil' | 'guarda'; sessoes: number; mentor?: string; concluida: boolean };
 };
 export type GovernoVivo = {
   lider?: string; legitimidade: number; sucessoes: number;

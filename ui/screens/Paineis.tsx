@@ -5,9 +5,12 @@ import { Pagina, BarraVoltar } from './_layout';
 import { TextoSerif, TextoMono, Card, Medidor, Divisor, Rotulo, Selo, Botao } from '../components';
 import { cores, fontes, esp, corPressao, corImpulso } from '../theme';
 import { useGame } from '../store';
-import { ComunidadeViva, CompromissosVivos, HistoriaViva } from './MundoVivo';
+import { ComunidadeViva, CompromissosVivos, HistoriaViva, BiografiaViva } from './MundoVivo';
+import { Progressao } from './Progressao';
 import {
   derivados,
+  defesaJogador,
+  acertoJogador,
   modificador,
   IMPULSOS,
   ATTR_KEYS,
@@ -23,6 +26,7 @@ import {
   type EstadoEntrada,
   todosNpcs,
   calcularContexto,
+  retratoProgressaoNpc,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -119,11 +123,12 @@ export function Ficha() {
         <Medidor key={imp.id} rotulo={imp.nome} valor={camp.impulsos[imp.id]} max={100} cor={corImpulso(camp.impulsos[imp.id])} compacto />
       ))}
 
+      <Progressao />
       <Divisor label="derivados" />
       <View style={styles.derivGrid}>
-        <Deriv nome="Defesa" v={d.defesa} />
+        <Deriv nome="Defesa" v={defesaJogador(content, camp)} />
         <Deriv nome="Iniciativa" v={d.iniciativa} />
-        <Deriv nome="Acerto" v={d.acerto} />
+        <Deriv nome="Acerto" v={acertoJogador(content, camp)} />
         <Deriv nome="Poder" v={d.poder} />
         <Deriv nome="Carga máx" v={d.cargaMax} />
         <Deriv nome="Percepção" v={d.percepcaoPassiva} />
@@ -190,6 +195,7 @@ export function Vinculos() {
   const eixos = content.cenario.eixosRelacao;
   const resgatar = useGame(s => s.resgatarFamiliar);
   const alternarCompanheiro = useGame(s => s.alternarCompanheiroAcao);
+  const agirMundo = useGame(s => s.acaoMundo);
   const [avisoGrupo, setAvisoGrupo] = useState('');
 
   const elenco = todosNpcs(content, camp);
@@ -227,7 +233,10 @@ export function Vinculos() {
               {din.tensao >= 60 && <Selo texto="afastando-se" cor={cores.cinabrio} />}
             </View>
             <TextoMono style={{ marginBottom: esp.sm }}>{n.ocupacao}</TextoMono>
+            {n.combatente && <TextoMono>Prática adquirida: {retratoProgressaoNpc(camp, n)?.maestria} · vida máxima {retratoProgressaoNpc(camp, n)?.vidaMax} · dano {retratoProgressaoNpc(camp, n)?.dano}</TextoMono>}
+            {noGrupo && din.vivo && <Botao titulo="Treinar juntos · 5 moedas" onPress={() => agirMundo({ tipo: 'treinar_companheiro', npcId: n.id })} />}
             {n.parentesco && <Selo texto={n.parentesco.toUpperCase()} cor={cores.ouro} />}
+            <BiografiaViva id={n.id} />
             {parente && parente.condicao !== 'livre' && <Selo texto={parente.condicao.toUpperCase()} cor={cores.cinabrio} />}
             {n.combatente && <Selo texto={noGrupo ? 'NO GRUPO' : 'COMBATENTE'} cor={noGrupo ? cores.verdigris : cores.mudo} />}
             {eixos.map((e) => {
@@ -331,6 +340,7 @@ export function Mapa() {
               {r.periodos === 0 ? 'ao lado' : `${r.periodos} período(s) de viagem`}
               {conhecido ? ` · ${dest.tipo}` : ''}
             </TextoMono>
+            <TextoMono>Risco da rota: {r.perigo}/10. Viagens à noite aumentam a chance de encontro. Esse risco não garante adversários do seu nível.</TextoMono>
           </Card>
         );
       })}

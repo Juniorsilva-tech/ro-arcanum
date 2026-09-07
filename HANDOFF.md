@@ -696,3 +696,388 @@ Nenhuma regressão.
 5. **CHIM intocado**, conforme pedido.
 6. Os achados de balanceamento das sessões anteriores continuam abertos: Nemesis
    que só acumula, fome estrutural das cidades e prazo fixo de missão.
+
+---
+
+## Sessão 4 — Astra — 2026-09-06 — expedições, legados e companheiros
+
+### Estado recebido e preservado
+
+HEAD recebido: `808a5fc`. Árvore inicialmente limpa. Leitura das três sessões
+acima e de AGENTS.md antes de editar; trabalho de um único agente.
+Baseline: `npm run test:engine` passou, seis campanhas sem violações;
+`npm run balanco -- 400` mostrou 17/20 faixas dentro dos alvos. A cobertura
+já era calculada pelo módulo, mas o comando não a imprimia. Nenhum alvo de
+vitória, prazo de missão, produção das cidades ou acúmulo de Nemesis foi alterado.
+
+### Implementado
+
+- Dez criaturas originais não-oni, níveis 10–32, com expedições locais opcionais
+  em `content/vaelhorn/desafios.ts`. Fichas fixas: não escalam com o jogador,
+  não entram no sorteio normal de viagens. Conclusão e recompensa únicas por
+  campanha; derrota/fuga permitem nova tentativa. Interface no painel da comunidade.
+- Dois legados conquistados, em `engine/identidade.ts`: ancestral (vida ×1,20,
+  dano ×1,25) e eclipse (vida ×1,10, dano ×1,15). Vale o maior multiplicador,
+  sem produto acumulativo. Eclipse exige vencer a expedição e maestria 80;
+  pode ser consolidado depois se a maestria ainda não bastava na vitória.
+  São adaptações RPG, não a Marca canônica. Potencial de nascimento não concede bônus.
+- Despertar recalcula recursos imediatamente, conservando ferimentos proporcionais.
+  Recalcular não ressuscita. Campanhas novas agora usam a vida da fórmula aprovada
+  (a fábrica ainda deixava a vida antiga); saves recebem migração única fora de combate.
+- `engine/progressaoNpc.ts`: esforço, experiência, potencial privado e ficha
+  derivada persistentes. Treino autônomo, prática em combate e treino pago com
+  companheiro afetam atributos reais usados nas lutas. Cura diária usa o novo máximo.
+  Migração preserva habilidade anterior; treino não consome RNG da campanha.
+- Ficha mostra maestria/reputação adquiridas, ocultação e legados; Vínculos mostra
+  progressão e treino dos aliados. Acerto/defesa passam a usar os cálculos de combate.
+- Novos constructos/feras não podem se render como humanos nem escravizar o jogador.
+  Campo opcional `Criatura.humano` preserva compatibilidade do conteúdo antigo.
+- Simulador distingue `limite_acoes` de um travamento real; orçamento não aumentou.
+
+### Arquivos de integração
+
+Além dos novos módulos: `engine/{acoesMundo,autonomia,campaign,campanhaLonga,
+combat,index,llm,migracao,mundo,progresso,simBalanco,types}.ts`,
+`content/vaelhorn/index.ts`, `ui/screens/{MundoVivo,Paineis,Progressao}.tsx`,
+`package.json`. Nova suíte `engine/expansao.selftest.ts` incluída em test:engine.
+
+### Verificação executada
+
+- `npm run typecheck`: passou.
+- `npm run test:engine`: cinco suítes e seis campanhas, zero violações, 53,1 s.
+  Três campanhas atingiram dez anos; as outras pararam em 8/9/9 anos pelo limite
+  de ações. Média 9,3 anos, 36.413 ações e 1.023,5 combates por campanha.
+  Não confundir teste automático da engine com sessão manual pela interface.
+- Suíte de expansão executada novamente após acrescentar vitória real em fixture
+  controlada: conclusão, impossibilidade de repetir, save, progressão, sigilo,
+  idempotência, ferimentos e não-ressurreição passaram.
+- `npm run balanco -- 400`: mesmos 17/20 alvos sintéticos do baseline.
+  Cobertura estimada agora preenche cinco faixas para veterano e mestre;
+  caçador com Nichirin ainda tem três faixas vazias. Cobertura não é taxa empírica.
+- `npx expo export --platform web`: passou, 334 módulos, bundle de 936 KB.
+- Não houve teste visual interativo, build Android/APK nem teste de narrador remoto.
+
+### Pendências / limites desta entrega
+
+1. Não é implementação integral de marca, linhagens, pactos e técnicas canônicas.
+   Foram conectados dois legados verificáveis. CHIM continua intocado.
+2. Nemesis ainda usa a progressão própria anterior. NPCs sem ficha combatente
+   não se tornam combatentes por esta mudança; prodígios familiares precisam de
+   uma trajetória de aquisição de profissão/ficha, não apenas números.
+3. As quatro decisões do usuário continuam abertas: acúmulo de Nemesis, fome,
+   prazo de missão e taxa de vitória desejada. Três faixas sintéticas seguem fora.
+4. Simulação longa usa a política automática existente; não explora sistematicamente
+   cada nova expedição nem recrutamento. Próximo passo: testes longos específicos
+   de grupo/expedições e validação visual dos botões/estados pela interface.
+5. Migração dos recursos de save com combate em andamento fica adiada até
+   normalização posterior fora do combate; não reescrever atores no meio da luta.
+6. Alterações desta sessão estão locais, sem commit/push efetuado pelo Astra.
+
+---
+
+## Sessão 5 — em andamento — integração causal — 2026-09-06
+
+Pedido: implementar a proposta de qualidade e deixar continuidade explícita ao Claude.
+Estado recebido: alterações locais da sessão 4 ainda presentes; preservar todas.
+Plano, registrado antes da implementação:
+
+1. Missões: prazo contextual, origem/data persistentes, pessoas envolvidas,
+   resolução independente e atribuição correta de participação.
+2. Nemesis: perseguir pistas conhecidas, não coordenadas oniscientes; recuperação,
+   desistência, feitos limitados e ameaça pessoal somente com encontro testemunhado.
+3. Sociedade: economia de subsistência proporcional à população com perdas reais
+   por crises; formação profissional de familiares sem transformar talento em destino.
+4. Identidades: preservar cânone e separar adaptação RPG. Não inventar pacto/Marca
+   só para preencher uma lista; registrar implementado versus ainda proposto.
+5. Visibilidade: motivos dos prazos, biografias e impactos acessíveis na interface.
+6. Testar antes/depois, atualizar este registro com resultados e ponto exato de parada.
+
+Critérios: consequências persistentes, determinismo, ausência de recompensas
+duplicadas, nenhum morto ressuscitado, nenhuma perseguição sem pista e nenhuma
+alteração em ficha canônica compartilhada. Metas de vitória continuam iguais;
+coeficientes novos são regras provisórias de RPG, sujeitos a medição posterior.
+
+### PARADA SOLICITADA PELO USUÁRIO — limite de uso (2026-09-06)
+
+**Claude: continuar daqui, não da sessão 4. Sessão 5 está PARCIAL e ainda não
+validada integralmente.** Usuário pediu parar e documentar por restarem 2% de uso.
+Nenhum commit/push foi feito. As alterações das sessões 4 e 5 coexistem na árvore.
+Não há outro agente modificando arquivos.
+
+#### O que já foi escrito nesta sessão
+
+- `engine/missoesVivas.ts`: novos `periodosDeViagem` (menor custo de rota) e
+  `janelaMissao`. Urgência por crise/tipo, escolta acrescenta deslocamento usando
+  os seis períodos reais do dia; destinos desconectados são rejeitados quando
+  o conteúdo é fornecido. Novos campos opcionais `criadaEm`, `aceitaEm`,
+  `motivoPrazo` em `vivoTypes.ts`. Missões antigas preservam seus prazos.
+  Deduplicação considera rival. Atribuição de vitória usa data de aceitação,
+  com fallback para saves antigos, em vez de assumir sempre prazo de dez dias.
+- `engine/acoesMundo.ts`: registra aceitação; confronto verifica se rival mudou
+  de local e exige nova investigação. Revalida vida, localização e estado da
+  missão após avançar o tempo. Passa rival específico ao combate.
+- `engine/kimetsu.ts`, `kimetsuTypes.ts`: memória registra local e companheiros
+  vivos presentes no confronto. `comportamento` guarda pista com validade de
+  14 dias, recuperação de sete dias quando gravemente ferido, último feito e
+  intervalo de ameaça pessoal. `obterRival` aceita alvo opcional validado.
+- `engine/combat.ts`: `iniciarCombate` aceita quarto argumento opcional
+  `rivalAlvo`, repassado a `obterRival`, para não selecionar outro oni do mesmo
+  arquétipo numa missão dirigida.
+- `engine/nemesis.ts`: perseguição usa pista testemunhada, não posição atual
+  onisciente do jogador; recuperação impede emboscadas; pista expira e rancor
+  diminui. Rede de servos só registra expansão real, pode perder servos em
+  segurança alta e aprendizado por vitórias tem teto quatro. Ameaça pessoal
+  referencia companheiro realmente visto, SEM sequestrá-lo por texto. Missões
+  podem reaparecer com intervalo de 30 dias, não a cada semana. Caçador autônomo
+  usa ficha derivada e recebe experiência após caçada concluída.
+- `engine/cidades.ts`: subsistência proporcional à população, bônus de lavouras
+  e perdas por doença/guerra/integridade/estação. Fórmula provisória:
+  população × 0,20 × (1 + lavouras × 0,04) × fertilidade × condição
+  × (1 - doença/150) × (guerra ? 0,6 : 1). Consumo anterior mantido.
+- Novo `engine/formacao.ts`: somente NPCs pertencentes à campanha, adultos,
+  livres e sem ficha combatente podem se formar. Vocação independente do RNG
+  principal: ofício marcial ou chance determinística de 25%; demais preferem
+  vida civil. Exige mentor combatente humano presente, saúde e sustento;
+  20 sessões pagas de prática geram ficha básica, sem técnicas canônicas nem
+  Nichirin gratuitas. Não modifica o catálogo compartilhado. Registra começo
+  e conclusão, depois conecta à progressão existente.
+- `engine/autonomia.ts`: chama formação na decisão civil; remove mortos do
+  grupo; companheiro perde vínculo com grupo quando confiança < -5, apenas
+  fora de combate ativo, com fato persistente.
+- `ui/screens/MundoVivo.tsx`: mostra motivo de prazo e formação.
+  `Paineis.tsx`: conecta `BiografiaViva` a Vínculos.
+
+#### Validação REAL desta sessão
+
+- ANTES das alterações: `npm run test:engine` passou (40,5 s, seis campanhas,
+  zero violações, média 9,3 anos); `npm run balanco -- 400`: 17/20 faixas.
+- Typecheck passou após a primeira integração de missões/Nemesis e novamente
+  após formação/cidades/UI. A segunda chamada terminou com código global 1
+  porque uma busca posterior usou pasta inexistente `content/kimetsu`, NÃO por
+  erro TypeScript. Conteúdo correto: `content/vaelhorn/kimetsu.ts`.
+- **Última alteração de rivalAlvo/revalidação pós-tempo ainda NÃO passou por
+  typecheck. Nenhuma suíte completa nem build foi rodada após as mudanças da
+  sessão 5. Não declarar estas mudanças prontas.**
+
+#### Próximos passos exatos (prioridade)
+
+1. Rodar `npm run typecheck`; revisar diff preservando sessões anteriores.
+2. Criar suíte causal para prazos urgentes versus obras, rotas/desconexão,
+   save antigo/novo, atribuição correta e recompensa única. Cobrir confronto
+   cujo alvo morre/muda durante o avanço do relógio e seleção do rival exato.
+3. Testar Nemesis sem pista, pista expirada, recuperação, teto por feitos,
+   perda de rede, morte definitiva e ameaça pessoal somente a testemunhas.
+   Rever `r.memoria` antiga sem local: migração não inventa pista, intencional.
+4. Testar formação: menor/morto/cativo/sem mentor não progride, 20 sessões
+   reais geram ficha persistente, conteúdo compartilhado intacto, vocação não
+   consome RNG. Testar saída de grupo sem remover ator no meio de combate.
+5. Simular cidade saudável por estações e crises; medir fome antes/depois.
+   A nova produção AINDA NÃO foi avaliada em campanhas longas. Conferir se
+   estoques/limites continuam coerentes para cidades muito populosas.
+6. Rodar `npm run test:engine`, `npm run balanco -- 400` e
+   `npx expo export --platform web`. Registrar resultados reais; metas de vitória
+   não foram alteradas. Validar novas telas manualmente quando possível.
+
+#### Cuidado / revisão pendente
+
+- `janelaMissao` inclui distância de escolta, NÃO distância do jogador até
+  toda missão. Isso evita que a localização do protagonista determine a
+  duração de uma crise, mas ainda é uma versão limitada dos prazos contextuais.
+- Ao localizar esconderijo vazio, `acoesMundo.ts` atualmente muda `q.local`
+  diretamente para `rival.local`, narrando rastros. Rever se deve indicar só o
+  próximo trecho da rota para evitar rastreamento perfeito do alvo pelo jogador.
+- A morte de rival por NPC pode manter a última memória de vitória do jogador;
+  revisar atribuição por autor explícito da morte para excluir crédito indevido
+  em casos antigos/excepcionais (data sozinha não é prova absoluta).
+- `formacao.ts` usa saúde civil para vida inicial da ficha e inicializa progressão;
+  conferir proporção quando habilidade civil prévia já altera máximo derivado.
+- Rival ainda se recupera conforme regra antiga de `obterRival`; a janela nova
+  restringe perseguição/emboscada, não proíbe ser encontrado num esconderijo.
+- Ameaça pessoal gera investigação contextual, não sistema completo de
+  sequestro por onis. Não narrar consequências que a engine não aplicou.
+
+#### Ainda NÃO implementado (não confundir com concluído)
+
+- Último ponto planejado antes da interrupção: ações ativas dos DOIS legados
+  existentes em combate, com custo/limite. **Nenhum código dessas ações foi
+  escrito.** Apenas inspecionados `jogadorAcaoTatica`, `recargas`, recursos e UI.
+  Ideia ainda não aprovada como regra final: ancestral voltado a sobrevivência,
+  eclipse à precisão, ambos com custo e sem multiplicação infinita.
+- Marca canônica, linhagem e pacto completos ainda ausentes. Exigem revisar os
+  documentos do usuário e registrar requisitos/custos/incompatibilidades, não
+  simplesmente adicionar multiplicadores. CHIM continua intocado.
+- NPCs têm formação básica/ruptura por confiança, não desejos e decisões
+  completos. Formação arcana/medicina e trajetórias de familiares ilustres
+  continuam pendentes; não afirmar que um pai “mestre da espada” recebeu uma
+  ficha equivalente ao passado narrado.
+- Reação social específica a identidades raras, proteção familiar aprofundada,
+  todas as alternativas narrativas e sinais de perigo completos faltam.
+- Simulação longa ainda não percorre sistematicamente grupo, formação e
+  expedições; precisa desses cenários antes de encerrar a versão jogável.
+- Não houve commit, backup remoto, APK ou validação manual da sessão 5.
+
+### Validação posterior da sessão 5 — pedido “testar então tudo”
+
+Executada sobre os arquivos locais atuais, sem modificar regras de jogo:
+
+- `npm run typecheck`: passou, inclusive alteração de rivalAlvo.
+- `npm run test:engine`: cinco suítes passaram; seis campanhas simuladas,
+  zero violações dos invariantes existentes, 27,4 segundos.
+- Desfechos: longa-0/2/4 atingiram dez anos; longa-1/5 pararam aos sete anos
+  pelo limite de ações; longa-3 terminou por morte aos dois anos.
+  Média de 7,7 anos. NÃO foram seis campanhas completas de dez anos.
+- Média por campanha: 807,5 combates, 450,5 vitórias, 101,5 derrotas,
+  255,5 fugas; 266,8 missões geradas, 53,8 concluídas, 202 falhadas e dez
+  resolvidas por outros. Emboscadas: 40,7; rivais vivos por dia: 13,7.
+- Vitória por faixa: 1–5 = 15,6%; 6–10 = 24,1%; 11–15 = 30,3%;
+  16–20 = 41,4%; 21–25 = 56,9%; 26+ = 76,4%.
+  São resultados da política automática, não taxas garantidas para jogador humano.
+- `npm run balanco -- 400`: 17/20 faixas sintéticas dentro dos alvos.
+  Fora: recruta +20% (63%), recruta +40% (75,3%), veterano +40% (78,8%).
+  Sem mudança perante o baseline. Caçador Nichirin ainda tem três lacunas de
+  cobertura estimada; veterano e mestre têm cobertura nas cinco faixas.
+- `npm run sim`: passou; 10.000 amostras por faixa e teste curto de agência.
+- `npx expo export --platform web`: passou, 335 módulos, bundle 942 KB.
+
+Limites: rodadas TODAS as suítes automatizadas já cadastradas, não todos os
+fluxos possíveis. Suíte causal específica listada acima ainda não foi criada;
+formação, expiração de pista, atribuição de morte e grupo precisam desses
+casos dirigidos. Não houve sessão manual pela interface, teste Android/APK ou
+validação do narrador remoto. Não há script de lint no package.json.
+Não declarar “tudo pronto”: curva de dificuldade, falhas de missão e duração
+dos cenários merecem investigação. Comparar fome absoluta entre execuções de
+durações diferentes não prova melhoria. Nenhum commit/push efetuado.
+
+## Sessão 6 — 2026-09-07 — plano registrado antes das alterações
+
+Pedido: melhorar os problemas encontrados, preservando o trabalho anterior.
+Escopo exclusivamente PC/web, sem Android/APK.
+
+Ordem de execução:
+1. Impedir mentor incapacitado/sem condições de ensinar; proteger aprendiz
+   incapacitado e preservar proporção de saúde ao adquirir ficha derivada.
+2. Adicionar regressões permanentes de formação, pistas, prazos, recompensa
+   única e persistência completa dos novos sistemas.
+3. Instrumentar missões: separar falha de compromisso aceito de oportunidade
+   ignorada. Não aumentar prazos baseado em uma taxa agregada enganosa.
+4. Validar integridade de save além do pequeno resumo atual; identificar
+   diferenças de normalização explicitamente em vez de ocultá-las.
+5. Executar typecheck, suítes, campanhas, balanço e build web; registrar
+   resultados e pendências. Se faltar validação visual/narrador, dizer claramente.
+
+Revisão posterior, condicionada à evidência: encontros iniciais e lacunas de
+conteúdo avançado. Não alterar metas de vitória ou enfraquecer todos os inimigos
+para compensar decisões da política automática. Não declarar a visão inteira
+concluída por entregar essas correções. Sem commit/push automático.
+
+### Entrega e evidências da sessão 6
+
+- Bug reproduzido primeiro em `engine/causal.selftest.ts` (falha real do
+  mentor incapacitado). Corrigido em `formacao.ts`: mentor exige vida positiva,
+  saúde/sustento e ausência de cativeiro/viagem; aprendiz com vida zero não treina.
+- Vida ao concluir formação agora usa máximo DERIVADO, conservando proporção
+  da saúde civil mesmo quando havia habilidade prévia.
+- Nova suíte causal cadastrada em `test:engine`: formação, menores, incapacitados,
+  persistência civil/dinâmica, normalização idempotente de campanha inteira,
+  save completo em combate (incluindo RNG/atores), urgência, desconexão de rota,
+  recompensa única, pistas/recuperação/morte de rival.
+- Contadores `compromissosFalhados` e `oportunidadesExpiradas` registrados na
+  conclusão da missão e exibidos no relatório longo. São prospectivos em saves
+  antigos; não reconstroem histórico já compactado.
+- Mapa PC agora informa risco numérico da rota, agravamento noturno e ausência
+  de garantia de adversário do nível do jogador. Sem mudar chance de encontro.
+
+Validação: typecheck e seis suítes passaram; seis campanhas sem violações,
+31,5 s. Quatro chegaram a dez anos; duas pararam aos sete pelo orçamento de
+ações. Média nove anos. Balanço permanece 17/20. Build web passou antes e
+depois do último aviso textual do mapa; `git diff --check` também passou.
+Teste causal e typecheck repetidos depois do teste completo de save em combate,
+também passaram. Nenhuma mudança em metas de vitória, prazos ou dano nesta sessão.
+
+Achado: média 238,3 missões falhadas, sendo 235,3 aceitas e três não aceitas.
+Em `campanhaLonga.ts`, a política aceita pedidos conhecidos com probabilidade
+0,7, mas só age se já estiver no destino; NÃO planeja viagem para cumprir o
+compromisso. Portanto a alta taxa não justifica sozinha aumentar prazos.
+
+Pendências explícitas:
+1. Criar política adicional de simulação orientada a objetivos/rotas, preservando
+   a atual como teste exploratório. Comparar mesmas sementes antes de balancear.
+2. O loop longo ainda usa retrato resumido do save; comparação completa foi
+   adicionada à suíte causal em cenários controlados, não em todos os saves da
+   simulação. Criação crua normaliza campos opcionais ausentes (opcoesUsadas,
+   marcos, ecos, almasSeladas); diferenciar preenchimento legítimo de perda real.
+3. Continuam três faixas sintéticas fora e lacunas de cobertura Nichirin.
+   Não foram adicionados inimigos nem alterado balanço neste lote.
+4. Validação visual interativa e narrador externo não executados. Escopo PC,
+   sem Android. Identidades raras completas e demais pendências da sessão 5
+   NÃO estão concluídas por estas correções.
+5. Arquivos locais, sem commit/push. Preservar mudanças das sessões anteriores.
+
+## Sessão 7 — plano antes da implementação — 2026-09-07
+
+Pedido: cobertura avançada, corrigir viés do simulador e commit para Claude.
+1. Preservar política exploratória original; criar política adicional por objetivos.
+2. Política nova avalia rota/prazo, limita compromissos simultâneos, prioriza
+   viagem/execução pela engine real e não concede dinheiro, teleporte ou vitórias.
+3. Adicionar testes de planejamento e comparação por mesmas sementes. Cobertura
+   avançada aqui é de simulação/testes; lacunas de criaturas Nichirin continuam
+   separadas para não misturar conteúdo e correção da ferramenta de medição.
+4. Executar ambas as políticas, testes, typecheck, balanço e build PC; registrar
+   resultados sem confundir melhoria do agente simulado com melhoria do jogo.
+5. Fazer commit das sessões locais acumuladas e deste lote, conforme autorização.
+   Push não solicitado: commit local não implica backup remoto atualizado.
+
+### Entrega da sessão 7
+
+- `engine/planejadorSim.ts`: planejamento puro por informações de missão
+  conhecidas; menor custo de rota, verificação de prazo/alcance, prioridade ao
+  compromisso aceito e ação ao chegar. Sem teleporte, dinheiro ou XP artificiais.
+- Após derrota/fuga testemunhada, pausa sete dias antes de insistir na caçada.
+  Não confronta oni identificado sem arma contra oni. Essas são decisões do
+  agente de TESTE; regras e dificuldade do jogo não foram alteradas.
+- `campanhaLonga.ts`: política opcional `objetivos`, política original
+  `exploratoria` preservada. Viagens planejadas entram nas métricas de viagem.
+- `simLongo.ts`: quinto argumento seleciona política, valida argumentos básicos.
+  Comparação reproduzível: `node node_modules/tsx/dist/cli.mjs engine/simLongo.ts
+  10 6 comum objetivos` e o mesmo com `exploratoria` (uma única linha por comando).
+- `causal.selftest.ts`: cobertura de aceitação alcançável, caminho de menor
+  tempo, execução ao chegar, prazo vencido, destino desconectado e RNG estável.
+  Mantém testes anteriores de formação, persistência completa em combate e Nemesis.
+
+### Resultados e interpretação
+
+Typecheck, seis suítes, `test:engine`, balanço (17/20), build web e diff-check
+passaram. Após a última cautela do planejador, typecheck/suíte causal repetidos
+e lote objetivos executado novamente: zero violações, 37,4 s.
+
+Mesmas sementes longa-0..5, marca comum, horizonte dez anos:
+
+| Métrica média | Exploratória | Objetivos final |
+|---|---:|---:|
+| Anos efetivamente simulados | 9 | 10 |
+| Missões concluídas | 56,7 | 173,5 |
+| Compromissos falhados | 235,3 | 167,3 |
+| Oportunidades expiradas | 3 | 44,3 |
+| Combates por painel | 235,7 | 0 |
+
+Objetivos: seis campanhas completas de dez anos; exploratória: quatro completas,
+duas limitadas a sete anos. Não comparar totais como durações iguais. Primeira
+versão do planejador insistia em caçadas perdidas e atingia limites cedo; a
+versão final evita isso, mas os ZERO confrontos por painel revelam uma lacuna:
+o agente ainda não planeja aquisição de Nichirin para a trajetória de caçador.
+A alta vitória desta política NÃO prova balanço resolvido, pois selecionou
+encontros diferentes. Não usar estes números para enfraquecer/fortalecer tudo.
+
+### Próximo passo para Claude
+
+1. Política especializada de caçador: obtenção legítima de equipamento,
+   recrutamento e preparo, seguida de caçadas/expedições. Cobrir grupos durante
+   anos, não apenas fixtures. Preservar as duas políticas existentes.
+2. Três lacunas do bestiário Nichirin e três faixas fora do alvo continuam abertas;
+   não foi criado conteúdo adicional nesta sessão. Cobertura ampliada foi de testes.
+3. Save completo em simulação contínua, atribuição explícita de morte, pista
+   parcial do alvo e identidade rara completa continuam nos registros anteriores.
+4. UI/narrador externo não validados. PC apenas. Commit deste lote inclui as
+   sessões 4–7 antes locais, sobre os três commits preservados do Claude.
+5. Commit solicitado; sem push automático. Claude no mesmo checkout vê o commit;
+   cópia remota só recebe depois de envio autorizado.
