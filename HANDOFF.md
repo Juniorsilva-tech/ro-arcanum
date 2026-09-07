@@ -1081,3 +1081,215 @@ encontros diferentes. Não usar estes números para enfraquecer/fortalecer tudo.
    sessões 4–7 antes locais, sobre os três commits preservados do Claude.
 5. Commit solicitado; sem push automático. Claude no mesmo checkout vê o commit;
    cópia remota só recebe depois de envio autorizado.
+
+## Sessão 8 — plano de cobertura sistêmica — 2026-09-07
+
+Pedido: testes em todos os sistemas e simulação ampla, com registro no HANDOFF.
+Plano anterior à edição: inventariar os módulos; adicionar suíte de integração
+para comércio/equipamento, grupo, caçadas e expedições, cidades/construção,
+política e ascensão. Usar cenários controlados declarados como fixtures, não
+apresentá-los como campanhas naturais. Executar as suítes e as duas políticas
+longas, registrar lacunas por sistema em matriz de cobertura. Não alegar 100%
+de cobertura sem medição de branches/linhas; UI e narrador externo são camadas
+distintas. Nenhuma regra de balanceamento será alterada para fazer teste passar.
+
+### Sessão 8 — resultado
+
+Criados `engine/sistemas.selftest.ts` e `TESTES.md` (matriz de cenários e lacunas).
+Suíte sistêmica incluída em `test:engine`; novo `npm run test:all` executa
+typecheck, sete suítes, ambas as políticas longas, sim curto, balanço e build PC.
+
+Cobertura nova executada:
+- 280 combates: todas as 70 criaturas × quatro sementes. Compra real de Nichirin,
+  débito de estoque/moedas, equipamento, dois aliados, rejeição do terceiro,
+  bloqueio de troca durante luta, save completo com RNG/atores, término de combate.
+  Nível/dinheiro/confiança/posições são fixtures explícitas, não conquistas naturais.
+- Um ano de cidade saudável nas quatro estações sem fome, obra e limite de obra
+  simultânea, conclusão de serviço e seca gerando fome. Cenário civil isolado.
+- Sucessão após morte de líder e ausência de governos públicos oni/caçadores.
+- Ascensão: requisitos, almas únicas, não repetição e proteção por cem avanços
+  anuais. Testa regras existentes; não altera CHIM.
+- Fusão: escolas distintas, três criações, custo de dias, resolução e save da arte.
+- 10.000 resoluções de duelo (5.000 sem/com reforço), três desfechos e benefício
+  do reforço. Ainda falta matriz dos efeitos de cada duelo sobre o mundo.
+
+`npm run test:all` terminou com exit 0. Exploratória: quatro campanhas completas
+de dez anos e duas de sete limitadas por ações, zero violações. Objetivos: seis
+campanhas completas de dez anos, zero violações. Balanço permanece 17/20 (o
+diagnóstico não retorna erro pelas três faixas fora do alvo). Build web passou.
+Fusão/duelos foram acrescentados enquanto rodava o lote longo; a suíte sistêmica
+completa e typecheck foram repetidos depois e passaram.
+
+Não afirmar cobertura total: `TESTES.md` discrimina cenários versus lacunas,
+sem inventar porcentagem de linhas/branches. Faltam E2E no navegador e storage
+real, narrador externo, campanha natural adquirindo Nichirin e formando grupo,
+comparação integral em TODO save da simulação e variações de todas as técnicas.
+Este lote modifica apenas testes/comandos/documentação, não regras do jogo.
+Mudanças da sessão 8 ainda locais; último commit anterior: a62f47a.
+
+## Sessão 9 — assentamentos e contexto narrativo — plano
+
+Pedido: ampliar cobertura de assentamentos/melhoria contínua e explicar como
+o narrador personaliza a experiência. Escopo: testes e diagnóstico, não criação
+de sistema de fundação sem especificação. Estado verificado: iniciarContinuidade
+instancia assentamentos em locais fixos do catálogo; não existe ação de fundar
+cidade do zero. Testar todos os edifícios, custos, bloqueio, interrupção/retomada,
+persistência e espelhamento no pacote do narrador. Verificar rumor versus fato
+oculto e ausência de mutação do estado ao montar contexto.
+
+Narrador atual: pacote já contém comunidade, obra, crise, compromissos, memória,
+relação, personalidade e crenças sobre talento. Limite: últimos seis fatos
+conhecidos globais podem deslocar história pessoal/local importante. Um prompt
+não garante fidelidade factual de toda a prosa; não declarar validação de modelo
+externo sem realmente executá-lo. Registrar recomendações separadas do implementado.
+
+### Resultado da sessão 9
+
+Nova suíte `engine/assentamentos.selftest.ts`, incluída em test:engine:
+59 asserções passaram, assim como typecheck. Para cada um dos cinco edifícios:
+ausência de material, débito exato, projeto único, envio da obra ao narrador,
+parada sem trabalhadores/por guerra, retomada em paz, save integral da cidade,
+conclusão/registro histórico e teto sem cobrança. Quatro verificações de contexto:
+fato histórico oculto excluído, rumor rotulado, campanha não mutada e protagonista
+correto. Não executado modelo externo; não alteradas regras ou prompt do narrador.
+
+Recomendações narrativas, NÃO implementadas nesta sessão:
+1. Seleção por relevância pessoal/local: obra que o jogador financiou, família,
+   pessoa presente e rival conhecido devem competir por contexto com a recência.
+2. Estado visual do local deve sobrepor atmosfera estática do catálogo: ruína,
+   escassez ou obra não podem ser contraditas por descrição fixa de prosperidade.
+3. Separar estado confirmado, rumor e espaço descritivo livre no contrato do
+   narrador. Cor/som/gesto não devem conceder pessoas, inventário ou construções.
+4. Memória de cena e comparação entre visitas: lembrar o que mudou desde a
+   última passagem, com causa e atores reais, sem repetir relatório numérico.
+5. Teste de saída do modelo com casos de obra interrompida, retorno anos depois,
+   morte familiar e rumor falso; comparar contradições, repetição e relevância.
+
+Fundar assentamento do zero continua ausente: mapa, população inicial,
+terreno, custos e rotas exigem sistema próprio. Não anunciar cobertura de uma
+ação que não existe. Documentos/testes desta e da sessão 8 permanecem locais.
+
+Validação final da sessão 9: `npm run test:engine` terminou com exit 0,
+incluindo as oito suítes e seis campanhas exploratórias. Quatro chegaram aos
+dez anos; duas pararam aos sete pelo limite de ações. Zero violações de
+invariantes. `git diff --check` passou (apenas avisos de conversão LF/CRLF).
+Isso não mede qualidade literária nem fidelidade da saída de um narrador externo.
+
+## Sessão 10 — contexto narrativo orgânico — plano
+
+Implementar os quatro pontos aprovados: fatos por relevância pessoal/local,
+comparação com a última saída do local persistida no save, atmosfera derivada
+de ruína/fome/obra e contrato explícito de voz/conhecimento. Preservar estado
+canônico e os testes locais anteriores. Montar pacote continuará puro; registrar
+observações na viagem, não na chamada ao modelo. Saves antigos sem observação
+não terão passado inventado. Corrigir instrução conflitante que mandava realizar
+literalmente a intenção livre mesmo quando a engine resolve falha. Validar
+contexto, viagem, save e prompt sem cobrar chamadas externas ao usuário.
+
+### Implementação da sessão 10
+
+- `engine/contextoNarrativo.ts`: seleção determinística de até seis fatos
+  conhecidos por vínculo familiar/grupo, compromisso, local e pessoa presente;
+  desempate por recência. Separa confirmados/rumores e omite resumo causal quando
+  a causa não consta dos fatos conhecidos (inclusive quando já compactada).
+- `Campaign.observacoesLocais` opcional: snapshot independente por local na saída,
+  em `viagem.ts` antes do avanço temporal e na saída do castelo em `combat.ts`.
+  Campo serializado normalmente, preservado pela migração; saves antigos sem
+  campo não inventam comparação. Não altera RNG ou custos. Não mede ausência
+  exata: informa dias desde a saída registrada, mesmo permanecendo no retorno.
+- `llm.ts`: atmosfera dinâmica, diferenças desde a saída, contrato de voz e
+  conhecimento. Intenção livre deixa de ordenar sucesso automático; resultado
+  da engine prevalece. Ganchos deixam de ser obrigatórios em toda cena.
+- `assentamentos.selftest.ts`: 17 asserções novas, 76 totais; typecheck passou.
+  HTTP simulado verifica o pedido real sem rede/crédito. `TESTES.md` atualizado.
+
+Limites: histórico de fatos continua limitado aos 300 registros da engine;
+seleção não recupera textos já compactados. Autoria de financiamento ausente
+não é inferida. Voz/rumor são contrato de geração, não verificador semântico
+da prosa retornada. Sem chamada externa nem E2E visual. Fundação continua fora
+do escopo. Preservadas alterações locais das sessões 8 e 9; sem commit novo.
+
+Validação final: typecheck, oito suítes de test:engine e exportação web passaram.
+Seis campanhas exploratórias sem violações; quatro completaram dez anos e duas
+pararam aos sete pelo limite de ações. Métricas iguais às da sessão 9: a camada
+narrativa não mudou os resultados sistêmicos dessas sementes. Build web 946 KB.
+
+## Sessão 11 — validação ampla e presença opcional de onis — plano
+
+Usuário esclarece que Corporação/transformação oni não devem dominar toda vida;
+encontros podem ser raros ou concentrados, e caminhos excepcionais são desejados.
+Rodar test:all e acrescentar matriz reproduzível de encontros por local/horário
+e ciclo de vida dos seis tipos de missão. Medir presença oni sem mudar números
+ou implementar carreiras neste pedido de testes. Não confundir filtro solar com
+diretor de frequência nem declarar caminho Hashira/Yoriichi sem sistema real.
+
+### Resultado da sessão 11
+
+test:all anterior à inclusão da nova suíte passou: oito suítes, 12 campanhas
+(dez completas de dez anos, duas de sete por limite de ações), zero violações,
+sim curto, balanço e build web. Balanço continua com 3/20 faixas fora do alvo.
+Nova `jornadas.selftest.ts` via `npm run test:jornadas`, adicionada ao test:all:
+114 locais/horários × 400 sorteios = 45.600, 12.562 encontros, 3.165 com oni.
+Sol direto exclui onis vulneráveis. Na estrada/noite 111/400 sorteios com oni
+(111/139 encontros). Não é taxa observada em viagens naturais: perigo do local
+como fixture, sem custo da rota e sem emboscada Nemesis. Não mudar balanceamento
+com base apenas nessa amostra; não há modulador de frequência pessoal no filtro.
+
+Seis tipos de missão × oferecida/aceita passaram em prazo, duplicação, save,
+expiração, contadores e pagamento único. Abastecer/tratar/reconstruir/resgatar
+também passaram via executarAcaoMundo aceitar/ajudar, custo e consequência real.
+Asserções de encerrarMissao são contrato de recompensa, não prova de conclusão
+jogada da escolta/investigação. Esses fluxos têm cobertura parcial nas suítes
+anteriores, não declarar todas as variações testadas.
+
+Inspeção: não encontrado caminho explícito de ingresso/patentes até Hashira ou
+transformação do protagonista em oni. Há NPCs/técnicas/combate/despertares; não
+equivalem a carreira completa nem comprovam superar Yoriichi. Próxima prioridade:
+diretor contextual de presença oni e jornadas opcionais, depois testes naturais
+de aquisição Nichirin e caça. Nenhuma regra alterada nesta sessão. Sem LLM pago,
+E2E de navegador, commit ou push. Limites registrados em TESTES.md.
+
+## Sessão 12 — presença contextual oni e entrega ao Claude — plano
+
+Implementar controlador apenas dos encontros aleatórios de viagem: presença
+discreta em paz, maior em ameaça local real ou investigação aceita, intervalo
+de respiro após encontro casual. Não bloquear confrontos deliberados/Nemesis,
+nem apagar ameaças e consequências existentes. Sem ingresso obrigatório ou
+escalonamento por nível. Medir cenários com sementes e repetir test:all.
+Commit incluirá também os testes/contexto narrativo das sessões 8–11 ainda
+locais. Carreiras completas e ajuste de combate seguem pendentes explicitamente.
+
+### Implementação da sessão 12
+
+`viagem.ts`: rolarEncontroContextual usa o filtro solar/canônicos mortos e
+autoriza o pool oni com probabilidade .08 em paz, .45 com ameaça ativa no local,
+.65 com investigação aceita ali. Essas são chances de disponibilizar o pool,
+NÃO chances finais de encontro. Sem pool oni não consome sorteio extra; monstros
+comuns continuam elegíveis. Em paz há três dias de intervalo após oni casual,
+guardado em flag persistente. Crise/caçada sobrepõem esse intervalo.
+Emboscada Nemesis e confronto deliberado não passam por este redutor. O sistema
+não remove ameaças existentes, não impõe carreira e não muda poder por nível.
+
+Medição controlada: oito sementes × mil sorteios por modo, estrada/noturno,
+perigo 5, um sorteio por dia: paz 167/8.000 (2,1%), crise 910 (11,4%), investigação
+1.321 (16,5%). Fixtures mantêm crise/quest artificialmente; não são viagens reais.
+Teste verifica aumento, filtro solar, intervalo e persistência. Mudança de RNG
+na viagem altera as histórias das sementes antigas; determinismo é preservado
+para a mesma versão, não identidade dos resultados entre versões.
+
+Próximo Claude: carreira de caçador/Hashira e transformação oni NÃO foram
+implementadas. Tampouco patamar acima de Yoriichi, correção das três faixas de
+combate ou validação de prosa externa/UI. Controle atual é por local exato e
+contexto simples, não uma simulação regional de densidade oni. Sessões 8–12
+incluídas no commit solicitado; não interpretar cobertura como 100% do jogo.
+
+Validação sessão 12: typecheck, nove suítes (incluindo jornadas), sim curto e
+12 campanhas sem violações. Exploratórias: duas completaram dez anos, quatro
+atingiram limite de ações aos 7–8 anos. Objetivos: seis completaram dez anos.
+Rivais criados médios: 15,5 exploratória e 17,5 objetivos (antes 46,8 e 62,5).
+Não atribuir toda diferença a frequência: o RNG e as histórias também mudaram.
+Achado de qualidade: objetivos nível 26+ vence 99,5% dos encontros; menor presença
+oni expõe falta de desafio comum NAS ROTAS usadas. Priorizar distribuição de
+adversários não-oni fortes em locais perigosos, sem nivelamento automático.
+Balanço sintético permanece 17/20. Não declarar equilíbrio concluído.
+`npm run test:all` terminou com exit 0; exportação PC/web passou (947 KB).

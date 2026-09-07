@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "sim": "tsx engine/sim.ts",
-    "test:engine": "tsx engine/selftest.ts && tsx engine/kimetsu.selftest.ts && tsx engine/familia.selftest.ts && tsx engine/aptidao.selftest.ts && tsx engine/expansao.selftest.ts && tsx engine/causal.selftest.ts && tsx engine/simLongo.ts 10 6",
+    "test:engine": "tsx engine/selftest.ts && tsx engine/kimetsu.selftest.ts && tsx engine/familia.selftest.ts && tsx engine/aptidao.selftest.ts && tsx engine/expansao.selftest.ts && tsx engine/causal.selftest.ts && tsx engine/sistemas.selftest.ts && tsx engine/assentamentos.selftest.ts && tsx engine/simLongo.ts 10 6",
+    "test:jornadas": "tsx engine/jornadas.selftest.ts",
+    "test:all": "npm run typecheck && npm run test:engine && npm run test:jornadas && tsx engine/simLongo.ts 10 6 comum objetivos && npm run sim && npm run balanco -- 400 && expo export --platform web",
     "sim:longo": "tsx engine/simLongo.ts",
     "balanco": "tsx engine/simBalanco.ts"
   },

@@ -20,6 +20,7 @@ import { artesConhecidasResolvidas } from './fusao';
 import { contextoDeAptidao, leituraDoObservador } from './aptidao';
 import { legadosConquistados } from './identidade';
 import { DOMINIOS } from './aptidaoTypes';
+import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 
 export type LlmProvider = 'openrouter' | 'anthropic';
 
@@ -208,6 +209,7 @@ export function montarPacote(
   acao?: { verbo?: string; categoria?: string; alvo?: string; grau?: string; livre?: string },
 ) {
   const p = camp.personagem;
+  const narrativa = contextoNarrativo(camp, ctx);
   const nomeItem = (id: string) => content.itens.find((i) => i.id === id)?.nome ?? id;
 
   // O que ele carrega, com o nome exato do catálogo.
@@ -255,7 +257,7 @@ export function montarPacote(
     capitulo: { numero: camp.capitulo.numero, titulo: camp.capitulo.titulo },
     local: {
       nome: ctx.local.nome,
-      atmosfera: ctx.local.atmosferaPorPeriodo[ctx.periodo] ?? ctx.local.descricaoBase,
+      atmosfera: narrativa.atmosfera,
       ganchos: ctx.local.ganchos,
       privacidade: ctx.privacidade,
       perigo: ctx.local.perigo,
@@ -268,8 +270,11 @@ export function montarPacote(
     // O vale anda sozinho: tempo, evento corrente e carestia entram na cena.
     oValeHoje: comoEstaOVale(camp, content),
     comunidadeLocal: camp.continuidade?.locais[ctx.local.id],
+    retornoAoLocal: narrativa.retorno,
     mundoPersistente: {
-      fatos: camp.vivo?.fatos.filter(f => f.conhecimento !== 'oculto').slice(-6).map(f => ({ dia: f.dia, texto: f.texto, fonte: f.conhecimento, causa: f.causa?.texto })),
+      fatos: narrativa.fatos,
+      confirmados: narrativa.confirmados,
+      rumores: narrativa.rumores,
       compromissos: camp.vivo?.missoes.filter(q => q.conhecida && q.estado === 'aceita').map(q => ({ titulo: q.titulo, local: q.local, prazo: q.prazo, etapa: q.etapa })),
       cidade: camp.vivo?.cidades[ctx.local.id] && { edificios: camp.vivo.cidades[ctx.local.id].edificios, obra: camp.vivo.cidades[ctx.local.id].projeto, fome: camp.vivo.cidades[ctx.local.id].fomeDias > 0, epidemia: camp.vivo.cidades[ctx.local.id].doenca > 30 },
       regra: 'Rumor é informação não verificada pelo protagonista. Fatos ocultos não foram fornecidos. Não invente conclusão de obra, missão, morte ou parentesco: use somente o estado confirmado.',
@@ -362,14 +367,14 @@ export function montarPacote(
 // Narrador de conto medieval, adulto. A única regra inviolável: todo personagem
 // é adulto. O modelo devolve JSON: narração + opções do próximo turno (§18.2).
 const INSTRUCAO_SISTEMA =
+  CONTRATO_NARRATIVO +
   'Você é o narrador de ARCANUM, um romance de fantasia sombria em português do Brasil. ' +
   'A ENGINE decide o que aconteceu; você escreve a VOZ e propõe os próximos caminhos.\n' +
   '\nREGRA NÚMERO UM, acima de todas as outras: a cena é sobre O QUE O JOGADOR ACABOU ' +
   'DE FAZER. A mensagem começa com essa ação. Narre ELA acontecendo e a reação de quem ' +
   'estava lá. Descrever o ambiente sem mostrar a ação é ERRO — o ambiente é moldura, ' +
   'nunca o assunto. Se o jogador escreveu a ação com as próprias palavras, aquilo é ' +
-  'ordem literal: faça acontecer exatamente o que ele pediu, sem trocar por outra coisa ' +
-  'e sem desviar para descrição.\n' +
+  'intenção: respeite o assunto, mas narre somente o resultado resolvido pela engine, inclusive falhas.\n' +
   '\nVOZ — escreva como um conto medieval, não como um relatório:\n' +
   '• Registro de fábula sombria: frases de fôlego, imagens concretas, o mundo antigo e ' +
   'cansado. Diga "a lâmina", "o pão preto", "a lama do pátio" — nunca abstrações vagas.\n' +
@@ -429,8 +434,8 @@ const INSTRUCAO_SISTEMA =
   'traída não recebe você como estranha, e quem você ajudou lembra disso.\n' +
   '• "jaAconteceu" é a história desta campanha. Cite o que couber — uma frase de ' +
   'retorno a algo antigo vale mais que um parágrafo bonito.\n' +
-  '• "arcosAtivos" são os fios abertos. Puxe pelo menos um por cena, nem que seja ' +
-  'de raspão: um comentário, um obstáculo, uma pista.\n' +
+  '• "arcosAtivos" são os fios abertos. Retome um quando for relevante à ação; ' +
+  'não force um gancho em toda conversa ou momento de descanso.\n' +
   '• "ritmo.tom" manda no registro desta cena. Obedeça: se pede respiro, não ' +
   'invente ameaça; se pede clímax, não alivie.\n' +
   '• Plante uma coisa que ainda não se explica. O mundo é mais velho que o jogador.\n' +
@@ -760,8 +765,8 @@ export async function narrarComModelo(
   // no contexto e narrava ambiente em vez de reagir ao que foi feito.
   const ordem = r.acaoLivre
     ? `O JOGADOR ESCREVEU, COM AS PALAVRAS DELE: "${r.acaoLivre}"\n` +
-      'Isto é uma ordem literal. A cena é sobre ISTO. Faça acontecer exatamente o que ele ' +
-      'descreveu — não desvie para o ambiente, não troque por outra coisa, não recuse.'
+      `Isto é a intenção, não uma alteração do estado. Resultado canônico: ${r.fato}. ` +
+      'A cena responde à intenção respeitando esse resultado, inclusive quando falha.'
     : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
       'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.';
 

@@ -1,4 +1,5 @@
 // ARCANUM · Combate por turnos, resolvido 100% pela engine (GDD §16, §17).
+import { registrarSaidaNarrativa } from './contextoNarrativo';
 import type {
   Campaign,
   ContentBundle,
@@ -657,6 +658,7 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
       if (inimigosVivos(s).some(a => a.vida > a.vidaMax * .3)) {
         s.log.push('Enfraqueça os adversários antes de forçar o confronto para fora.'); return;
       }
+      registrarSaidaNarrativa(camp);
       camp.localAtual = 'ruinas';
       if (!camp.locaisVisitados.includes('ruinas')) camp.locaisVisitados.push('ruinas');
       camp.flags['visitou.ruinas'] = true;

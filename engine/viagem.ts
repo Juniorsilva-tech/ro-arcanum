@@ -13,8 +13,33 @@ import { descobrirNoticias } from './historiaViva';
 import { encontrosElegiveis } from './kimetsu';
 import { emboscadaNemesis } from './nemesis';
 import { iniciarCombate } from './combat';
+import { registrarSaidaNarrativa } from './contextoNarrativo';
 
 const PERIODOS_DE_RISCO = new Set<Periodo>(['anoitecer', 'noite', 'madrugada']);
+
+// Só regula o acaso. Caçadas escolhidas e perseguições já causadas continuam reais.
+export function presencaOniCasual(camp: Campaign): number {
+  const investigando = camp.vivo?.missoes.some(q => q.tipo === 'investigar' && q.estado === 'aceita' && q.local === camp.localAtual);
+  if (investigando) return .65;
+  const crise = camp.continuidade?.ameacas.some(a => a.local === camp.localAtual && a.estado === 'ativa');
+  if (crise) return .45;
+  const ultimo = camp.flags['narrativa.ultimoOniCasual'];
+  if (typeof ultimo === 'number' && camp.calendario.dia < ultimo + 3) return 0;
+  return .08;
+}
+
+export function rolarEncontroContextual(content: ContentBundle, camp: Campaign, periodo: Periodo, perigo: number, pool: string[]): string[] | null {
+  const elegiveis = encontrosElegiveis(content, camp, pool);
+  const comuns = elegiveis.filter(id => !content.criaturas.find(c => c.id === id)?.oni);
+  const temOni = comuns.length !== elegiveis.length;
+  const chance = temOni ? presencaOniCasual(camp) : 0;
+  const permitir = temOni && chance > 0 && nextFloat(camp.rng) < chance;
+  const encontro = rolarEncontroDeViagem(camp, periodo, perigo, permitir ? elegiveis : comuns);
+  if (encontro?.some(id => content.criaturas.find(c => c.id === id)?.oni)) {
+    camp.flags['narrativa.ultimoOniCasual'] = camp.calendario.dia;
+  }
+  return encontro;
+}
 
 // Retorna os ids das criaturas do encontro, ou null se a viagem correu em paz.
 // `pool` é o elenco possível para o tipo de local de destino (ver
@@ -64,6 +89,7 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   const rota = local?.rotas.find((r) => r.destino === destino);
   if (!rota) return { ok: false, motivo: 'não há rota daqui para lá' };
 
+  registrarSaidaNarrativa(camp);
   if (rota.periodos > 0) {
     camp.calendario = avancarPeriodos(camp.calendario, rota.periodos);
     crescerImpulsos(camp, rota.periodos);
@@ -83,7 +109,7 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   const pool = encontrosElegiveis(content, camp, content.encontrosPorTipo?.[alvo?.tipo ?? ''] ?? []);
   const encontro =
     emboscadaNemesis(content, camp) ??
-    rolarEncontroDeViagem(camp, periodoAtual(camp.calendario), rota.perigo, pool);
+    rolarEncontroContextual(content, camp, periodoAtual(camp.calendario), rota.perigo, pool);
 
   if (encontro) iniciarCombate(content, camp, encontro);
   return { ok: true, destino: alvo, primeiraVez, encontro: encontro ?? undefined };

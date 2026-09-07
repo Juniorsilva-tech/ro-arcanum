@@ -527,6 +527,7 @@ export type QuestEstado = 'desconhecida' | 'ativa' | 'concluida' | 'falhada';
 
 // ── Estado serializável de uma campanha (GDD §34).
 export type Campaign = {
+  observacoesLocais?: Record<string, import('./contextoNarrativo').ObservacaoLocal>;
   vivo?: import('./vivoTypes').MundoVivo;
   familia?: import('./familia').FamiliaState;
   npcsProcedurais?: NPC[];
