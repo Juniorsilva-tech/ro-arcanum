@@ -598,3 +598,17 @@ Segue o mesmo da sessão 15: **rotina por pessoa, não por ofício**. Hoje duas
 taverneiras de cidades diferentes vivem o mesmo dia, e ninguém muda de hábito
 quando a insegurança da vila sobe. É a diferença entre um mundo povoado e um
 mundo habitado.
+
+## Sessão 17 — catálogo inicial de casas
+
+Adicionada a primeira camada explícita de casas dos reinos em
+`content/vaelhorn/casas.ts`: quatro casas (Halvet, Mareu, Corveira e Tessel),
+cada uma com reino, lema, sede, territórios reais, modelo de sucessão, riqueza,
+reputação e rivalidades. Integrada ao `ContentBundle` e ao pacote do narrador
+como `casasPresentes`; ainda é conteúdo estático, não estado mutável.
+`engine/casas.selftest.ts` valida sedes, territórios, ids e rivalidades.
+
+Commit: `54a0a16`. O commit também capturou `.claude-flow/data/pending-insights.jsonl`,
+que já estava no workspace; revisar antes de limpar. Próximo passo: estado
+persistente das casas e processador de herança, patrimônio, alianças e conflitos,
+com testes de falência e sucessão. Não declarar esta camada dinâmica ainda.
