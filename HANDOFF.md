@@ -621,3 +621,22 @@ Commit: `54a0a16`. O commit também capturou `.claude-flow/data/pending-insights
 que já estava no workspace; revisar antes de limpar. Próximo passo: estado
 persistente das casas e processador de herança, patrimônio, alianças e conflitos,
 com testes de falência e sucessão. Não declarar esta camada dinâmica ainda.
+
+### Diretriz do proprietário — fase complexa das casas
+
+Implementar devagar e em commits pequenos. A ordem recomendada é: (1) sucessão
+e identidade válidas; (2) patrimônio territorial; (3) relações entre casas;
+(4) casamento e herança; (5) vassalagem e impostos; (6) disputas e perda de
+território; (7) missões e narrador. Não misturar todas as camadas num commit.
+
+Invariantes obrigatórias: líderes/herdeiros apontam para NPCs vivos, adultos e
+existentes; territórios apontam para locais reais; tesouro, legitimidade e
+influência ficam em suas faixas; casamentos não criam parentesco impossível;
+processamento repetido no mesmo dia é idempotente; save antigo continua
+carregando; fatos políticos têm causa e estado confirmado/rumor separados.
+
+Cada etapa exige contrato, teste unitário, save round-trip, campanha longa e
+inspeção do pacote do narrador antes de prosseguir. Fome e guerra devem causar
+consequências graduais, nunca apagar uma casa por regra abstrata. Não usar
+balanceamento por nível do jogador nem tornar casas destino obrigatório. Esta
+diretriz é decisão do proprietário e deve ser preservada pelo próximo agente.
