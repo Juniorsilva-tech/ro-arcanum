@@ -33,7 +33,9 @@ export function iniciarContinuidade(content: ContentBundle, camp: Campaign): voi
   if (camp.continuidade) return;
   camp.continuidade = {
     versao: 1, ameacas: [], eventos: [], proximaAmeaca: camp.calendario.dia + 7,
-    locais: Object.fromEntries(content.locais.filter(l => ['praca', 'mercado', 'oficina', 'forja', 'acampamento'].includes(l.tipo))
+    // Cidade, vila e aldeia do continente tambem sao assentamentos de verdade:
+    // tem economia, populacao e inseguranca proprias (ver cidades.ts).
+    locais: Object.fromEntries(content.locais.filter(l => ['praca', 'mercado', 'oficina', 'forja', 'acampamento', 'cidade', 'vila', 'aldeia', 'porto', 'forte'].includes(l.tipo))
       .map(l => [l.id, { integridade: 100, populacao: 60, obra: 0, nivel: 1 }])),
   };
 }
@@ -93,6 +95,16 @@ export function processarContinuidade(content: ContentBundle, camp: Campaign): v
       lugar.populacao = Math.max(0, lugar.populacao - 8);
       lugar.obra = Math.max(0, lugar.obra - 20);
       acontecimento(camp, local, `O ataque anunciado atingiu ${content.locais.find(l => l.id === local)?.nome}: casas danificadas e moradores dispersos.`);
+    }
+    // `devastou` era estado terminal: a ameaça ficava pendurada no lugar para
+    // sempre se o rival nunca fosse morto. E ameaça pendurada trava reconstrução
+    // (aqui) e obra da cidade (cidades.ts), então a comunidade atingida nunca
+    // mais levantava. Medido: comunidades novas terminando dez anos com
+    // população zero e obra parada. Passado o estrago, o predador segue adiante
+    // — continua vivo no Nemesis, só deixa de prender aquele lugar.
+    if (ameaca?.estado === 'devastou' && dia >= ameaca.prazo + 30) {
+      ameaca.estado = 'resolvida';
+      acontecimento(camp, local, `O que atacou ${content.locais.find(l => l.id === local)?.nome} seguiu adiante. Ficaram as ruínas e o medo.`);
     }
     if (!ameaca && lugar.populacao > 0) {
       lugar.obra++;

@@ -350,6 +350,9 @@ export function montarPacote(
       .map((x) => `${x.v.nome}: ${x.d.motivo}`),
     // Substantivos concretos deste lugar. Opção boa aponta para uma coisa.
     coisasAqui: ctx.local.pontos ?? [],
+    // O passado do lugar, escrito no conteúdo (ver content/vaelhorn/continente.ts).
+    // O narrador pode citá-lo; o que não estiver aqui, ele não sabe.
+    historiaDesteLugar: ctx.local.historia ?? [],
     artesQueVoceSabe: artesConhecidasResolvidas(content, camp).map((a) => a.nome),
     ondeDaParaIr: ctx.local.rotas
       .map((r) => content.locais.find((l) => l.id === r.destino)?.nome)

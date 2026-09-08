@@ -9,7 +9,7 @@ import { avancarPeriodos, periodoAtual, type Periodo } from './time';
 import { crescerImpulsos } from './impulsos';
 import { avancarMundo } from './mundo';
 import { registrarMarco } from './memoria';
-import { descobrirNoticias } from './historiaViva';
+import { descobrirNoticias, cidadeIdDoLocal } from './historiaViva';
 import { encontrosElegiveis } from './kimetsu';
 import { emboscadaNemesis } from './nemesis';
 import { iniciarCombate } from './combat';
@@ -39,6 +39,55 @@ export function rolarEncontroContextual(content: ContentBundle, camp: Campaign, 
     camp.flags['narrativa.ultimoOniCasual'] = camp.calendario.dia;
   }
   return encontro;
+}
+
+/**
+ * Perigo efetivo de uma rota — o número que o sorteio de encontro deveria ter
+ * usado desde sempre.
+ *
+ * `rota.perigo` é constante escrita à mão no conteúdo: idêntica no dia 1 e no
+ * dia 3000, com o vale em paz ou em guerra. Enquanto isso a engine já mantinha
+ * `cidade.inseguranca` (sobe com ameaça ativa, com guerra e com missão vencida;
+ * desce com muralha), e nove módulos liam esse número. A viagem não era um
+ * deles — o mapa de risco estava congelado sobre um mundo que muda.
+ *
+ * Agora a base de conteúdo é o piso, e o estado real das duas pontas move o
+ * resto: uma estrada entre duas vilas em paz continua tranquila; a mesma
+ * estrada com a vila do outro lado tomada fica perigosa sozinha, sem que
+ * ninguém reescreva o conteúdo.
+ */
+export function perigoEfetivoDaRota(
+  content: ContentBundle,
+  camp: Campaign,
+  origem: string,
+  destino: string,
+  perigoBase: number,
+): number {
+  let perigo = perigoBase;
+  for (const ponta of [origem, destino]) {
+    const cidadeId = cidadeIdDoLocal(content, camp, ponta);
+    const cidade = cidadeId ? camp.vivo?.cidades[cidadeId] : undefined;
+    // Insegurança de 0 a 100 vira até +3 de perigo por ponta.
+    if (cidade) perigo += (cidade.inseguranca / 100) * 3;
+    // Ameaça anunciada e ainda não resolvida pesa mais do que estatística.
+    const ameaca = camp.continuidade?.ameacas.some(a => a.local === ponta && a.estado === 'ativa');
+    if (ameaca) perigo += 2;
+    // Quem caça naquele local devolve segurança: é o laço que faltava fechar.
+    const guardiao = [...content.npcs, ...(camp.npcsProcedurais ?? [])].some(n =>
+      n.combatente && camp.npcState[n.id]?.vivo && camp.vivo?.pessoas[n.id]?.objetivo === 'cacar'
+      && camp.vivo.pessoas[n.id].local === ponta);
+    if (guardiao) perigo -= 1.5;
+  }
+  // Rival acampado em qualquer das pontas: ele escolheu aquele refúgio de
+  // propósito (ver engine/nemesis.ts) e sai à noite.
+  for (const r of Object.values(camp.kimetsu?.rivais ?? {})) {
+    if (!r.vivo) continue;
+    if (r.local === origem || r.local === destino || r.evolucao?.refugio === destino) {
+      perigo += 1 + (r.evolucao?.servos ?? 0) * 0.4;
+      break;
+    }
+  }
+  return Math.max(0, perigo);
 }
 
 // Retorna os ids das criaturas do encontro, ou null se a viagem correu em paz.
@@ -89,6 +138,7 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   const rota = local?.rotas.find((r) => r.destino === destino);
   if (!rota) return { ok: false, motivo: 'não há rota daqui para lá' };
 
+  const origemDaViagem = camp.localAtual;
   registrarSaidaNarrativa(camp);
   if (rota.periodos > 0) {
     camp.calendario = avancarPeriodos(camp.calendario, rota.periodos);
@@ -109,7 +159,11 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   const pool = encontrosElegiveis(content, camp, content.encontrosPorTipo?.[alvo?.tipo ?? ''] ?? []);
   const encontro =
     emboscadaNemesis(content, camp) ??
-    rolarEncontroContextual(content, camp, periodoAtual(camp.calendario), rota.perigo, pool);
+    rolarEncontroContextual(
+      content, camp, periodoAtual(camp.calendario),
+      perigoEfetivoDaRota(content, camp, origemDaViagem, destino, rota.perigo),
+      pool,
+    );
 
   if (encontro) iniciarCombate(content, camp, encontro);
   return { ok: true, destino: alvo, primeiraVez, encontro: encontro ?? undefined };

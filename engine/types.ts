@@ -292,6 +292,9 @@ export type Local = {
   verbosBloqueados?: string[];
   ganchos: string[];
   pontos?: string[];
+  // O que aconteceu aqui antes de o jogador chegar. Vai para o pacote do
+  // narrador, que passa a poder citar o passado do lugar em vez de inventar um.
+  historia?: string[];
   rotas: { destino: string; periodos: number; perigo: number }[];
 };
 

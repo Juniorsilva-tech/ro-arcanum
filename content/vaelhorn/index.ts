@@ -5,6 +5,7 @@ import { classesVaelhorn } from './classes';
 import { origensVaelhorn } from './origins';
 import { verbosVaelhorn } from './verbs';
 import { locaisVaelhorn } from './locations';
+import { integrarContinente } from './continente';
 import { npcsVaelhorn } from './npcs';
 import { itensVaelhorn } from './items';
 import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
@@ -25,7 +26,7 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   classes: classesVaelhorn,
   origens: origensVaelhorn,
   verbos: verbosVaelhorn,
-  locais: locaisVaelhorn,
+  locais: integrarContinente(locaisVaelhorn),
   npcs: npcsVaelhorn,
   mestres: mestresVaelhorn,
   trabalhos: trabalhosVaelhorn,

@@ -1293,3 +1293,214 @@ oni expõe falta de desafio comum NAS ROTAS usadas. Priorizar distribuição de
 adversários não-oni fortes em locais perigosos, sem nivelamento automático.
 Balanço sintético permanece 17/20. Não declarar equilíbrio concluído.
 `npm run test:all` terminou com exit 0; exportação PC/web passou (947 KB).
+
+---
+
+## Sessão 13 — Claude — continente e perigo dinâmico — plano antes das alterações
+
+### Estado encontrado
+
+Commit `3d29172` (Astra). Auditoria independente feita antes de tocar em nada:
+typecheck limpo, nove suítes passando, `simLongo 10 6` sem violações, balanço
+sintético 17/20, `test:all` exit 0. Todas as afirmações do HANDOFF do Astra
+conferem. Ele resolveu duas pendências que eu havia deixado (identidade rara
+com `engine/identidade.ts`, progressão de NPC com `engine/progressaoNpc.ts`) e
+corrigiu um bug meu: `recalcularRecursosMaximos` ressuscitava personagem morto,
+porque o `Math.max(1, ...)` dava 1 de vida a quem estava em 0.
+
+Medição comparativa que eu fiz e que motiva esta sessão — mesma build, mesmo
+personagem, dois agentes diferentes dirigindo o simulador:
+
+| Nível | Explorador (anda ao acaso) | Objetivos (planejador do Astra) |
+|---|---|---|
+| 1-5 | 35,8% | 76,6% |
+| 6-10 | 34,2% | 94,4% |
+| 26+ | 70,8% | 99,5% |
+
+O Astra atribuiu o 99,5% a "falta de desafio comum nas rotas". A comparação
+mostra causa maior: o planejador desvia do perigo. Em `planejadorSim.ts` ele
+ordena rotas por `a.total - b.total || a.perigo - b.perigo`, pula missão de oni
+sem Nichirin e espera sete dias após uma derrota. É um jogador competente — e
+contra ele, povoar a rota perigosa não muda nada, porque ele não passa por lá.
+
+### O defeito de fundo
+
+`engine/viagem.ts` calcula o encontro assim:
+
+```
+chance = min(0.5, 0.05 + perigoRota * 0.04 + (noturno ? 0.12 : 0))
+```
+
+`perigoRota` é `rota.perigo`: **constante escrita à mão no conteúdo**, igual no
+dia 1 e no dia 3000, com o vale em paz ou em guerra. Enquanto isso a engine já
+mantém `cidade.inseguranca` (0-100), que sobe +1/dia com ameaça ativa, +2/dia
+com guerra, +8 quando uma missão vence, +10 numa revolta, e desce com muralha.
+Nove módulos leem essa insegurança; **a viagem não é um deles**. O mapa de risco
+está congelado sobre um mundo que muda.
+
+### Tamanho do mundo hoje
+
+19 locais, e só 5 são assentamentos vivos (`praca`, `mercado`, `moinho`,
+`vila_ferreiros`, `acampamento` — o filtro está em `continuidade.ts`). Os outros
+14 são cenário: têm rota e encontro, mas não têm economia, população nem
+insegurança. Três regiões: Vale de Halvet (11), Fora do Vale (6), Fora do Mundo (2).
+
+### Objetivo desta sessão
+
+Decisão do dono do projeto: ampliar o mundo para um continente e ligar o perigo
+ao estado real dos lugares.
+
+1. **Continente.** Novas regiões com cidades, vilas, aldeias e lugares pequenos,
+   cada um com história própria — não só descrição de cena.
+2. **Mais assentamentos vivos.** Ampliar o filtro de `continuidade.ts` para que
+   cidade e vila tenham economia, população e insegurança de verdade.
+3. **Perigo dinâmico.** Perigo efetivo da rota = base do conteúdo + insegurança
+   das duas pontas + ameaça ativa + presença de rival acampado por perto.
+4. **Segurança que responde.** Muralha e caçador com objetivo `cacar` no local
+   reduzem o perigo efetivo, fechando o laço que hoje só existe pela metade.
+
+### Restrições que vou respeitar
+
+- Não reverter nada do Astra. As oito sessões dele continuam válidas.
+- Não mexer no CHIM.
+- Todo tipo de local novo precisa de entrada em `encontrosPorTipo` — o
+  `selftest.ts` já exige isso e vai falhar se eu esquecer.
+- Saves antigos: `migracao.ts` tem de continuar carregando campanha que não
+  conhece os locais novos.
+- Rodar `test:all` antes de declarar qualquer coisa.
+
+
+### Implementação da sessão 13
+
+#### Continente de Halvern (`content/vaelhorn/continente.ts`)
+
+O Vale de Halvet virou uma província. **De 19 para 50 lugares**, de 3 para 10
+regiões, de 5 para **22 assentamentos vivos**. Trinta e um lugares carregam
+`historia`: o que aconteceu ali antes de o jogador chegar.
+
+| Região | Lugares | O que a sustenta |
+|---|---|---|
+| Marca de Tessel | Tessel, Forte Agulha, Pedravel, Campos da Ceifa, Passo do Lobo, Capela dos Ceifeiros | fronteira militar, leva, trigo |
+| Planalto de Corveira | Corveira, Poço Fundo, Ferro Velho, Terraço Sexto, Colina dos Forcados, Mosteiro do Alto | minério e sete casas que se comportam como reinos |
+| Costa de Mareu | Mareu, Porto do Sal, Mercado do Peixe, Rede Rota, Farol Quebrado | porto, sal, guilda |
+| Bosque de Vintra | Vintra, Carvoeira, Lenha Alta, Clareira das Pedras, Lodaçal | madeira e carvão; gente que dorme com a escada recolhida |
+| Ermo de Solgar | Solgar, Poço Seco, Parada de Idrin, Ruína de Areia | uma cisterna, e a rota que só fecha por causa dela |
+| Baixios de Halvern | Vau de Pedra, Juncal, Juncal de Baixo | a travessia do sul quando a ponte fecha |
+| Estradas | Estrada Real, Trilha Costeira | costuram tudo |
+
+Tipos novos de local (`cidade`, `vila`, `aldeia`, `porto`, `forte`, `campo`,
+`colina`, `passo`, `pantano`) receberam tabela de encontros em `bestiary.ts` —
+o `selftest` exige isso e falharia sem.
+
+`Local.historia` é campo novo e vai para o pacote do narrador como
+`historiaDesteLugar`. O narrador passa a poder citar o passado do lugar em vez
+de inventar um; o que não estiver ali, ele não sabe.
+
+#### Perigo dinâmico de rota (`engine/viagem.ts`, `perigoEfetivoDaRota`)
+
+O sorteio de encontro usava `rota.perigo`, constante escrita à mão. Agora esse
+número é o piso, e o estado real das duas pontas move o resto:
+
+- insegurança da cidade → até +3 por ponta;
+- ameaça ativa e não resolvida → +2 por ponta;
+- caçador com objetivo `cacar` presente → −1,5 por ponta;
+- rival acampado numa das pontas → +1, mais 0,4 por servo.
+
+Uma estrada entre duas vilas em paz continua tranquila; a mesma estrada com a
+vila do outro lado tomada fica perigosa sozinha, sem ninguém reescrever conteúdo.
+
+### Três bugs encontrados e corrigidos
+
+1. **Rotas de mão única no mapa original.** `casa_senhorial → cemiterio` existia
+   sem a volta, entre outras. `proximoPasso` — a busca que a autonomia dos NPCs
+   e o planejador usam — enxerga o grafo como dirigido, então um NPC podia
+   entrar num lugar e não ter caminho de saída. `integrarContinente` agora
+   simetriza o mapa inteiro, e há teste para isso.
+
+2. **Deadlock de epidemia.** A enfermaria produzia `0,2` de remédio por dia e
+   consumia até `1,0`. O estoque zerava, o tratamento virava zero e a doença
+   ficava em 100 **para sempre**. Doença acima de 60 mata um morador por semana;
+   em dez anos isso esvazia a comunidade. E cidade com população zero não
+   constrói (a obra exige população), então não havia volta. Medido num mundo
+   sem jogador: Tessel e Forte Agulha terminaram os dez anos com população 0 e
+   doença 100. Corrigido com remissão natural de 0,35/dia — uma epidemia cede
+   sozinha, as pessoas se curam ou morrem — mais reocupação lenta de
+   assentamento vazio que ainda tenha estrutura de pé.
+
+3. **`devastou` era estado terminal.** Uma ameaça que devastou o lugar ficava
+   pendurada nele para sempre se o rival nunca fosse morto. E ameaça pendurada
+   trava reconstrução (`continuidade.ts`) e obra da cidade (`cidades.ts`) — a
+   comunidade atingida nunca mais levantava. Passados 30 dias do estrago, o
+   predador segue adiante: continua vivo no Nemesis, só deixa de prender aquele
+   lugar.
+
+Depois dos três, o mesmo mundo sem jogador termina dez anos com todas as
+comunidades povoadas, integridade 90-100 e sem doença. O pico de fome caiu de
+1161 dias-cidade para 194 na pior semente, com a maioria em zero.
+
+### Arquivos
+
+**Criados:** `content/vaelhorn/continente.ts`, `engine/continente.selftest.ts`.
+
+**Modificados:** `engine/types.ts` (`Local.historia`), `engine/viagem.ts`
+(`perigoEfetivoDaRota`), `engine/continuidade.ts` (assentamentos novos, fim do
+estado terminal), `engine/cidades.ts` (remissão natural, reocupação),
+`engine/llm.ts` (`historiaDesteLugar`), `content/vaelhorn/bestiary.ts` (nove
+tabelas de encontro), `content/vaelhorn/index.ts`, `package.json`.
+
+### Testes executados
+
+- `npx tsc --noEmit` — limpo.
+- `npm run test:engine` — dez suítes, exit 0. Inclui a nova
+  `continente.selftest.ts` com 21 asserções.
+- `npm run test:jornadas` — todas as missões.
+- `simLongo 10 6` — zero violações, 36,1 s.
+- `simLongo 10 6 comum objetivos` — zero violações.
+- `simBalanco 300` — 17 de 20 faixas no alvo (inalterado; não mexi na
+  matemática do combate).
+- `npx expo export --platform web` — build concluído.
+
+### Achado que eu não esperava, e que precisa ficar registrado
+
+**O continente deixou o mundo mais fácil, não mais difícil.** Taxa de vitória do
+agente explorador, antes e depois desta sessão:
+
+| Nível | Antes | Depois |
+|---|---|---|
+| 1-5 | 35,8% | 60,0% |
+| 11-15 | 46,4% | 95,8% |
+| 26+ | 70,8% | 99,4% |
+
+Duas causas, ambas minhas:
+
+1. Os lugares novos são majoritariamente civilizados. Cidade, vila e aldeia têm
+   tabela de encontro fraca de propósito — cidade grande tem guarda, o que
+   ataca ali é humano e oportunista. Só que agora eles **dominam o mapa**: são
+   22 dos 50 lugares. O andarilho passa muito mais tempo em lugar seguro do que
+   passava quando o mundo era floresta, estrada e ruína.
+2. As correções de cidade deixaram o mundo mais saudável — menos epidemia,
+   menos comunidade destruída — e insegurança baixa significa perigo dinâmico
+   baixo. O sistema novo funciona; ele só está lendo um mundo que agora vai bem.
+
+O perigo dinâmico está certo e testado. Ele não compensou a diluição porque não
+foi feito para isso: ele reage à crise, e o mundo saiu desta sessão com menos
+crise. No modo por objetivos nada mudou — continua 99,9% no nível 26+, pela
+razão de sempre: o planejador desvia do risco e o bestiário não tem adversário
+não-oni do tamanho de um personagem maduro.
+
+### Pendências
+
+1. **Densidade de perigo por região.** O mapa precisa de proporção: hoje o
+   caminho seguro é o padrão e o perigoso é exceção. Sugestão a decidir —
+   Passo do Lobo, Lodaçal, Clareira das Pedras e Ruína de Areia deveriam ser
+   travessia obrigatória para algo que valha a pena, não desvio opcional.
+2. **Bestiário sem topo continua aberto** (sessão 3). Com 50 lugares, a lacuna
+   ficou mais visível: há região inteira sem um adversário à altura.
+3. **Aldeias novas não têm NPC próprio.** Elas têm economia, insegurança e
+   história, mas ninguém mora nelas por nome — o elenco continua concentrado no
+   Vale. `autonomia.ts` cria residentes procedurais, mas nenhum NPC autoral.
+4. **Ganchos e pontos não viram missão.** Cada lugar novo tem dois ganchos
+   escritos; nada no gerador de missões os lê ainda.
+5. As pendências das sessões anteriores seguem abertas: Nemesis que só acumula,
+   prazo fixo de missão, faixas baixas do combate comprimidas, e a identidade
+   rara que o Astra começou a ligar em `identidade.ts`.

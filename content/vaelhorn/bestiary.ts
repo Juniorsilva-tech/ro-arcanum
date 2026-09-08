@@ -595,4 +595,15 @@ export const encontrosPorTipo: Record<string, string[]> = {
   // Só quem mora lá — de propósito. Ninguém tropeça no Castelo Infinito à toa,
   // e as Luas Superiores não vagam pelo mundo comum como as Inferiores vagam.
   castelo: ['muzan', 'nakime', 'kaigaku', 'lua_superior_seis', 'lua_superior_cinco', 'lua_superior_quatro', 'lua_superior_tres', 'lua_superior_dois', 'lua_superior_um'],
+  // ── Continente de Halvern (ver content/vaelhorn/continente.ts) ──────────
+  // Cidade grande tem guarda: o que ataca ali é humano e oportunista.
+  cidade: ['salteador', 'bandido', 'cao_selvagem'],
+  vila: ['salteador', 'bandido', 'cao_selvagem', 'lobo', 'oni_faminto'],
+  aldeia: ['salteador', 'lobo', 'raposa_raivosa', 'cao_selvagem', 'oni_faminto'],
+  porto: ['contrabandista_do_sal', 'bandido', 'rato_gigante', 'salteador'],
+  forte: ['foragido_veterano', 'salteador_arqueiro', 'capanga_do_senhorio', 'bandido'],
+  campo: ['salteador', 'javali', 'cao_selvagem', 'corvo_gigante', 'oni_da_estrada'],
+  colina: ['lobo', 'lobo_branco', 'corvo_gigante', 'esqueleto_da_cova', 'gargula_partida'],
+  passo: ['lobo_branco', 'urso_pardo', 'salteador_arqueiro', 'foragido_veterano', 'oni_ancestral'],
+  pantano: ['sanguessuga_do_lodo', 'serpente_do_junco', 'afogado', 'fogo_fatuo', 'oni_do_pantano'],
 };

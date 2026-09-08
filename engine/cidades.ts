@@ -58,8 +58,26 @@ export function processarCidades(content: ContentBundle, camp: Campaign): void {
     if (c.doenca > 0) {
       const tratamento = Math.min(c.remedios, c.edificios.enfermaria);
       c.remedios -= tratamento;
-      c.doenca = Math.max(0, Math.min(100, c.doenca + (c.fomeDias ? 1 : 0) - tratamento * .8));
+      // Uma epidemia cede sozinha com o tempo, mesmo sem remédio: as pessoas se
+      // curam ou morrem. Sem essa parcela o sistema travava — a enfermaria
+      // produzia 0,2 de remédio por dia e consumia até 1,0, então o estoque
+      // zerava, o tratamento virava zero e a doença ficava em 100 para sempre.
+      // A cidade perdia um morador por semana até esvaziar, e cidade vazia não
+      // constrói (a obra exige população), então não havia volta. Foi medido:
+      // duas comunidades novas morreram assim em dez anos de calendário.
+      const remissaoNatural = 0.35;
+      c.doenca = Math.max(0, Math.min(100, c.doenca + (c.fomeDias ? 1 : 0) - tratamento * .8 - remissaoNatural));
       if (c.doenca > 60 && dia % 7 === 0) povo.populacao = Math.max(0, povo.populacao - 1);
+    }
+    // Assentamento esvaziado que ainda tem estrutura de pé volta a ser ocupado:
+    // gente de fora chega devagar quando há o que ocupar e o lugar está calmo.
+    if (povo.populacao === 0 && povo.integridade >= 40 && !ameaca && !guerra && c.doenca < 40 && dia % 30 === 0) {
+      povo.populacao = 4;
+      registrarFato(camp, {
+        tipo: 'reocupacao', local: id,
+        texto: `${nome} voltou a ter moradores: chegaram poucos, e ficaram.`,
+        atores: [], publico: true,
+      });
     }
     if (c.projeto && !ameaca && !guerra && c.fomeDias === 0 && povo.populacao > 0) {
       c.projeto.progresso += condicao;
