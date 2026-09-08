@@ -125,6 +125,10 @@ Se uma tarefa não puder ser concluída, registre em `HANDOFF.md`:
 
 O próximo agente deve ler `HANDOFF.md` antes de continuar trabalho incompleto.
 
+As sessões 1 a 12 vivem em `HANDOFF-ARQUIVO.md`, na íntegra. `HANDOFF.md`
+guarda o estado atual e as sessões recentes; quando passar de ~800 linhas, mova
+as mais antigas para o arquivo sem editar o texto.
+
 ## Finalização
 
 Ao terminar uma tarefa, informe:
