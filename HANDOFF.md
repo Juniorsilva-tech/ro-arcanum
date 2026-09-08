@@ -1675,3 +1675,132 @@ causas, ambas corrigidas em `engine/autonomia.ts`:
    para o teste, mas a causa (é adjacente a Mareu, que absorve) merece olhada.
 5. Pendências anteriores seguem abertas: densidade de perigo por região,
    bestiário sem topo, Nemesis que só acumula, prazo fixo de missão.
+
+---
+
+## Sessão 15 — Claude — rotinas e mais mundo — plano antes das alterações
+
+### Estado encontrado
+
+Commit `ae8317b`. Medição de rotina antes de tocar em nada:
+
+- **190 NPCs, 44 com rotina, 146 sem.**
+- Os 134 moradores gerados na sessão 14 têm `rotina: {}` — ficam no `localBase`
+  as vinte e quatro horas. A cidade tem gente, mas a gente não se mexe.
+- Oito do elenco da mansão Ubuyashiki também estão sem: Zenitsu, Kanao, Genya,
+  Kagaya, Amane, Jigoro, Shinjuro e Kanae. Vieram do atalho `npc()` em
+  `content/vaelhorn/kimetsu.ts`, que preenche `rotina: {}`.
+- Os nove Hashiras têm rotina escrita à mão e boa, cobrindo os seis períodos.
+
+Isso importa porque `localEfetivo` resolve presença por
+`npc.rotina[periodo] ?? npc.localBase`. Sem rotina, a pessoa está sempre no
+mesmo lugar, a qualquer hora — o que apaga a diferença entre procurar alguém de
+manhã e à noite, e tira sentido de privacidade, de vigia e de encontro.
+
+### Objetivo desta sessão
+
+1. **Rotina por ofício** para todo morador gerado, ancorada em lugares reais e
+   alcançáveis a partir do assentamento. Taverneira à noite, lavradora no campo
+   de dia, ladra onde há privacidade, guarda em ronda.
+2. **Rotina para os oito da mansão Ubuyashiki**, respeitando o que cada um é.
+3. **Mais mundo**: adensar as regiões magras e ampliar o elenco das cidades.
+
+### Restrições
+
+- Rotina não pode mandar ninguém para lugar oculto: quebraria o sigilo que a
+  sessão 14 acabou de criar.
+- Rotina só pode citar lugar que existe e que é alcançável a partir do
+  assentamento — `selftest.ts` valida referência cruzada.
+- Continua tudo em conteúdo, não em save.
+- `test:all` antes de declarar qualquer coisa.
+
+
+### Implementação da sessão 15
+
+#### Rotina por ofício (`content/vaelhorn/povoamento.ts`)
+
+Seis ritmos, atribuídos por papel, traduzidos em lugares **reais e alcançáveis**
+a partir do assentamento:
+
+| Ritmo | Quem segue | Como é o dia |
+|---|---|---|
+| `RITMO_DIURNO` | senhora da cidade, mestra de guilda, lojista, armeira, escrivã, ferreira, anciã | fica no assentamento |
+| `RITMO_LAVOURA` | lavradora, carregadora do cais, moleira, pastora | sai para o campo de manhã, volta ao anoitecer |
+| `RITMO_TAVERNA` | taverneira, estalajadeira, dona da parada | trabalha onde a casa está, na hora em que a casa enche |
+| `RITMO_RONDA` | capitã da guarda, curandeira, campeã de arena, benzedeira, sargenta | patrulha ou visita à tarde |
+| `RITMO_NOTURNO` | chefe do crime, batedora de carteira, agiota, ladra, contrabandista, boticária de fundos | some na madrugada, aparece à noite |
+| `RITMO_ERRANTE` | tropeira, chefe de caravana, escolta, cocheira | sai de dia e dorme fora |
+
+`vizinhancaDe()` resolve `campo` e `retiro` a partir das rotas do próprio
+lugar, escolhendo por tipo — aberto (campo, estrada, floresta, lago, praça) ou
+recolhido (ruína, cripta, cemitério, pântano, mina, passo). **Nunca escolhe um
+lugar oculto**: mandar uma taverneira dormir na forja secreta entregaria de
+graça o que a sessão 14 acabou de esconder. Há teste para isso.
+
+#### Rotinas do elenco da mansão Ubuyashiki
+
+Os nove Hashiras já tinham rotina escrita à mão. Os outros oito vinham com
+`rotina: {}` do atalho `npc()` em `content/vaelhorn/kimetsu.ts` — mais Inosuke,
+que estava no mesmo caso. Agora cada um tem as seis casas preenchidas conforme
+o que a pessoa é:
+
+- **Kagaya** não sai da casa em nenhum período: a doença não deixa.
+- **Amane** coordena e cuida dele; vai só até a capela e volta.
+- **Zenitsu** dorme de dia e caça à noite — a audição dele serve melhor no escuro.
+- **Kanao** treina de manhã na mansão, campo à tarde, patrulha à noite.
+- **Genya** não usa respiração: treina sozinho nas ruínas e caça longe dos outros.
+- **Jigoro** e **Urokodaki** ficam onde se instrui.
+- **Shinjuro** bebe na taverna à tarde e à noite, e evita a mansão de dia.
+- **Kanae** atende quem chega ferido; a capela é o posto avançado dela.
+- **Sabito** e **Makomo** ficam onde morreram e onde ainda ensinam.
+- **Tamayo** e **Yushiro** já tinham manhã e tarde na capela; a noite é quando
+  podem sair, e é quando trabalham de verdade.
+- **Inosuke** cresceu na mata e não confia em telhado: dorme fora.
+
+Efeito medido: a mansão tem 13 pessoas na madrugada e 4 no entardecer. Tessel
+vai de 11 à tarde a 19 à noite. Antes, todo lugar tinha exatamente a mesma
+gente às três da manhã e ao meio-dia.
+
+#### Mais mundo
+
+Elenco de papéis ampliado: cidade foi de 14 para **20 pessoas** (entraram
+estalajadeira do bairro de fora, boticária de fundos, cocheira de aluguel,
+pregoeira do registro, veterana de guerra sem posto e contrabandista de
+fronteira); vila de 7 para 9 (moleira, caçadora de peles); aldeia de 4 para 5
+(pastora que dorme fora); mercado e porto de 8 para 10.
+
+Total de moradores gerados: **134 → 172**. Elenco completo: **228 NPCs**.
+
+### Arquivos
+
+**Modificados:** `content/vaelhorn/povoamento.ts` (ritmos, vizinhança,
+`rotinaDe`, seis papéis novos, densidade), `content/vaelhorn/kimetsu.ts`
+(`ROTINAS_ELENCO` com treze rotinas escritas à mão),
+`engine/povoamento.selftest.ts` (dez asserções novas sobre rotina e densidade).
+
+### Testes executados
+
+- `npx tsc --noEmit` — limpo.
+- `npm run test:engine` — onze suítes, exit 0.
+- `npm run test:jornadas` — todas as missões.
+- `simLongo 10 6` e `simLongo 10 6 comum objetivos` — zero violações.
+- `simBalanco 300` — 17 de 20 (inalterado).
+- `npx expo export --platform web` — build concluído.
+
+Números do mundo depois de dez anos: 1 assentamento vazio em 23, maior
+concentração com 26 de 250 pessoas.
+
+### Pendências
+
+1. **Rotina ainda é por ofício, não por pessoa.** Duas taverneiras de cidades
+   diferentes têm o mesmo dia. Falta variação individual — folga, doença,
+   viagem, luto — e reação ao estado do mundo (ninguém se recolhe quando a
+   insegurança sobe).
+2. **A rotina não conhece a hora do lugar.** Uma taverneira "trabalha" às três
+   da manhã porque o ritmo dela é ficar em casa; o ofício está certo, o horário
+   é indiferente. Faltaria um conceito de expediente.
+3. **Ninguém escrito à mão nas regiões novas** — segue da sessão 14. Os 172
+   moradores dão densidade; personagem memorável ainda precisa de autoria.
+4. **Ganchos e segredos não viram missão** — segue.
+5. Pendências antigas seguem: densidade de perigo por região, bestiário sem
+   topo, Nemesis que só acumula, prazo fixo de missão.

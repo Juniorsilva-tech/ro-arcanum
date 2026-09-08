@@ -80,9 +80,47 @@ const novosOnis: Criatura[] = [
   { id: 'yahaba', nome: 'Yahaba', descricao: 'Setas vetoriais invisíveis alteram a direção de corpos e ataques.', nivel: 6, vida: 58, defesa: 14, acerto: 15, ataqueNome: 'Setas vetoriais', dano: { base: 8, dispersao: .25, tipo: 'impacto' }, moralBase: 75, xp: 100, oni: true, chefe: true, faccaoId: 'onis' },
 ];
 
+// Rotinas do elenco da mansão. Os nove Hashiras já tinham a sua escrita à
+// mão; estes oito vinham com `rotina: {}` do atalho abaixo e, por isso,
+// ficavam parados no mesmo lugar às três da manhã e ao meio-dia — o que apaga
+// a diferença entre procurar alguém de dia e à noite (ver `localEfetivo`).
+//
+// Cada uma segue o que a pessoa é: quem caça sai à noite, quem instrui fica
+// onde se instrui, e quem comanda não sai da casa.
+type Rotina = NPC['rotina'];
+const ROTINAS_ELENCO: Record<string, Rotina> = {
+  // Caça de noite, dorme de dia, e a audição dele serve melhor no escuro.
+  zenitsu: { madrugada: 'estrada', manha: 'mansao_ubuyashiki', tarde: 'mansao_ubuyashiki', entardecer: 'floresta', anoitecer: 'floresta', noite: 'estrada' },
+  // Tsuguko: treino de manhã na mansão, campo à tarde, patrulha à noite.
+  kanao: { madrugada: 'mansao_ubuyashiki', manha: 'mansao_ubuyashiki', tarde: 'floresta', entardecer: 'floresta', anoitecer: 'praca', noite: 'estrada' },
+  // Não usa respiração: compensa treinando sozinho e caçando longe dos outros.
+  genya: { madrugada: 'floresta', manha: 'mansao_ubuyashiki', tarde: 'ruinas', entardecer: 'ruinas', anoitecer: 'floresta', noite: 'floresta' },
+  // Dirige a corporação de dentro de casa; a doença não o deixa sair.
+  kagaya: { madrugada: 'mansao_ubuyashiki', manha: 'mansao_ubuyashiki', tarde: 'mansao_ubuyashiki', entardecer: 'mansao_ubuyashiki', anoitecer: 'mansao_ubuyashiki', noite: 'mansao_ubuyashiki' },
+  // Coordena e cuida dele. Sai só até a capela, e volta.
+  amane: { madrugada: 'mansao_ubuyashiki', manha: 'mansao_ubuyashiki', tarde: 'capela', entardecer: 'mansao_ubuyashiki', anoitecer: 'mansao_ubuyashiki', noite: 'mansao_ubuyashiki' },
+  // Instrutor aposentado: fica onde se ensina, e dorme cedo.
+  jigoro: { madrugada: 'mansao_ubuyashiki', manha: 'floresta', tarde: 'floresta', entardecer: 'mansao_ubuyashiki', anoitecer: 'mansao_ubuyashiki', noite: 'mansao_ubuyashiki' },
+  // Ex-Hashira amargurado: bebe na taverna e evita a mansão de dia.
+  shinjuro: { madrugada: 'mansao_ubuyashiki', manha: 'mansao_ubuyashiki', tarde: 'taverna', entardecer: 'taverna', anoitecer: 'taverna', noite: 'mansao_ubuyashiki' },
+  // Atende quem chega ferido; a capela é o posto avançado dela.
+  kanae: { madrugada: 'mansao_ubuyashiki', manha: 'capela', tarde: 'capela', entardecer: 'praca', anoitecer: 'floresta', noite: 'mansao_ubuyashiki' },
+  // Os dois espíritos ficam onde morreram e onde ainda ensinam.
+  sabito: { madrugada: 'floresta', manha: 'floresta', tarde: 'floresta', entardecer: 'floresta', anoitecer: 'floresta', noite: 'floresta' },
+  makomo: { madrugada: 'floresta', manha: 'floresta', tarde: 'floresta', entardecer: 'floresta', anoitecer: 'floresta', noite: 'floresta' },
+  // Cresceu na mata e não confia em telhado: dorme fora, caça o dia inteiro.
+  inosuke: { madrugada: 'floresta', manha: 'floresta', tarde: 'ruinas', entardecer: 'ruinas', anoitecer: 'floresta', noite: 'floresta' },
+  // Instrutor da Água: monte, e só o monte.
+  urokodaki: { madrugada: 'floresta', manha: 'floresta', tarde: 'floresta', entardecer: 'floresta', anoitecer: 'floresta', noite: 'floresta' },
+  // Os dois onis dissidentes já tinham manhã e tarde na capela; a noite é
+  // quando podem sair, e é quando trabalham de verdade.
+  tamayo: { madrugada: 'capela', manha: 'capela', tarde: 'capela', entardecer: 'capela', anoitecer: 'cripta', noite: 'cripta' },
+  yushiro: { madrugada: 'capela', manha: 'capela', tarde: 'capela', entardecer: 'cripta', anoitecer: 'cripta', noite: 'praca' },
+};
+
 function npc(id: string, nome: string, idade: number, ocupacao: string, personalidade: string, localBase = 'mansao_ubuyashiki'): NPC {
   return { id, nome, idade, ocupacao, personalidade, localBase, faccaoId: 'cacadores',
-    rotina: {}, vozNarrativa: personalidade, corpo: 'Veste roupas de viagem e equipamento coerente com seu ofício.', relacoes: [] };
+    rotina: ROTINAS_ELENCO[id] ?? {}, vozNarrativa: personalidade, corpo: 'Veste roupas de viagem e equipamento coerente com seu ofício.', relacoes: [] };
 }
 const novosNpcs: NPC[] = [
   npc('zenitsu', 'Zenitsu Agatsuma', 19, 'caçador do Trovão', 'Ansioso e de audição aguçada; seu medo convive com uma lealdade obstinada.'),

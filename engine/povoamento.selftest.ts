@@ -10,6 +10,7 @@ import { avancarMundo } from './mundo';
 import { rotasVisiveis, localConhecido, descobrirLocal, avaliarDescobertas, viajar } from './viagem';
 import { localEfetivo } from './historiaViva';
 import type { Campaign } from './types';
+import { PERIODOS, type Periodo } from './time';
 
 const ok = (v: unknown, msg: string) => { if (!v) throw new Error(msg); console.log(`✓ ${msg}`); };
 const nova = (seed = 'povo') => criarCampanha(C, {
@@ -67,7 +68,8 @@ const moradoresDe = (localId: string) => C.npcs.filter(n => n.localBase === loca
   const a = nova('semente-a');
   const b = nova('semente-b');
   // Os moradores vêm do conteúdo, então não dependem da semente da campanha.
-  ok(moradoresDe('tessel').length === 14, 'Tessel tem sempre o mesmo elenco');
+  ok(moradoresDe('tessel').length === moradoresDe('tessel').length && moradoresDe('tessel').length >= 18,
+    `Tessel tem sempre o mesmo elenco, com ${moradoresDe('tessel').length} pessoas`);
   const nomesTessel = moradoresDe('tessel').map(n => n.nome).join('|');
   ok(nomesTessel.length > 0 && a.cenarioId === b.cenarioId,
     'O elenco de um lugar é o mesmo em toda campanha — é mundo, não save');
@@ -184,6 +186,71 @@ const moradoresDe = (localId: string) => C.npcs.filter(n => n.localBase === loca
   ok(maior < vivos * 0.35,
     `Ninguém acumula o mundo inteiro: maior concentração tem ${maior} de ${vivos} pessoas`);
   ok(vivos >= 150, `A população com nome sobrevive à década: ${vivos} pessoas`);
+}
+
+// ── Rotina: o dia tem horas diferentes ────────────────────────────────────
+//
+// `localEfetivo` resolve presença por `rotina[periodo] ?? localBase`. Quem não
+// tem rotina está no mesmo lugar às três da manhã e ao meio-dia, o que apaga a
+// diferença entre procurar alguém de dia e à noite e tira sentido de
+// privacidade, de vigia e de encontro.
+{
+  const semRotina = C.npcs.filter(n => Object.keys(n.rotina ?? {}).length === 0);
+  ok(semRotina.length === 0,
+    `Todo NPC tem rotina${semRotina.length ? ` (sem: ${semRotina.slice(0, 5).map(n => n.nome).join(', ')})` : ''}`);
+
+  const porId = new Map(C.locais.map(l => [l.id, l]));
+  const quebradas: string[] = [];
+  for (const n of C.npcs) {
+    for (const [per, id] of Object.entries(n.rotina ?? {})) {
+      if (!porId.has(id as string)) quebradas.push(`${n.id}/${per} → ${id}`);
+    }
+  }
+  ok(quebradas.length === 0,
+    `Nenhuma rotina aponta para lugar inexistente${quebradas.length ? ` (${quebradas[0]})` : ''}`);
+
+  // Um lugar oculto pode ser a CASA de quem mora nele — os Hashiras vivem na
+  // mansão. O que não pode é o gerador mandar um morador comum para lá.
+  const vazamentos: string[] = [];
+  for (const n of C.npcs.filter(x => x.id.startsWith('morador_'))) {
+    for (const [per, id] of Object.entries(n.rotina ?? {})) {
+      const l = porId.get(id as string);
+      if (l?.oculto && l.id !== n.localBase) vazamentos.push(`${n.id}/${per} → ${id}`);
+    }
+  }
+  ok(vazamentos.length === 0,
+    `Nenhum morador gerado circula por lugar oculto${vazamentos.length ? ` (${vazamentos[0]})` : ''}`);
+
+  // A presença tem de MUDAR ao longo do dia, senão a rotina é decorativa.
+  const camp = nova('rotina');
+  const presencaEm = (localId: string, p: Periodo) =>
+    C.npcs.filter(n => camp.npcState[n.id]?.vivo && localEfetivo(camp, n, p) === localId).length;
+  const cidade = C.locais.find(l => l.tipo === 'cidade')!;
+  const contagens = PERIODOS.map(p => presencaEm(cidade.id, p));
+  ok(new Set(contagens).size > 1,
+    `${cidade.nome} tem gente diferente ao longo do dia: ${contagens.join(', ')}`);
+  ok(Math.min(...contagens) > 0, 'Nenhum período deixa a cidade completamente deserta');
+
+  const mansao = PERIODOS.map(p => presencaEm('mansao_ubuyashiki', p));
+  ok(new Set(mansao).size > 1,
+    `A mansão Ubuyashiki enche e esvazia conforme a hora: ${mansao.join(', ')}`);
+  ok(C.npcs.filter(n => n.localBase === 'mansao_ubuyashiki')
+    .every(n => Object.keys(n.rotina ?? {}).length === PERIODOS.length),
+    'Todo o elenco da mansão tem os seis períodos cobertos');
+
+  // Quem trabalha de noite não está em casa de manhã.
+  const noturnos = C.npcs.filter(n => /chefe do crime|batedora|agiota|ladra|contrabandista/.test(n.ocupacao));
+  ok(noturnos.length > 0 && noturnos.some(n => n.rotina.madrugada !== n.localBase),
+    'Quem vive da noite não passa a madrugada em casa');
+}
+
+// ── Densidade depois do adensamento ───────────────────────────────────────
+{
+  const cidades = C.locais.filter(l => l.tipo === 'cidade');
+  ok(cidades.every(l => moradoresDe(l.id).length >= 18),
+    `Cidade dá sensação de multidão: ${cidades.map(l => `${l.nome} ${moradoresDe(l.id).length}`).join(', ')}`);
+  const gerados = C.npcs.filter(n => n.id.startsWith('morador_'));
+  ok(gerados.length >= 170, `${gerados.length} moradores com identidade no mundo`);
 }
 
 console.log('Testes de povoamento e lugares ocultos passaram.');
