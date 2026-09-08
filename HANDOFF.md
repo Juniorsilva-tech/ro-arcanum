@@ -599,6 +599,15 @@ taverneiras de cidades diferentes vivem o mesmo dia, e ninguém muda de hábito
 quando a insegurança da vila sobe. É a diferença entre um mundo povoado e um
 mundo habitado.
 
+## Sessão 18 — estado vivo inicial das casas
+
+`engine/casas.ts` e `MundoState.casas` adicionam estado persistente por casa:
+líder, herdeiro, legitimidade, tesouro, influência e sucessões. O processador
+roda a cada avanço do mundo; fome reduz tesouro/legitimidade, prosperidade
+recupera lentamente, e morte do líder promove herdeiro vivo. É uma primeira
+camada causal, ainda sem casamento, vassalagem, tributação territorial ou
+disputa entre pretendentes. Typecheck passou. Commit `613b4e5`.
+
 ## Sessão 17 — catálogo inicial de casas
 
 Adicionada a primeira camada explícita de casas dos reinos em
