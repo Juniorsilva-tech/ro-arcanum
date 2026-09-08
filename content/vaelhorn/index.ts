@@ -13,6 +13,7 @@ import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
 import { questsVaelhorn } from './quests';
 import { integrarKimetsu } from './kimetsu';
 import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
+import { casasVaelhorn } from './casas';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -43,6 +44,7 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   desafios: desafiosVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
+  casas: casasVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,
   encontrosPorTipo,
   localInicial: 'taverna',

@@ -273,6 +273,7 @@ export function montarPacote(
     comunidadeLocal: camp.continuidade?.locais[ctx.local.id],
     retornoAoLocal: narrativa.retorno,
     mundoPersistente: {
+      casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id)).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao })),
       fatos: narrativa.fatos,
       confirmados: narrativa.confirmados,
       rumores: narrativa.rumores,

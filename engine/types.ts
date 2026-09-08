@@ -514,6 +514,7 @@ export type ContentBundle = {
   criaturas: Criatura[];
   quests: Quest[];
   faccoes: { id: string; nome: string }[];
+  casas?: import('../content/vaelhorn/casas').CasaNobre[];
   // Pares de facções com rivalidade de fundo real o bastante pra às vezes
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.
