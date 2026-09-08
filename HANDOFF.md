@@ -1504,3 +1504,174 @@ não-oni do tamanho de um personagem maduro.
 5. As pendências das sessões anteriores seguem abertas: Nemesis que só acumula,
    prazo fixo de missão, faixas baixas do combate comprimidas, e a identidade
    rara que o Astra começou a ligar em `identidade.ts`.
+
+---
+
+## Sessão 14 — Claude — povoamento e lugares ocultos — plano antes das alterações
+
+### Estado encontrado
+
+Commit `24d8a3c` (continente). Censo medido antes de tocar em nada, e o
+resultado condena a nomenclatura da sessão anterior:
+
+| | Dia 0 | Dia 3650 |
+|---|---|---|
+| Pessoas com identidade | 58 | 89 |
+| População escalar somada | 1320 | 3347 |
+| Assentamentos SEM ninguém com identidade | 17 de 22 | 20 de 22 |
+
+"Assentamento vivo" só queria dizer que o lugar tem economia e insegurança.
+`populacao: 372` é o inteiro 372, não 372 pessoas. Os 56 NPCs autorais estão
+todos no Vale de Halvet (28), Fora do Vale (27) e Fora do Mundo (1). As seis
+regiões que eu criei na sessão 13 têm **zero** habitantes com nome: Tessel tem
+cerco, marechal e lista de leva no texto, e ninguém para falar com você.
+
+Segundo achado do mesmo censo: ao fim de dez anos, **56 das 89 pessoas estão
+empilhadas na `praca`**. A migração de `autonomia.ts` puxa todo mundo para onde
+há mais pão e menos risco, e nada segura ninguém no lugar de origem.
+
+### Objetivo desta sessão
+
+Decisão do dono do projeto: densidade por porte de assentamento, papéis
+próprios de cada porte, e lugares escondidos.
+
+1. **Densidade escalonada.** Cidade precisa dar sensação de gente: quem manda,
+   guarda, guilda, lojas, curandeiro, taverna, herói local, quem rouba. Vila
+   tem chefe, ofício, taverna, ladrão. Aldeia tem ancião e pouco mais.
+2. **NPC com história, não figurante.** Cada gerado carrega ocupação, voz,
+   índole, corpo e — quando couber — segredo ligado à história do próprio
+   lugar (que já existe em `Local.historia` desde a sessão 13).
+3. **Lugares ocultos.** Hoje `mansao_ubuyashiki` e `vila_ferreiros` são
+   secretos só na ficção: mecanicamente aparecem na lista de rotas como
+   qualquer outro. Precisa existir local que não se alcança sem descobrir.
+
+### Como pretendo fazer
+
+- **Gerador determinístico em conteúdo**, não em campanha. Semente derivada do
+  id do lugar, então o elenco é o MESMO em toda campanha — é mundo, não sorteio
+  por save. Entra em `content.npcs`, o que faz `todosNpcs`, `convivio`,
+  `autonomia` e o narrador enxergarem sem nenhuma mudança neles.
+- **Figuras autorais à mão** nas três cidades, por cima do gerado.
+- **`Local.oculto`** mais condição de descoberta, e uma função de rotas
+  visíveis que a UI e o simulador passam a usar.
+
+### Restrições
+
+- Não inchar o save: gerado é conteúdo, não estado de campanha.
+- `selftest.ts` valida referência cruzada de NPC, facção e local — tudo que eu
+  gerar tem de apontar para coisa existente.
+- Saves antigos precisam continuar carregando.
+- Rodar `test:all` antes de declarar qualquer coisa.
+
+
+### Implementação da sessão 14
+
+#### Povoamento (`content/vaelhorn/povoamento.ts`)
+
+Gerador determinístico de moradores, com semente derivada do **id do lugar** —
+Tessel tem exatamente a mesma gente em toda campanha, como se tivesse sido
+escrita à mão. Entra em `content.npcs`, então `todosNpcs`, `convivio`,
+`autonomia` e o narrador enxergam sem nenhuma mudança neles, e **não incha o
+save**: é conteúdo, não estado de campanha.
+
+Densidade por porte, com elenco de papéis próprio:
+
+| Porte | Pessoas | Papéis |
+|---|---|---|
+| cidade | 14 | senhora da cidade, capitã da guarda, mestra de guilda, lojista, armeira, curandeira, taverneira, escrivã, campeã de arena, chefe do crime, batedora de carteira, agiota, carregadora, mendiga que vê tudo |
+| porto / mercado | 8 | recorte do elenco de cidade |
+| vila | 7 | chefe da vila, ferreira, taverneira, curandeira, guarda, ladra, tropeira |
+| forte | 4 | comandante, sargenta veterana, cozinheira, recruta |
+| parada de caravana | 4 | dona da parada, chefe de caravana, escolta, viajante que não diz de onde vem |
+| aldeia | 4 | anciã, lavradora, benzedeira, moça que some por dias |
+| forja | 2 | ferreira mestra, aprendiz |
+
+Cada pessoa tem ocupação, idade, voz, índole, corpo e duas ligações com outra
+gente do mesmo lugar — o que basta para `convivio.ts` produzir acontecimento sem
+o jogador. Quem tem segredo carrega um **costurado na `historia` do próprio
+lugar**: descobrir uma pessoa é descobrir o lugar. Todo segredo diz como se
+descobre; não existe segredo sem porta.
+
+Os ofícios vão no feminino porque é a premissa do cenário e `selftest.ts` tem
+trava automática contra ofício masculino no elenco. Descobri isso apanhando.
+
+#### Lugares ocultos (`Local.oculto`, `engine/viagem.ts`)
+
+A mansão Ubuyashiki e a vila dos ferreiros sempre foram secretas na ficção e
+**públicas na mecânica**: apareciam na lista de rotas como qualquer destino.
+Agora existe `Local.oculto` com dica e condição declarada de revelação.
+
+- `rotasVisiveis()` filtra o que o jogador pode ver. Usada pela tela do mapa,
+  pelo pacote do narrador e pelo planejador do simulador — os três passaram a
+  enxergar só o que o jogador enxerga.
+- `viajar()` recusa destino desconhecido devolvendo **a dica**, não um erro seco.
+- `avaliarDescobertas()` roda no tique diário: a revelação chega como
+  acontecimento, não como recompensa de menu.
+
+Seis lugares nascem escondidos. Três já existiam e passaram a ser secretos de
+verdade (vila dos ferreiros, mansão Ubuyashiki, Castelo Infinito) e três são
+novos: **A Casa da Agulha** (o quartel-general dos caçadores dentro de Tessel,
+revelado por confiança da facção), **A Forja Afundada** (oficina numa galeria
+alagada do Poço Fundo, revelada por chegar à galeria de cima) e **A Toca do
+Juncal** (câmara seca sob o charco, revelada por reputação com os ladrões).
+
+### Dois bugs de despovoamento
+
+O censo de dez anos mostrou o mundo se esvaziando: **20 dos 23 assentamentos
+sem uma alma**, com mais da metade das pessoas empilhada no mesmo lugar. Duas
+causas, ambas corrigidas em `engine/autonomia.ts`:
+
+1. **O destino da migração era `[0]`** — a primeira cidade na ordem do objeto,
+   sempre a mesma. Todo mundo que migrava em dez anos ia parar no mesmo lugar.
+   Agora o destino é o assentamento **mais perto** que tenha comida, calma e
+   espaço, com capacidade limitada por moradias: cidade cheia deixa de atrair.
+2. **Quem migrava passava a chamar o destino de casa** (`p.casa = p.local` na
+   chegada), então nunca mais tinha para onde voltar. Entrou `VidaCivil.natal`:
+   `casa` muda quando a pessoa se muda, `natal` nunca. Se o lugar de origem
+   voltou a servir, ela volta.
+
+| Medição em 10 anos | Antes | Depois |
+|---|---|---|
+| Assentamentos vazios | 20 de 23 | **1 de 23** |
+| Maior concentração | 56 pessoas | **19 de 212** |
+| Pessoas com nome no dia 0 | 58 | **192** |
+| Pessoas com nome no dia 3650 | 89 | **212** |
+
+### Arquivos
+
+**Criados:** `content/vaelhorn/povoamento.ts`, `engine/povoamento.selftest.ts`.
+
+**Modificados:** `engine/types.ts` (`Local.oculto`), `engine/viagem.ts`
+(`rotasVisiveis`, `localConhecido`, `descobrirLocal`, `avaliarDescobertas`),
+`engine/autonomia.ts` (migração por proximidade, retorno para o natal),
+`engine/vivoTypes.ts` (`natal`), `engine/historiaViva.ts`,
+`engine/mundoVivo.ts`, `engine/llm.ts`, `engine/planejadorSim.ts`,
+`engine/campanhaLonga.ts`, `ui/screens/Paineis.tsx`,
+`content/vaelhorn/locations.ts`, `content/vaelhorn/continente.ts`,
+`content/vaelhorn/index.ts`, `package.json`.
+
+### Testes executados
+
+- `npx tsc --noEmit` — limpo.
+- `npm run test:engine` — onze suítes, exit 0. Inclui a nova
+  `povoamento.selftest.ts` com 30 asserções.
+- `npm run test:jornadas` — todas as missões.
+- `simLongo 10 6` e `simLongo 10 6 comum objetivos` — zero violações.
+- `simBalanco 300` — 17 de 20 (inalterado; não toquei no combate).
+- `npx expo export --platform web` — build concluído.
+
+### Pendências
+
+1. **Ninguém escrito à mão nas regiões novas.** Os 134 moradores são gerados.
+   As figuras que importam — quem o jogador vai lembrar — ainda precisam de
+   autoria: nome próprio, história longa, relação com o enredo. O gerador
+   entrega densidade, não personagem memorável.
+2. **Rotinas vazias.** Todo morador gerado tem `rotina: {}`, então fica no
+   `localBase` o dia inteiro. Faltam padrões por ofício: taverneira à noite,
+   lavradora no campo de dia, ladra em local de privacidade alta.
+3. **Ganchos e segredos não viram missão.** Cada lugar tem dois ganchos e boa
+   parte dos moradores tem segredo; nada no gerador de missões lê isso ainda.
+4. **`mercado_peixe` esvazia** em algumas sementes. Um a cada 23 é aceitável
+   para o teste, mas a causa (é adjacente a Mareu, que absorve) merece olhada.
+5. Pendências anteriores seguem abertas: densidade de perigo por região,
+   bestiário sem topo, Nemesis que só acumula, prazo fixo de missão.

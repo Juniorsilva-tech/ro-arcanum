@@ -90,6 +90,55 @@ export function perigoEfetivoDaRota(
   return Math.max(0, perigo);
 }
 
+/** O lugar já foi descoberto por esta campanha? */
+export function localConhecido(camp: Campaign, local: Local): boolean {
+  if (!local.oculto) return true;
+  return camp.flags[local.oculto.flag] === true || camp.locaisVisitados.includes(local.id);
+}
+
+/**
+ * Rotas que o jogador pode ver e usar daqui. Lugar oculto não aparece na lista
+ * até ser descoberto — é o que separa "secreto na ficção" de "secreto de
+ * verdade". Quem chama isto: a tela do mapa, o pacote do narrador e o
+ * planejador do simulador.
+ */
+export function rotasVisiveis(content: ContentBundle, camp: Campaign, localId = camp.localAtual) {
+  const local = content.locais.find(l => l.id === localId);
+  if (!local) return [];
+  return local.rotas.filter(r => {
+    const destino = content.locais.find(l => l.id === r.destino);
+    return !destino || localConhecido(camp, destino);
+  });
+}
+
+/**
+ * Confere as condições declaradas de cada lugar oculto e revela os que já
+ * foram satisfeitos. Roda no tique diário do mundo — a descoberta chega como
+ * notícia, não como recompensa de menu.
+ */
+export function avaliarDescobertas(content: ContentBundle, camp: Campaign): string[] {
+  const revelados: string[] = [];
+  for (const l of content.locais) {
+    const o = l.oculto;
+    if (!o || camp.flags[o.flag] === true) continue;
+    const porReputacao = o.exigeReputacao
+      && (camp.reputacao[o.exigeReputacao.faccaoId] ?? 0) >= o.exigeReputacao.minimo;
+    const porVisita = o.exigeVisita && camp.locaisVisitados.includes(o.exigeVisita);
+    if (!porReputacao && !porVisita) continue;
+    if (descobrirLocal(content, camp, l.id)) revelados.push(l.id);
+  }
+  return revelados;
+}
+
+/** Marca um lugar oculto como descoberto e registra o momento. */
+export function descobrirLocal(content: ContentBundle, camp: Campaign, localId: string): boolean {
+  const local = content.locais.find(l => l.id === localId);
+  if (!local?.oculto || camp.flags[local.oculto.flag] === true) return false;
+  camp.flags[local.oculto.flag] = true;
+  registrarMarco(camp, `você descobriu onde fica ${local.nome}`);
+  return true;
+}
+
 // Retorna os ids das criaturas do encontro, ou null se a viagem correu em paz.
 // `pool` é o elenco possível para o tipo de local de destino (ver
 // content/vaelhorn/bestiary.ts, encontrosPorTipo) — a engine não conhece
@@ -137,6 +186,10 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   const local = content.locais.find((l) => l.id === camp.localAtual);
   const rota = local?.rotas.find((r) => r.destino === destino);
   if (!rota) return { ok: false, motivo: 'não há rota daqui para lá' };
+  const alvoOculto = content.locais.find(l => l.id === destino);
+  if (alvoOculto && !localConhecido(camp, alvoOculto)) {
+    return { ok: false, motivo: alvoOculto.oculto!.dica };
+  }
 
   const origemDaViagem = camp.localAtual;
   registrarSaidaNarrativa(camp);

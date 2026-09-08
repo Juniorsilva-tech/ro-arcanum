@@ -295,6 +295,19 @@ export type Local = {
   // O que aconteceu aqui antes de o jogador chegar. Vai para o pacote do
   // narrador, que passa a poder citar o passado do lugar em vez de inventar um.
   historia?: string[];
+  // Lugar que nao aparece no mapa ate ser descoberto. `dica` e' o que se ouve
+  // antes de saber onde fica; `flag` e' o que a campanha precisa ter marcado.
+  // A mansao Ubuyashiki e a vila dos ferreiros sempre foram secretas na
+  // ficcao e publicas na mecanica — apareciam na lista de rotas como qualquer
+  // outro destino.
+  oculto?: {
+    flag: string;
+    dica: string;
+    /** Confiança de uma facção abre a porta: eles contam a você. */
+    exigeReputacao?: { faccaoId: string; minimo: number };
+    /** Ou você chega perto o bastante de um lugar que dá acesso. */
+    exigeVisita?: string;
+  };
   rotas: { destino: string; periodos: number; perigo: number }[];
 };
 

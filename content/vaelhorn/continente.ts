@@ -567,9 +567,83 @@ const BAIXIOS: Def[] = [
   },
 ];
 
+// ── Lugares que ninguém acha por acaso ────────────────────────────────────
+//
+// A mansão Ubuyashiki e a vila dos ferreiros sempre foram secretas na ficção e
+// públicas na mecânica: apareciam na lista de rotas como qualquer outro
+// destino. Agora `Local.oculto` existe, e estes três nascem escondidos — cada
+// um com a sua condição de revelação declarada.
+const OCULTOS: (Def & { oculto: NonNullable<Local['oculto']> })[] = [
+  {
+    id: 'casa_da_agulha', nome: 'A Casa da Agulha', regiao: 'Marca de Tessel', tipo: 'mansao', perigo: 3,
+    descricao: 'Uma casa comum numa rua comum de Tessel, com porta dos fundos que dá para outra rua e um porão que não consta na planta.',
+    atmosfera: [
+      'Por fora, casa de família. Cortina fechada e ninguém à janela.',
+      'Alguém entra pela porta dos fundos e não sai pela da frente.',
+      'Luz sob a porta do porão a noite inteira.',
+    ],
+    privacidade: [3, 3],
+    ganchos: ['Um mapa da marca com alfinetes que mudam de lugar', 'Correio que chega sem selo e parte sem destinatário'],
+    pontos: ['porão', 'porta dos fundos', 'mesa de mapas'],
+    historia: [
+      'É daqui que os caçadores coordenam a marca inteira. Tessel não sabe, e a Casa prefere assim.',
+      'Três chefes de posto já foram substituídos por decisão tomada nesta mesa, e nenhum soube por quê.',
+    ],
+    oculto: {
+      flag: 'descoberto.casa_da_agulha',
+      dica: 'Falam de uma casa em Tessel onde as ordens de verdade são dadas. Ninguém aponta qual.',
+      exigeReputacao: { faccaoId: 'cacadores', minimo: 3 },
+    },
+  },
+  {
+    id: 'forja_afundada', nome: 'A Forja Afundada', regiao: 'Planalto de Corveira', tipo: 'forja', perigo: 6,
+    descricao: 'Uma oficina inteira dentro de uma galeria abandonada do Poço Fundo, com fole movido pela própria água que inundou o nível de baixo.',
+    atmosfera: [
+      'Calor onde deveria haver frio. O fole respira com a água.',
+      'A brasa ilumina a galeria e mostra até onde ela vai — não muito.',
+      'Só o fole e a água. Quem trabalha aqui trabalha sozinho.',
+    ],
+    privacidade: [3, 3],
+    ganchos: ['Uma lâmina inacabada na bigorna, esperando alguém', 'Marcas de mão pequena na poeira do chão'],
+    pontos: ['bigorna', 'fole de água', 'galeria alagada'],
+    historia: [
+      'Quando as casas de Corveira proibiram forjar aço solar, a forja desceu. Está aqui desde então.',
+      'Quem forja aqui não vende para a cidade. Vende para quem precisa matar o que a cidade finge que não existe.',
+    ],
+    oculto: {
+      flag: 'descoberto.forja_afundada',
+      dica: 'Há quem jure que ainda se forja no Poço Fundo, num nível que a casa dona diz estar interditado.',
+      exigeVisita: 'mina_corveira',
+    },
+  },
+  {
+    id: 'toca_juncal', nome: 'A Toca do Juncal', regiao: 'Baixios de Halvern', tipo: 'cripta', perigo: 7,
+    descricao: 'Uma câmara seca sob o charco, alcançada por um caminho de estacas que só existe para quem sabe contá-las.',
+    atmosfera: [
+      'Seco, quieto e mais alto do que deveria caber ali embaixo.',
+      'A luz que entra vem de cima, por uma fenda entre as raízes.',
+      'De noite ouve-se o charco inteiro através da pedra.',
+    ],
+    privacidade: [3, 3],
+    ganchos: ['Mercadoria empilhada que não passou por alfândega nenhuma', 'Uma lista de nomes pregada na parede, alguns riscados'],
+    pontos: ['câmara seca', 'caminho de estacas', 'parede dos nomes'],
+    historia: [
+      'A capela da aldeia engolida ficava aqui. O que sobrou dela virou depósito de quem não pode ser visto.',
+      'Os juncaleiros sabem onde é e não contam. Contar custaria mais caro do que guardar.',
+    ],
+    oculto: {
+      flag: 'descoberto.toca_juncal',
+      dica: 'No Juncal se diz que existe chão seco embaixo da água. Quem sabe onde não diz, e quem diz não sabe.',
+      exigeReputacao: { faccaoId: 'ladroes', minimo: 5 },
+    },
+  },
+];
+
 export const locaisContinente: Local[] = [
   ...TESSEL, ...CORVEIRA, ...MAREU, ...VINTRA, ...SOLGAR, ...ESTRADAS, ...BAIXIOS,
-].map(expandir);
+].map(expandir).concat(
+  OCULTOS.map(d => ({ ...expandir(d), oculto: d.oculto })),
+);
 
 // ── O grafo ───────────────────────────────────────────────────────────────
 //
@@ -633,6 +707,11 @@ const ARESTAS: Aresta[] = [
   ['poco_seco', 'ruina_areia', 1, 7],
   ['mareu', 'mercado_peixe', 0, 3],
   ['mercado_peixe', 'porto_sal', 1, 4],
+
+  // Os ocultos: têm rota, mas a rota não aparece até se descobrir o lugar.
+  ['tessel', 'casa_da_agulha', 0, 3],
+  ['mina_corveira', 'forja_afundada', 1, 6],
+  ['charco_juncal', 'toca_juncal', 1, 7],
 
   // Ermo de Solgar
   ['solgar', 'poco_seco', 1, 6],

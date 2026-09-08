@@ -18,6 +18,7 @@ import {
   armaEquipada,
   itemPorId,
   mestresQueEnsinamAqui,
+  rotasVisiveis,
   escolasDominadas,
   podeFundir,
   artesConhecidasResolvidas,
@@ -326,7 +327,8 @@ export function Mapa() {
       <ComunidadeViva />
 
       <Divisor label="para onde ir" />
-      {local.rotas.map((r) => {
+      {/* Lugar oculto nao entra na lista ate ser descoberto (engine/viagem.ts). */}
+      {rotasVisiveis(content, camp).map((r) => {
         const dest = content.locais.find((l) => l.id === r.destino);
         if (!dest) return null;
         const conhecido = camp.locaisVisitados.includes(r.destino);

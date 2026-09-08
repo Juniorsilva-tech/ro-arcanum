@@ -24,6 +24,13 @@ export type MissaoViva = {
   recompensa: number; desfecho?: string;
 };
 export type VidaCivil = {
+  /**
+   * Onde a pessoa nasceu. `casa` muda quando ela se muda; `natal` nunca. Sem
+   * essa distincao, quem migrava passava a chamar o destino de casa e nunca
+   * mais tinha para onde voltar — em dez anos o mundo esvaziava num ponto so.
+   * Ausente em saves antigos: cai no `casa` da epoca.
+   */
+  natal?: string;
   casa: string; local: string; deslocado: boolean;
   viagem?: { destino: string; chegada: number };
   objetivo: 'rotina' | 'trabalhar' | 'tratar' | 'migrar' | 'treinar' | 'cacar' | 'cativo';

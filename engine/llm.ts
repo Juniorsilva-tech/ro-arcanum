@@ -18,6 +18,7 @@ import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 import { artesConhecidasResolvidas } from './fusao';
 import { contextoDeAptidao, leituraDoObservador } from './aptidao';
+import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
@@ -354,7 +355,7 @@ export function montarPacote(
     // O narrador pode citá-lo; o que não estiver aqui, ele não sabe.
     historiaDesteLugar: ctx.local.historia ?? [],
     artesQueVoceSabe: artesConhecidasResolvidas(content, camp).map((a) => a.nome),
-    ondeDaParaIr: ctx.local.rotas
+    ondeDaParaIr: rotasVisiveis(content, camp)
       .map((r) => content.locais.find((l) => l.id === r.destino)?.nome)
       .filter(Boolean),
     // Rótulos que já foram oferecidos — proibido repetir (nem reescritos).

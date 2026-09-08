@@ -3,6 +3,7 @@ import { periodosDeViagem } from './missoesVivas';
 import { PERIODOS } from './time';
 import type { AcaoMundo } from './acoesMundo';
 import { armaEquipada } from './items';
+import { rotasVisiveis } from './viagem';
 
 export type PlanoSim = { tipo: 'viajar'; destino: string } | { tipo: 'agir'; acao: AcaoMundo };
 // Only public mission information; no access to hidden aptitude or rival positions.
@@ -27,7 +28,7 @@ export function planejarMissao(content: ContentBundle, camp: Campaign): PlanoSim
     if (!Number.isFinite(necessario) || necessario > (q.prazo - dia + 1) * PERIODOS.length) continue;
     if (q.estado === 'oferecida') return { tipo: 'agir', acao: { tipo: 'missao', id: q.id, escolha: 'aceitar' } };
     if (camp.localAtual !== destino) {
-      const rotas = content.locais.find(l => l.id === camp.localAtual)?.rotas ?? [];
+      const rotas = rotasVisiveis(content, camp);
       const rota = rotas.map(r => ({ ...r, total: Math.max(1, r.periodos) + periodosDeViagem(content, r.destino, destino) }))
         .filter(r => Number.isFinite(r.total)).sort((a, b) => a.total - b.total || a.perigo - b.perigo)[0];
       if (rota) return { tipo: 'viajar', destino: rota.destino };

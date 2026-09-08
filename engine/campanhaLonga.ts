@@ -20,7 +20,7 @@ import { calcularContexto, disponibilidadeVerbo } from './availability';
 import { resolverIntencao } from './turn';
 import { atributosBase } from './character';
 import { nextFloat, pick } from './rng';
-import { viajar } from './viagem';
+import { viajar, rotasVisiveis } from './viagem';
 import { jogadorAtaca, jogadorFoge, jogadorAcaoTatica, jogadorConjura, jogadorUsaItemCombate, fecharCombate } from './combat';
 import { normalizarCampanha } from './migracao';
 import { executarAcaoMundo } from './acoesMundo';
@@ -411,7 +411,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
       m.acoes++;
     } else {
       const ctx = calcularContexto(content, camp);
-      const rotas = content.locais.find(l => l.id === camp.localAtual)?.rotas ?? [];
+      const rotas = rotasVisiveis(content, camp);
       // Um jogador real não fica parado num lugar só: viaja de vez em quando.
       if (rotas.length && nextFloat(camp.rng) < 0.18) {
         const r = viajar(content, camp, pick(camp.rng, rotas).destino);

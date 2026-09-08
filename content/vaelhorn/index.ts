@@ -6,6 +6,7 @@ import { origensVaelhorn } from './origins';
 import { verbosVaelhorn } from './verbs';
 import { locaisVaelhorn } from './locations';
 import { integrarContinente } from './continente';
+import { povoarContinente } from './povoamento';
 import { npcsVaelhorn } from './npcs';
 import { itensVaelhorn } from './items';
 import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
@@ -21,13 +22,18 @@ import {
   rivalidadesVaelhorn,
 } from './book';
 
+// O mapa primeiro, porque o povoamento depende dele: cada morador nasce de um
+// lugar, e o segredo dele se apoia na historia daquele lugar.
+const mapaVaelhorn = integrarContinente(locaisVaelhorn);
+const moradores = povoarContinente(mapaVaelhorn, faccoesVaelhorn);
+
 export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   cenario: vaelhorn,
   classes: classesVaelhorn,
   origens: origensVaelhorn,
   verbos: verbosVaelhorn,
-  locais: integrarContinente(locaisVaelhorn),
-  npcs: npcsVaelhorn,
+  locais: mapaVaelhorn,
+  npcs: [...npcsVaelhorn, ...moradores],
   mestres: mestresVaelhorn,
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,

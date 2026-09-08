@@ -25,6 +25,7 @@ export function iniciarMundoVivo(content: ContentBundle, camp: Campaign): MundoV
     if (!camp.npcState[npc.id]) continue;
     const cativo = camp.familia?.membros.find(m => m.id === npc.id)?.condicao === 'cativo';
     v.pessoas[npc.id] ??= {
+      natal: npc.localBase,
       casa: npc.localBase, local: npc.localBase, deslocado: false,
       objetivo: cativo ? 'cativo' : 'rotina', moedas: 20, fome: 0, saude: 100,
       habilidade: npc.combatente ? 5 : 1, prestigio: 0, proximaDecisao: camp.calendario.dia + 3,

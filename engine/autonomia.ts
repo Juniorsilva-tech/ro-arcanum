@@ -1,10 +1,46 @@
 import type { Campaign, ContentBundle, NPC } from './types';
 import { cidadeIdDoLocal, localEfetivo, proximoPasso, registrarFato } from './historiaViva';
 import { nextFloat, pick } from './rng';
-import { oferecerMissao, encerrarMissao } from './missoesVivas';
+import { oferecerMissao, encerrarMissao, periodosDeViagem } from './missoesVivas';
 import { registrarMorteFamiliar } from './familia';
 import { treinarNpc } from './progressaoNpc';
 import { processarFormacao } from './formacao';
+
+/** A cidade de origem voltou a ser lugar de morar? */
+function casaHabitavel(content: ContentBundle, camp: Campaign, casa: string): boolean {
+  const id = cidadeIdDoLocal(content, camp, casa);
+  const c = id ? camp.vivo?.cidades[id] : undefined;
+  if (!c || !id) return false;
+  const povo = camp.continuidade?.locais[id];
+  return c.fomeDias === 0 && c.inseguranca < 55 && (povo?.integridade ?? 0) >= 40;
+}
+
+/**
+ * Para onde alguém foge: o assentamento mais PERTO que tenha comida, calma e
+ * espaço. Capacidade importa — uma cidade cheia deixa de atrair, e é isso que
+ * espalha a população em vez de concentrá-la.
+ */
+function destinoDeMigracao(
+  content: ContentBundle,
+  camp: Campaign,
+  origem: string,
+  cidadeAtual: string | undefined,
+): string | undefined {
+  const v = camp.vivo!;
+  const candidatos = Object.keys(v.cidades)
+    .filter(id => {
+      if (id === cidadeAtual) return false;
+      const d = v.cidades[id];
+      const povo = camp.continuidade?.locais[id];
+      if (!povo || d.fomeDias > 0 || d.inseguranca >= 40) return false;
+      if (povo.populacao >= d.edificios.moradias * 90) return false;
+      return !!proximoPasso(content, origem, id);
+    })
+    .map(id => ({ id, perto: periodosDeViagem(content, origem, id), calma: v.cidades[id].inseguranca }))
+    .filter(x => Number.isFinite(x.perto))
+    .sort((a, b) => a.perto - b.perto || a.calma - b.calma);
+  return candidatos[0]?.id;
+}
 
 export function processarAutonomia(content: ContentBundle, camp: Campaign): void {
   const v = camp.vivo!, dia = camp.calendario.dia;
@@ -66,8 +102,19 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
     }
     if (p.saude < 65 && c.remedios >= 2) {
       p.objetivo = 'tratar'; c.remedios -= 2; p.saude = Math.min(100, p.saude + 12);
-    } else if (p.fome > 45 || c.inseguranca > 65) {
-      const destino = Object.keys(v.cidades).filter(id => id !== cidadeId && v.cidades[id].fomeDias === 0 && v.cidades[id].inseguranca < 40 && proximoPasso(content, local, id))[0];
+    } else if (p.deslocado && (p.natal ?? p.casa) !== local && casaHabitavel(content, camp, p.natal ?? p.casa)) {
+      // Ninguém fica fora de casa por gosto. Se o lugar de origem voltou a
+      // servir, a pessoa volta — e é isso que impede o mundo de se esvaziar
+      // num ponto só.
+      p.objetivo = 'migrar'; p.local = local; p.viagem = { destino: p.natal ?? p.casa, chegada: dia + 1 };
+      registrarFato(camp, { tipo: 'retorno_npc', local, texto: `${npc.nome} arrumou o que tinha e voltou para casa.`, atores: [npc.id], publico: true });
+    } else if (p.fome > 60 || c.inseguranca > 75) {
+      // Sair de casa é último recurso, e o destino é o mais PERTO que sirva —
+      // não o primeiro da lista. Antes era `[0]`, a mesma cidade na ordem do
+      // objeto, sempre: todo mundo que migrava em dez anos ia parar no mesmo
+      // lugar, e o resto do mundo esvaziava. Medido: vinte de vinte e três
+      // assentamentos sem uma alma ao fim de uma década.
+      const destino = destinoDeMigracao(content, camp, local, cidadeId);
       if (destino) {
         p.objetivo = 'migrar'; p.local = local; p.viagem = { destino, chegada: dia + 1 };
         registrarFato(camp, { tipo: 'partida_npc', local, texto: `${npc.nome} partiu em busca de segurança e alimento.`, atores: [npc.id], publico: true });
@@ -122,7 +169,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
         const novo: NPC = { id, nome, idade: 0, especie: 'humano', ocupacao: 'criança acolhida', faccaoId: tutor.faccaoId, localBase: casa.local, rotina: {}, vozNarrativa: 'curiosa e direta', personalidade: pick(camp.rng, ['observadora e paciente', 'impulsiva e leal', 'reservada e inventiva']), corpo: 'Aparência registrada conforme cresce.', relacoes: [{ npc: tutor.id, tipo: 'sangue', nota: 'família por acolhimento' }] };
         (camp.npcsProcedurais ??= []).push(novo);
         camp.npcState[id] = { vivo: true, idade: 0, tensao: 0, eixos: {}, memoria: [] };
-        v.pessoas[id] = { casa: casa.local, local: casa.local, deslocado: true, objetivo: 'rotina', moedas: 0, fome: 0, saude: 100, habilidade: nextFloat(camp.rng) < .05 ? 8 : 1, prestigio: 0, proximaDecisao: dia + 3, parceiros: {}, filhos: [], tutores: [tutor.id] };
+        v.pessoas[id] = { natal: casa.local, casa: casa.local, local: casa.local, deslocado: true, objetivo: 'rotina', moedas: 0, fome: 0, saude: 100, habilidade: nextFloat(camp.rng) < .05 ? 8 : 1, prestigio: 0, proximaDecisao: dia + 3, parceiros: {}, filhos: [], tutores: [tutor.id] };
         casa.filhos.push(id); casa.moedas -= 10;
         registrarFato(camp, { tipo: 'acolhimento', local: casa.local, texto: `${tutor.nome} acolheu ${nome}, uma criança recém-chegada à comunidade.`, atores: [tutor.id, id], publico: true });
       }

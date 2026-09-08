@@ -398,6 +398,7 @@ export const locaisVaelhorn: Local[] = [
     },
     privacidadeBase: P(3),
     perigo: 2,
+    oculto: { flag: 'descoberto.vila_ferreiros', dica: 'Dizem que existe uma vila de ferreiros nas montanhas. Ninguém que não seja do ofício sabe o caminho.', exigeReputacao: { faccaoId: 'cacadores', minimo: 4 }, exigeVisita: 'mina' },
     ganchos: [
       'Uma lâmina recém-forjada não muda de cor na mão de ninguém — o ferreiro se recusa a entregá-la assim',
       'Uma pilha de espadas quebradas, cada uma com uma marca de dente grande demais pra ser de fera',
@@ -510,6 +511,7 @@ export const locaisVaelhorn: Local[] = [
     },
     privacidadeBase: P(3),
     perigo: 1,
+    oculto: { flag: 'descoberto.mansao_ubuyashiki', dica: 'A casa de quem comanda os caçadores muda de lugar e não recebe estranho. Você precisaria ser levado.', exigeReputacao: { faccaoId: 'cacadores', minimo: 8 } },
     ganchos: [
       'Uma respiração diferente ecoa do outro lado da casa — alguém pratica uma forma que você nunca viu',
       'Um mapa na parede principal marca pontos pelo mundo todo, cada um com uma data ao lado',
@@ -543,6 +545,7 @@ export const locaisVaelhorn: Local[] = [
     },
     privacidadeBase: P(3),
     perigo: 10,
+    oculto: { flag: 'descoberto.castelo_infinito', dica: 'Não se chega lá andando. É o lugar que vem até você.', exigeReputacao: { faccaoId: 'onis', minimo: 12 } },
     ganchos: [
       'Uma sala cheia de espelhos que não refletem o corredor por onde você entrou',
       'Uma cadeira, sozinha, num salão grande demais pra fazer sentido — como se alguém a esperasse ali há muito tempo',
