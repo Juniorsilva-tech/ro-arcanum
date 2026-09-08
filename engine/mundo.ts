@@ -20,6 +20,7 @@ import { processarContinuidade } from './continuidade';
 import { todosNpcs } from './elenco';
 import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
+import { processarCasas } from './casas';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -59,6 +60,7 @@ export type MundoState = {
     apoiou?: string;
   };
   proximaGuerra?: number;
+  casas?: Record<string, import('./casas').EstadoCasa>;
 };
 
 const CLIMA_POR_ESTACAO: Record<Estacao, Clima[]> = {
@@ -210,6 +212,7 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     // E, raro, uma rivalidade de facções esquenta demais e vira guerra
     // aberta longe do jogador (ver guerra.ts).
     processarGuerrasDeFundo(content, camp);
+    processarCasas(content, camp);
     processarContinuidade(content, camp);
     processarMundoVivo(content, camp);
     m.diaProcessado = dia;
