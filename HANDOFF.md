@@ -640,3 +640,155 @@ inspeção do pacote do narrador antes de prosseguir. Fome e guerra devem causar
 consequências graduais, nunca apagar uma casa por regra abstrata. Não usar
 balanceamento por nível do jogador nem tornar casas destino obrigatório. Esta
 diretriz é decisão do proprietário e deve ser preservada pelo próximo agente.
+
+---
+
+## Sessão 19 — Claude — o teto humano — plano antes das alterações
+
+### Estado encontrado (medido, não suposto)
+Rodei um diagnóstico de razão de poder (`engine/poder.ts`) contra o bestiário
+inteiro, para um caçador com Nichirin, em dez níveis diferentes:
+
+```
+nível  1 · poder     7.0 | equivalentes  2 · desafio(<=1.4) 27
+nível 15 · poder    43.0 | equivalentes  1 · desafio(<=1.4)  8
+nível 25 · poder   127.5 | equivalentes  3 · desafio(<=1.4)  6
+nível 30 · poder   183.7 | equivalentes  1 · desafio(<=1.4)  3
+nível 40 · poder   593.2 | equivalentes  0 · desafio(<=1.4)  0
+nível 50 · poder  1399.1 | equivalentes  0 · desafio(<=1.4)  0
+nível 67 · poder  3628.0 | equivalentes  0 · desafio(<=1.4)  0
+```
+
+Do nível 40 em diante **não existe uma única criatura no bestiário com razão
+até 1,4**. O inimigo mais duro que o jogador consegue derrotar no nível 67 dá
+razão 117 — cento e dezessete vezes de vantagem. Não é uma luta, é um trâmite.
+As campanhas longas terminam em nível 66–68.
+
+### Diagnóstico — a causa não é o bestiário
+A pendência antiga dizia "bestiário sem topo", e isso estava errado. O topo do
+bestiário é o Muzan, nível 20, e **é assim que tem que ser**: ele é o teto do
+mundo, não um degrau. Pôr criatura acima dele quebraria o cânone.
+
+O problema é do outro lado da conta. Duas causas, ambas mensuráveis:
+
+1. **A curva de xp é linear.** `xpParaProximoNivel = 20 + nivel * 15`. Custo
+   linear com recompensa crescente (Muzan dá 2000 xp) significa que subir nunca
+   fica mais difícil. Dez anos de jogo entregam nível 67 num mundo cujo ser mais
+   perigoso é nível 20. O comentário em `engine/progresso.ts:74` já declara a
+   intenção certa — *"o teto normal de nível não leva ninguém perto de um
+   Yoriichi — de propósito"* — mas a curva não implementa esse teto. O código
+   contradiz o próprio comentário.
+
+2. **A defesa cresce sem teto.** `defesaJogador` soma `Math.floor(nivel / 3)`
+   sem limite, enquanto `acertoJogador` foi limitado na sessão 3 por
+   `TETO_NIVEL_ACERTO = 15`. A assimetria é minha, da sessão 3: capei o acerto e
+   esqueci a defesa. No nível 67 isso são +22 de defesa, e nenhuma criatura do
+   mundo acerta mais. É o que faz a resiliência da régua explodir.
+
+### Objetivo desta sessão
+Estabelecer o teto humano, sem tocar no bestiário e sem tocar em CHIM:
+
+- curva de xp superlinear, para que o fim natural da progressão fique perto do
+  topo do mundo e não trinta níveis acima dele;
+- teto de nível na defesa, simétrico ao que o acerto já tem;
+- `concederDespertar` continua intocado — é ele, e só ele, a exceção Yoriichi:
+  avanço raro e concedido pela história, nunca farmado.
+
+Não mexer na camada de casas (é a faixa do Astra) nem em CHIM.
+
+### O que foi implementado
+
+**1. Curva de xp com teto humano** (`engine/progresso.ts`). Abaixo do nível 20 a
+curva é a antiga — linear e generosa, para que a primeira metade da campanha
+ande. Acima dela cada nível custa `1,45×` o anterior:
+
+| até o nível | xp acumulado |
+| --- | --- |
+| 21 | 3.550 |
+| 26 | 10.097 |
+| 31 | 60.435 |
+| 41 | 3.193.481 |
+
+Não é um limite duro — ninguém é impedido de passar. É uma parede macia, e
+`concederDespertar` continua sendo o único caminho barato através dela, que é
+exatamente o que o comentário daquela função sempre prometeu.
+
+**2. Teto de nível na defesa** (`engine/combat.ts`). `TETO_NIVEL_DEFESA = 30`,
+valendo +10 no máximo, contra os +15 do acerto. A assimetria é deliberada: é
+mais fácil aprender a bater do que ficar impossível de acertar.
+
+**3. O simulador agora enfrenta o topo** (`engine/campanhaLonga.ts`). As dez
+expedições de `content/vaelhorn/desafios.ts` — fichas fixas de nível 10 a 32,
+não-oni, caçadas de propósito — existiam e o simulador **nunca encostava numa
+delas**. A taxa de vitória era medida só contra bicho de beira de estrada.
+O agente agora aceita uma expedição quando está inteiro de vida e com maestria
+de lâmina ≥ 25, sem consultar a régua de poder (que o jogador não tem).
+
+### Resultados — antes e depois
+
+Campanhas de 10 anos, 6 sementes:
+
+| | antes | depois |
+| --- | --- | --- |
+| nível final | 66–68 | 29–31 |
+| poder no fim | 3.628 | ~180 |
+| criaturas com razão ≤ 1,4 no nível 40 | 0 | 1 |
+| expedições por campanha | 0 | 36,7 |
+
+Vitória por faixa, com as expedições entrando na conta:
+
+| faixa | antes | depois |
+| --- | --- | --- |
+| 11-15 | 97,3% | 87,6% |
+| 21-25 | 98,6% | 95,5% |
+| 26+ | 99,2% (1 derrota) | 95,3% (90 derrotas) |
+
+O que sobra de 95% no topo é honesto: a maioria dos combates continua sendo
+encontro comum de estrada, e um caçador de nível 29 deve mesmo atropelar um
+salteador. A diferença é que agora existe onde perder.
+
+### Descoberta que corrigiu uma pendência antiga
+A pendência dizia "bestiário sem topo". **Estava errada.** O topo existe desde
+a sessão do Astra (`desafios.ts`, dez criaturas de nível 10 a 32) e o topo dos
+onis é o Muzan no nível 20 — que é como tem que ser, ele é o teto do mundo e
+não um degrau. O que faltava não era conteúdo: era o jogador parar de crescer
+trinta níveis acima de tudo que o mundo tem. Pendência reescrita.
+
+### Arquivos alterados
+- `engine/progresso.ts` — `TETO_HUMANO`, `CUSTO_ACIMA_DO_TETO`, curva de xp.
+- `engine/combat.ts` — `TETO_NIVEL_DEFESA` e o teto em `defesaJogador`.
+- `engine/campanhaLonga.ts` — expedições no agente e métrica `expedicoes`.
+
+### Testes executados
+- `tsc --noEmit` — limpo.
+- `npm run test:engine` (11 suítes + campanha longa) — exit 0, zero violações.
+- `npm run test:jornadas`, `npm run test:casas` — OK.
+- `simLongo 10 6` e `simLongo 10 6 comum objetivos` — zero violações nos dois.
+- `npm run balanco -- 400` — 17 de 20 faixas dentro do alvo (mesmo de antes;
+  as três de fora são as mesmas, no perfil recruta).
+- `expo export --platform web` — build OK.
+
+### Compatibilidade de save
+`xpParaProximoNivel` é função pura: um save antigo com nível 67 continua
+carregando e continua nível 67. A curva nova governa a progressão dali pra
+frente. Nenhum campo de save mudou de forma.
+
+### Pendências
+1. **A parede é plana demais.** Todas as seis sementes terminam em 29–31. O
+   teto funciona, mas todo mundo encosta nele no mesmo lugar; falta variação
+   por caminho de vida.
+2. **O planejador por objetivos ainda evita risco por construção** — segue de
+   sessões anteriores. Ele escolhe as lutas que ganha.
+3. **Nenhum Despertar é concedido por conteúdo hoje.** A função existe, a
+   curva agora depende dela para o jogo tardio, e nada no mundo a chama. É o
+   próximo passo natural: dar à história os limiares que concedem Despertar.
+4. Pendências antigas seguem: rotina por pessoa e não por ofício, ninguém
+   escrito à mão nas regiões novas, ganchos e segredos não viram missão,
+   densidade de perigo por região, Nemesis que só acumula.
+
+### Próximo passo recomendado
+Conceder Despertar pela história. Sem isso a curva nova tem um teto e nenhuma
+porta — e a porta é justamente a parte que o dono do jogo pediu desde o começo:
+o prodígio consagrado, o Musashi da lâmina, o que vive além dos 25 como
+Yoriichi. Os limiares existem no mundo (mestres, marcos, missões de linha
+principal); falta ligá-los a `concederDespertar`.

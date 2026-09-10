@@ -131,13 +131,22 @@ export function avaliarAmputacao(camp: Campaign, ator: CombatActor, danoRecebido
 // Acerto de combate do jogador (escala comparável à defesa das criaturas).
 // Defesa do jogador. Estava embutida em iniciarCombate, o que impedia
 // qualquer ferramenta de medir o personagem fora de um combate aberto.
+//
+// Teto do nivel na defesa. Vale +10 no maximo (30/3), contra os +15 que o
+// acerto ganha — de proposito: e' mais facil aprender a bater do que ficar
+// impossivel de acertar.
+export const TETO_NIVEL_DEFESA = 30;
 export function defesaJogador(content: ContentBundle, camp: Campaign): number {
   const p = camp.personagem;
   // Tres fontes distintas, de proposito: corpo (atributos + nivel), tecnica
   // (maestria, que e' onde mora a aparadura) e equipamento.
+  // O nivel entra com teto, igual ao acerto. Sem teto, um personagem muito
+  // avancado simplesmente para de ser acertado por qualquer coisa do mundo —
+  // e um mundo que nao acerta nao ameaca. Corpo treinado tem limite; quem
+  // passa dele passa por tecnica (maestria) e equipamento, que nao tem teto.
   return 10 + modificador(p.atributos.precisao) + modificador(p.atributos.resiliencia)
     + bonusDefesaEquip(content, p)
-    + Math.floor(p.nivel / 3)
+    + Math.floor(Math.min(TETO_NIVEL_DEFESA, p.nivel) / 3)
     + Math.floor(maestriaDe(camp, 'espada') / 18);
 }
 

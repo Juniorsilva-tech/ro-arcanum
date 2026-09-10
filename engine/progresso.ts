@@ -16,9 +16,36 @@ import { registrarMarco } from './memoria';
 import { modificador, recursoMaximo } from './character';
 import { multiplicadoresDeIdentidade } from './identidade';
 
-// Curva simples e crescente — cada nível pede mais que o anterior.
+// O teto humano. Não é um limite duro — ninguém é impedido de passar dele —
+// mas é onde a curva deixa de ser generosa. Vinte é o nível do ser mais
+// perigoso que existe no mundo (Muzan, no bestiário); um caçador que chega
+// perto disso já está no alto do que gente alcança treinando.
+export const TETO_HUMANO = 20;
+
+// Quanto cada nível acima do teto custa a mais que o anterior. Multiplicativo
+// de propósito: subir do 21 pro 22 é caro, do 30 pro 31 é quase impossível
+// sem que a história conceda um Despertar.
+const CUSTO_ACIMA_DO_TETO = 1.45;
+
+/**
+ * XP do próximo nível. Abaixo do teto humano a curva é a antiga — linear,
+ * generosa, para que a primeira metade da campanha ande.
+ *
+ * Acima do teto ela acelera, e isso conserta um erro medido na sessão 19: com
+ * a curva puramente linear, dez anos de campanha entregavam nível 66-68 num
+ * mundo cujo ser mais perigoso é nível 20. O resultado era um jogador com
+ * cento e dezessete vezes a força do inimigo mais duro que conseguia derrotar
+ * — combate deixava de ser risco e virava trâmite por volta do nível 40.
+ *
+ * O comentário do Despertar, logo abaixo, sempre disse que o teto normal "não
+ * leva ninguém perto de um Yoriichi — de propósito". Agora a curva cumpre o
+ * que aquele comentário promete: passar do teto humano é caminho da história
+ * (`concederDespertar`), não de acumular xp.
+ */
 export function xpParaProximoNivel(nivelAtual: number): number {
-  return 20 + nivelAtual * 15;
+  const base = 20 + nivelAtual * 15;
+  const excedente = Math.max(0, nivelAtual - TETO_HUMANO);
+  return Math.round(base * Math.pow(CUSTO_ACIMA_DO_TETO, excedente));
 }
 
 // Sobe quantos níveis o xp acumulado permitir, de uma vez só — cobre saves

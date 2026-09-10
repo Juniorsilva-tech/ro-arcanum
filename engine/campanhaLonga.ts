@@ -53,6 +53,8 @@ export type Metricas = {
   conjuracoes: number;
   rodadaMaisLonga: number;
   artesAprendidas: number;
+  /** Expedicoes de desafio enfrentadas (o topo nao-oni do bestiario). */
+  expedicoes: number;
   etapasDeInfancia: number;
   missoesGeradas: number;
   missoesConcluidas: number;
@@ -294,6 +296,26 @@ function acaoDeMundo(content: ContentBundle, camp: Campaign, m: Metricas, objeti
     }
   }
 
+  // Expedicoes (content/vaelhorn/desafios.ts). Sao o topo do que nao e' oni:
+  // fichas fixas de nivel 10 a 32, cacadas de proposito, nunca sorteadas na
+  // estrada. Ate a sessao 19 o simulador jamais encostava numa delas, e o
+  // resultado era uma taxa de vitoria medida so' contra bicho de beira de
+  // estrada — o numero parecia otimo e nao dizia nada sobre o topo do jogo.
+  //
+  // O agente aceita como um jogador aceitaria: inteiro de vida e com lamina
+  // treinada. Nao consulta a regua de poder, que o jogador nao tem. Perder
+  // aqui e' resultado legitimo, e e' justamente o que queremos poder medir.
+  const inteiro = p.recursos.vida >= p.recursosMax.vida * 0.9;
+  if (inteiro && maestriaDe(camp, 'espada') >= 25) {
+    for (const d of content.desafios ?? []) {
+      if (d.local !== camp.localAtual || camp.flags[`desafio.concluido.${d.id}`]) continue;
+      if (executarAcaoMundo(content, camp, { tipo: 'desafio', id: d.id }).ok) {
+        m.expedicoes++;
+        return true;
+      }
+    }
+  }
+
   const v = camp.vivo;
   if (v && !objetivos) {
     const conhecidas = v.missoes.filter(q => q.conhecida && camp.calendario.dia <= q.prazo);
@@ -336,7 +358,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   const m: Metricas = {
     seed, dias: 0, anos: 0, causaFim: 'fim_do_prazo',
     acoes: 0, viagens: 0, combates: 0, combatesIniciados: 0, combatesPorViagem: 0, combatesPorPainel: 0, combatesPorVerbo: 0, vitorias: 0, derrotas: 0, fugas: 0,
-    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
+    passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, expedicoes: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
     picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, idadeFinal: 20,
@@ -591,6 +613,7 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     conjuracoes: Math.round(med(m => m.conjuracoes)),
     rodadaMaisLonga: Math.round(med(m => m.rodadaMaisLonga)),
     artesAprendidas: +med(m => m.artesAprendidas).toFixed(1),
+    expedicoes: +med(m => m.expedicoes).toFixed(1),
     historiasDistintas: distintas,
   };
 }
