@@ -928,6 +928,14 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
         camp.flags[`desafio.concluido.${desafio.id}`] = true;
         registrarMarco(camp, `você superou a expedição ${desafio.titulo}`);
         if (c.id === 'cavaleira_do_eclipse' && maestriaDe(camp, 'espada') >= 80) concederDespertar(camp, 'dominou_prova_eclipse', 'a prova do eclipse consolidou sua maestria');
+        // A besta e' o adversario nao-oni mais duro do jogo (nivel 32) e
+        // fecha a entrada da mata profunda desde antes dos reinos. Derrubar
+        // ela e' limiar de historia, nao numero de xp.
+        if (c.id === 'besta_do_primeiro_inverno') {
+          if (concederDespertar(camp, 'cacada_impossivel', `a besta do primeiro inverno caiu — e a mata profunda ficou aberta atrás dela`)) {
+            s.log.push('A mata profunda fica em silêncio. Faz muito tempo que ela não ficava.');
+          }
+        }
       }
       if (a.capturado) {
         xp += Math.floor(c.xp / 2);
@@ -944,6 +952,14 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       if (c.id === 'oni_ancestral') {
         const ganhou = concederDespertar(camp, 'venceu_oni_ancestral', `você derrubou ${c.nome} — algo em você mudou de patamar de vez.`);
         if (ganhou) s.log.push(`Alguma coisa em você não volta mais ao que era.`);
+      }
+      // As doze Luas sao o limiar canonico: quem derruba uma volta diferente,
+      // seja Inferior ou Superior. Concedido uma vez so' — a segunda Lua e'
+      // proeza, nao transformacao.
+      if (c.oni && c.id.startsWith('lua_')) {
+        if (concederDespertar(camp, 'derrubou_uma_lua', `você enfrentou ${c.nome}, um dos doze, e voltou`)) {
+          s.log.push('Você enfrentou um dos doze e está de pé. Quase ninguém no mundo pode dizer isso.');
+        }
       }
       // Pilar de almas da Ascensão (ver engine/ascensao.ts): só chefes oni de
       // verdade alto nível — nivel >= 10 deixa de fora oni_ancestral (9) e as

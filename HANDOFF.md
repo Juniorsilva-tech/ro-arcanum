@@ -792,3 +792,147 @@ porta — e a porta é justamente a parte que o dono do jogo pediu desde o come�
 o prodígio consagrado, o Musashi da lâmina, o que vive além dos 25 como
 Yoriichi. Os limiares existem no mundo (mestres, marcos, missões de linha
 principal); falta ligá-los a `concederDespertar`.
+
+---
+
+## Sessão 20 — Claude — a porta do teto — plano antes das alterações
+
+### Correção de um erro meu da sessão 19
+Encerrei a sessão anterior dizendo que "nenhum Despertar é concedido por
+conteúdo hoje". **Estava errado.** Dois já existem e estão ligados:
+
+- `venceu_oni_ancestral` — derrubar o Oni Ancestral (`engine/combat.ts:945`);
+- `dominou_prova_eclipse` — vencer a Cavaleira do eclipse com maestria ≥ 80
+  (`engine/combat.ts:930`), mais a consolidação manual em `acoesMundo.ts:62`.
+
+Ambos têm multiplicador em `LEGADOS` (`engine/identidade.ts`), que usa o
+**maior** dos legados e não o produto — não há empilhamento de buff.
+
+### Estado encontrado (medido)
+Adicionei a métrica `despertares` ao simulador e rodei seis campanhas de dez
+anos:
+
+```
+nivelFinal    29
+despertares   0.17
+expedicoes    36.7
+```
+
+**0,17 Despertar por campanha** — uma em cada seis campanhas ganha um único
+Despertar em dez anos de jogo. A porta existe e está praticamente fechada.
+
+Isso é um problema novo, criado pela sessão 19: antes a curva linear levava ao
+nível 67 e o Despertar era irrelevante. Agora a curva para no 29-31 e o
+Despertar é o único caminho adiante — mas quase ninguém o atravessa. Trocamos
+"progressão infinita sem sentido" por "progressão que termina".
+
+### Objetivo desta sessão
+Dar à história mais limiares que concedem Despertar, sem torná-lo farmável.
+A regra do dono continua valendo: *avanço raro e ganho, concedido quando o
+jogador cruza um limiar real da história, não um número de xp*.
+
+Candidatos, todos apoiados em sistema que já existe:
+1. **Maestria consumada** — chegar ao topo real de um domínio. É o "Musashi da
+   lâmina" que o dono nomeou: ganho por treino obstinado, não por monstro.
+2. **Derrubar uma Lua** — limiar canônico de verdade.
+3. **A perda** — morte de um vínculo de família. Muito do gênero, e
+   `registrarMorteFamiliar` já é o ponto de engate.
+4. **A caçada impossível** — vencer a Besta do primeiro inverno, nível 32, o
+   adversário não-oni mais duro do jogo.
+
+Cada um concedido uma única vez (`concederDespertar` já deduplica por id), cada
+um com entrada em `LEGADOS`, cada um coberto por teste. Meta mensurável: sair
+de 0,17 para algo entre 1 e 2 por campanha de dez anos — raro o bastante para
+significar alguma coisa, frequente o bastante para o jogo tardio existir.
+
+Não mexer na camada de casas (faixa do Astra) nem em CHIM.
+
+### O que foi implementado
+
+Quatro limiares novos, todos apoiados em sistema que já existia, todos
+concedidos uma única vez, todos com entrada em `LEGADOS`:
+
+| Despertar | Onde dispara | O que exige |
+| --- | --- | --- |
+| `maestria_consumada` | `engine/aptidao.ts`, dentro de `treinar` | cruzar 90 de maestria em qualquer domínio |
+| `derrubou_uma_lua` | `engine/combat.ts`, na queda de um oni `lua_*` | derrubar uma das doze, Inferior ou Superior |
+| `a_perda` | `engine/familia.ts`, em `registrarMorteFamiliar` | a primeira morte no próprio sangue |
+| `cacada_impossivel` | `engine/combat.ts`, na queda da besta | vencer a Besta do primeiro inverno (nível 32) |
+
+Decisões que valem registro:
+
+- **`maestria_consumada` é um só, em qualquer domínio.** O limiar é "consumou
+  um ofício", não um colecionável por perícia. Noventa não é escolha arbitrária:
+  a curva de esforço é assintótica, cem exigiria esforço infinito, e acima do
+  teto confortável da aptidão o ganho cai para 15% — chegar lá é teimosia de
+  anos, e aptidão alta encurta o caminho sem dispensá-lo.
+- **`a_perda` é a primeira morte, e só a primeira.** O que muda um caçador não
+  é a contagem de perdas — é descobrir que existem.
+- **A segunda Lua não concede nada.** Proeza não é transformação.
+- `registrarMorteFamiliar` passou a sair cedo se o membro já estava morto.
+  Antes reescrevia a condição sem consequência; agora isso importa.
+
+### Resultados — antes e depois
+
+Campanhas de 10 anos, 6 sementes, política exploratória:
+
+| | antes | depois |
+| --- | --- | --- |
+| Despertares por campanha | **0,17** | **2,33** |
+| nível final | 29 em todas as seis | 29, 30, 31, 33, 34, 35 |
+
+Na política por objetivos: 2,83 Despertares, níveis 32–35.
+
+**A pendência 1 da sessão 19 está resolvida de lado.** Ela dizia "a parede é
+plana demais — todas as seis sementes terminam em 29–31". Terminam diferente
+agora, e por um motivo legítimo: campanhas diferentes atravessam limiares
+diferentes. A variação não veio de aleatoriedade, veio de biografia.
+
+### Erro corrigido nesta sessão
+Encerrei a sessão 19 afirmando que nenhum Despertar era concedido por conteúdo.
+Dois já eram. O plano acima corrige o registro; a medição de 0,17 é o número
+que eu deveria ter apresentado no lugar daquela afirmação.
+
+### Arquivos alterados
+- `engine/identidade.ts` — quatro entradas novas em `LEGADOS`.
+- `engine/aptidao.ts` — `LIMIAR_MAESTRIA_CONSUMADA` e a concessão em `treinar`.
+- `engine/combat.ts` — limiares da Lua e da besta.
+- `engine/familia.ts` — limiar da perda, e saída cedo em morte repetida.
+- `engine/campanhaLonga.ts` — métrica `despertares`.
+- `engine/despertar.selftest.ts` — **novo**, 21 asserções.
+- `package.json` — a suíte nova entra no `test:engine`.
+
+### Testes executados
+- `tsc --noEmit` — limpo.
+- `npm run test:engine` (12 suítes + campanha longa) — exit 0, zero violações.
+- `npm run test:jornadas`, `npm run test:casas` — OK.
+- `simLongo 10 6` e `simLongo 10 6 comum objetivos` — zero violações nos dois.
+- `npm run balanco -- 400` — 17 de 20 faixas, igual às sessões anteriores.
+- `expo export --platform web` — OK.
+
+### Achado que o teste revelou
+A primeira versão do teste da Lua falhava, e estava certa em falhar: sem lâmina
+Nichirin equipada o oni volta a 1 de vida para sempre (`aplicarFerimentoOni`).
+O teste é que supunha errado. Está documentado no arquivo, porque é o tipo de
+regra que um agente futuro vai tropeçar de novo.
+
+### Pendências
+1. **2,33 está no limite alto do alvo** (a meta era 1–2). Não é farmável — cada
+   limiar é único — mas quatro limiares alcançáveis em dez anos deixam o teto
+   mais permeável do que o planejado. Vale reavaliar depois de jogar.
+2. **Nenhum limiar vem de missão ou de mestre.** Todos vêm de combate ou de
+   treino. Faltam os limiares sociais: o reconhecimento de um mestre, a
+   conclusão de uma linha principal, a decisão que custa caro.
+3. **A Marca do Caçador não existe no código.** O dono decidiu que o
+   protagonista pode viver além dos 25 como Yoriichi — a exceção está definida
+   e a regra que ela excepciona nunca foi implementada.
+4. Pendências antigas seguem: planejador que evita risco, rotina por ofício e
+   não por pessoa, ninguém escrito à mão nas regiões novas, ganchos e segredos
+   que não viram missão, Nemesis que só acumula.
+
+### Próximo passo recomendado
+Limiares sociais para Despertar (pendência 2). Hoje a única forma de crescer
+depois do teto humano é matar alguma coisa ou treinar sozinho — o que faz do
+jogo tardio uma coisa só. Um mestre que reconhece, uma linha principal que
+fecha, uma escolha que cobra preço: são limiares que o mundo já tem material
+para sustentar, e são o que falta para o teto ter mais de uma porta.

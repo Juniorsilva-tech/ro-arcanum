@@ -1,5 +1,6 @@
 import type { AttrKey, Campaign, ContentBundle, NPC, NpcDinamico } from './types';
 import { nextFloat, nextInt, pick } from './rng';
+import { concederDespertar } from './progresso';
 
 export type CondicaoParente = 'livre' | 'cativo' | 'desaparecido' | 'morto';
 export type ParenteCampanha = {
@@ -240,7 +241,12 @@ export function resumoFamilia(camp: Campaign): string[] {
 
 export function registrarMorteFamiliar(camp: Campaign, npcId: string): void {
   const membro = camp.familia?.membros.find(m => m.id === npcId);
-  if (membro) membro.condicao = 'morto';
+  if (!membro || membro.condicao === 'morto') return;
+  membro.condicao = 'morto';
+  // A primeira morte no próprio sangue é limiar, e só a primeira. O que muda
+  // um caçador não é a contagem de perdas — é descobrir que existem. Concedido
+  // uma vez, pela chave, mesmo que a família inteira caia depois.
+  concederDespertar(camp, 'a_perda', `${membro.nome} não voltou, e você continuou`);
 }
 
 export function sincronizarIdadeFamilia(camp: Campaign): void {

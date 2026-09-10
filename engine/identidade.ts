@@ -5,6 +5,12 @@ import type { Campaign } from './types';
 export const LEGADOS = {
   venceu_oni_ancestral: { nome: 'Despertar ancestral', vida: 1.2, dano: 1.25, descricao: 'A sobrevivência à caçada ancestral fortaleceu seu corpo e sua execução.' },
   dominou_prova_eclipse: { nome: 'Legado do eclipse', vida: 1.1, dano: 1.15, descricao: 'Maestria elevada e a vitória na prova do eclipse consolidaram uma técnica própria.' },
+  // Limiares acrescentados na sessão 20. Não são coletáveis: cada um é
+  // concedido uma única vez, por atravessar algo que a história cobra caro.
+  maestria_consumada: { nome: 'Maestria consumada', vida: 1.1, dano: 1.3, descricao: 'Anos de repetição obstinada num único ofício. O corpo entendeu o que a cabeça já sabia.' },
+  derrubou_uma_lua: { nome: 'Quem derrubou uma Lua', vida: 1.25, dano: 1.3, descricao: 'Enfrentou um dos doze e voltou. Pouquíssima gente no mundo pode dizer o mesmo.' },
+  a_perda: { nome: 'O que ficou da perda', vida: 1.15, dano: 1.2, descricao: 'Alguém do seu sangue não voltou. O que sobrou disso não é força — é a ausência de hesitação.' },
+  cacada_impossivel: { nome: 'A caçada impossível', vida: 1.3, dano: 1.25, descricao: 'A besta que fechava a mata profunda desde antes dos reinos. Ninguém esperava que caísse.' },
 } as const;
 
 export function legadosConquistados(camp: Campaign) {

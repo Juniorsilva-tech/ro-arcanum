@@ -74,6 +74,8 @@ export type Metricas = {
   diasComRival: number;
   populacaoFinal: number;
   nivelFinal: number;
+  /** Despertares concedidos pela historia (ver engine/progresso.ts). */
+  despertares: number;
   idadeFinal: number;
   tiposDeFato: number;
   assinatura: string;
@@ -361,7 +363,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, expedicoes: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
-    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, idadeFinal: 20,
+    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, idadeFinal: 20,
     tiposDeFato: 0, assinatura: '', porFaixa: {},
   };
 
@@ -508,6 +510,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   m.dias = camp.calendario.dia;
   m.anos = Math.floor(m.dias / DIAS_POR_ANO);
   m.nivelFinal = camp.personagem.nivel;
+  m.despertares = camp.despertares?.length ?? 0;
   m.idadeFinal = camp.personagem.idade ?? 20;
   if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'limite_acoes';
   if (m.causaFim === 'morte' && m.idadeFinal >= 65) m.causaFim = 'idade';
@@ -607,6 +610,7 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     rivaisVivosPorDia: +(med(m => m.diasComRival) / Math.max(1, med(m => m.dias))).toFixed(1),
     populacaoFinal: Math.round(med(m => m.populacaoFinal)),
     nivelFinal: +med(m => m.nivelFinal).toFixed(1),
+    despertares: +med(m => m.despertares).toFixed(2),
     tiposDeFato: +med(m => m.tiposDeFato).toFixed(1),
     passosSemVerbo: Math.round(med(m => m.passosSemVerbo)),
     passosSemEfeito: Math.round(med(m => m.passosSemEfeito)),

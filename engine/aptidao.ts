@@ -15,6 +15,7 @@ import { DOMINIOS, NOME_DOMINIO } from './aptidaoTypes';
 import { createRng, nextFloat, seedFromString } from './rng';
 import { registrarFato } from './historiaViva';
 import { registrarMarco } from './memoria';
+import { concederDespertar } from './progresso';
 
 // ── Vocabulário: como os domínios conversam com o que já existe ───────────
 //
@@ -172,6 +173,12 @@ export function migrarAptidao(camp: Campaign): void {
 // Os primeiros pontos saem baratos; os últimos custam uma vida.
 const ESCALA_ESFORCO = 220;
 
+/**
+ * Topo real do que se treina. Noventa, e nao cem, porque a curva de esforco e'
+ * assintotica: cem exigiria esforco infinito e ninguem chegaria nunca.
+ */
+export const LIMIAR_MAESTRIA_CONSUMADA = 90;
+
 export function maestriaPorEsforco(esforco: number): number {
   return 100 * (1 - Math.exp(-Math.max(0, esforco) / ESCALA_ESFORCO));
 }
@@ -245,6 +252,15 @@ export function treinar(
   const maestriaNova = maestriaPorEsforco(a.esforco[d]);
 
   sincronizarPericias(camp, d);
+
+  // Maestria consumada. Noventa num dominio nao se alcanca por acaso: acima do
+  // teto confortavel da aptidao o ganho cai para 15%, entao chegar aqui e'
+  // teimosia de anos, e aptidao alta so' encurta o caminho — nao o dispensa.
+  // Concedido uma vez, em qualquer dominio: e' o limiar de "consumou um
+  // oficio", nao um colecionavel por pericia.
+  if (maestriaAtual < LIMIAR_MAESTRIA_CONSUMADA && maestriaNova >= LIMIAR_MAESTRIA_CONSUMADA) {
+    concederDespertar(camp, 'maestria_consumada', `você alcançou o topo real do que se pode treinar em ${d}`);
+  }
 
   // Quem estava olhando pode notar o RITMO, não a aptidão. É assim que um
   // mestre desconfia antes de qualquer torneio: o sujeito pega rápido demais.
