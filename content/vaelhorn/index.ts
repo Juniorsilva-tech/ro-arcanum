@@ -8,6 +8,7 @@ import { locaisVaelhorn } from './locations';
 import { integrarContinente } from './continente';
 import { povoarContinente } from './povoamento';
 import { npcsVaelhorn } from './npcs';
+import { elencoDoContinente } from './elenco-continente';
 import { itensVaelhorn } from './items';
 import { criaturasVaelhorn, encontrosPorTipo, encontrosPorRegiao } from './bestiary';
 import { questsVaelhorn } from './quests';
@@ -34,7 +35,7 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   origens: origensVaelhorn,
   verbos: verbosVaelhorn,
   locais: mapaVaelhorn,
-  npcs: [...npcsVaelhorn, ...moradores],
+  npcs: [...npcsVaelhorn, ...elencoDoContinente, ...moradores],
   mestres: mestresVaelhorn,
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,

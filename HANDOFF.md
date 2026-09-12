@@ -1209,3 +1209,62 @@ descoberto; o teto de dois abertos é respeitado.
 Arquivos: `engine/ganchos.ts` (novo), `engine/ganchos.selftest.ts` (novo),
 `engine/mundoVivo.ts`, `engine/campanhaLonga.ts` (métrica `ganchosUsados`),
 `package.json`.
+
+### Etapa F — gente de quem se lembrar nas regiões novas
+
+Pendência que o dono levantou duas vezes: *"precisamos ter um tempo pra focar
+somente em personagens"*. A medição confirmou o tamanho do buraco:
+
+| região | escritos à mão | gerados |
+| --- | --- | --- |
+| Vale de Halvet | 28 | 10 |
+| Fora do Vale | 27 | 4 |
+| Marca de Tessel | **0** | 33 |
+| Planalto de Corveira | **0** | 36 |
+| Costa de Mareu | **0** | 45 |
+| Bosque de Vintra | **0** | 19 |
+| Ermo de Solgar | **0** | 18 |
+| Baixios de Halvern | **0** | 5 |
+
+156 moradores gerados no continente e **zero pessoas escritas à mão**. As
+regiões novas tinham densidade — gente na praça — e ninguém de quem lembrar
+depois. Densidade é trabalho de gerador; personagem é trabalho de autoria.
+
+`content/vaelhorn/elenco-continente.ts` traz 16 pessoas, e **cada uma está
+amarrada a algo que o mapa já dizia**. A ficção veio primeiro, a ficha veio
+depois:
+
+- A história de **Pedravel** diz que o celeiro foi erguido com pedra roubada do
+  forte, de noite, peça por peça, e que todo mundo sabe e ninguém diz. Então
+  Pedravel tem **Mora Quelha**, 71 anos, que organizou o roubo durante dois
+  invernos e tem a conta escrita — e esconde um dos três rapazes que a lista da
+  leva diz que voltaram.
+- **Corveira** pertence a sete famílias que se comportam como reinos e teve um
+  desabamento que matou duzentos e onze, indenizado em minério. Então Corveira
+  tem **Halda Verrão**, que comprou o laudo, e **Sibel Arne**, que o assinou aos
+  trinta e dois e guarda o relatório verdadeiro costurado no forro do casaco.
+- O gancho do **Mosteiro do Alto** dizia "um irmão copia o mesmo texto há
+  semanas e queima cada cópia". Agora há **Irmã Velun**, que queima porque
+  decorar é a única forma de guardar o que mandaram destruir.
+- O gancho do **Forte Agulha** dizia que o poço secou e ninguém reportou. A
+  **aguadeira do Poço Seco**, no outro lado do mapa, sabe o que foi feito —
+  porque foi a ela que pediram para fazer.
+
+Elenco autoral do jogo: **56 → 72 pessoas**.
+
+**Uma correção de premissa no caminho.** Escrevi Ivo Quelha como "lavradora de
+contrabando" por reflexo da regra do feminino. Errado: a premissa é que a Leva
+**leva os homens**, e é por isso que o vale é das mulheres — um rapaz escondido
+que fugiu da leva é exatamente o que a ficção já fazia com o segredo da
+Aldrica. Virou "foragido da leva". A regra do selftest é sobre ofício, não
+sobre existir homem no mundo.
+
+**Testes:** `engine/elenco.selftest.ts`, ligado ao `test:engine`. Cobra que
+cada uma das seis regiões tenha gente com nome, que cada pessoa more num lugar
+que tem história ou gancho para conversar, que tenha voz, índole, corpo e os
+seis períodos do dia, que 70% carreguem segredo **com caminho para ser
+descoberto**, que 60% tenham laço, e que nenhum id ou nome colida com o elenco
+antigo.
+
+Arquivos: `content/vaelhorn/elenco-continente.ts` (novo),
+`engine/elenco.selftest.ts` (novo), `content/vaelhorn/index.ts`, `package.json`.
