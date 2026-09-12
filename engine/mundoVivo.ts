@@ -8,6 +8,7 @@ import { processarMissoesVivas } from './missoesVivas';
 import { atualizarAmeacas } from './continuidade';
 import { processarAptidao } from './aptidao';
 import { avaliarDescobertas } from './viagem';
+import { processarGanchos, conciliarGanchos } from './ganchos';
 
 // Called once for each elapsed calendar day, using the same campaign RNG as gameplay.
 export function processarMundoVivo(content: ContentBundle, camp: Campaign): void {
@@ -20,6 +21,12 @@ export function processarMundoVivo(content: ContentBundle, camp: Campaign): void
   atualizarAmeacas(content, camp);
   processarMissoesVivas(content, camp);
   processarDiretor(content, camp);
+  // Os ganchos escritos a mao nos lugares viram missao. Depois do diretor, de
+  // proposito: as crises do mundo tem prioridade na lista, e o gancho entra no
+  // espaco que sobra.
+  processarGanchos(content, camp);
+  // Gancho so' queima quando o jogador se envolveu; ignorado, volta a circular.
+  conciliarGanchos(camp);
   descobrirNoticias(content, camp);
   // Fama persegue a reputacao com atraso, e esfria sem novidade.
   processarAptidao(content, camp);

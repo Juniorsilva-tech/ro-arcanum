@@ -1152,3 +1152,60 @@ não mais fraca; um teste que passava por sorte não estava provando nada.
 
 Arquivos: `content/vaelhorn/povoamento.ts`, `engine/historiaViva.ts`,
 `engine/povoamento.selftest.ts`, `engine/selftest.ts`.
+
+### Etapa E — os ganchos do mapa viram razão para sair de casa
+
+O mapa carrega **mais de cem ganchos escritos à mão** — "o celeiro está cheio e
+a vila come pouco", "três rapazes não voltaram da última leva e a lista diz que
+voltaram", "uma galeria foi interditada e a interdição foi removida por
+dentro". Até aqui esse material só chegava ao narrador como sabor de ambiente e
+morria ali. Nenhum deles gerava uma única razão para o jogador ir a lugar
+nenhum.
+
+`engine/ganchos.ts` fecha essa ponta: um gancho vira missão de investigar cuja
+**causa é o texto literal do gancho**. A missão não é procedural com rótulo
+colado por cima — é a ficção que já estava escrita entrando pela porta que o
+mundo vivo já usa.
+
+**Duas correções de rumo durante a etapa, ambas achadas medindo:**
+
+1. **O gancho queimava na oferta.** A primeira versão marcava o gancho como
+   usado no instante em que a missão era oferecida. Medido: em dez anos o
+   jogador consumia 102 dos ~110 ganchos do mapa, a maioria expirando sem
+   ninguém chegar perto — a ficção autoral se gastava sem ser vista. Agora só
+   queima quando o jogador **aceita** ou conclui. Ignorado, o gancho volta para
+   a fila: um rumor que ninguém foi checar não deixa de ser verdade.
+2. **Devolver criou um moinho.** Com a devolução e sem carência, o mesmo punhado
+   de rumores era reoferecido a cada poucas semanas. Entrou
+   `CARENCIA_DO_GANCHO = 240` dias: o assunto esfria e ressurge quando já virou
+   história velha de novo.
+
+**Calibração, medida e não escolhida no olho** (10 anos, 3 sementes, objetivos):
+
+| chance/dia | ganchos engajados | missões concluídas | falhadas |
+| --- | --- | --- | --- |
+| 0 (sem ganchos) | 0 | 171 | 201 |
+| 0,008 | 26 | 144 | 223 |
+| 0,015 | 42 | 141 | 251 |
+| 0,025 | 71 | 133 | 265 |
+| 0,06 | 102 (de ~110) | — | — |
+
+A leitura que importa: **gancho desloca missão do mundo quase um por um**,
+porque o tempo do jogador é finito. Não é defeito — é o custo de haver mais o
+que fazer. Ficou em **0,01**, que dá uns três ganchos engajados por ano: o
+tamanho de "ouvi uma coisa na praça e fui ver".
+
+**Regras de alcance:** rumor anda por rota — vale o lugar onde o jogador pisou
+e o que faz fronteira com ele, senão a lista viraria um catálogo do mapa
+inteiro. E lugar oculto não vaza gancho antes de ser descoberto, o que mantém
+a promessa da sessão 14.
+
+**Testes:** `engine/ganchos.selftest.ts`, 23 asserções, ligado ao `test:engine`.
+Cobre o que importa: a causa é o texto literal de um gancho do mapa; ignorar
+não consome; aceitar consome para sempre; a carência devolve à fila; rumor não
+alcança o mapa inteiro; lugar oculto não vaza e passa a render depois de
+descoberto; o teto de dois abertos é respeitado.
+
+Arquivos: `engine/ganchos.ts` (novo), `engine/ganchos.selftest.ts` (novo),
+`engine/mundoVivo.ts`, `engine/campanhaLonga.ts` (métrica `ganchosUsados`),
+`package.json`.
