@@ -239,12 +239,44 @@ function vizinhancaDe(local: Local, porId: Map<string, Local>): Vizinhanca {
 
 const PERIODOS_DIA = ['madrugada', 'manha', 'tarde', 'entardecer', 'anoitecer', 'noite'] as const;
 
-function rotinaDe(ritmo: Ritmo | undefined, local: Local, viz: Vizinhanca): NPC['rotina'] {
+/**
+ * Feitios individuais. O ofício diz o ritmo; o feitio diz quem é a pessoa
+ * dentro dele.
+ *
+ * Medido na sessão 15 e anotado como pendência: duas taverneiras de cidades
+ * diferentes viviam exatamente o mesmo dia, período por período. O ofício
+ * estava certo e a pessoa não existia. Cada feitio desloca um ou dois períodos
+ * do ritmo base — não o reescreve, senão o ofício deixaria de significar algo.
+ */
+type Feitio = {
+  nome: string;
+  /** Períodos que a pessoa passa fora do que o ofício mandaria, e para onde. */
+  desvio: Partial<Record<number, Ponto>>;
+};
+
+const FEITIOS: Feitio[] = [
+  { nome: 'madrugadora', desvio: { 0: 'campo' } },
+  { nome: 'que dorme tarde', desvio: { 5: 'campo' } },
+  { nome: 'caseira', desvio: { 1: 'casa', 4: 'casa' } },
+  { nome: 'que some à tarde', desvio: { 2: 'retiro' } },
+  { nome: 'de anoitecer no mato', desvio: { 4: 'retiro' } },
+  { nome: 'inquieta', desvio: { 1: 'campo', 5: 'campo' } },
+  { nome: 'que reza sozinha', desvio: { 0: 'retiro' } },
+  { nome: 'sem feitio', desvio: {} },
+];
+
+function rotinaDe(
+  ritmo: Ritmo | undefined,
+  local: Local,
+  viz: Vizinhanca,
+  feitio: Feitio = FEITIOS[FEITIOS.length - 1],
+): NPC['rotina'] {
   const usado = ritmo ?? RITMO_DIURNO;
   const rotina: NPC['rotina'] = {};
   usado.forEach((ponto, i) => {
+    const efetivo = feitio.desvio[i] ?? ponto;
     rotina[PERIODOS_DIA[i]] =
-      ponto === 'casa' ? local.id : ponto === 'campo' ? viz.campo : viz.retiro;
+      efetivo === 'casa' ? local.id : efetivo === 'campo' ? viz.campo : viz.retiro;
   });
   return rotina;
 }
@@ -277,6 +309,10 @@ function povoar(local: Local, faccoesValidas: Set<string>, usados: Set<string>, 
     const faccao = faccoesValidas.has(papel.faccao) ? papel.faccao : 'vila';
     const nome = nomeUnico(rng, usados);
     const temSegredo = papel.segredo !== undefined && nextFloat(rng) < papel.segredo;
+    // Sorteado do mesmo RNG determinístico do lugar: Tessel tem sempre a mesma
+    // gente com os mesmos hábitos, mas a taverneira de Tessel e a de Corveira
+    // deixam de viver o mesmo dia.
+    const feitio = pick(rng, FEITIOS);
     const npc: NPC = {
       id: `morador_${local.id}_${i}`,
       nome,
@@ -284,7 +320,7 @@ function povoar(local: Local, faccoesValidas: Set<string>, usados: Set<string>, 
       ocupacao: papel.ocupacao,
       faccaoId: faccao,
       localBase: local.id,
-      rotina: rotinaDe(papel.ritmo, local, viz),
+      rotina: rotinaDe(papel.ritmo, local, viz, feitio),
       vozNarrativa: pick(rng, VOZES),
       personalidade: pick(rng, INDOLES),
       corpo: pick(rng, CORPOS),

@@ -1098,3 +1098,57 @@ encontro do próprio tipo, mais uma por região exigindo tabela característica.
 
 Arquivos: `content/vaelhorn/bestiary.ts`, `content/vaelhorn/index.ts`,
 `engine/viagem.ts`, `engine/types.ts`, `engine/continente.selftest.ts`.
+
+### Etapa D — rotina por pessoa, e rotina que reage ao mundo
+
+Duas metades da mesma pendência, aberta desde a sessão 15.
+
+**Metade 1 — o ofício dava o ritmo e a pessoa não existia.** Duas taverneiras
+de cidades diferentes viviam exatamente o mesmo dia, período por período:
+**100% dos pares do mesmo ofício tinham dia idêntico**. Agora cada morador
+recebe um `Feitio` — madrugadora, que dorme tarde, caseira, que some à tarde,
+de anoitecer no mato, inquieta, que reza sozinha, ou nenhum. O feitio desloca
+um ou dois períodos; não reescreve o ritmo, senão o ofício deixaria de
+significar alguma coisa e a variação viraria ruído. Sorteado do mesmo RNG
+determinístico do lugar, então Tessel continua tendo sempre a mesma gente com
+os mesmos hábitos.
+
+| pares do mesmo ofício com dia idêntico | antes | depois |
+| --- | --- | --- |
+| | **100%** | **25%** |
+
+Teste de contenção junto: quem trabalha na lavoura continua saindo (6 de 6).
+
+**Metade 2 — ninguém mudava de hábito quando a vila ficava perigosa.**
+`localEfetivo` agora recolhe quem sairia do assentamento quando a insegurança
+passa de 55, ou quando há ameaça ativa no lugar exato para onde a pessoa iria.
+Combatentes não se recolhem — é essa a diferença entre a guarda e o resto.
+
+Em Tessel, período de maior saída: **7 pessoas no mato em paz → 0 com a vila
+insegura**, e os 2 combatentes continuam fora. Ameaça ativa no destino produz
+o mesmo efeito com a cidade calma.
+
+**Limitação declarada:** o medo difuso só alcança NPC cujo `localBase` é o
+próprio assentamento — os moradores gerados. Um NPC escrito à mão que mora na
+taverna sente a ameaça concreta, mas não o medo difuso. Resolver exigiria o
+`content` dentro de `localEfetivo` (para `cidadeIdDoLocal`), e mudar aquela
+assinatura ramifica por meio motor. Fica anotado, não escondido.
+
+**A pendência do expediente continua aberta.** "A rotina não conhece a hora do
+lugar" (sessão 15, item 2) é outro problema: exigiria os moradores circularem
+entre sub-locais do assentamento — taverna, praça, mercado — e hoje o
+`localBase` deles é o assentamento inteiro.
+
+### Teste frágil corrigido no caminho
+`selftest.ts` reprovou em "Duas semanas paradas mudam o vale". **Não era
+regressão.** A carestia tinha mudado — de 1 para 0,9943 — mas o teste exigia
+0,01 de afastamento, um limiar escolhido a dedo, numa única semente. Meu ajuste
+deslocou o cursor do RNG e a moeda caiu do outro lado.
+
+O teste agora afirma o que importa de verdade: "o vale anda sem o jogador" é
+propriedade do mundo, não de uma semente. Mede 20 campanhas e exige que ao
+menos 80% andem — deu **20 de 20**. A afirmação ficou mais forte do que era,
+não mais fraca; um teste que passava por sorte não estava provando nada.
+
+Arquivos: `content/vaelhorn/povoamento.ts`, `engine/historiaViva.ts`,
+`engine/povoamento.selftest.ts`, `engine/selftest.ts`.

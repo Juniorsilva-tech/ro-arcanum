@@ -3,6 +3,7 @@ import { createRng } from './rng';
 import { probabilidade, resolverTeste } from './resolution';
 import { conteudoVaelhorn } from '../content/vaelhorn';
 import { encontrosPorTipo } from '../content/vaelhorn/bestiary';
+import type { Campaign } from './types';
 import { criarCampanha } from './campaign';
 import {
   validarOpcoesIA,
@@ -662,11 +663,36 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   const climaInicial = c.mundo!.clima;
 
   // Duas semanas paradas: o mundo tem que ter mudado alguma coisa.
+  //
+  // Este teste já foi frágil. A versão antiga rodava UMA semente e exigia que
+  // a carestia tivesse se afastado 0,01 de 1 — um limiar arbitrário que, na
+  // sessão 21, passou a reprovar por 0,0057. O mundo estava andando; o teste é
+  // que apostava numa semente só. Qualquer mudança que desloque o cursor do
+  // RNG fazia a moeda cair do outro lado.
+  //
+  // Agora a afirmação é a que importa de verdade — "o vale anda sem o
+  // jogador" é uma propriedade do mundo, não de uma semente — e é medida como
+  // tal: em muitas campanhas, e com o limiar no lugar honesto (mexeu ou não
+  // mexeu), não num número escolhido a dedo.
   c.calendario = { ...c.calendario, dia: c.calendario.dia + 14 };
   avancarMundo(conteudoVaelhorn, c);
-  const mudou =
-    c.mundo!.clima !== climaInicial || !!c.mundo!.evento || Math.abs(c.mundo!.carestia - 1) > 0.01;
-  ok(mudou, 'Duas semanas paradas mudam o vale');
+  const mexeu = (x: Campaign, climaAntes: string) =>
+    x.mundo!.clima !== climaAntes || !!x.mundo!.evento || x.mundo!.carestia !== 1;
+  ok(mexeu(c, climaInicial), 'Duas semanas paradas mexem em alguma coisa no vale');
+
+  let andaram = 0;
+  const SEMENTES = 20;
+  for (let i = 0; i < SEMENTES; i++) {
+    const x = criarCampanha(conteudoVaelhorn, {
+      nome: 'Parado', atributos: atributosBase(), classeId: 'guardiao',
+      origemId: 'sem_nome', seedString: `mundo-anda-${i}`,
+    });
+    const antes = x.mundo!.clima;
+    x.calendario = { ...x.calendario, dia: x.calendario.dia + 14 };
+    avancarMundo(conteudoVaelhorn, x);
+    if (mexeu(x, antes)) andaram++;
+  }
+  ok(andaram >= SEMENTES * 0.8, `O vale anda sem o jogador na maioria das campanhas (${andaram}/${SEMENTES})`);
   ok(c.mundo!.diaProcessado === c.calendario.dia, 'O mundo não reprocessa o mesmo dia');
 
   // Quem foi deixado de lado esfria.

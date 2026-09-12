@@ -8,7 +8,7 @@ import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { avancarMundo } from './mundo';
 import { rotasVisiveis, localConhecido, descobrirLocal, avaliarDescobertas, viajar } from './viagem';
-import { localEfetivo } from './historiaViva';
+import { localEfetivo, INSEGURANCA_QUE_RECOLHE } from './historiaViva';
 import type { Campaign } from './types';
 import { PERIODOS, type Periodo } from './time';
 
@@ -251,6 +251,104 @@ const moradoresDe = (localId: string) => C.npcs.filter(n => n.localBase === loca
     `Cidade dá sensação de multidão: ${cidades.map(l => `${l.nome} ${moradoresDe(l.id).length}`).join(', ')}`);
   const gerados = C.npcs.filter(n => n.id.startsWith('morador_'));
   ok(gerados.length >= 170, `${gerados.length} moradores com identidade no mundo`);
+}
+
+// ── Rotina por pessoa, não por ofício ─────────────────────────────────────
+//
+// Pendência aberta desde a sessão 15: duas taverneiras de cidades diferentes
+// viviam exatamente o mesmo dia, período por período. O ofício dava o ritmo e
+// a pessoa não existia — 100% dos pares do mesmo ofício tinham dia idêntico.
+{
+  const assinaturaDoDia = (n: typeof C.npcs[number]) =>
+    PERIODOS.map(p => (n.rotina[p] ?? n.localBase) === n.localBase ? 'C' : 'F').join('');
+
+  const porOficio: Record<string, string[]> = {};
+  for (const n of C.npcs) {
+    if (!n.id.startsWith('morador_')) continue;
+    (porOficio[n.ocupacao] ??= []).push(assinaturaDoDia(n));
+  }
+  let iguais = 0, pares = 0;
+  for (const lista of Object.values(porOficio)) {
+    for (let i = 0; i < lista.length; i++) {
+      for (let j = i + 1; j < lista.length; j++) {
+        pares++;
+        if (lista[i] === lista[j]) iguais++;
+      }
+    }
+  }
+  ok(pares > 100, `Há pares do mesmo ofício para comparar (${pares})`);
+  const taxa = iguais / pares;
+  ok(taxa < 0.6, `Mesmo ofício não significa mesmo dia (${(taxa * 100).toFixed(0)}% dos pares ainda coincidem)`);
+
+  // O feitio desloca, não reescreve: quem trabalha na lavoura continua saindo,
+  // e quem é da cidade continua sendo da cidade. Sem isso o ofício perderia
+  // sentido e a variação viraria ruído.
+  const lavradoras = C.npcs.filter(n => n.id.startsWith('morador_') && /lavrador|lavoura|ceifeir/.test(n.ocupacao));
+  if (lavradoras.length) {
+    const saem = lavradoras.filter(n => assinaturaDoDia(n).includes('F')).length;
+    ok(saem / lavradoras.length > 0.7, `Quem trabalha fora continua saindo (${saem}/${lavradoras.length})`);
+  }
+}
+
+// ── A rotina reage ao estado do mundo ─────────────────────────────────────
+//
+// A outra metade da mesma pendência: ninguém mudava de hábito quando a
+// insegurança da vila subia. A capela às três da manhã continuava cheia com
+// bandido acampado na estrada.
+{
+  const c = nova('rotina-medo');
+  // O assentamento com MAIS gente que sai, não o primeiro da lista: medir o
+  // recolhimento numa vila de três moradores daria um sinal fraco demais para
+  // distinguir a regra funcionando de uma coincidência.
+  const cidadeId = Object.keys(c.vivo!.cidades)
+    .map(id => ({
+      id,
+      saem: C.npcs.filter(n => n.localBase === id && !n.combatente
+        && PERIODOS.some(p => (n.rotina[p] ?? n.localBase) !== n.localBase)).length,
+    }))
+    .sort((a, b) => b.saem - a.saem)[0];
+  ok(cidadeId && cidadeId.saem >= 5, `Assentamento com gente que sai de casa: ${cidadeId?.id} (${cidadeId?.saem})`);
+  const moradores = C.npcs.filter(n => n.localBase === cidadeId.id && !n.combatente);
+  const foraAgora = (periodo: Periodo) => moradores.filter(n => {
+    const l = localEfetivo(c, n, periodo);
+    return l && l !== n.localBase;
+  }).length;
+
+  const periodoComSaida = PERIODOS.find(p => {
+    c.vivo!.cidades[cidadeId.id].inseguranca = 0;
+    return foraAgora(p) > 0;
+  });
+  ok(!!periodoComSaida, 'Em paz, alguém sai do assentamento em algum período');
+
+  c.vivo!.cidades[cidadeId.id].inseguranca = 0;
+  const emPaz = foraAgora(periodoComSaida!);
+  c.vivo!.cidades[cidadeId.id].inseguranca = 90;
+  const comMedo = foraAgora(periodoComSaida!);
+  ok(comMedo < emPaz, `Com a vila insegura, menos gente no mato (${emPaz} → ${comMedo})`);
+
+  // Quem é pago para enfrentar continua saindo — é essa a diferença entre a
+  // guarda e o resto.
+  const guardas = C.npcs.filter(n => n.localBase === cidadeId.id && n.combatente);
+  if (guardas.length) {
+    const saindo = guardas.filter(n => {
+      const l = localEfetivo(c, n, periodoComSaida!);
+      return l && l !== n.localBase;
+    }).length;
+    const semMedo = guardas.filter(n => (n.rotina[periodoComSaida!] ?? n.localBase) !== n.localBase).length;
+    ok(saindo === semMedo, `Combatentes não se recolhem por medo (${saindo} de ${semMedo} continuam fora)`);
+  }
+
+  // Ameaça concreta no destino recolhe mesmo com a cidade calma.
+  c.vivo!.cidades[cidadeId.id].inseguranca = 0;
+  const alvo = moradores.map(n => localEfetivo(c, n, periodoComSaida!)).find(l => l && l !== cidadeId.id);
+  if (alvo) {
+    c.continuidade!.ameacas.push({
+      id: 'ameaca_teste', local: alvo, criaturaId: 'lobo', rivalId: 'x',
+      estado: 'ativa', desde: 0, gravidade: 3,
+    } as any);
+    const depois = foraAgora(periodoComSaida!);
+    ok(depois < emPaz, `Ameaça ativa no destino esvazia o caminho (${emPaz} → ${depois})`);
+  }
 }
 
 console.log('Testes de povoamento e lugares ocultos passaram.');

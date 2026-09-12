@@ -75,7 +75,42 @@ export function localEfetivo(camp: Campaign, npc: NPC, periodo: Periodo = period
   const pessoa = camp.vivo?.pessoas[npc.id];
   if (pessoa?.viagem) return; // In transit, not simultaneously at both ends.
   if (pessoa?.deslocado || pessoa?.objetivo === 'cativo') return pessoa.local;
-  return npc.rotina[periodo] ?? npc.localBase;
+  const previsto = npc.rotina[periodo] ?? npc.localBase;
+  return recolhidoPeloMedo(camp, npc, previsto) ? npc.localBase : previsto;
+}
+
+/**
+ * Quando a casa fica perigosa, a rotina muda.
+ *
+ * Pendência aberta desde a sessão 15: os moradores mantinham o mesmo dia
+ * mesmo com a vila sitiada. A capela às três da manhã continuava cheia com
+ * bandido acampado na estrada, porque a rotina era tabela fixa e o mundo não
+ * chegava nela.
+ *
+ * A regra é a que qualquer um seguiria: **com medo, ninguém dorme no mato**.
+ * Quem sairia do assentamento fica dentro dele. Não se aplica a quem está
+ * dentro do próprio lugar (já está seguro), nem a quem é pago para enfrentar —
+ * guarda e caçador continuam saindo, e é essa a diferença entre eles e o resto.
+ *
+ * O medo vem do estado vivo da própria cidade, não de um parâmetro solto: a
+ * insegurança que a autonomia e as ameaças já calculam.
+ */
+export const INSEGURANCA_QUE_RECOLHE = 55;
+
+function recolhidoPeloMedo(camp: Campaign, npc: NPC, previsto: string): boolean {
+  if (previsto === npc.localBase) return false;
+  if (npc.combatente) return false;
+  // Ameaça ativa no lugar para onde a pessoa iria: ninguém vai capinar o campo
+  // onde tem oni. Vale mesmo sem cidade, porque é sobre o destino, não a casa.
+  if (camp.continuidade?.ameacas.some(a => a.local === previsto && a.estado === 'ativa')) return true;
+  // Medo difuso, vindo do estado vivo da própria cidade. A busca completa por
+  // cidade mais próxima (`cidadeIdDoLocal`) exige o `content`, que esta função
+  // não recebe e cuja assinatura eu não quero mudar só por isto — então aqui
+  // só se resolve o caso direto. Na prática cobre os moradores gerados, cujo
+  // `localBase` É o assentamento; um NPC escrito à mão que mora na taverna não
+  // sente o medo difuso, só a ameaça concreta acima.
+  const cidade = camp.vivo?.cidades[npc.localBase];
+  return !!cidade && cidade.inseguranca >= INSEGURANCA_QUE_RECOLHE;
 }
 
 export function registrarFato(camp: Campaign, entrada: Omit<FatoHistorico, 'id' | 'dia' | 'conhecimento'> & { conhecimento?: FatoHistorico['conhecimento'] }): FatoHistorico {
