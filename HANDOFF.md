@@ -998,3 +998,52 @@ a deduplicação funciona. Há caso negativo para mestre de repertório curto.
 
 Arquivos: `engine/magic.ts`, `engine/aptidao.ts`, `engine/identidade.ts`,
 `engine/despertar.selftest.ts`.
+
+### Etapa B — escala do mapa e prazo que conhece a distância
+
+A pendência dizia "prazo de missão é fixo". A medição encontrou uma causa
+maior, e a pendência estava descrevendo o sintoma.
+
+**O continente não tinha escala.** Com 53 lugares no mapa, **nenhum par estava
+a mais de dois dias de distância**. As arestas eram declaradas em 1 ou 2
+períodos e o dia tem seis: o continente inteiro tinha a largura de uma tarde.
+Isso esvaziava três coisas ao mesmo tempo — prazo de missão nunca apertava,
+perigo de rota nunca acumulava, e escolher para onde ir não era decisão.
+
+**A regra nova fica nos dados, não em quarenta arestas reescritas à mão:**
+atravessar região custa dia, andar dentro dela custa hora
+(`FATOR_ENTRE_REGIOES = 6`, aplicado em `integrarContinente`). Duas exceções
+deliberadas: aresta de custo zero fica zero — é o autor dizendo "isto é
+praticamente o mesmo lugar", e escalar inventaria distância que a ficção nega;
+e regiões de fora do mundo não entram, porque não se chega lá andando.
+
+| | antes | depois |
+| --- | --- | --- |
+| distância mediana entre dois lugares | 1 dia | **4 dias** |
+| distância máxima | 2 dias | **6 dias** |
+| prazo de resgate cobre ida-e-volta de | 100% dos pares | 48% |
+
+Aquele 48% não é defeito: é o mundo ficando maior que uma pessoa. Mas exigiu a
+segunda metade da etapa — **o prazo passou a contar a ida**. `oferecerMissao`
+agora soma duas pernas: onde você está → onde é a crise, e a viagem que a
+missão exige em si. Antes só a segunda era contada, o que não custava nada num
+mapa onde tudo ficava a dois dias. Um resgate de prazo seis oferecido do outro
+lado do mapa não é oferta, é formalidade.
+
+**Efeito medido** (6 anos, 3 campanhas, política por objetivos):
+
+| | antes | depois |
+| --- | --- | --- |
+| missões concluídas | 118 de 233 (51%) | 88 de 229 (38%) |
+
+A queda é o preço correto de um mundo três vezes maior: uma pessoa não serve
+todas as crises de um continente. O que a etapa garante é que nenhuma missão
+seja oferecida com prazo que a geografia já nega.
+
+**Testes:** cinco asserções novas em `continente.selftest.ts` prendem a escala
+— mediana ≥ 3 dias, máximo ≥ 5, rotas intrarregionais ≤ 1 dia, rotas de custo
+zero preservadas — mais uma que confere que o prazo de um resgate distante
+cobre a chegada. Sem isso a escala poderia encolher de novo sem ninguém notar.
+
+Arquivos: `content/vaelhorn/continente.ts`, `engine/missoesVivas.ts`,
+`engine/continente.selftest.ts`.

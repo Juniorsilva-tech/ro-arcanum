@@ -11,6 +11,8 @@ import { atributosBase } from './character';
 import { normalizarCampanha } from './migracao';
 import { proximoPasso, cidadeIdDoLocal } from './historiaViva';
 import { perigoEfetivoDaRota } from './viagem';
+import { periodosDeViagem, janelaMissao } from './missoesVivas';
+import { PERIODOS } from './time';
 import type { Campaign } from './types';
 
 const ok = (v: unknown, msg: string) => { if (!v) throw new Error(msg); console.log(`✓ ${msg}`); };
@@ -146,6 +148,60 @@ function rotaDe(c: Campaign, origem: string): { destino: string; perigo: number 
   ok(!!migrado.continuidade!.locais.tessel || Object.keys(migrado.continuidade!.locais).length >= 5,
     'Carregar um save antigo não quebra por causa de lugares que não existiam');
   ok(!!migrado.vivo, 'O mundo vivo sobrevive à migração com o mapa ampliado');
+}
+
+// ── Escala geográfica ─────────────────────────────────────────────────────
+//
+// Medido na sessão 21: com 53 lugares, nenhum par do mapa ficava a mais de
+// DOIS dias de distância. O continente inteiro tinha a largura de uma tarde, e
+// isso esvaziava prazo de missão, perigo acumulado de rota e a própria decisão
+// de para onde ir. Estes testes prendem a escala para que ela não volte a
+// encolher sem alguém perceber.
+{
+  const dias: number[] = [];
+  const ids = C.locais.filter(l => l.regiao !== 'Fora do Mundo').map(l => l.id);
+  for (const a of ids) {
+    for (const b of ids) {
+      if (a === b) continue;
+      const p = periodosDeViagem(C, a, b);
+      if (Number.isFinite(p)) dias.push(Math.ceil(p / PERIODOS.length));
+    }
+  }
+  dias.sort((x, y) => x - y);
+  const mediana = dias[Math.floor(dias.length / 2)];
+  const maximo = dias[dias.length - 1];
+  ok(dias.length > 1000, `O mapa é conexo de verdade (${dias.length} pares alcançáveis)`);
+  ok(mediana >= 3, `Atravessar o continente custa dias, não horas (mediana ${mediana}d)`);
+  ok(maximo >= 5, `As pontas do mapa são longe uma da outra (máximo ${maximo}d)`);
+
+  // A outra metade da regra: dentro da região continua sendo questão de horas.
+  // Sem isso, ir da praça ao mercado custaria um dia e a cidade deixaria de
+  // funcionar como cidade.
+  const porId = new Map(C.locais.map(l => [l.id, l]));
+  const curtas = C.locais.flatMap(l =>
+    l.rotas.filter(r => porId.get(r.destino)?.regiao === l.regiao).map(r => r.periodos));
+  ok(curtas.length > 0, 'Existem rotas dentro da mesma região');
+  ok(Math.max(...curtas) <= PERIODOS.length, `Andar dentro da região não passa de um dia (máx ${Math.max(...curtas)} períodos)`);
+
+  // Zero é o autor dizendo "praticamente o mesmo lugar". A escala não pode
+  // inventar distância que a ficção nega.
+  const colados = C.locais.flatMap(l => l.rotas.filter(r => r.periodos === 0));
+  ok(colados.length > 0, `Lugares colados continuam colados (${colados.length} rotas de custo zero)`);
+}
+
+// Uma missão oferecida do outro lado do mapa precisa caber no próprio prazo,
+// senão é formalidade e não oferta.
+{
+  const c = nova('prazo-distante');
+  const longe = C.locais.find(l => {
+    const p = periodosDeViagem(C, c.localAtual, l.id);
+    return Number.isFinite(p) && p / PERIODOS.length >= 4;
+  });
+  ok(!!longe, `Existe lugar a quatro dias ou mais de ${c.localAtual}`);
+  const ida = periodosDeViagem(C, c.localAtual, longe!.id);
+  const janela = janelaMissao(c, 'resgatar', longe!.id, ida);
+  const diasIda = Math.ceil(ida / PERIODOS.length);
+  ok(janela.dias > diasIda, `O prazo do resgate distante cobre a chegada (${janela.dias}d para ${diasIda}d de ida)`);
 }
 
 console.log('Testes do continente e do perigo dinâmico passaram.');

@@ -35,8 +35,20 @@ export function oferecerMissao(camp: Campaign, tipo: MissaoViva['tipo'], fato: F
   const v = camp.vivo!;
   const abertas = v.missoes.filter(q => ['oferecida', 'aceita'].includes(q.estado));
   if (abertas.some(q => q.tipo === tipo && q.local === fato.local && q.ator === extra.ator && q.rival === extra.rival) || abertas.length >= 12) return;
-  const viagem = content && extra.destino ? periodosDeViagem(content, fato.local, extra.destino) : 0;
-  if (!Number.isFinite(viagem)) return;
+  // Deslocamento previsto, em duas pernas. A segunda (local → destino) é a
+  // viagem que a missão exige em si, e sempre foi contada. A primeira
+  // (onde você está → onde é a crise) passou a existir na sessão 21, quando o
+  // continente ganhou escala: antes nenhum par do mapa ficava a mais de dois
+  // dias, então ignorar a chegada não custava nada. Com a mediana em quatro
+  // dias, um resgate de prazo seis oferecido do outro lado do mapa não é
+  // oferta, é formalidade.
+  const ida = content ? periodosDeViagem(content, camp.localAtual, fato.local) : 0;
+  const tarefa = content && extra.destino ? periodosDeViagem(content, fato.local, extra.destino) : 0;
+  if (!Number.isFinite(tarefa)) return;
+  // Lugar inalcançável a partir daqui não vira missão — é o mesmo critério que
+  // o destino já usava.
+  if (!Number.isFinite(ida)) return;
+  const viagem = ida + tarefa;
   const janela = janelaMissao(camp, tipo, fato.local, viagem);
   const q: MissaoViva = {
     id: `missao_${++v.sequencia}`, tipo, titulo: TITULOS[tipo], local: fato.local,

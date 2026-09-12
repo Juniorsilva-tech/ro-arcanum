@@ -770,5 +770,43 @@ export function integrarContinente(base: Local[]): Local[] {
       }
     }
   }
+  escalarTravessias(todos, porId);
   return todos;
+}
+
+/**
+ * Dá escala geográfica ao continente.
+ *
+ * Medido na sessão 21: com 53 lugares no mapa, **nenhum par estava a mais de
+ * dois dias de distância**. As arestas eram declaradas em 1 ou 2 períodos, e o
+ * dia tem seis — o continente inteiro tinha a largura de uma tarde. Isso
+ * esvaziava três coisas de uma vez: prazo de missão nunca apertava, perigo de
+ * rota nunca acumulava, e escolher para onde ir não era decisão nenhuma.
+ *
+ * A regra é simples e fica nos dados, não em quarenta arestas reescritas à
+ * mão: **atravessar região custa dia, andar dentro dela custa hora**. Um
+ * período declarado numa aresta que cruza fronteira passa a valer um dia
+ * inteiro de estrada.
+ *
+ * Duas exceções deliberadas:
+ * - Aresta declarada com 0 período fica com 0. Zero é o autor dizendo "isto é
+ *   praticamente o mesmo lugar" — o mercado de peixe colado em Mareu, a casa
+ *   escondida na saia de Tessel. Escalar isso inventaria distância que a
+ *   ficção nega.
+ * - Regiões de fora do mundo (o Castelo Infinito e o que vier depois) não
+ *   entram: não se chega lá andando, e medir em dias de estrada seria mentira.
+ */
+export const FATOR_ENTRE_REGIOES = 6;
+const FORA_DO_MUNDO = 'Fora do Mundo';
+
+function escalarTravessias(todos: Local[], porId: Map<string, Local>): void {
+  for (const l of todos) {
+    if (l.regiao === FORA_DO_MUNDO) continue;
+    l.rotas = l.rotas.map(r => {
+      const destino = porId.get(r.destino);
+      if (!destino || destino.regiao === FORA_DO_MUNDO) return r;
+      if (r.periodos <= 0 || destino.regiao === l.regiao) return r;
+      return { ...r, periodos: r.periodos * FATOR_ENTRE_REGIOES };
+    });
+  }
 }
