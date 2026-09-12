@@ -179,6 +179,14 @@ const ESCALA_ESFORCO = 220;
  */
 export const LIMIAR_MAESTRIA_CONSUMADA = 90;
 
+/**
+ * Reputacao a partir da qual o mundo trata o nome como referencia. Menor que o
+ * limiar de maestria de proposito: reputacao e' teto-limitada pela exposicao e
+ * pesada pela confianca de quem observou, entao 78 de reputacao publica e'
+ * mais raro do que 78 de maestria privada.
+ */
+export const LIMIAR_NOME_CONHECIDO = 78;
+
 export function maestriaPorEsforco(esforco: number): number {
   return 100 * (1 - Math.exp(-Math.max(0, esforco) / ESCALA_ESFORCO));
 }
@@ -442,7 +450,17 @@ function atualizarReputacao(camp: Campaign): void {
     const teto = a.exposicao[d];
     a.reputacao[d] += (Math.min(media, teto) - a.reputacao[d]) * 0.35;
     a.reputacao[d] = Math.max(0, Math.min(100, a.reputacao[d]));
-    a.picoReputacao[d] = Math.max(a.picoReputacao[d] ?? 0, a.reputacao[d]);
+    const picoAnterior = a.picoReputacao[d] ?? 0;
+    a.picoReputacao[d] = Math.max(picoAnterior, a.reputacao[d]);
+
+    // Limiar social: o nome reconhecido. Diferente de todos os outros
+    // Despertares — este não depende do que você É, e sim do que o mundo
+    // passou a acreditar. Chegar aqui exige exposição real (a reputação é
+    // limitada por ela) e observadores que confiem no que viram; ninguém se
+    // torna nome conhecido treinando sozinho num celeiro.
+    if (picoAnterior < LIMIAR_NOME_CONHECIDO && a.picoReputacao[d] >= LIMIAR_NOME_CONHECIDO) {
+      concederDespertar(camp, 'nome_conhecido', `seu nome passou a ser dito em ${NOME_DOMINIO[d]} sem que você precise estar presente`);
+    }
   }
 }
 

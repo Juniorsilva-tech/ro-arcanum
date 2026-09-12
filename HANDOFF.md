@@ -936,3 +936,65 @@ depois do teto humano é matar alguma coisa ou treinar sozinho — o que faz do
 jogo tardio uma coisa só. Um mestre que reconhece, uma linha principal que
 fecha, uma escolha que cobra preço: são limiares que o mundo já tem material
 para sustentar, e são o que falta para o teto ter mais de uma porta.
+
+---
+
+## Sessão 21 — Claude — fechar as pendências abertas — plano antes das alterações
+
+### Pedido do dono
+"Complete tudo agora, faça por etapas com testes e validez e robustez."
+
+### Estado encontrado
+Commit `ceb5dac`, árvore limpa, remoto sincronizado (`0 0`). Todas as suítes
+verdes. As pendências acumuladas até aqui, consolidadas das sessões 13 a 20:
+
+| # | Pendência | Origem |
+| --- | --- | --- |
+| A | Nenhum limiar social concede Despertar | sessão 20 |
+| B | Prazo de missão é fixo, não conhece distância | sessão 14 |
+| C | Densidade de perigo é igual no continente inteiro | sessão 13 |
+| D | Rotina é por ofício, não por pessoa; sem expediente | sessão 15 |
+| E | Ganchos e segredos não viram missão | sessão 14 |
+| F | Ninguém escrito à mão nas regiões novas | sessão 14 |
+| G | Marca do Caçador não existe no código | sessão 20 |
+| H | Nemesis só acumula, nunca recua | sessão 13 |
+| I | Planejador por objetivos evita risco por construção | sessão 3 |
+
+### Fora de escopo, de propósito
+A camada de casas (etapas 2 a 7 da diretriz do dono) é a faixa ativa do Astra.
+Trabalhar nela em paralelo produziria conflito nos mesmos arquivos. Fica com ele.
+
+### Método desta sessão
+Uma etapa por commit, cada uma com: medição antes, implementação, teste
+dedicado, suíte completa verde, registro aqui. Nenhuma etapa é declarada
+pronta sem `tsc`, `test:engine` e campanha longa sem violação de invariante.
+
+### Etapa A — limiares sociais de Despertar
+
+Dois limiares que não passam por matar nem por treinar sozinho:
+
+| Despertar | Onde dispara | O que exige |
+| --- | --- | --- |
+| `mestre_esgotado` | `engine/magic.ts`, em `aprenderArte` | aprender a última arte de um mestre com repertório ≥ 3 |
+| `nome_conhecido` | `engine/aptidao.ts`, em `atualizarReputacao` | o pico de reputação num domínio cruzar 78 |
+
+`nome_conhecido` é o único Despertar do jogo que não depende do que o
+personagem **é**, e sim do que o mundo passou a **acreditar**. Ele respeita a
+regra central do módulo de aptidão: reputação é limitada pela exposição, então
+ninguém vira nome conhecido treinando sozinho num celeiro. Usa o **pico** de
+reputação, não a corrente — glória antiga esfria devagar e não deveria desfazer
+o que o mundo já soube.
+
+`MIN_ARTES_PARA_LIMIAR = 3` existe para que "aprendi tudo que ele sabia" diga
+alguma coisa: um mestre de uma arte só seria limiar alcançável na primeira
+semana de jogo.
+
+Medição: **2,33 → 3,0 Despertares** por campanha de dez anos. Nível final
+29–34. Zero violações de invariante.
+
+Testes: a suíte `despertar.selftest.ts` subiu para 30 asserções. O teste do
+mestre passa pelo `aprenderArte` de verdade — conceder na mão só provaria que
+a deduplicação funciona. Há caso negativo para mestre de repertório curto.
+
+Arquivos: `engine/magic.ts`, `engine/aptidao.ts`, `engine/identidade.ts`,
+`engine/despertar.selftest.ts`.

@@ -7,6 +7,7 @@ import { avancarPeriodos } from './time';
 import { crescerImpulsos } from './impulsos';
 import { avancarMundo } from './mundo';
 import { dominioDaArte, treinar } from './aptidao';
+import { concederDespertar } from './progresso';
 
 // O contexto é caro: percorre o elenco inteiro, que cresce com os moradores
 // procedurais (ver engine/autonomia.ts). Calcular um por mestre fazia a
@@ -24,6 +25,12 @@ function mestreDisponivel(
 }
 
 // Mestres que ensinam no local atual, com as artes que ainda dá para aprender.
+/**
+ * Repertorio minimo para um mestre esgotado valer um Despertar. Abaixo disso
+ * "aprendi tudo que ele sabia" nao diz nada sobre o aluno.
+ */
+const MIN_ARTES_PARA_LIMIAR = 3;
+
 export function mestresQueEnsinamAqui(
   content: ContentBundle,
   camp: Campaign,
@@ -80,6 +87,19 @@ export function aprenderArte(
   treinar(content, camp, dominioDaArte(arte?.tecnica?.estilo), {
     mestre: 0.85, esforco: 0.8, recursos: 0.7, observadorId: observador?.id,
   });
+  // Limiar social: o mestre esgotado. Aprender a ÚLTIMA arte de um mestre que
+  // tinha um repertório de verdade não é um item a mais na lista — é o fim de
+  // uma relação de anos, e o momento em que quem ensinava passa a não ter mais
+  // o que dar. Exige repertório mínimo de propósito: um mestre de uma arte só
+  // seria um limiar barato demais, alcançável na primeira semana de jogo.
+  if (mestreDaArte && mestreDaArte.ensina.length >= MIN_ARTES_PARA_LIMIAR) {
+    const faltando = mestreDaArte.ensina.filter(id => !camp.personagem.artesConhecidas.includes(id));
+    if (faltando.length === 0) {
+      const nome = content.npcs.find(n => n.ensinaMestre === mestreDaArte.id)?.nome ?? mestreDaArte.nome;
+      concederDespertar(camp, 'mestre_esgotado', `${nome} não tem mais o que te ensinar`);
+    }
+  }
+
   camp.calendario = avancarPeriodos(camp.calendario, PERIODOS_PARA_APRENDER);
   crescerImpulsos(camp, PERIODOS_PARA_APRENDER);
   camp.capitulo.periodosDecorridos += PERIODOS_PARA_APRENDER;

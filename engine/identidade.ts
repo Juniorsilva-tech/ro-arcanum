@@ -11,6 +11,10 @@ export const LEGADOS = {
   derrubou_uma_lua: { nome: 'Quem derrubou uma Lua', vida: 1.25, dano: 1.3, descricao: 'Enfrentou um dos doze e voltou. Pouquíssima gente no mundo pode dizer o mesmo.' },
   a_perda: { nome: 'O que ficou da perda', vida: 1.15, dano: 1.2, descricao: 'Alguém do seu sangue não voltou. O que sobrou disso não é força — é a ausência de hesitação.' },
   cacada_impossivel: { nome: 'A caçada impossível', vida: 1.3, dano: 1.25, descricao: 'A besta que fechava a mata profunda desde antes dos reinos. Ninguém esperava que caísse.' },
+  // Limiares sociais (sessão 21). Os únicos que não passam por matar nem por
+  // treinar sozinho: dependem de outra pessoa — quem ensinou, ou quem contou.
+  mestre_esgotado: { nome: 'O aluno que passou', vida: 1.15, dano: 1.25, descricao: 'Aprendeu tudo que um mestre tinha. A partir daqui o caminho não tem mais quem o mostre.' },
+  nome_conhecido: { nome: 'O nome que corre sozinho', vida: 1.2, dano: 1.2, descricao: 'Dizem seu nome em lugares onde você nunca pôs os pés. Isso abre portas e atrai coisas.' },
 } as const;
 
 export function legadosConquistados(camp: Campaign) {

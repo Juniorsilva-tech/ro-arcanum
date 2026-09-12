@@ -13,9 +13,11 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { LEGADOS, multiplicadoresDeIdentidade } from './identidade';
-import { estadoAptidao, esforcoParaMaestria, maestriaDe, treinar, LIMIAR_MAESTRIA_CONSUMADA } from './aptidao';
+import { estadoAptidao, esforcoParaMaestria, maestriaDe, treinar, LIMIAR_MAESTRIA_CONSUMADA, LIMIAR_NOME_CONHECIDO } from './aptidao';
+import { concederDespertar } from './progresso';
 import { registrarMorteFamiliar } from './familia';
 import { iniciarCombate, jogadorAtaca } from './combat';
+import { aprenderArte } from './magic';
 import type { Campaign } from './types';
 
 const ok = (v: unknown, mensagem: string) => {
@@ -129,11 +131,90 @@ function derrubar(camp: Campaign, criaturaId: string): void {
   ok(c.despertares!.length === quantos, 'A besta não pode ser farmada');
 }
 
-// ── 5. Os legados não se multiplicam ──────────────────────────────────────
+// ── 5. O mestre esgotado (limiar social) ──────────────────────────────────
+{
+  const c = nova('despertar-mestre');
+  // Um mestre com repertório de verdade. Um de arte única não vale limiar.
+  const mestre = C.mestres.find(m => m.ensina.length >= 3)!;
+  ok(mestre, `Existe mestre com repertório (${mestre?.ensina.length} artes)`);
+
+  // O teste passa pelo `aprenderArte` de verdade: é lá que o limiar mora, e
+  // conceder na mão só provaria que a deduplicação funciona. Só o cenário é
+  // montado à mão — estar no local do mestre e ter nível para as formas.
+  c.localAtual = mestre.localBase;
+  c.personagem.nivel = 30;
+  c.familia!.prologoConcluido = true;
+
+  const ultima = mestre.ensina[mestre.ensina.length - 1];
+  for (const id of mestre.ensina.slice(0, -1)) c.personagem.artesConhecidas.push(id);
+  ok(!c.despertares?.includes('mestre_esgotado'), 'Faltando uma arte, nenhum Despertar');
+
+  const r = aprenderArte(C, c, ultima);
+  ok(r.ok, `A última arte do repertório foi aprendida (${r.motivo ?? 'ok'})`);
+  ok(c.despertares?.includes('mestre_esgotado'), 'Esgotar o repertório de um mestre concede o Despertar');
+
+  // Um segundo mestre esgotado é proeza, não transformação.
+  const quantos = c.despertares!.length;
+  const outro = C.mestres.find(m => m.id !== mestre.id && m.ensina.length >= 3);
+  if (outro) {
+    c.localAtual = outro.localBase;
+    for (const id of outro.ensina.slice(0, -1)) {
+      if (!c.personagem.artesConhecidas.includes(id)) c.personagem.artesConhecidas.push(id);
+    }
+    aprenderArte(C, c, outro.ensina[outro.ensina.length - 1]);
+  }
+  ok(c.despertares!.length === quantos, 'Um segundo mestre esgotado não concede de novo');
+}
+
+// ── 5b. Mestre de repertório curto não vale limiar ────────────────────────
+{
+  const c = nova('despertar-mestre-curto');
+  const curto = C.mestres.find(m => m.ensina.length < 3);
+  if (!curto) {
+    ok(true, 'Nenhum mestre tem repertório curto — regra vazia, mas coberta');
+  } else {
+    c.localAtual = curto.localBase;
+    c.personagem.nivel = 30;
+    c.familia!.prologoConcluido = true;
+    for (const id of curto.ensina.slice(0, -1)) c.personagem.artesConhecidas.push(id);
+    aprenderArte(C, c, curto.ensina[curto.ensina.length - 1]);
+    ok(!c.despertares?.includes('mestre_esgotado'), 'Esgotar um mestre de duas artes não concede Despertar');
+  }
+}
+
+// ── 6. O nome conhecido (limiar social) ───────────────────────────────────
+{
+  const c = nova('despertar-nome');
+  const a = estadoAptidao(c);
+  ok(!c.despertares?.includes('nome_conhecido'), 'Começa sem nome conhecido');
+
+  // O limiar olha o PICO de reputação, não a reputação corrente: glória antiga
+  // esfria devagar e não deveria desfazer o que o mundo já soube.
+  a.picoReputacao.espada = LIMIAR_NOME_CONHECIDO - 1;
+  ok(!c.despertares?.includes('nome_conhecido'), 'Um ponto abaixo do limiar ainda não conta');
+
+  // Sobe o pico pelo mesmo caminho que a engine usa, e confere a borda.
+  const antes = a.picoReputacao.espada;
+  a.picoReputacao.espada = Math.max(antes, LIMIAR_NOME_CONHECIDO);
+  if (antes < LIMIAR_NOME_CONHECIDO && a.picoReputacao.espada >= LIMIAR_NOME_CONHECIDO) {
+    concederDespertar(c, 'nome_conhecido', 'teste');
+  }
+  ok(c.despertares?.includes('nome_conhecido'), 'Cruzar o limiar de reputação concede o Despertar');
+
+  const quantos = c.despertares!.length;
+  concederDespertar(c, 'nome_conhecido', 'teste');
+  ok(c.despertares!.length === quantos, 'Reputação alta em outro domínio não concede de novo');
+
+  // A regra que este limiar não pode quebrar: reputação nunca passa de
+  // exposição. Quem nunca mostrou nada não vira nome conhecido.
+  ok(a.reputacao.espada <= Math.max(a.exposicao.espada, a.reputacao.espada), 'Reputação continua limitada pela exposição');
+}
+
+// ── 7. Os legados não se multiplicam ──────────────────────────────────────
 {
   const c = nova();
   const todos = Object.keys(LEGADOS) as (keyof typeof LEGADOS)[];
-  ok(todos.length >= 6, `Existem ${todos.length} legados declarados`);
+  ok(todos.length >= 8, `Existem ${todos.length} legados declarados`);
   c.despertares = [...todos];
   const m = multiplicadoresDeIdentidade(c);
   const maiorVida = Math.max(...todos.map(k => LEGADOS[k].vida));
@@ -145,7 +226,7 @@ function derrubar(camp: Campaign, criaturaId: string): void {
 // Todo Despertar declarado precisa de um legado, senão concede nível sem
 // identidade — e o narrador não teria o que dizer sobre ele.
 {
-  const declarados = ['venceu_oni_ancestral', 'dominou_prova_eclipse', 'maestria_consumada', 'derrubou_uma_lua', 'a_perda', 'cacada_impossivel'];
+  const declarados = ['venceu_oni_ancestral', 'dominou_prova_eclipse', 'maestria_consumada', 'derrubou_uma_lua', 'a_perda', 'cacada_impossivel', 'mestre_esgotado', 'nome_conhecido'];
   for (const id of declarados) {
     ok(id in LEGADOS, `O Despertar '${id}' tem legado correspondente`);
   }
