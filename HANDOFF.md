@@ -1047,3 +1047,54 @@ cobre a chegada. Sem isso a escala poderia encolher de novo sem ninguém notar.
 
 Arquivos: `content/vaelhorn/continente.ts`, `engine/missoesVivas.ts`,
 `engine/continente.selftest.ts`.
+
+### Etapa C — o rosto de cada região
+
+A pendência dizia "densidade de perigo por região". Medindo, descobri que a
+densidade **já existia**: Vale 3,7 · Bosque de Vintra 6,0 · Ermo de Solgar 5,5
+· Marca de Tessel 3,9. O número variava.
+
+O que não variava era **o que aparece**. O sorteio de encontro olhava só o
+`tipo` do lugar, nunca a região — e a medição foi categórica:
+
+> Dois lugares do mesmo tipo em regiões diferentes sorteavam listas
+> **100% idênticas**. Toda aldeia do continente, em qualquer região, cuspia
+> exatamente as mesmas criaturas.
+
+A região tinha intensidade e não tinha rosto. Um lobo no Ermo de Solgar — um
+deserto — era tão provável quanto no Bosque de Vintra.
+
+**O que foi feito:** `encontrosPorRegiao` em `bestiary.ts`, sete tabelas, uma
+por região do continente, e `encontrosDoLugar()` em `engine/viagem.ts` que
+junta o elenco do tipo com o da região. Tessel dá gente (salteador, bandido,
+arqueiro); Corveira dá o que vem de baixo ou voa alto (verme de pedra, mineira
+enlouquecida, corvo, gárgula); Mareu dá contrabando e o que o mar devolve;
+Vintra dá mata fechada; Solgar dá ossada não enterrada; os Baixios dão o que
+espera parado no lodo.
+
+**As duas listas somam, não filtram.** Filtrar poderia esvaziar a tabela de um
+lugar, e `selftest.ts` cobra que todo tipo sorteável tenha encontro.
+Exclusividade de verdade é decisão da criatura, via `regiaoExclusiva` — essa
+sim filtra, porque é o autor dizendo onde aquilo pode existir. Hoje nenhuma
+criatura a usa; o campo existe para quando o bestiário quiser.
+
+| semelhança de elenco entre regiões, no mesmo tipo de lugar | antes | depois |
+| --- | --- | --- |
+| média geral | **100%** | **43%** |
+| aldeia (5 regiões) | 100% | 41% |
+| cidade (3 regiões) | 100% | 26% |
+| capela (3 regiões) | 100% | 14% |
+
+**Erro de método que vale registrar:** minha primeira medição comparou a união
+de todos os encontros de cada região e deu 34% antes, 35% depois — quase nada.
+Concluir dali que a mudança não funcionou teria sido errado: a métrica é que
+estava errada. A união de uma região inteira já era ampla e parecida com a das
+outras; a pergunta certa era sobre o mesmo tipo de lugar em regiões
+diferentes, e aí a diferença é 100% contra 43%.
+
+**Testes:** `continente.selftest.ts` ganhou a asserção de semelhança < 70%,
+mais uma por lugar garantindo que somar a região não faz ninguém perder
+encontro do próprio tipo, mais uma por região exigindo tabela característica.
+
+Arquivos: `content/vaelhorn/bestiary.ts`, `content/vaelhorn/index.ts`,
+`engine/viagem.ts`, `engine/types.ts`, `engine/continente.selftest.ts`.

@@ -10,7 +10,7 @@ import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { normalizarCampanha } from './migracao';
 import { proximoPasso, cidadeIdDoLocal } from './historiaViva';
-import { perigoEfetivoDaRota } from './viagem';
+import { perigoEfetivoDaRota, encontrosDoLugar } from './viagem';
 import { periodosDeViagem, janelaMissao } from './missoesVivas';
 import { PERIODOS } from './time';
 import type { Campaign } from './types';
@@ -202,6 +202,58 @@ function rotaDe(c: Campaign, origem: string): { destino: string; perigo: number 
   const janela = janelaMissao(c, 'resgatar', longe!.id, ida);
   const diasIda = Math.ceil(ida / PERIODOS.length);
   ok(janela.dias > diasIda, `O prazo do resgate distante cobre a chegada (${janela.dias}d para ${diasIda}d de ida)`);
+}
+
+// ── Rosto de cada região ──────────────────────────────────────────────────
+//
+// Medido na sessão 21: o perigo de cada região já variava como NÚMERO (Vale
+// 3,7 · Bosque de Vintra 6,0 · Ermo de Solgar 5,5), mas o sorteio ignorava
+// região por completo — duas aldeias em regiões diferentes cuspiam listas
+// **100% idênticas**. A região tinha intensidade e não tinha rosto.
+{
+  const fora = ['Fora do Mundo', 'Fora do Vale'];
+  const porTipo: Record<string, { regiao: string; ids: Set<string> }[]> = {};
+  for (const l of C.locais) {
+    if (!l.regiao || fora.includes(l.regiao)) continue;
+    const lista = (porTipo[l.tipo] ??= []);
+    if (lista.some(x => x.regiao === l.regiao)) continue;
+    lista.push({ regiao: l.regiao, ids: new Set(encontrosDoLugar(C, l)) });
+  }
+  let soma = 0, n = 0;
+  for (const lista of Object.values(porTipo)) {
+    if (lista.length < 2) continue;
+    let s = 0, c = 0;
+    for (let i = 0; i < lista.length; i++) {
+      for (let j = i + 1; j < lista.length; j++) {
+        const a = lista[i].ids, b = lista[j].ids;
+        s += [...a].filter(x => b.has(x)).length / new Set([...a, ...b]).size;
+        c++;
+      }
+    }
+    soma += s / c; n++;
+  }
+  const semelhanca = soma / n;
+  ok(n >= 5, `Há tipos de lugar repetidos entre regiões para comparar (${n})`);
+  ok(semelhanca < 0.7, `O mesmo tipo de lugar muda de elenco conforme a região (${(semelhanca * 100).toFixed(0)}% igual)`);
+
+  // A soma não pode esvaziar nem inflar: todo lugar continua sorteável, e a
+  // região só acrescenta ao que o tipo já dava.
+  for (const l of C.locais) {
+    if (l.regiao === 'Fora do Mundo') continue;
+    const doTipo = C.encontrosPorTipo?.[l.tipo] ?? [];
+    const juntos = encontrosDoLugar(C, l);
+    if (doTipo.length === 0) continue;
+    const perdeu = doTipo.filter(id => !juntos.includes(id) && !C.criaturas.find(c => c.id === id)?.regiaoExclusiva);
+    ok(perdeu.length === 0, `${l.id} não perde encontro do próprio tipo ao somar a região`);
+    ok(juntos.length >= doTipo.length - perdeu.length, `${l.id} continua com elenco sorteável`);
+  }
+
+  // Toda região do continente precisa ter tabela própria, senão ela herda o
+  // mundo inteiro e volta a não ter rosto.
+  const regioesDoMapa = new Set(C.locais.map(l => l.regiao).filter(r => r && !fora.includes(r) && r !== 'Vale de Halvet'));
+  for (const r of regioesDoMapa) {
+    ok(!!C.encontrosPorRegiao?.[r!], `A região ${r} tem elenco característico`);
+  }
 }
 
 console.log('Testes do continente e do perigo dinâmico passaram.');

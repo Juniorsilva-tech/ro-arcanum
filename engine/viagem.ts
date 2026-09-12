@@ -139,6 +139,32 @@ export function descobrirLocal(content: ContentBundle, camp: Campaign, localId: 
   return true;
 }
 
+/**
+ * O elenco possível de um lugar: o que o TIPO dele sorteia, mais o que é
+ * característico da REGIÃO onde ele fica.
+ *
+ * Até a sessão 21 só o tipo contava. O perigo de cada região já variava como
+ * número — Vale 3,7, Bosque de Vintra 6,0, Ermo de Solgar 5,5 — mas uma
+ * floresta em Vintra e uma floresta em Tessel cuspiam exatamente a mesma
+ * lista. A região tinha intensidade e não tinha rosto.
+ *
+ * As duas listas somam em vez de filtrar, de propósito: filtrar poderia
+ * esvaziar a tabela de um lugar, e `selftest.ts` cobra que todo tipo sorteável
+ * tenha encontro. Exclusividade de verdade é decisão da criatura, via
+ * `regiaoExclusiva` — e essa sim filtra, porque é o autor dizendo onde aquilo
+ * pode existir.
+ */
+export function encontrosDoLugar(content: ContentBundle, local?: Local): string[] {
+  if (!local) return [];
+  const doTipo = content.encontrosPorTipo?.[local.tipo] ?? [];
+  const daRegiao = local.regiao ? content.encontrosPorRegiao?.[local.regiao] ?? [] : [];
+  const juntos = [...new Set([...doTipo, ...daRegiao])];
+  return juntos.filter(id => {
+    const exclusiva = content.criaturas.find(c => c.id === id)?.regiaoExclusiva;
+    return !exclusiva || exclusiva === local.regiao;
+  });
+}
+
 // Retorna os ids das criaturas do encontro, ou null se a viagem correu em paz.
 // `pool` é o elenco possível para o tipo de local de destino (ver
 // content/vaelhorn/bestiary.ts, encontrosPorTipo) — a engine não conhece
@@ -209,7 +235,7 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   camp.flags[`visitou.${destino}`] = true;
   descobrirNoticias(content, camp);
 
-  const pool = encontrosElegiveis(content, camp, content.encontrosPorTipo?.[alvo?.tipo ?? ''] ?? []);
+  const pool = encontrosElegiveis(content, camp, encontrosDoLugar(content, alvo));
   const encontro =
     emboscadaNemesis(content, camp) ??
     rolarEncontroContextual(

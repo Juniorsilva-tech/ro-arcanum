@@ -422,6 +422,8 @@ export type LivroState = {
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.
 export type Criatura = {
+  /** Regiao fora da qual esta criatura nunca e sorteada. */
+  regiaoExclusiva?: string;
   humano?: boolean;
   perfilOni?: import('./kimetsuTypes').PerfilOni;
   id: string;
@@ -524,6 +526,8 @@ export type ContentBundle = {
   // regra de viagem inteira a morar na UI — a engine não alcançava a tabela.
   // Ausente = cenário sem encontro de viagem.
   encontrosPorTipo?: Record<string, string[]>;
+  /** Encontros caracteristicos de cada regiao, somados aos do tipo de lugar. */
+  encontrosPorRegiao?: Record<string, string[]>;
   localInicial: string;
 };
 

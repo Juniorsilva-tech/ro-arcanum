@@ -573,6 +573,37 @@ export const criaturasVaelhorn: Criatura[] = [
   },
 ];
 
+/**
+ * Encontros característicos de cada região, somados ao que o tipo de lugar já
+ * sorteia.
+ *
+ * Medido na sessão 21: o perigo de cada região já variava como número (Vale
+ * 3,7 · Vintra 6,0 · Solgar 5,5), mas o sorteio ignorava região por completo.
+ * Uma floresta no Bosque de Vintra e uma floresta na Marca de Tessel cuspiam
+ * exatamente a mesma lista — a região tinha intensidade, não tinha rosto.
+ *
+ * Estas listas SOMAM, não substituem. Filtrar correria o risco de esvaziar a
+ * tabela de um lugar, e `selftest.ts` cobra que todo tipo sorteável tenha
+ * encontro. Quem quiser exclusividade de verdade usa `regiaoExclusiva` na
+ * própria criatura.
+ */
+export const encontrosPorRegiao: Record<string, string[]> = {
+  // Terra de lavoura, forte e estrada movimentada: o que ataca aqui é gente.
+  'Marca de Tessel': ['salteador', 'bandido', 'salteador_arqueiro', 'javali', 'cao_de_guarda'],
+  // Planalto de mina e pedra. O que mora aqui vem de baixo ou voa alto.
+  'Planalto de Corveira': ['verme_de_pedra', 'mineiro_enlouquecido', 'corvo_gigante', 'lobo_branco', 'gargula_partida'],
+  // Costa: contrabando, porão de navio e o que o mar devolve.
+  'Costa de Mareu': ['contrabandista_do_sal', 'enxame_de_morcegos', 'rato_gigante', 'afogado', 'sanguessuga_do_lodo'],
+  // Mata fechada e antiga — a região de perigo mais alto do mapa.
+  'Bosque de Vintra': ['lobo', 'urso_pardo', 'aranha_das_arvores', 'raposa_raivosa', 'oni_sussurrante'],
+  // Ermo seco. Pouca água, pouca gente, e ossada que não foi enterrada.
+  'Ermo de Solgar': ['corvo_gigante', 'esqueleto_da_cova', 'gargula_partida', 'verme_de_pedra', 'foragido_veterano'],
+  // Baixios: juncal, vau e lodo. Quase tudo aqui espera parado.
+  'Baixios de Halvern': ['sanguessuga_do_lodo', 'serpente_do_junco', 'afogado', 'fogo_fatuo', 'oni_do_pantano'],
+  // A capital: guarda na rua, e o crime que a guarda não alcança.
+  'Halvern': ['capanga_do_senhorio', 'bandido', 'salteador', 'rato_gigante'],
+};
+
 // Encontros por tipo de local (ids de criatura sorteáveis).
 export const encontrosPorTipo: Record<string, string[]> = {
   floresta: ['lobo', 'javali', 'aranha_das_arvores', 'corvo_gigante', 'cao_selvagem', 'raposa_raivosa', 'lobo_branco', 'urso_pardo', 'oni_faminto', 'oni_sussurrante', 'lua_inferior_cinco', 'oni_da_mao', 'ubume'],

@@ -9,7 +9,7 @@ import { integrarContinente } from './continente';
 import { povoarContinente } from './povoamento';
 import { npcsVaelhorn } from './npcs';
 import { itensVaelhorn } from './items';
-import { criaturasVaelhorn, encontrosPorTipo } from './bestiary';
+import { criaturasVaelhorn, encontrosPorTipo, encontrosPorRegiao } from './bestiary';
 import { questsVaelhorn } from './quests';
 import { integrarKimetsu } from './kimetsu';
 import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
@@ -47,5 +47,6 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   casas: casasVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,
   encontrosPorTipo,
+  encontrosPorRegiao,
   localInicial: 'taverna',
 });
