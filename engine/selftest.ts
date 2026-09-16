@@ -337,6 +337,34 @@ ok(r.fato.length > 0, 'Resolução produz um fato');
   if (quebras.length) console.log('  referências quebradas:', quebras.slice(0, 12).join(' · '));
   ok(quebras.length === 0, `Integridade do conteúdo (${quebras.length} referência(s) quebrada(s))`);
 
+  // ── Classes ─────────────────────────────────────────────────────────────
+  //
+  // `mecanicaUnica` é TEXTO: ela vai para o narrador e não é lida por regra
+  // nenhuma da engine (vale para as três classes originais também). O que
+  // diferencia uma classe de verdade é o que está testado aqui — atributos,
+  // perícias, itens, equipamento e artes.
+  {
+    const recursosConhecidos = new Set(['vigor', 'mana']);
+    const vistos = new Set<string>();
+    for (const c of conteudoVaelhorn.classes) {
+      ok(!vistos.has(c.id), `Classe ${c.id} tem id único`);
+      vistos.add(c.id);
+      ok(recursosConhecidos.has(c.recursoPrincipal),
+        `${c.id} usa recurso que a engine conhece (${c.recursoPrincipal})`);
+      ok(Object.keys(c.bonusAtributos).length > 0, `${c.id} move algum atributo`);
+      ok(Object.keys(c.periciasIniciais).length >= 3, `${c.id} começa com perícias`);
+      ok(c.descricao.length >= 60, `${c.id} tem descrição de verdade`);
+
+      // Equipar o que não está na mochila deixa o personagem de mãos vazias.
+      for (const [slot, item] of Object.entries(c.equipInicial ?? {})) {
+        if (!item) continue;
+        ok((c.itensIniciais ?? {})[item] > 0,
+          `${c.id} carrega o que equipa em ${slot} (${item})`);
+      }
+    }
+    ok(conteudoVaelhorn.classes.length >= 8, `O jogo oferece ${conteudoVaelhorn.classes.length} classes`);
+  }
+
   // A LEVA: o vale é das mulheres. Ninguém do elenco pode ter ofício no
   // masculino, e todo mundo precisa de corpo — o narrador usa os dois.
   const MASCULINO = /\b(taverneiro|ferreiro|coveiro|moleiro|pescador|carreteiro|escriba errante|mercador|padre|sargento|senhor|capataz do|vigia noturno|armeiro|eremita solitário)\b/;
