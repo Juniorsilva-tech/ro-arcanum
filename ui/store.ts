@@ -57,6 +57,9 @@ import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
   salvarCampanha,
   carregarCampanha,
+  carregarCampanhaDetalhado,
+  carregarSlotAtivo,
+  migrarSaveAntigo,
   apagarCampanha,
   salvarSessao,
   carregarSessao,
@@ -173,6 +176,11 @@ interface GameState {
   feed: EntradaFeed[];
   ocupado: boolean;
   temSave: boolean;
+  /**
+   * Ultimo problema ou aviso do save. A camada antiga engolia falha de
+   * gravacao em silencio; agora o erro sobe ate aqui e a tela mostra.
+   */
+  avisoSave?: string;
   config: ConfigApp;
   rascunho: Rascunho;
   iaStatus: 'off' | 'pensando' | 'ok' | 'erro';
@@ -254,6 +262,20 @@ function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => vo
   set({ cena });
 }
 
+/**
+ * Grava a campanha e faz o erro chegar a tela.
+ *
+ * Todas as gravacoes do jogo passam por aqui. A camada antiga tinha um
+ * `catch {}` vazio com o comentario "perder um autosave nao deve travar o
+ * jogo" — verdade, mas perder em SILENCIO e' pior: o jogador segue jogando
+ * horas confiando num save que nao existe.
+ */
+async function persistir(camp: Campaign, set: (p: Partial<GameState>) => void): Promise<void> {
+  const r = await salvarCampanha(camp);
+  if (!r.ok) set({ avisoSave: `Não foi possível salvar: ${r.erro}` });
+  else if (r.aviso) set({ avisoSave: r.aviso });
+}
+
 export const useGame = create<GameState>((set, get) => ({
   pronto: false,
   tela: 'entrada',
@@ -261,14 +283,23 @@ export const useGame = create<GameState>((set, get) => ({
   feed: [],
   ocupado: false,
   temSave: false,
+  avisoSave: undefined,
   config: configPadrao,
   rascunho: { nome: '', atributos: atributosBase() },
   iaStatus: 'off',
 
   async init() {
     const config = await carregarConfig();
-    const save = await carregarCampanha();
-    set({ config, temSave: !!save, pronto: true });
+    await carregarSlotAtivo();
+    // Save de antes dos slots vira slot 0. O antigo nao e' apagado.
+    await migrarSaveAntigo();
+    const r = await carregarCampanhaDetalhado();
+    set({
+      config,
+      temSave: !!r.camp,
+      avisoSave: r.aviso ?? r.erro,
+      pronto: true,
+    });
   },
 
   irPara(t) {
@@ -287,8 +318,11 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   async continuar() {
-    const bruto = await carregarCampanha();
-    if (!bruto) return;
+    const r = await carregarCampanhaDetalhado();
+    const bruto = r.camp;
+    if (!bruto) { set({ avisoSave: r.erro ?? 'Não há campanha para continuar.' }); return; }
+    // Recuperado de instantaneo: o jogador precisa saber quanto perdeu.
+    if (r.aviso) set({ avisoSave: r.aviso });
     const content = bundlePorId(bruto.cenarioId);
     if (!content) return;
     // Save de uma versão anterior não pode virar tela branca: completa o que
@@ -388,7 +422,7 @@ export const useGame = create<GameState>((set, get) => ({
       feed: [],
       ocupado: false,
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
 
   async avancarInfancia(opcaoId) {
@@ -396,7 +430,7 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp?.familia) return;
     const resultado = resolverEtapaInfancia(content, camp, opcaoId);
     if (!resultado.ok) return;
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     if (!resultado.concluida) {
       set({ camp: { ...camp } });
       return;
@@ -413,7 +447,7 @@ export const useGame = create<GameState>((set, get) => ({
     if (!camp) return;
     const r = resgatarParente(camp, id, modo);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
 
   async alternarCompanheiroAcao(id) {
@@ -425,7 +459,7 @@ export const useGame = create<GameState>((set, get) => ({
       ? `${npc?.nome ?? id} ${r.entrou ? 'passou a acompanhar você' : 'deixou o grupo'}.`
       : r.motivo ?? 'Não foi possível mudar o grupo.';
     set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     return texto;
   },
 
@@ -436,7 +470,7 @@ export const useGame = create<GameState>((set, get) => ({
     const nome = content.faccoes.find(f => f.id === id)?.nome ?? id;
     const texto = r.ok ? `Você entrou na frente ao lado de ${nome}. O resultado ainda dependerá dos dias seguintes.` : r.motivo ?? 'Não foi possível intervir.';
     set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
 
   async abandonar() {
@@ -469,14 +503,14 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     equiparEngine(content, camp, id);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async desequiparSlot(slot) {
     const { camp } = get();
     if (!camp) return;
     desequiparEngine(camp, slot);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async usarItem(id) {
     const { content, camp } = get();
@@ -486,7 +520,7 @@ export const useGame = create<GameState>((set, get) => ({
       camp: { ...camp },
       feed: r.ok ? [...get().feed, nf('Você usa e o corpo responde.', 'sistema')] : get().feed,
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async comprarItem(id) {
     const { content, camp } = get();
@@ -495,7 +529,7 @@ export const useGame = create<GameState>((set, get) => ({
     const resultado = comprarEngine(content, camp, id, desconto);
     if (!resultado.ok) set({ feed: [...get().feed, nf(resultado.motivo ?? 'Compra indisponível.', 'sistema')] });
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async venderItem(id) {
     const { content, camp } = get();
@@ -503,7 +537,7 @@ export const useGame = create<GameState>((set, get) => ({
     const resultado = venderEngine(content, camp, id);
     if (!resultado.ok) set({ feed: [...get().feed, nf(resultado.motivo ?? 'Venda indisponível.', 'sistema')] });
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
 
   // ── Combate ──────────────────────────────────────────────
@@ -512,14 +546,14 @@ export const useGame = create<GameState>((set, get) => ({
     if (!camp || !content || ocupado) return;
     const r = executarAcaoMundo(content, camp, acao);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')], ...(r.combate ? { tela: 'combate' as const } : {}) });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async reconstruirLocal() {
     const { camp } = get();
     if (!camp) return;
     const r = ajudarReconstrucao(camp);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.ok ? 'Você contribuiu com materiais para a reconstrução.' : r.motivo ?? 'Não foi possível.', 'sistema')] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   cacarAmeaca(id) {
     const { camp, content } = get();
@@ -543,35 +577,35 @@ export const useGame = create<GameState>((set, get) => ({
     const ids = Array.from({ length: count }, () => pick(camp.rng, pool));
     iniciarCombate(content, camp, ids);
     set({ camp: { ...camp }, tela: 'combate' });
-    void salvarCampanha(camp);
+    void persistir(camp, set);
   },
   iniciarLuta(criaturaIds) {
     const { content, camp } = get();
     if (!content || !camp) return;
     iniciarCombate(content, camp, criaturaIds);
     set({ camp: { ...camp }, tela: 'combate' });
-    void salvarCampanha(camp);
+    void persistir(camp, set);
   },
   async combAtacar(alvoId) {
     const { content, camp } = get();
     if (!content || !camp?.combate) return;
     jogadorAtaca(content, camp, alvoId);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async combDefender() {
     const { content, camp } = get();
     if (!content || !camp?.combate) return;
     jogadorDefende(content, camp);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async combTatica(acao, alvoId) {
     const { content, camp } = get();
     if (!content || !camp?.combate) return;
     jogadorAcaoTatica(content, camp, acao, alvoId);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async combConjurar(arteId, alvoId) {
     const { content, camp } = get();
@@ -579,7 +613,7 @@ export const useGame = create<GameState>((set, get) => ({
     const r = jogadorConjura(content, camp, arteId, alvoId);
     if (!r.ok && r.motivo) camp.combate.log.push(`Não deu: ${r.motivo}.`);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async combUsar(itemId) {
     const { content, camp } = get();
@@ -587,14 +621,14 @@ export const useGame = create<GameState>((set, get) => ({
     const r = jogadorUsaItemCombate(content, camp, itemId);
     if (!r.ok && r.motivo) camp.combate.log.push(`Não deu: ${r.motivo}.`);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async combFugir() {
     const { content, camp } = get();
     if (!content || !camp?.combate) return;
     jogadorFoge(content, camp);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
   async fecharLuta() {
     const { content, camp } = get();
@@ -626,7 +660,7 @@ export const useGame = create<GameState>((set, get) => ({
       ),
     ];
     set({ camp: { ...camp }, tela: 'jogo', ocupado: true, feed: [...get().feed, ...linhas] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     const concl = verificarQuests(content, camp);
     if (concl.length) set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
     // Até o fim de um combate é narrado pelo modelo.
@@ -642,7 +676,7 @@ export const useGame = create<GameState>((set, get) => ({
     if (r.ok) {
       const arte = content.artes.find((a) => a.id === arteId);
       set({ camp: { ...camp }, feed: [...get().feed, nf(`Você aprendeu ${arte?.nome ?? arteId}.`, 'sistema')] });
-      await salvarCampanha(camp);
+      await persistir(camp, set);
       get().irPara('jogo');
       // A cena precisa reagir: novas opções depois de aprender (§7.1).
       registrarMarco(camp, `você aprendeu ${arte?.nome ?? arteId}`);
@@ -651,7 +685,7 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
     set({ feed: [...get().feed, nf(`Não deu para aprender: ${r.motivo}.`, 'sistema')] });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     checarCapitulo(get, set);
   },
   // Funde duas escolas dominadas num estilo original (engine/fusao.ts,
@@ -665,7 +699,7 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     get().irPara('jogo');
     set({
       feed: [
@@ -691,7 +725,7 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     get().irPara('jogo');
     set({
       feed: [
@@ -715,7 +749,7 @@ export const useGame = create<GameState>((set, get) => ({
       camp: { ...camp },
       feed: [...get().feed, nf(`Memória jogada: ${carta.titulo}.`, 'sistema')],
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
   },
 
   async conjurarArteLivre(arteId) {
@@ -724,7 +758,7 @@ export const useGame = create<GameState>((set, get) => ({
     const r = conjurarLivre(content, camp, arteId);
     const arte = artePorId(content, camp, arteId);
     set({ camp: { ...camp } });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     if (!r.ok) {
       set({ feed: [...get().feed, nf(`Não deu: ${r.motivo}.`, 'sistema')] });
       return;
@@ -802,7 +836,7 @@ export const useGame = create<GameState>((set, get) => ({
         }),
       ],
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
 
     if (encontro) {
       set({
@@ -811,7 +845,7 @@ export const useGame = create<GameState>((set, get) => ({
         ocupado: false,
         feed: [...get().feed, nf('No caminho, alguém — ou algo — te alcança.', 'sistema')],
       });
-      await salvarCampanha(camp);
+      await persistir(camp, set);
       return;
     }
 
@@ -839,7 +873,7 @@ export const useGame = create<GameState>((set, get) => ({
       ocupado: true,
       feed: [nf(`— ${camp.capitulo.titulo} —`, 'sistema', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     await narrar(get, set, `Começa o ${camp.capitulo.titulo}.`);
   },
 
@@ -957,7 +991,7 @@ async function executar(
     });
   }
   set({ camp: { ...camp }, ocupado: true });
-  await salvarCampanha(camp);
+  await persistir(camp, set);
 
   const concl = verificarQuests(content, camp);
   if (concl.length) {
@@ -1037,7 +1071,7 @@ async function narrar(
       ocupado: false,
       pendente: undefined,
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     return;
   }
 
@@ -1073,7 +1107,7 @@ async function narrar(
       ocupado: false,
       pendente: undefined,
     });
-    await salvarCampanha(camp);
+    await persistir(camp, set);
     return;
   }
 

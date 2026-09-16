@@ -11,6 +11,7 @@ export function Entrada() {
   const continuar = useGame((s) => s.continuar);
   const temSave = useGame((s) => s.temSave);
   const irPara = useGame((s) => s.irPara);
+  const avisoSave = useGame((s) => s.avisoSave);
 
   return (
     <Pagina>
@@ -23,6 +24,15 @@ export function Entrada() {
       </View>
 
       <Divisor />
+
+      {/* Save corrompido, recuperado de instantaneo ou gravacao que falhou: o
+          jogador precisa saber. A versao anterior engolia tudo em silencio e
+          simplesmente oferecia "Nova campanha" como se nao houvesse nada. */}
+      {!!avisoSave && (
+        <View style={styles.aviso}>
+          <TextoMono style={styles.avisoDoSave}>{avisoSave}</TextoMono>
+        </View>
+      )}
 
       {temSave && (
         <Botao titulo="Continuar" sub="retomar a última campanha" variante="acento" onPress={continuar} />
@@ -68,6 +78,14 @@ export function Aviso17() {
 }
 
 const styles = StyleSheet.create({
+  aviso: {
+    borderLeftWidth: 2,
+    borderLeftColor: cores.cinabrio,
+    paddingLeft: esp.md,
+    paddingVertical: esp.sm,
+    marginBottom: esp.md,
+  },
+  avisoDoSave: { color: cores.cinabrio, fontSize: 12, lineHeight: 18 },
   hero: { alignItems: 'center', marginTop: esp.xxl, marginBottom: esp.xl },
   selo: { letterSpacing: 4, marginBottom: esp.md, color: cores.mudo },
   marca: { fontSize: 52, letterSpacing: 8, color: cores.ouro },
