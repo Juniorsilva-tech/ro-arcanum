@@ -449,6 +449,11 @@ export type Criatura = {
 };
 
 export type CombatActor = {
+  /** Guardiao: o primeiro golpe do combate ja foi absorvido? (engine/classe.ts) */
+  primeiroGolpeAbsorvido?: boolean;
+  /** Espadachim: alvo em que ele esta focado, e quantos acertos seguidos. */
+  focoAlvo?: string;
+  focoAcertos?: number;
   // Fracao dos acertos que sai como critico. Ausente = 0,25 (regra base).
   janelaCritica?: number;
   posicao?: 'frente' | 'flanco' | 'cobertura';

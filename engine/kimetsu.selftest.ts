@@ -148,7 +148,16 @@ teste('Sobrevivente mantém identidade, ferida e histórico no reencontro', () =
   c.combate!.atores[0].vida = 1;
   c.combate!.atores[0].defesa = -1000;
   a.acerto = 1000; a.dano = { base: 10000, dispersao: 0, tipo: 'teste' };
+  // A campanha de teste é de guardião, e guardião absorve o primeiro golpe de
+  // cada combate (ver engine/classe.ts, sessão 22). Antes dessa regra, um
+  // turno bastava para derrubar o jogador; agora o primeiro golpe morre na
+  // guarda e é o segundo que mata. O teste é sobre o que acontece na DERROTA,
+  // então ele precisa chegar até ela.
   jogadorDefende(C, c);
+  if (!c.combate!.terminado) {
+    c.combate!.atores[0].vida = 1;
+    jogadorDefende(C, c);
+  }
   assert.equal(c.combate!.resultado, 'derrota');
   assert.equal(c.kimetsu!.rivais[id].vitorias, 1);
   const vida = c.kimetsu!.rivais[id].vida;

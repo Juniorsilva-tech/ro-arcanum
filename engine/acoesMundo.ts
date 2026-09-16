@@ -16,6 +16,7 @@ import { npcPorId } from './elenco';
 import { localEfetivo } from './historiaViva';
 import { treinarNpc } from './progressaoNpc';
 import { concederDespertar } from './progresso';
+import { multiplicadorDeDescanso, condicoesTratadasAoDescansar } from './classe';
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
@@ -92,8 +93,11 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     const custo = c ? 3 : 0;
     if (p.dinheiro < custo) return { ok: false, texto: 'A hospedagem custa 3 moedas. Trabalhe para pagar a estadia.' };
     p.dinheiro -= custo;
-    for (const recurso of Object.keys(p.recursosMax)) p.recursos[recurso] = Math.min(p.recursosMax[recurso], (p.recursos[recurso] ?? 0) + Math.max(5, Math.ceil(p.recursosMax[recurso] * .35)));
-    p.condicoes = p.condicoes.filter(x => !['agonizante', 'ferido'].includes(x));
+    // Cacadora recupera mais; curandeira trata mais coisa (engine/classe.ts).
+    const mult = multiplicadorDeDescanso(camp);
+    for (const recurso of Object.keys(p.recursosMax)) p.recursos[recurso] = Math.min(p.recursosMax[recurso], (p.recursos[recurso] ?? 0) + Math.max(5, Math.ceil(p.recursosMax[recurso] * .35 * mult)));
+    const tratadas = condicoesTratadasAoDescansar(camp);
+    p.condicoes = p.condicoes.filter(x => !tratadas.includes(x));
     camp.impulsos.sono = 0;
     return terminar('Você descansou, recuperou parte das forças e deixou o mundo seguir por algumas horas.', 3);
   }

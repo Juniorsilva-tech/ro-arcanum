@@ -18,6 +18,7 @@ import { penalidadeEstado } from './risco';
 import { calcularContexto } from './availability';
 import type { Natureza } from './risco';
 import { aplicarEfeito, substituirAlvo } from './effects';
+import { manaDeEstudo } from './classe';
 import { lembrarDoTurno } from './memoria';
 import { todosNpcs, npcPorId } from './elenco';
 import { dominioDaAcao, treinar, registrarDemonstracao } from './aptidao';
@@ -193,6 +194,17 @@ export function resolverIntencao(
   for (const ef of substituirAlvo(baldeGrau, intencao.alvoId)) {
     aplicarEfeito(camp, ef);
     aplicados.push(ef);
+  }
+
+  // Arcanista: estudar devolve mana a ela, e so a ela (engine/classe.ts).
+  // Para o resto do elenco, estudar continua sendo o que sempre foi.
+  if (verbo?.id === 'estudar') {
+    const extra = manaDeEstudo(camp);
+    if (extra > 0) {
+      const ef: Efeito = { tipo: 'recurso', recurso: 'mana', delta: extra };
+      aplicarEfeito(camp, ef);
+      aplicados.push(ef);
+    }
   }
 
   // Saciar impulso em caso de sucesso (ou verbo sem teste).

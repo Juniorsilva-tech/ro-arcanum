@@ -8,6 +8,7 @@ import { nextFloat, pick } from './rng';
 import { avancarPeriodos, periodoAtual, type Periodo } from './time';
 import { crescerImpulsos } from './impulsos';
 import { avancarMundo } from './mundo';
+import { alivioDeRota } from './classe';
 import { registrarMarco } from './memoria';
 import { descobrirNoticias, cidadeIdDoLocal } from './historiaViva';
 import { encontrosElegiveis } from './kimetsu';
@@ -87,7 +88,8 @@ export function perigoEfetivoDaRota(
       break;
     }
   }
-  return Math.max(0, perigo);
+  // Batedor conhece os atalhos (engine/classe.ts).
+  return Math.max(0, perigo - alivioDeRota(camp));
 }
 
 /** O lugar já foi descoberto por esta campanha? */

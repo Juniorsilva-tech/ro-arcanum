@@ -18,7 +18,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'batedor',
     nome: 'Batedor',
     recursoPrincipal: 'vigor',
-    mecanicaUnica: 'Vê a oportunidade um período antes: oportunidades ficam destacadas mais cedo.',
+    mecanicaUnica: 'Conhece os atalhos: toda rota fica menos perigosa.',
     descricao:
       'Conhece as rotas, os atalhos e quem anda por eles. Chega antes, sai antes, e ninguém lembra que você passou.',
     bonusAtributos: { precisao: 2, percepcao: 2 },
@@ -30,7 +30,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'arcanista',
     nome: 'Arcanista',
     recursoPrincipal: 'mana',
-    mecanicaUnica: 'Cada arte lançada grava um traço; mana gasta pode ser recuperada estudando.',
+    mecanicaUnica: 'Mana gasta volta estudando: cada estudo devolve mana a mais.',
     descricao:
       'Leu o que não devia e sobreviveu para usar. A vila te tolera enquanto for útil e enquanto não fizer perguntas.',
     bonusAtributos: { raciocinio: 3, percepcao: 1 },
@@ -43,7 +43,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'espadachim',
     nome: 'Espadachim',
     recursoPrincipal: 'vigor',
-    mecanicaUnica: 'Um alvo por vez: contra quem já feriu, seus golpes acertam mais fácil até alguém cair.',
+    mecanicaUnica: 'Um alvo por vez: cada acerto no mesmo inimigo facilita o próximo. Trocar de alvo zera.',
     descricao:
       'Aprendeu a lâmina como quem aprende um idioma: cedo, apanhando, e sem escolha. Não carrega escudo — carrega a certeza de que o segundo golpe não vai ser preciso.',
     bonusAtributos: { precisao: 3, fisico: 1 },
@@ -55,7 +55,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'cacadora',
     nome: 'Caçadora',
     recursoPrincipal: 'vigor',
-    mecanicaUnica: 'O corpo obedece ao fôlego: recupera vigor mais rápido entre combates, e enxerga no escuro o que os outros não enxergam.',
+    mecanicaUnica: 'O corpo obedece ao fôlego: descansar recupera metade a mais.',
     descricao:
       'Não caça bicho. Caça o que aparece depois que o sol se põe — e aprendeu a respirar de um jeito que o corpo aguenta a noite inteira.',
     bonusAtributos: { fisico: 2, percepcao: 2 },
@@ -68,7 +68,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'curandeira',
     nome: 'Curandeira',
     recursoPrincipal: 'mana',
-    mecanicaUnica: 'Trata quem estiver por perto: cuidar dos outros rende conhecimento, e veneno em suas mãos vale tanto quanto remédio.',
+    mecanicaUnica: 'Descansar também trata veneno, doença e infecção.',
     descricao:
       'Sabe o nome de cada erva e o preço de cada uma. Foi chamada em toda casa da vila pelo menos uma vez, e por isso sabe o que cada família esconde.',
     bonusAtributos: { raciocinio: 2, percepcao: 2 },
@@ -81,7 +81,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'contrabandista',
     nome: 'Contrabandista',
     recursoPrincipal: 'vigor',
-    mecanicaUnica: 'Conhece quem compra: vende por mais e compra por menos, e passa por posto de guarda sem ser revistada.',
+    mecanicaUnica: 'Conhece quem compra: 20% mais barato para comprar, 20% mais caro para vender.',
     descricao:
       'Atravessa o que os outros não atravessam, pelo caminho que os outros não conhecem. Deve favor a gente demais em cidade demais.',
     bonusAtributos: { social: 2, precisao: 2 },
@@ -93,7 +93,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'penitente',
     nome: 'Penitente',
     recursoPrincipal: 'mana',
-    mecanicaUnica: 'Carrega o peso de propósito: quanto mais ferida, mais forte o que ela invoca.',
+    mecanicaUnica: 'Carrega o peso de propósito: quanto mais ferida, mais forte a arte que invoca.',
     descricao:
       'Fez uma promessa que ninguém ouviu e cumpre desde então. Reza pouco e em voz baixa, mas alguma coisa do outro lado atende.',
     bonusAtributos: { resiliencia: 3, social: 1 },

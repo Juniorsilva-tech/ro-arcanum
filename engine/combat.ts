@@ -25,6 +25,7 @@ import { registrarMarco } from './memoria';
 import { recolherDespojos } from './despojos';
 import { artePorId } from './fusao';
 import { processarSubidaDeNivel, concederDespertar } from './progresso';
+import { absorveuOPrimeiroGolpe, bonusDeFoco, registrarFoco, multiplicadorDeArte } from './classe';
 import { multiplicadoresDeIdentidade } from './identidade';
 import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
 import { selarAlma, chimAlcancado } from './ascensao';
@@ -315,14 +316,23 @@ function resolverAtaque(
   const defEfetiva = alvo.defesa + (alvo.defendendo ? 4 : 0) + (evasao ? 5 : 0) + (alvo.posicao === 'cobertura' ? 3 : alvo.posicao === 'flanco' ? -2 : 0);
   if (evasao) alvo.tatico!.esquiva!--;
   const posicao = atacante.posicao === 'flanco' ? 3 : atacante.posicao === 'cobertura' ? -2 : 0;
-  const p = probabilidade(atacante.acerto + posicao, defEfetiva, 4);
+  const foco = bonusDeFoco(camp, atacante, alvo.id);
+  const p = probabilidade(atacante.acerto + posicao + foco, defEfetiva, 4);
   const r = nextFloat(camp.rng);
-  if (r >= p) return `${atacante.nome} ataca ${alvo.nome} e erra.`;
+  if (r >= p) {
+    registrarFoco(camp, atacante, alvo.id, false);
+    return `${atacante.nome} ataca ${alvo.nome} e erra.`;
+  }
+  registrarFoco(camp, atacante, alvo.id, true);
   const crit = r < p * (atacante.janelaCritica ?? 0.25);
   const dano = calcularDano(camp.rng, perfil, crit);
   if ((alvo.tatico?.guarda ?? 0) > 0) {
     dano.valor = Math.max(1, Math.round(dano.valor * .35));
     alvo.tatico!.guarda!--;
+  }
+  // Guardiao: o primeiro golpe de cada combate nao passa (engine/classe.ts).
+  if (dano.valor > 0 && absorveuOPrimeiroGolpe(camp, alvo)) {
+    return `${atacante.nome} acerta ${alvo.nome} — e o golpe morre na guarda. O primeiro sempre morre.`;
   }
   alvo.vida = Math.max(0, alvo.vida - dano.valor);
   aplicarFerimentoOni(camp, alvo, contraOni);
@@ -429,14 +439,15 @@ export function jogadorConjura(
   const cura = /cura|curativo/.test(arte.id);
 
   if (cura) {
-    const v = 8 + grauBase(arte.grau);
+    // Penitente: quanto mais ferida, mais forte a arte (engine/classe.ts).
+    const v = Math.round((8 + grauBase(arte.grau)) * multiplicadorDeArte(camp));
     jog.vida = Math.min(jog.vidaMax, jog.vida + v);
     p.recursos.vida = jog.vida;
     s.log.push(`Você conjura ${arte.nome}: ${v} de vida restaurada.`);
   } else if (ofensiva) {
     const alvo = s.atores.find((a) => a.id === alvoId && !a.ehJogador && vivo(a)) ?? inimigosVivos(s)[0];
     if (alvo) {
-      const perfil: PerfilDano = { base: (6 + grauBase(arte.grau) + modificador(p.atributos.raciocinio)) * multiplicadoresDeIdentidade(camp).dano, dispersao: 0.3, tipo: 'arcano' };
+      const perfil: PerfilDano = { base: (6 + grauBase(arte.grau) + modificador(p.atributos.raciocinio)) * multiplicadoresDeIdentidade(camp).dano * multiplicadorDeArte(camp), dispersao: 0.3, tipo: 'arcano' };
       const jogMag = { ...jog, acerto: 10 + p.nivel + modificador(p.atributos.raciocinio) };
       s.log.push(`Você conjura ${arte.nome}. ` + resolverAtaque(camp, jogMag, alvo, perfil));
     }

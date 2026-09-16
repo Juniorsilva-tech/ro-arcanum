@@ -46,7 +46,14 @@ export type OpcoesJogador = {
 /** Monta um jogador sob medida, sem passar pela criação normal de campanha. */
 export function jogadorDeTeste(content: ContentBundle, opts: OpcoesJogador, seed: string): Campaign {
   const camp = criarCampanha(content, {
-    nome: 'Provador', atributos: atributosBase(), classeId: 'guardiao', origemId: 'divida',
+    // Contrabandista de proposito: o banco mede a MATEMATICA do combate, e a
+    // classe nao pode entrar na conta. Guardiao absorve o primeiro golpe de
+    // cada luta (engine/classe.ts) e isso sozinho tirou 17 das 20 faixas do
+    // alvo quando as mecanicas de classe foram implementadas — media a classe,
+    // nao a formula. A mecanica da contrabandista e' comercial: zero efeito em
+    // combate. Atributos, arma, armadura, nivel e maestria ja vem sobrescritos
+    // logo abaixo, entao a escolha da classe nao muda mais nada.
+    nome: 'Provador', atributos: atributosBase(), classeId: 'contrabandista', origemId: 'divida',
     seedString: seed,
   });
   const p = camp.personagem;

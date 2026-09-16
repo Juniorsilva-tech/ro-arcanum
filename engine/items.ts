@@ -4,6 +4,7 @@ import { aplicarEfeito } from './effects';
 import { clampRecursos } from './character';
 import { multiplicadorDePreco } from './mundo';
 import { cidadeDoLocal, cidadeIdDoLocal } from './historiaViva';
+import { descontoDeCompra, multiplicadorDeVenda } from './classe';
 
 export function estoqueNaLoja(content: ContentBundle, camp: Campaign, itemId: string): number {
   const item = itemPorId(content, itemId);
@@ -102,7 +103,7 @@ export function comprar(
   const p = camp.personagem;
   const item = itemPorId(content, itemId);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
-  const preco = precoCompra(item, desconto, multiplicadorDePreco(camp));
+  const preco = precoCompra(item, descontoDeCompra(camp, desconto), multiplicadorDePreco(camp));
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
   if (estoqueNaLoja(content, camp, itemId) <= 0) return { ok: false, motivo: 'item indisponível nesta loja ou serviço interrompido' };
   if (p.dinheiro < preco) return { ok: false, motivo: 'sem moedas suficientes' };
@@ -126,13 +127,13 @@ export function vender(
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
   if (!itensDaLoja(content, camp.localAtual).length) return { ok: false, motivo: 'não há comerciante aqui' };
   const cidade = cidadeDoLocal(content, camp, camp.localAtual);
-  const preco = precoVenda(item, multiplicadorDePreco(camp));
+  const preco = precoVenda(item, multiplicadorDePreco(camp) * multiplicadorDeVenda(camp));
   if (cidade && cidade.tesouro < preco) return { ok: false, motivo: 'o mercado não tem moedas para essa compra' };
   if (cidade) { cidade.tesouro -= preco; if (item.lojas?.includes(camp.localAtual)) cidade.estoque[itemId] = Math.min(20, (cidade.estoque[itemId] ?? 0) + 1); }
   (['arma', 'armadura', 'escudo', 'acessorio'] as const).forEach((s) => {
     if (p.equipado[s] === itemId && (p.inventario[itemId] ?? 0) <= 1) delete p.equipado[s];
   });
-  p.dinheiro += precoVenda(item, multiplicadorDePreco(camp));
+  p.dinheiro += precoVenda(item, multiplicadorDePreco(camp) * multiplicadorDeVenda(camp));
   p.inventario[itemId] = (p.inventario[itemId] ?? 0) - 1;
   if (p.inventario[itemId] <= 0) delete p.inventario[itemId];
   return { ok: true };
