@@ -406,13 +406,17 @@ const INSTRUCAO_SISTEMA =
   'Ninguém fica calado quando falam com ela.\n' +
   '• De 3 a 6 falas por cena, alternando entre os dois. Deixe a conversa respirar: uma ' +
   'fala, um gesto, outra fala.\n' +
-  '• Cada fala em LINHA PRÓPRIA começando com travessão, e o nome de quem falou na mesma ' +
-  'linha ou na anterior:\n' +
-  '    — Você tem mão boa para pão velho, Aldrica.\n' +
+  '• OBRIGATÓRIO, e a regra que mais importa neste prompt inteiro: cada fala em LINHA ' +
+  'PRÓPRIA, começando com travessão e com o NOME DE QUEM FALA entre colchetes logo em ' +
+  'seguida. O jogador é sempre [você]. Sem exceção, em toda fala, inclusive a primeira:\n' +
+  '    — [você] Você tem mão boa para pão velho, Aldrica.\n' +
   '\n' +
   '    Ela não levanta os olhos do pano.\n' +
   '\n' +
-  '    — Freguês novo é sempre bom de língua. Isso passa.\n' +
+  '    — [Aldrica] Freguês novo é sempre bom de língua. Isso passa.\n' +
+  '  A interface lê esse colchete para mostrar de quem é cada fala, e o remove do texto. ' +
+  'Sem ele, a tela atribui a fala à pessoa errada — é o pior defeito que uma cena pode ' +
+  'ter. Nunca ponha duas falas na mesma linha, e nunca deixe uma fala sem colchete.\n' +
   '• O resultado da ação aparece NA FALA e no gesto, não num aviso. Se deu certo, ela ' +
   'cede alguma coisa: uma informação, um sorriso, uma cadeira. Se falhou, ela corta.\n' +
   '\nVERDADE — a engine manda:\n' +
