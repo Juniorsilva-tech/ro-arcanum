@@ -27,7 +27,7 @@ export function calcularContexto(content: ContentBundle, camp: Campaign): Contex
     // normal volta a valer assim que a pessoa deixa o grupo.
     if ((camp.grupo ?? []).includes(npc.id)) return true;
     if (camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') return false;
-    return localEfetivo(camp, npc, periodo) === local.id;
+    return localEfetivo(camp, npc, periodo, content) === local.id;
   });
 
   let privacidade: 0 | 1 | 2 | 3 = local.privacidadeBase[periodo] ?? 0;

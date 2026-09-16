@@ -8,12 +8,15 @@ import { useGame } from '../store';
 import type { ModeloOR } from '@/engine';
 import {
   SUGESTOES_OPENROUTER,
+  SUGESTOES_NOUS,
   MODELO_PADRAO_OPENROUTER,
   MODELO_PADRAO_ANTHROPIC,
+  MODELO_PADRAO_NOUS,
   perfilDoModelo,
   MODELOS_PARA_CENA_ADULTA,
   agruparPorFabricante,
   todosNpcs,
+  obterTokenNousAtual,
 } from '@/engine';
 
 // As sugestões estáticas entram na mesma vitrine dos modelos vivos.
@@ -96,10 +99,13 @@ export function Config() {
   const abandonar = useGame((s) => s.abandonar);
   const temSave = useGame((s) => s.temSave);
   const irPara = useGame((s) => s.irPara);
+  const exportarSave = useGame((s) => s.exportarSave);
+  const importarSave = useGame((s) => s.importarSave);
 
   const buscarModelos = useGame((s) => s.buscarModelosGratis);
   const testarAdultoStore = useGame((s) => s.testarSeNarraAdulto);
   const testarNarr = useGame((s) => s.testarNarracaoReal);
+
   const [chave, setChave] = useState(config.apiKey ?? '');
   const [modelo, setModelo] = useState(config.modelo);
   const [testando, setTestando] = useState(false);
@@ -127,11 +133,25 @@ export function Config() {
     }
   }
 
-  async function trocarProvider(p: 'openrouter' | 'anthropic') {
-    const novoModelo = p === 'openrouter' ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC;
+  async function trocarProvider(p: 'openrouter' | 'anthropic' | 'nous') {
+    const novoModelo =
+      p === 'openrouter'
+        ? MODELO_PADRAO_OPENROUTER
+        : p === 'nous'
+          ? MODELO_PADRAO_NOUS
+          : MODELO_PADRAO_ANTHROPIC;
     setModelo(novoModelo);
+    setModelosVivos(null);
     setResultado(null);
-    await setConfig({ provider: p, modelo: novoModelo });
+    let novaChave = chave;
+    if (p === 'nous' && (chave.startsWith('sk-or-') || chave.startsWith('sk-ant-'))) {
+      novaChave = '';
+      setChave('');
+    } else if (p === 'openrouter' && (chave.startsWith('sk-ant-') || chave.length > 200)) {
+      novaChave = '';
+      setChave('');
+    }
+    await setConfig({ provider: p, modelo: novoModelo, apiKey: novaChave.trim() || undefined });
   }
 
   async function salvarChave() {
@@ -189,6 +209,10 @@ export function Config() {
   }
 
   const ehOR = provider === 'openrouter';
+  const ehNous = provider === 'nous';
+
+  const tokenHermes = (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_NOUS_API_KEY : undefined) || (ehNous ? obterTokenNousAtual() : undefined);
+  const temChaveEfetiva = !!(config.apiKey || (ehNous && tokenHermes));
 
   return (
     <Pagina>
@@ -197,13 +221,13 @@ export function Config() {
       <Divisor label="O narrador" />
       <TextoSerif style={styles.explica}>
         Quem escreve ARCANUM é o modelo — não existe narração de reserva. Sem uma chave
-        salva aqui, a história não anda. Recomendado: OpenRouter, que dá acesso a modelos
-        gratuitos e sem filtro. A chave fica só neste aparelho e nunca vai no APK.
+        salva aqui, a história não anda. Recomendado: OpenRouter ou Nous Research (Hermes),
+        que dão acesso a modelos gratuitos e sem filtro. A chave fica só neste aparelho e nunca vai no APK.
       </TextoSerif>
 
-      <View style={[styles.estadoBox, config.apiKey ? styles.estadoOk : styles.estadoFalta]}>
-        <Text style={[styles.estadoTxt, config.apiKey ? styles.estadoTxtOk : styles.estadoTxtFalta]}>
-          {config.apiKey ? 'Narrador ativo — a história pode andar.' : 'Sem chave: a história está parada.'}
+      <View style={[styles.estadoBox, temChaveEfetiva ? styles.estadoOk : styles.estadoFalta]}>
+        <Text style={[styles.estadoTxt, temChaveEfetiva ? styles.estadoTxtOk : styles.estadoTxtFalta]}>
+          {temChaveEfetiva ? 'Narrador ativo — a história pode andar.' : 'Sem chave: a história está parada.'}
         </Text>
       </View>
 
@@ -217,37 +241,69 @@ export function Config() {
           <Text style={styles.provSub}>grátis · sem filtro</Text>
         </Pressable>
         <Pressable
-          style={[styles.provBtn, !ehOR && styles.provBtnAtivo]}
+          style={[styles.provBtn, ehNous && styles.provBtnAtivo]}
+          onPress={() => trocarProvider('nous')}
+        >
+          <Text style={[styles.provTxt, ehNous && styles.provTxtAtivo]}>Nous (Hermes)</Text>
+          <Text style={styles.provSub}>Solar · StepFun · Hermes</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.provBtn, provider === 'anthropic' && styles.provBtnAtivo]}
           onPress={() => trocarProvider('anthropic')}
         >
-          <Text style={[styles.provTxt, !ehOR && styles.provTxtAtivo]}>Anthropic</Text>
+          <Text style={[styles.provTxt, provider === 'anthropic' && styles.provTxtAtivo]}>Anthropic</Text>
           <Text style={styles.provSub}>Claude</Text>
         </Pressable>
       </View>
 
-      <Rotulo>{ehOR ? 'Chave da API (OpenRouter)' : 'Chave da API (x-api-key)'}</Rotulo>
+      <Rotulo>
+        {ehOR
+          ? 'Chave da API (OpenRouter)'
+          : ehNous
+            ? 'Token / Chave da API (Nous Research / Hermes)'
+            : 'Chave da API (x-api-key)'}
+      </Rotulo>
       <TextInput
         style={styles.input}
         value={chave}
         onChangeText={(t) => {
-          // Salva enquanto digita: não dá para o jogador esquecer de tocar "Salvar".
           setChave(t);
           setConfig({ apiKey: t.trim() || undefined });
         }}
-        placeholder={ehOR ? 'sk-or-v1-…' : 'sk-ant-…'}
+        placeholder={ehOR ? 'sk-or-v1-…' : ehNous ? (tokenHermes ? 'Token do Hermes ativo (renovação automática)…' : 'Token JWT ou API key da Nous…') : 'sk-ant-…'}
         placeholderTextColor={cores.linha}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
       />
-      {!!chave.trim() && (
+      {!!chave.trim() ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: esp.xs }}>
+          <TextoMono style={{ color: cores.verdigris }}>chave salva neste aparelho ✓</TextoMono>
+          {ehNous && tokenHermes && (
+            <Pressable
+              onPress={async () => {
+                setChave('');
+                await setConfig({ apiKey: undefined });
+                setResultado('Usando token automático do Hermes (renovação contínua) ✓');
+              }}
+            >
+              <TextoMono style={{ color: cores.ouro, fontSize: 11 }}>[Usar token do Hermes]</TextoMono>
+            </Pressable>
+          )}
+        </View>
+      ) : ehNous && tokenHermes ? (
         <TextoMono style={{ color: cores.verdigris, marginBottom: esp.xs }}>
-          chave salva neste aparelho ✓
+          Token do Hermes ativo com renovação automática imperceptível ✓
         </TextoMono>
-      )}
+      ) : null}
       {ehOR && (
         <TextoMono style={{ color: cores.linha, marginBottom: esp.sm }}>
           Crie a chave grátis em openrouter.ai/keys
+        </TextoMono>
+      )}
+      {ehNous && (
+        <TextoMono style={{ color: cores.linha, marginBottom: esp.sm }}>
+          Nous Research / Hermes: token sincronizado de ~/.hermes/auth.json ou insira sua chave
         </TextoMono>
       )}
 
@@ -259,12 +315,12 @@ export function Config() {
           setModelo(t);
           setConfig({ modelo: t.trim() });
         }}
-        placeholder={ehOR ? MODELO_PADRAO_OPENROUTER : MODELO_PADRAO_ANTHROPIC}
+        placeholder={ehOR ? MODELO_PADRAO_OPENROUTER : ehNous ? MODELO_PADRAO_NOUS : MODELO_PADRAO_ANTHROPIC}
         placeholderTextColor={cores.linha}
         autoCapitalize="none"
         autoCorrect={false}
       />
-      {ehOR && (
+      {(ehOR || ehNous) && (
         <View style={{ marginBottom: esp.md }}>
           <TextoMono style={{ color: cores.mudo, marginBottom: esp.xs }}>
             Para cena adulta (toque para usar):
@@ -303,18 +359,20 @@ export function Config() {
         </View>
       )}
 
-      {ehOR && (
+      {(ehOR || ehNous) && (
         <View style={{ marginBottom: esp.sm }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: esp.xs }}>
             <TextoMono style={{ color: cores.mudo, flex: 1 }}>
-              {modelosVivos ? 'Modelos gratuitos da sua conta:' : 'Sugestões (toque para usar):'}
+              {modelosVivos
+                ? (ehNous ? 'Modelos disponíveis na Nous Research:' : 'Modelos gratuitos da sua conta:')
+                : (ehNous ? 'Sugestões Nous / Hermes (toque para usar):' : 'Sugestões (toque para usar):')}
             </TextoMono>
             <Pressable style={styles.buscarBtn} onPress={buscar}>
               <Text style={styles.buscarTxt}>{buscando ? '…' : 'Buscar modelos'}</Text>
             </Pressable>
           </View>
           <View style={styles.chipsSug}>
-            {(modelosVivos ?? SUGESTOES_OPENROUTER.map(comoModelo)).slice(0, 40).map((m) => {
+            {(modelosVivos ?? (ehNous ? SUGESTOES_NOUS : SUGESTOES_OPENROUTER).map(comoModelo)).slice(0, 40).map((m) => {
               const filtrado = m.perfil === 'estrito' || m.moderado;
               return (
                 <Pressable
@@ -385,7 +443,7 @@ export function Config() {
 
       <View style={styles.avisoSeg}>
         <TextoMono style={{ color: cores.mudo }}>
-          A chave fica só neste aparelho e vai direto para {ehOR ? 'a OpenRouter' : 'a Anthropic'}.
+          A chave fica só neste aparelho e vai direto para {ehOR ? 'a OpenRouter' : ehNous ? 'a Nous Research' : 'a Anthropic'}.
           Nunca é embutida no app nem enviada a terceiros. O uso é cobrado (ou consome a cota grátis)
           na sua conta.
         </TextoMono>
@@ -394,6 +452,35 @@ export function Config() {
       {temSave && (
         <>
           <Divisor label="Campanha" />
+          <Botao
+            titulo="Exportar save (.json)"
+            sub="baixa um arquivo com sua campanha completa"
+            variante="acento"
+            onPress={exportarSave}
+          />
+          {/* input nativo de arquivo — invisível, ativado pelo botão abaixo */}
+          <Pressable
+            style={styles.botaoImportar}
+            onPress={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.json,application/json';
+              input.onchange = (ev: Event) => {
+                const file = (ev.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const texto = e.target?.result;
+                  if (typeof texto === 'string') void importarSave(texto);
+                };
+                reader.readAsText(file, 'utf-8');
+              };
+              input.click();
+            }}
+          >
+            <Text style={styles.botaoImportarTxt}>Importar save (.json)</Text>
+            <Text style={styles.botaoImportarSub}>carrega uma campanha exportada anteriormente</Text>
+          </Pressable>
           {!confirmarApagar ? (
             <Botao titulo="Abandonar campanha atual" variante="perigo" onPress={() => setConfirmarApagar(true)} />
           ) : (
@@ -414,6 +501,7 @@ export function Config() {
           )}
         </>
       )}
+
     </Pagina>
   );
 }
@@ -426,6 +514,26 @@ const styles = StyleSheet.create({
     marginTop: esp.sm,
     marginBottom: esp.xs,
   },
+  botaoImportar: {
+    borderWidth: 1,
+    borderColor: cores.verdigris,
+    borderRadius: raio.md,
+    padding: esp.md,
+    marginBottom: esp.sm,
+    alignItems: 'center',
+  },
+  botaoImportarTxt: {
+    fontFamily: fontes.serifMedium,
+    color: cores.verdigris,
+    fontSize: 16,
+  },
+  botaoImportarSub: {
+    fontFamily: fontes.mono,
+    color: cores.mudo,
+    fontSize: 11,
+    marginTop: 2,
+  },
+
   cartelaSelo: { letterSpacing: 3, color: cores.mudo, marginBottom: esp.sm },
   fecho: { color: cores.vellum, fontSize: 20, lineHeight: 30 },
   linha: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: esp.sm },

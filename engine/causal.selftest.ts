@@ -37,6 +37,20 @@ const nova = () => criarCampanha(C, { nome: 'Teste', atributos: atributosBase(),
   ok(JSON.stringify(c.rng) === rng, 'Planejamento não consome sorte da campanha');
 }
 {
+  const c = nova();
+  const base = C.locais[0];
+  const content = { ...C, locais: [
+    { ...base, id: 'a', rotas: [{ destino: 'b', periodos: 1, perigo: 10 }, { destino: 'c', periodos: 4, perigo: 0 }] },
+    { ...base, id: 'b', rotas: [{ destino: 'c', periodos: 1, perigo: 10 }] },
+    { ...base, id: 'c', rotas: [] },
+  ] };
+  c.localAtual = 'a'; c.personagem.recursos.vida = 10; c.personagem.recursosMax.vida = 100;
+  const f = registrarFato(c, { tipo: 'teste', local: 'c', texto: 'Rota sob ameaça', atores: [], publico: true });
+  const q = oferecerMissao(c, 'reconstruir', f)!; q.conhecida = true; q.estado = 'aceita'; q.prazo = c.calendario.dia + 10;
+  const plano = planejarMissao(content, c);
+  ok(plano?.tipo === 'viajar' && plano.destino === 'c', 'Personagem ferido prefere rota segura à mais curta');
+}
+{
   const c = normalizarCampanha(C, nova());
   iniciarCombate(C, c, ['sentinela_de_basalto']);
   const salvo = normalizarCampanha(C, JSON.parse(JSON.stringify(c)));

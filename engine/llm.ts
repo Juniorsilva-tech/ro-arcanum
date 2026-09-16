@@ -22,8 +22,10 @@ import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
+import { conviccoesDoNpc } from './reflexao';
+import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
 
-export type LlmProvider = 'openrouter' | 'anthropic';
+export type LlmProvider = 'openrouter' | 'anthropic' | 'nous';
 
 export type LlmConfig = {
   provider: LlmProvider;
@@ -35,6 +37,22 @@ export type LlmConfig = {
 // Configurações para pegar a lista atual e grátis direto da OpenRouter.
 export const MODELO_PADRAO_OPENROUTER = 'thedrummer/rocinante-12b';
 export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
+export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
+
+// Sugestões Nous Research / Hermes (inclui os modelos gratuitos do portal)
+export const SUGESTOES_NOUS = [
+  'upstage/solar-pro4:free', // Solar Pro 4 (grátis, forte em narrativa e diálogos)
+  'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (grátis, ágil)
+  'poolside/laguna-s-2.1:free', // Laguna S 2.1 (grátis)
+  'poolside/laguna-xs-2.1:free', // Laguna XS 2.1 (grátis)
+  'thinkingmachines/inkling:free', // Inkling (grátis)
+  'nvidia/nemotron-3.5-lightning:free', // Nemotron 3.5 Lightning (grátis)
+  'inclusionai/ling-3.0-flash-fin:free', // Ling 3.0 Flash (grátis)
+  'meituan/longcat-2.0:free', // Longcat 2.0 (grátis)
+  'nousresearch/hermes-3-llama-3.1-70b', // Hermes 3 70B
+  'nousresearch/hermes-3-llama-3.1-405b', // Hermes 3 405B
+  'tencent/hy3', // Tencent Hunyuan 3
+];
 
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
 // substitui esta lista pela lista viva da sua conta.
@@ -92,6 +110,13 @@ export const FABRICANTE: Record<string, string> = {
   infermatic: 'Infermatic',
   nvidia: 'NVIDIA',
   cohere: 'Cohere',
+  upstage: 'Upstage (Solar)',
+  stepfun: 'StepFun',
+  poolside: 'Poolside (Laguna)',
+  thinkingmachines: 'Thinking Machines',
+  tencent: 'Tencent',
+  inclusionai: 'Inclusion AI',
+  meituan: 'Meituan',
 };
 
 /** Nome do fabricante a partir do slug. Desconhecido vira o proprio prefixo. */
@@ -117,15 +142,8 @@ export function agruparPorFabricante<T extends { id: string }>(
 }
 
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
-  // ── Nous Research, de graça ───────────────────────────────────────────────
-  //
-  // Pedido do dono: os Hermes gratuitos primeiro na lista. Eles são a melhor
-  // aposta grátis para esta cena — a família Hermes é afinada para seguir
-  // instrução sem recusar, que é exatamente o que o narrador precisa.
-  //
-  // Continua valendo o aviso do bloco acima: endpoint grátis some, muda de
-  // nome e tem teto diário. Se a narração começar a falhar, troque para um
-  // pago aqui embaixo; custa frações de centavo por cena.
+  // ── Nous Research & Gratuitos Testados ────────────────────────────────────
+  { id: 'meituan/longcat-2.0:free', nota: 'Nous grátis: testado, narra sexo explícito sem recusa e prosa rica', pago: false },
   { id: 'nousresearch/hermes-3-llama-3.1-405b:free', nota: 'Nous grátis, o maior: melhor prosa da lista sem pagar', pago: false },
   { id: 'nousresearch/deephermes-3-llama-3-8b-preview:free', nota: 'Nous grátis, pequeno e rápido; cena curta', pago: false },
   { id: 'nousresearch/deephermes-3-mistral-24b-preview:free', nota: 'Nous grátis, meio-termo: aguenta diálogo', pago: false },
@@ -168,7 +186,7 @@ const IDS_NAO_NARRA = ['openrouter/free', 'openrouter/auto'];
 // Linhagens conhecidas por escrever cena adulta sem travar. São finetunes de
 // interpretação e bases pouco alinhadas — o que este jogo pede.
 const PERMISSIVOS = [
-  'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
+  'longcat', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
   'toppy', 'rocinante', 'unslopnemo', 'magnum', 'midnight-rose', 'wizardlm',
   'airoboros', 'xwin', 'anubis', 'cydonia', 'behemoth', 'sorcerer', 'lzlv',
   'goliath', 'psyfighter', 'remm', 'weaver', 'tiefighter', 'fimbulvetr',
@@ -257,15 +275,87 @@ export async function listarModelosOpenRouter(
         contexto: m.context_length ?? 0,
       });
     }
-    return modelos.sort((a, b) => {
-      // Moderação do provedor pesa tanto quanto a linhagem do modelo.
-      const pa = ORDEM_PERFIL[a.perfil] + (a.moderado ? 1 : 0);
-      const pb = ORDEM_PERFIL[b.perfil] + (b.moderado ? 1 : 0);
-      return pa !== pb ? pa - pb : a.id.localeCompare(b.id);
-    });
+    return modelos.sort(
+      (a, b) =>
+        ORDEM_PERFIL[a.perfil] - ORDEM_PERFIL[b.perfil] ||
+        Number(b.free) - Number(a.free) ||
+        a.nome.localeCompare(b.nome),
+    );
   } catch {
     return [];
   }
+}
+
+// Busca modelos da Nous Research / Hermes.
+export async function listarModelosNous(
+  apiKey?: string,
+  apenasGratis = true,
+): Promise<ModeloOR[]> {
+  try {
+    let chave = apiKey?.trim() || obterTokenNousAtual();
+    const headers: Record<string, string> = {};
+    if (chave) headers.authorization = `Bearer ${chave}`;
+    let resp = await fetch('https://inference-api.nousresearch.com/v1/models', { headers });
+    if (resp.status === 401 && (!apiKey || !apiKey.trim())) {
+      const novaChave = await renovarTokenNous(true);
+      if (novaChave && novaChave !== chave) {
+        chave = novaChave;
+        headers.authorization = `Bearer ${chave}`;
+        resp = await fetch('https://inference-api.nousresearch.com/v1/models', { headers });
+      }
+    }
+    if (!resp.ok) {
+      return SUGESTOES_NOUS.map(comoModeloOR);
+    }
+    const data = (await resp.json()) as { data?: { id: string }[] };
+    const modelos: ModeloOR[] = [];
+    for (const m of data.data ?? []) {
+      const id = m.id;
+      const free = id.endsWith(':free');
+      if (apenasGratis && !free) continue;
+      modelos.push({
+        id,
+        nome: id,
+        free,
+        moderado: false,
+        perfil: perfilDoModelo(id),
+        contexto: 0,
+      });
+    }
+    modelos.sort((a, b) => {
+      const idxA = SUGESTOES_NOUS.indexOf(a.id);
+      const idxB = SUGESTOES_NOUS.indexOf(b.id);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.id.localeCompare(b.id);
+    });
+    return modelos.length > 0 ? modelos : SUGESTOES_NOUS.map(comoModeloOR);
+  } catch {
+    return SUGESTOES_NOUS.map(comoModeloOR);
+  }
+}
+
+function comoModeloOR(id: string): ModeloOR {
+  return {
+    id,
+    nome: id,
+    free: id.endsWith(':free'),
+    moderado: false,
+    perfil: perfilDoModelo(id),
+    contexto: 0,
+  };
+}
+
+// Lista modelos conforme o provedor ativo.
+export async function listarModelos(
+  provider: LlmProvider,
+  apiKey?: string,
+  apenasGratis = true,
+): Promise<ModeloOR[]> {
+  if (provider === 'nous') return listarModelosNous(apiKey, apenasGratis);
+  if (provider === 'openrouter') return listarModelosOpenRouter(apiKey, apenasGratis);
+  return [];
 }
 
 // Pacote de contexto de tamanho ~constante (GDD §18.1).
@@ -371,6 +461,7 @@ export function montarPacote(
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
       conheceHaDias: diasDeConvivio(camp, n.id),
       lembraDeVoce: memoriaParaNarrador(camp, n.id, 4),
+      conviccoesSobreVoce: conviccoesDoNpc(camp, n.id).map(c => c.texto),
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
       // não foi descoberto não entra no pacote — não se entrega de graça.
       segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
@@ -392,6 +483,21 @@ export function montarPacote(
       })),
     // O que já ficou para trás e merece ser citado de novo.
     jaAconteceu: marcosRecentes(camp, 5),
+    // ── A cena anterior, literal ──────────────────────────────────────────
+    //
+    // Até aqui o narrador recebia o ESTADO do mundo e nenhuma linha do texto
+    // que ele mesmo tinha acabado de escrever. Cada cena começava do zero:
+    // o modelo sabia os fatos, mas não sabia o que estava acontecendo — então
+    // reabria a cena, repetia apresentações e ignorava a conversa em curso.
+    // Foi o defeito relatado em jogo: "não segue a história que está posta".
+    //
+    // `camp.cronica` já guardava o texto narrado. Faltava devolvê-lo.
+    // Duas entradas: a última é a continuidade imediata; a penúltima dá o
+    // fio. Mais que isso enche o pacote sem melhorar a costura.
+    cenasAnteriores: (camp.cronica ?? [])
+      .filter((c) => c.tipo === 'narracao')
+      .slice(-2)
+      .map((c) => c.texto),
     // Como o vale trata este forasteiro hoje.
     reputacao: Object.entries(camp.reputacao)
       .filter(([, v]) => v !== 0)
@@ -458,6 +564,11 @@ const INSTRUCAO_SISTEMA =
   'tratamento ("forasteiro", "freguês", "viajante", "estranho") ou descrição do corpo — ' +
   'concorda no MASCULINO. Nunca "freguesa", "forasteira", "estranha" nem qualquer forma ' +
   'feminina para ele, em hipótese nenhuma — mesmo que uma cena anterior tenha errado isso.\n' +
+  '• CONTINUIDADE — "cenasAnteriores" traz, literalmente, as últimas cenas que VOCÊ '  +
+  'escreveu. Esta cena continua de onde aquela parou: mesma conversa, mesmo lugar, mesmas '  +
+  'pessoas, no instante seguinte. Não reabra a cena, não reapresente quem já está ali, não '  +
+  'repita a descrição do ambiente que já foi dada. Se alguém fez uma pergunta na última '  +
+  'cena, ela ainda está esperando resposta.\n' +
   '• NOME DO JOGADOR — "personagem.nome" está no pacote pra você narrar em segunda ' +
   'pessoa, não pra qualquer NPC saber de cor. Uma NPC só o chama pelo nome se ' +
   '"jaAconteceu" ou "arcosAtivos" já mostrarem uma apresentação de verdade (ele se ' +
@@ -831,6 +942,27 @@ export async function narrarComModelo(
   ctx: Contexto,
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao> {
+  const userMsg = montarMensagemNarracao(content, camp, ctx, r);
+  try {
+    const bruto =
+      cfg.provider === 'anthropic'
+        ? await chamarAnthropic(cfg, userMsg)
+        : cfg.provider === 'nous'
+          ? await chamarNous(cfg, userMsg)
+          : await chamarOpenRouter(cfg, userMsg);
+    if (bruto.erro) return bruto;
+    return interpretarResposta(bruto.texto ?? '', content, camp);
+  } catch (e) {
+    return { erro: `rede: ${String(e).slice(0, 120)}` };
+  }
+}
+
+function montarMensagemNarracao(
+  content: ContentBundle,
+  camp: Campaign,
+  ctx: Contexto,
+  r: ResultadoTurno,
+): string {
   const pacote = montarPacote(content, camp, ctx, r.fato, {
     verbo: r.verbo?.nome,
     categoria: r.verbo?.categoria,
@@ -838,27 +970,37 @@ export async function narrarComModelo(
     grau: r.grau,
     livre: r.acaoLivre,
   });
-  // A ação do jogador vai PRIMEIRO, em texto puro, e é repetida no fim. Ela
-  // estava enterrada como um campo no meio do JSON, e modelo pequeno se afogava
-  // no contexto e narrava ambiente em vez de reagir ao que foi feito.
   const ordem = r.acaoLivre
     ? `O JOGADOR ESCREVEU, COM AS PALAVRAS DELE: "${r.acaoLivre}"\n` +
       `Isto é a intenção, não uma alteração do estado. Resultado canônico: ${r.fato}. ` +
       'A cena responde à intenção respeitando esse resultado, inclusive quando falha.'
     : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
       'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.';
-
-  const userMsg =
-    `${ordem}\n\n` +
+  return `${ordem}\n\n` +
     'Contexto do mundo (JSON, material de apoio — não é o assunto da cena):\n' +
     JSON.stringify(pacote) +
     `\n\nAgora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
     'Comece pela ação e pela reação. Só o JSON de resposta.';
+}
+
+/**
+ * Mesmo contrato de narrarComModelo, mas entrega o campo narracao à medida
+ * que chega. O JSON completo continua sendo validado por interpretarResposta;
+ * o callback nunca altera campanha nem efeitos da engine.
+ */
+export async function narrarComModeloStream(
+  cfg: LlmConfig,
+  content: ContentBundle,
+  camp: Campaign,
+  ctx: Contexto,
+  r: ResultadoTurno,
+  onChunk: (textoParcial: string) => void,
+): Promise<ResultadoNarracao> {
+  const userMsg = montarMensagemNarracao(content, camp, ctx, r);
   try {
-    const bruto =
-      cfg.provider === 'anthropic'
-        ? await chamarAnthropic(cfg, userMsg)
-        : await chamarOpenRouter(cfg, userMsg);
+    const bruto = cfg.provider === 'anthropic'
+      ? await chamarAnthropic(cfg, userMsg)
+      : await chamarStreamCompat(cfg, userMsg, onChunk);
     if (bruto.erro) return bruto;
     return interpretarResposta(bruto.texto ?? '', content, camp);
   } catch (e) {
@@ -926,6 +1068,215 @@ export function interpretarResposta(
 
   // 4) Sobrou lixo. Melhor a narração local do que despejar JSON na tela.
   return { erro: 'o modelo devolveu uma resposta malformada (JSON cortado)' };
+}
+
+export function resolverApiKey(cfg: LlmConfig): string {
+  const c = cfg.apiKey?.trim();
+  if (c) return c;
+  if (cfg.provider === 'nous') {
+    const tokenBridge = obterTokenNousAtual();
+    if (tokenBridge) return tokenBridge;
+    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
+    if (envKey.trim()) return envKey.trim();
+  }
+  return '';
+}
+
+/**
+ * O texto a mostrar enquanto a resposta ainda está chegando.
+ *
+ * Esta função NÃO valida nada. A validação é de `interpretarResposta`, no fim,
+ * e é lá que o texto cru é impedido de chegar à tela. Aqui o objetivo é só
+ * dar ao jogador algo para ler enquanto espera — então ela é deliberadamente
+ * tolerante com JSON meio quebrado, que é o estado normal de uma resposta pela
+ * metade.
+ *
+ * A versão anterior usava `"((?:\\.|[^"\\])*)`, que para na primeira aspa não
+ * escapada. Modelos pequenos erram escape o tempo todo — escrevem
+ * `"narracao": "Ela diz "sim" e sai."` — e o resultado na tela era a narração
+ * **congelar nas primeiras palavras** e nunca mais andar, porque a cada pedaço
+ * novo a função devolvia o mesmo fragmento curto. Foi o bug relatado em jogo:
+ * "só escreve a primeira palavra".
+ *
+ * Agora ela pega tudo depois da abertura do campo e corta só onde o campo
+ * termina de verdade — o começo do campo seguinte do JSON.
+ */
+export function parcialNarracao(acumulado: string): string {
+  // A chave pode vir sem acento (o padrão) ou com, quando o modelo "traduz".
+  const abertura = acumulado.match(/"narra[cç][aã]o"\s*:\s*"/);
+  if (!abertura || abertura.index === undefined) {
+    // Sem JSON nenhum: o modelo está escrevendo prosa direta. Mostrar isso é
+    // melhor do que deixar a tela muda — e se no fim não for narração válida,
+    // `interpretarResposta` recusa e o fallback assume.
+    const cru = acumulado.trim();
+    return cru.startsWith('{') || cru.startsWith('```') ? '' : desescapar(cru);
+  }
+  const corpo = acumulado.slice(abertura.index + abertura[0].length);
+  // Fim do campo. Duas tentativas, da mais específica para a mais tolerante:
+  // primeiro o fecho seguido do próximo campo do JSON, que é o formato certo;
+  // depois só o fecho, que cobre a resposta terminando ali (inclusive com
+  // cerca de markdown pendurada no fim). Enquanto nenhum dos dois aparece, o
+  // campo é tudo que chegou até agora — que é o caso durante o stream.
+  const forte = corpo.search(/"\s*[,}]\s*"/);
+  const fim = forte >= 0 ? forte : corpo.search(/"\s*[,}]/);
+  return desescapar(fim >= 0 ? corpo.slice(0, fim) : corpo);
+}
+
+/** Desfaz os escapes de JSON sem exigir que o texto seja JSON válido. */
+function desescapar(s: string): string {
+  try {
+    return JSON.parse(`"${s.replace(/\\(?!["\\/bfnrtu])/g, '\\\\').replace(/\n/g, '\\n')}"`);
+  } catch {
+    return s
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+  }
+}
+
+async function lerStreamSse(
+  resp: Response,
+  onChunk: (textoParcial: string) => void,
+): Promise<ResultadoNarracao> {
+  if (!resp.body?.getReader) {
+    const bruto = await resp.text();
+    return resp.ok ? { texto: bruto } : { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+  }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let acumulado = '';
+  const consumir = (linha: string) => {
+    const data = linha.startsWith('data:') ? linha.slice(5).trim() : '';
+    if (!data || data === '[DONE]') return;
+    try {
+      const obj = JSON.parse(data) as {
+        choices?: { delta?: { content?: string }; message?: { content?: string } }[];
+        error?: { message?: string };
+      };
+      if (obj.error?.message) { acumulado = `__ERRO__${obj.error.message}`; return; }
+      const delta = obj.choices?.[0]?.delta?.content ?? obj.choices?.[0]?.message?.content ?? '';
+      if (delta) {
+        acumulado += delta;
+        const parcial = parcialNarracao(acumulado);
+        if (parcial) onChunk(parcial);
+      }
+    } catch { /* SSE pode dividir o JSON; a próxima linha completa será lida. */ }
+  };
+  while (true) {
+    const parte = await reader.read();
+    if (parte.done) break;
+    buffer += decoder.decode(parte.value, { stream: true });
+    const linhas = buffer.split(/\r?\n/);
+    buffer = linhas.pop() ?? '';
+    for (const linha of linhas) consumir(linha);
+  }
+  if (buffer) consumir(buffer);
+  if (acumulado.startsWith('__ERRO__')) return { erro: acumulado.slice(9) };
+  return acumulado ? { texto: acumulado } : { erro: 'o modelo respondeu vazio' };
+}
+
+async function chamarStreamCompat(
+  cfg: LlmConfig,
+  userMsg: string,
+  onChunk: (textoParcial: string) => void,
+): Promise<ResultadoNarracao> {
+  const nous = cfg.provider === 'nous';
+  let chave = resolverApiKey(cfg);
+  const url = nous
+    ? 'https://inference-api.nousresearch.com/v1/chat/completions'
+    : 'https://openrouter.ai/api/v1/chat/completions';
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    authorization: `Bearer ${chave}`,
+  };
+  if (!nous) {
+    headers['HTTP-Referer'] = 'https://github.com/Rogualdi/Ro';
+    headers['X-Title'] = 'ARCANUM';
+  }
+  const corpo = () => JSON.stringify({
+    model: cfg.modelo || (nous ? MODELO_PADRAO_NOUS : MODELO_PADRAO_OPENROUTER),
+    max_tokens: MAX_TOKENS,
+    temperature: 0.9,
+    stream: true,
+    messages: [{ role: 'system', content: INSTRUCAO_SISTEMA }, { role: 'user', content: userMsg }],
+  });
+  let resp = await fetch(url, { method: 'POST', headers, body: corpo() });
+  if (nous && resp.status === 401 && !cfg.apiKey?.trim()) {
+    const nova = await renovarTokenNous(true);
+    if (nova && nova !== chave) {
+      chave = nova;
+      headers.authorization = `Bearer ${chave}`;
+      resp = await fetch(url, { method: 'POST', headers, body: corpo() });
+    }
+  }
+  return lerStreamSse(resp, onChunk);
+}
+
+async function chamarNous(
+  cfg: LlmConfig,
+  userMsg: string,
+  sistema: string = INSTRUCAO_SISTEMA,
+  teto: number = MAX_TOKENS,
+): Promise<ResultadoNarracao> {
+  let chave = resolverApiKey(cfg);
+  let resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${chave}`,
+    },
+    body: JSON.stringify({
+      model: cfg.modelo || MODELO_PADRAO_NOUS,
+      max_tokens: teto,
+      temperature: 0.9,
+      messages: [
+        { role: 'system', content: sistema },
+        { role: 'user', content: userMsg },
+      ],
+    }),
+  });
+
+  // Se o token expirou (HTTP 401) e o usuário está usando o token automático do Hermes,
+  // renova silenciosamente em segundo plano e repete a chamada imediatamente.
+  if (resp.status === 401 && (!cfg.apiKey || !cfg.apiKey.trim())) {
+    const novaChave = await renovarTokenNous(true);
+    if (novaChave && novaChave !== chave) {
+      chave = novaChave;
+      resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${chave}`,
+        },
+        body: JSON.stringify({
+          model: cfg.modelo || MODELO_PADRAO_NOUS,
+          max_tokens: teto,
+          temperature: 0.9,
+          messages: [
+            { role: 'system', content: sistema },
+            { role: 'user', content: userMsg },
+          ],
+        }),
+      });
+    }
+  }
+
+  const bruto = await resp.text();
+  if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
+  let data: {
+    choices?: { message?: { content?: string }; finish_reason?: string }[];
+    error?: { message?: string };
+  };
+  try {
+    data = JSON.parse(bruto);
+  } catch {
+    return { erro: 'resposta inválida da Nous Research' };
+  }
+  if (data.error?.message) return { erro: data.error.message };
+  const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
+  return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
 async function chamarOpenRouter(
@@ -1026,6 +1377,42 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
       });
       return resp.ok ? { ok: true } : { ok: false, erro: `HTTP ${resp.status}: ${(await resp.text()).slice(0, 140)}` };
     }
+    if (cfg.provider === 'nous') {
+      let chave = resolverApiKey(cfg);
+      let resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${chave}`,
+        },
+        body: JSON.stringify({
+          model: cfg.modelo || MODELO_PADRAO_NOUS,
+          max_tokens: 8,
+          messages: [{ role: 'user', content: 'ok' }],
+        }),
+      });
+      if (resp.status === 401 && (!cfg.apiKey || !cfg.apiKey.trim())) {
+        const novaChave = await renovarTokenNous(true);
+        if (novaChave && novaChave !== chave) {
+          chave = novaChave;
+          resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${chave}`,
+            },
+            body: JSON.stringify({
+              model: cfg.modelo || MODELO_PADRAO_NOUS,
+              max_tokens: 8,
+              messages: [{ role: 'user', content: 'ok' }],
+            }),
+          });
+        }
+      }
+      return resp.ok
+        ? { ok: true }
+        : { ok: false, erro: explicarErroOpenRouter(resp.status, await resp.text()) };
+    }
     const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1064,7 +1451,9 @@ export async function testarCenaAdulta(
     const r =
       cfg.provider === 'anthropic'
         ? await chamarAnthropic({ ...cfg }, pedido, sistema, 320)
-        : await chamarOpenRouter({ ...cfg }, pedido, sistema, 320);
+        : cfg.provider === 'nous'
+          ? await chamarNous({ ...cfg }, pedido, sistema, 320)
+          : await chamarOpenRouter({ ...cfg }, pedido, sistema, 320);
     if (r.erro) return { narra: false, recusou: false, erro: r.erro };
     const texto = (r.texto ?? '').trim();
     if (!texto) return { narra: false, recusou: false, erro: 'o modelo respondeu vazio' };
@@ -1086,14 +1475,13 @@ export async function narrarComFallback(
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao & { modeloUsado?: string }> {
   const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
-  if (primeira.texto || cfg.provider !== 'openrouter') return primeira;
+  if (primeira.texto || (cfg.provider !== 'openrouter' && cfg.provider !== 'nous')) return primeira;
 
-  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou|fora de contexto/i.test(primeira.erro ?? '');
+  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou|fora de contexto|at capacity/i.test(primeira.erro ?? '');
   if (!trocavel) return primeira;
 
-  // A lista já vem ordenada com os permissivos na frente — é justamente o que
-  // se quer quando o modelo atual recusou a cena.
-  const vivos = await listarModelosOpenRouter(cfg.apiKey, true);
+  // A lista já vem ordenada com os permissivos/prioritários na frente
+  const vivos = await listarModelos(cfg.provider, cfg.apiKey, true);
   const candidatos = vivos
     .filter((m) => m.id !== cfg.modelo && m.perfil !== 'estrito' && !m.moderado)
     .map((m) => m.id)

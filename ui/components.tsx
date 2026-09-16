@@ -52,7 +52,11 @@ export function Card({
   );
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => (pressed ? { opacity: 0.7 } : null)}>
+      <Pressable 
+        onPress={onPress} 
+        accessibilityRole="button"
+        style={({ pressed }) => (pressed ? { opacity: 0.8, transform: [{ scale: 0.98 }] } : null)}
+      >
         {conteudo}
       </Pressable>
     );
@@ -84,12 +88,15 @@ export function Botao({
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.botao,
         {
           borderColor: cor,
           backgroundColor: variante === 'primario' ? cores.couro : 'transparent',
-          opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
+          opacity: disabled ? 0.4 : pressed ? 0.8 : 1,
+          transform: [{ scale: (pressed && !disabled) ? 0.98 : 1 }]
         },
       ]}
     >
@@ -170,7 +177,7 @@ export function Selo({ texto, cor }: { texto: string; cor?: string }) {
 const styles = StyleSheet.create({
   serif: { fontFamily: fontes.serif, color: cores.vellum, fontSize: 20, lineHeight: 30 },
   mono: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
-  titulo: { fontFamily: fontes.serifSemi, color: cores.vellum, fontSize: 28, lineHeight: 34 },
+  titulo: { fontFamily: fontes.serifSemi, color: cores.vellum, fontSize: 28, lineHeight: 34, letterSpacing: -0.5 },
   rotulo: {
     fontFamily: fontes.monoMedium,
     color: cores.mudo,

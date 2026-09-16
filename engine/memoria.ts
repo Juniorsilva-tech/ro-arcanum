@@ -10,6 +10,7 @@
 //   3. RETIDA POR PESO — a lista não descarta o mais antigo, descarta o menos
 //      importante. Uma noite juntos sobrevive a cinquenta conversas de balcão.
 import type { Campaign, Grau, NPC, Verbo } from './types';
+import { acumularReflexao } from './reflexao';
 
 export type TipoLembranca =
   | 'conversa'
@@ -44,13 +45,15 @@ export function registrarLembranca(
 ): void {
   const din = camp.npcState[npcId];
   if (!din || !din.vivo) return;
+  const pesoAjustado = Math.max(1, Math.min(5, Math.round(entrada.peso)));
   din.memoria.push({
     turno: camp.turno,
     dia: camp.calendario.dia,
     resumo: entrada.resumo,
-    peso: Math.max(1, Math.min(5, Math.round(entrada.peso))),
+    peso: pesoAjustado,
     tipo: entrada.tipo,
   });
+  acumularReflexao(camp, npcId, pesoAjustado);
   if (din.memoria.length <= TETO_MEMORIA) return;
   // Ordena por importância e, em empate, por quem é mais recente.
   din.memoria.sort((a, b) => (b.peso - a.peso) || (b.turno - a.turno));
@@ -197,4 +200,34 @@ export function estadoDoNpc(camp: Campaign, npc: NPC): string {
   if (disposicao >= 8) return 'Fica à vontade com você.';
   if (disposicao <= -6) return 'Responde curto e olha para o lado.';
   return 'Trata você com a cortesia de quem ainda não decidiu.';
+}
+
+/**
+ * Guarda o texto de uma cena na crônica da campanha.
+ *
+ * A crônica existia em `Campaign` desde o começo e **ninguém escrevia nela**:
+ * o campo nascia `[]` na criação, era preservado na migração, e ficava vazio
+ * para sempre. Duas coisas dependiam dela e não funcionavam — a tela de
+ * crônica, que só mostrava a sessão corrente, e a continuidade do narrador,
+ * que nunca via a cena anterior e por isso reabria a história a cada turno.
+ *
+ * Teto de 200 entradas: uma campanha de anos escreveria milhares, e o save
+ * inteiro passa por JSON a cada gravação. As mais antigas saem primeiro; o
+ * histórico de longo prazo é dos marcos e dos fatos causais, não daqui.
+ */
+export const MAX_CRONICA = 200;
+
+export function registrarNaCronica(
+  camp: Campaign,
+  texto: string,
+  tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' = 'narracao',
+): void {
+  const limpo = texto?.trim();
+  if (!limpo) return;
+  const cronica = (camp.cronica ??= []);
+  // A mesma cena gravada duas vezes seguidas é repetição de chamada, não
+  // história — e duplicata na crônica vira duplicata no prompt do narrador.
+  if (cronica[cronica.length - 1]?.texto === limpo) return;
+  cronica.push({ turno: camp.turno, texto: limpo, tipo });
+  if (cronica.length > MAX_CRONICA) cronica.splice(0, cronica.length - MAX_CRONICA);
 }

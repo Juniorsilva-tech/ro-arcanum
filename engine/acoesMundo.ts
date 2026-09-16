@@ -51,7 +51,7 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
   }
   if (acao.tipo === 'treinar_companheiro') {
     const npc = npcPorId(content, camp, acao.npcId);
-    if (!npc?.combatente || !camp.grupo?.includes(npc.id) || !camp.npcState[npc.id]?.vivo || localEfetivo(camp, npc) !== camp.localAtual) return { ok: false, texto: 'Convide um combatente presente para o grupo primeiro.' };
+    if (!npc?.combatente || !camp.grupo?.includes(npc.id) || !camp.npcState[npc.id]?.vivo || localEfetivo(camp, npc, undefined, content) !== camp.localAtual) return { ok: false, texto: 'Convide um combatente presente para o grupo primeiro.' };
     if (p.dinheiro < 5) return { ok: false, texto: 'O treino exige 5 moedas em alimentação e material.' };
     if (!treinarNpc(camp, npc, 3)) return { ok: false, texto: 'Esse companheiro não pode treinar agora.' };
     p.dinheiro -= 5;

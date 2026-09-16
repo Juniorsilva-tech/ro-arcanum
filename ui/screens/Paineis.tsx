@@ -7,6 +7,7 @@ import { cores, fontes, esp, corPressao, corImpulso } from '../theme';
 import { useGame } from '../store';
 import { ComunidadeViva, CompromissosVivos, HistoriaViva, BiografiaViva } from './MundoVivo';
 import { Progressao } from './Progressao';
+import { MapaVisual } from './MapaVisual';
 import {
   derivados,
   defesaJogador,
@@ -189,6 +190,27 @@ function nomeRecurso(content: any, id: string): string {
   return content.cenario.recursos.find((r: any) => r.id === id)?.nome ?? id;
 }
 
+function pontuacaoVinculo(din: { eixos: Record<string, number>; vivo: boolean } | undefined): number {
+  if (!din) return -999;
+  return Object.values(din.eixos).reduce((s, v) => s + Math.abs(v), 0) + (din.vivo ? 0 : 1000);
+}
+
+function filtroVinculo(
+  npc: { id: string; parentesco?: string; relacoes?: { tipo: string }[] },
+  camp: { npcState: Record<string, { eixos: Record<string, number>; vivo: boolean; tensao?: number }> },
+  filtro: 'todos' | 'aliados' | 'rivais' | 'familia' | 'mortos',
+): boolean {
+  const din = camp.npcState[npc.id];
+  if (filtro === 'todos') return true;
+  if (filtro === 'mortos') return din ? !din.vivo : false;
+  if (filtro === 'familia') return !!npc.parentesco;
+  const tipos = new Set((npc.relacoes ?? []).map((r) => r.tipo));
+  const confianca = din?.eixos.confianca ?? 0;
+  const medo = din?.eixos.medo ?? 0;
+  if (filtro === 'aliados') return tipos.has('aliada') || tipos.has('amante') || tipos.has('protege') || confianca >= 20;
+  return tipos.has('rival') || tipos.has('desconfia') || medo >= 20 || (din?.tensao ?? 0) >= 60;
+}
+
 // ─────────────────────────────────────────────── VÍNCULOS
 export function Vinculos() {
   const camp = useGame((s) => s.camp)!;
@@ -198,6 +220,7 @@ export function Vinculos() {
   const alternarCompanheiro = useGame(s => s.alternarCompanheiroAcao);
   const agirMundo = useGame(s => s.acaoMundo);
   const [avisoGrupo, setAvisoGrupo] = useState('');
+  const [filtro, setFiltro] = useState<'todos' | 'aliados' | 'rivais' | 'familia' | 'mortos'>('todos');
 
   const elenco = todosNpcs(content, camp);
   const familiares = elenco.filter(n => !!n.parentesco);
@@ -213,6 +236,13 @@ export function Vinculos() {
     return true;
   });
   if (lista.length === 0) lista.push(...elenco.slice(0, 3));
+  const visiveis = lista
+    .filter((n) => filtroVinculo(n, camp, filtro))
+    .sort((a, b) => pontuacaoVinculo(camp.npcState[b.id]) - pontuacaoVinculo(camp.npcState[a.id]));
+  const filtros = [
+    ['todos', 'Todos'], ['aliados', 'Aliados'], ['rivais', 'Rivais'],
+    ['familia', 'Família'], ['mortos', 'Mortos'],
+  ] as const;
 
   return (
     <Pagina>
@@ -220,8 +250,18 @@ export function Vinculos() {
       <TextoSerif style={styles.intro}>
         Afeto não é confiança. Alguém pode te amar e não te confiar nada.
       </TextoSerif>
+      <View style={styles.vinculoFiltros}>
+        <TextoMono style={styles.vinculoContagem}>{visiveis.length} vínculo(s) visível(is)</TextoMono>
+        <View style={styles.vinculoChips}>
+          {filtros.map(([id, label]) => (
+            <Pressable key={id} onPress={() => setFiltro(id)} style={[styles.vinculoChip, filtro === id && styles.vinculoChipAtivo]}>
+              <Text style={[styles.vinculoChipTxt, filtro === id && styles.vinculoChipTxtAtivo]}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
       {!!avisoGrupo && <TextoMono style={{ color: cores.ouro, marginBottom: esp.md }}>{avisoGrupo}</TextoMono>}
-      {lista.map((n) => {
+      {visiveis.map((n) => {
         const din = camp.npcState[n.id];
         const sabeSegredo = camp.segredosRevelados.includes(n.id);
         const parente = camp.familia?.membros.find(m => m.id === n.id);
@@ -240,6 +280,12 @@ export function Vinculos() {
             <BiografiaViva id={n.id} />
             {parente && parente.condicao !== 'livre' && <Selo texto={parente.condicao.toUpperCase()} cor={cores.cinabrio} />}
             {n.combatente && <Selo texto={noGrupo ? 'NO GRUPO' : 'COMBATENTE'} cor={noGrupo ? cores.verdigris : cores.mudo} />}
+            {!!din.conviccoes?.length && (
+              <View style={styles.conviccoes}>
+                <Rotulo cor={cores.violeta}>Convicções de {n.nome.split(/[ ,]/)[0]}</Rotulo>
+                {din.conviccoes.map((c) => <TextoMono key={c.id} style={styles.conviccao}>{c.texto}</TextoMono>)}
+              </View>
+            )}
             {eixos.map((e) => {
               const v = din.eixos[e.id] ?? 0;
               const cor = e.id === 'medo' ? cores.cinabrio : e.id === 'confianca' ? cores.verdigris : cores.ouro;
@@ -247,6 +293,12 @@ export function Vinculos() {
                 <Medidor key={e.id} rotulo={e.nome} valor={Math.max(0, v + 20)} max={40} cor={cor} compacto />
               );
             })}
+            {!!din.memoria.length && (
+              <View style={styles.memoriaRecente}>
+                <Rotulo cor={cores.mudo}>Memórias recentes</Rotulo>
+                {din.memoria.slice(-2).reverse().map((m, i) => <TextoSerif key={`${m.turno}-${i}`} style={styles.memoriaTexto}>{m.resumo}</TextoSerif>)}
+              </View>
+            )}
             {sabeSegredo && n.segredo && (
               <View style={styles.segredo}>
                 <Rotulo cor={cores.violeta}>Segredo descoberto</Rotulo>
@@ -281,11 +333,42 @@ export function Vinculos() {
 export function Cronica() {
   const camp = useGame((s) => s.camp);
   const feed = useGame((s) => s.feed);
-  const narrativas = feed.filter((e) => e.tipo === 'narracao' || e.tipo === 'eco');
+  const [busca, setBusca] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState<'todos' | 'narracao' | 'eco' | 'sistema'>('todos');
+
+  // Unifica crônica persistente (camp.cronica) + feed atual da sessão
+  type EntradaCronica = { id: string; turno?: number; dia?: number; texto: string; tipo: string };
+  const todasEntradas: EntradaCronica[] = [];
+  // Feed da sessão corrente (mais recente)
+  for (const e of (feed ?? [])) {
+    if (e.tipo !== 'acao') todasEntradas.push({ id: `feed-${e.id}`, texto: e.texto, tipo: e.tipo });
+  }
+  // Crônica persistida (mais antigas), em ordem reversa para as mais recentes ficarem no topo
+  const cronica = [...(camp?.cronica ?? [])].reverse();
+  for (const e of cronica) {
+    todasEntradas.push({ id: `cr-${e.turno}-${e.tipo}`, turno: e.turno, texto: e.texto, tipo: e.tipo });
+  }
+
+  const buscaMin = busca.trim().toLowerCase();
+  const filtradas = todasEntradas.filter((e) => {
+    if (filtroTipo !== 'todos' && e.tipo !== filtroTipo) return false;
+    if (buscaMin && !e.texto.toLowerCase().includes(buscaMin)) return false;
+    return true;
+  });
+
+  const TIPOS = [
+    { id: 'todos', label: 'Tudo' },
+    { id: 'narracao', label: 'Narração' },
+    { id: 'eco', label: 'Ecos' },
+    { id: 'sistema', label: 'Sistema' },
+  ] as const;
+
   return (
     <Pagina>
       <BarraVoltar titulo="Crônica" />
       {camp && <HistoriaViva />}
+
+      {/* Rivais kimetsu */}
       {Object.values(camp?.kimetsu?.rivais ?? {}).filter(r => r.reencontros > 0).map(r => (
         <Card key={r.id}>
           <TextoSerif>{r.nome} · {r.vivo ? 'sobreviveu' : 'morto'}</TextoSerif>
@@ -294,21 +377,62 @@ export function Cronica() {
           {r.evolucao && <TextoMono>Comportamento observado: {r.evolucao.plano} · evolução {r.evolucao.nivel}.</TextoMono>}
         </Card>
       ))}
-      {narrativas.length === 0 && <TextoMono>Sua história ainda não começou.</TextoMono>}
-      {narrativas.map((e) => (
-        <TextoSerif
-          key={e.id}
-          style={[
-            { marginBottom: esp.md, fontSize: 18 },
-            e.tipo === 'eco' ? { color: cores.ouro, fontStyle: 'italic' } : { color: cores.vellum },
-          ]}
-        >
-          {e.texto}
-        </TextoSerif>
+
+      {/* Busca e filtros */}
+      <View style={styles.cronicaFiltros}>
+        <TextInput
+          style={styles.cronicaBusca}
+          value={busca}
+          onChangeText={setBusca}
+          placeholder="buscar na crônica…"
+          placeholderTextColor={cores.linha}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <View style={styles.cronicaChips}>
+          {TIPOS.map((t) => (
+            <Pressable
+              key={t.id}
+              style={[styles.cronicaChip, filtroTipo === t.id && styles.cronicaChipAtivo]}
+              onPress={() => setFiltroTipo(t.id)}
+            >
+              <Text style={[styles.cronicaChipTxt, filtroTipo === t.id && styles.cronicaChipTxtAtivo]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <TextoMono style={{ color: cores.mudo, fontSize: 10, marginTop: 2 }}>
+          {filtradas.length} {filtradas.length === 1 ? 'entrada' : 'entradas'}
+        </TextoMono>
+      </View>
+
+      {filtradas.length === 0 && (
+        <TextoMono style={{ color: cores.mudo }}>{busca ? 'Nenhum resultado para essa busca.' : 'Sua história ainda não começou.'}</TextoMono>
+      )}
+      {filtradas.map((e) => (
+        <View key={e.id} style={styles.cronicaEntrada}>
+          {e.turno !== undefined && (
+            <TextoMono style={styles.cronicaTurno}>
+              turno {e.turno}{e.dia !== undefined ? ` · dia ${e.dia}` : ''}
+            </TextoMono>
+          )}
+          <TextoSerif
+            style={[
+              styles.cronicaTexto,
+              e.tipo === 'eco' ? { color: cores.ouro, fontStyle: 'italic' } :
+              e.tipo === 'sistema' ? { color: cores.mudo, fontSize: 14 } :
+              { color: cores.vellum },
+            ]}
+          >
+            {e.texto}
+          </TextoSerif>
+        </View>
       ))}
     </Pagina>
   );
 }
+
 
 // ─────────────────────────────────────────────── MAPA
 export function Mapa() {
@@ -325,6 +449,9 @@ export function Mapa() {
       <TextoSerif style={{ fontSize: 26, marginTop: 2 }}>{local.nome}</TextoSerif>
       <TextoMono style={{ marginBottom: esp.lg }}>você está aqui · perigo {local.perigo}/10</TextoMono>
       <ComunidadeViva />
+
+      <Divisor label="mapa do mundo conhecido" />
+      <MapaVisual content={content} camp={camp} />
 
       <Divisor label="para onde ir" />
       {/* Lugar oculto nao entra na lista ate ser descoberto (engine/viagem.ts). */}
@@ -491,7 +618,12 @@ export function Livro() {
               <TextoMono style={{ marginBottom: esp.sm }}>{mestre.custo}</TextoMono>
               <View style={styles.chips}>
                 {artes.map((a) => (
-                  <Pressable key={a.id} style={styles.chipAprender} onPress={() => aprender(a.id)}>
+                  <Pressable 
+                    key={a.id} 
+                    style={({ pressed }) => [styles.chipAprender, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]} 
+                    accessibilityRole="button"
+                    onPress={() => aprender(a.id)}
+                  >
                     <Text style={styles.chipAprenderTxt}>aprender {a.nome}</Text>
                     <Text style={styles.chipAprenderSub}>2 períodos</Text>
                   </Pressable>
@@ -510,7 +642,12 @@ export function Livro() {
                 content.artes.find(...) antigo nao as achava, e a arte
                 recem-fundida nunca aparecia aqui pra ser conjurada. */}
             {artesConhecidasResolvidas(content, camp).map((a) => (
-              <Pressable key={a.id} style={styles.chipConjurar} onPress={() => conjurar(a.id)}>
+              <Pressable 
+                key={a.id} 
+                style={({ pressed }) => [styles.chipConjurar, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]} 
+                accessibilityRole="button"
+                onPress={() => conjurar(a.id)}
+              >
                 <Text style={styles.chipAprenderTxt}>
                   {a.origem === 'fusao' ? '⟡ ' : ''}
                   {a.nome}
@@ -647,7 +784,28 @@ function corGrauReliquia(grau: string): string {
 void ({} as EstadoEntrada);
 
 const styles = StyleSheet.create({
+  cronicaFiltros: { marginBottom: esp.md, gap: esp.sm },
+  cronicaBusca: { fontFamily: fontes.mono, color: cores.vellum, fontSize: 13, borderWidth: 1, borderColor: cores.linha, borderRadius: 8, padding: esp.sm, marginBottom: esp.sm },
+  cronicaChips: { flexDirection: 'row', gap: esp.sm, flexWrap: 'wrap' },
+  cronicaChip: { borderWidth: 1, borderColor: cores.linha, borderRadius: 6, paddingHorizontal: esp.sm, paddingVertical: 3 },
+  cronicaChipAtivo: { borderColor: cores.ouro, backgroundColor: cores.fundo3 },
+  cronicaChipTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11 },
+  cronicaChipTxtAtivo: { color: cores.ouro },
+  cronicaEntrada: { marginBottom: esp.md, paddingBottom: esp.md, borderBottomWidth: 1, borderBottomColor: cores.fundo3 },
+  cronicaTurno: { color: cores.mudo, fontSize: 10, marginBottom: 2 },
+  cronicaTexto: { fontSize: 17, lineHeight: 26 },
   intro: { color: cores.mudo, fontStyle: 'italic', marginBottom: esp.lg },
+  vinculoFiltros: { marginBottom: esp.md, gap: esp.sm },
+  vinculoContagem: { color: cores.mudo, fontSize: 11 },
+  vinculoChips: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm },
+  vinculoChip: { borderWidth: 1, borderColor: cores.linha, borderRadius: 6, paddingHorizontal: esp.sm, paddingVertical: 4 },
+  vinculoChipAtivo: { borderColor: cores.ouro, backgroundColor: cores.fundo3 },
+  vinculoChipTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11 },
+  vinculoChipTxtAtivo: { color: cores.ouro },
+  conviccoes: { marginTop: esp.md, padding: esp.sm, borderLeftWidth: 2, borderLeftColor: cores.violeta, gap: 3 },
+  conviccao: { color: cores.vellum, fontSize: 12 },
+  memoriaRecente: { marginTop: esp.md, paddingTop: esp.sm, borderTopWidth: 1, borderTopColor: cores.fundo3, gap: 3 },
+  memoriaTexto: { color: cores.mudo, fontSize: 14, fontStyle: 'italic' },
   attrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: esp.sm },
   attrNome: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 19 },
   attrVal: { fontFamily: fontes.monoMedium, color: cores.vellum, fontSize: 16 },

@@ -3,9 +3,28 @@ import { periodosDeViagem } from './missoesVivas';
 import { PERIODOS } from './time';
 import type { AcaoMundo } from './acoesMundo';
 import { armaEquipada } from './items';
-import { rotasVisiveis } from './viagem';
+import { perigoEfetivoDaRota, rotasVisiveis } from './viagem';
 
 export type PlanoSim = { tipo: 'viajar'; destino: string } | { tipo: 'agir'; acao: AcaoMundo };
+
+/** Custo de apresentação para o agente do mundo, não custo da viagem física. */
+export function pontuarRotaPlanejador(
+  content: ContentBundle,
+  camp: Campaign,
+  origem: string,
+  rota: { destino: string; periodos: number; perigo: number },
+  restantePeriodos: number,
+): number {
+  const tempo = Math.max(1, rota.periodos);
+  const perigo = perigoEfetivoDaRota(content, camp, origem, rota.destino, rota.perigo);
+  const vida = camp.personagem.recursos.vida ?? 0;
+  const vidaMax = camp.personagem.recursosMax.vida ?? 1;
+  const ferido = vidaMax > 0 && vida / vidaMax < 0.5;
+  // Prazo apertado vence segurança; com folga, uma pessoa ferida evita risco.
+  const urgente = restantePeriodos <= PERIODOS.length * 2;
+  const pesoPerigo = urgente ? 0.15 : ferido ? 2.5 : 0.8;
+  return tempo + perigo * pesoPerigo;
+}
 // Only public mission information; no access to hidden aptitude or rival positions.
 export function planejarMissao(content: ContentBundle, camp: Campaign): PlanoSim | undefined {
   const dia = camp.calendario.dia;
@@ -29,8 +48,13 @@ export function planejarMissao(content: ContentBundle, camp: Campaign): PlanoSim
     if (q.estado === 'oferecida') return { tipo: 'agir', acao: { tipo: 'missao', id: q.id, escolha: 'aceitar' } };
     if (camp.localAtual !== destino) {
       const rotas = rotasVisiveis(content, camp);
-      const rota = rotas.map(r => ({ ...r, total: Math.max(1, r.periodos) + periodosDeViagem(content, r.destino, destino) }))
-        .filter(r => Number.isFinite(r.total)).sort((a, b) => a.total - b.total || a.perigo - b.perigo)[0];
+      const restante = Math.max(0, (q.prazo - dia + 1) * PERIODOS.length - (q.tipo === 'investigar' ? 12 : 3));
+      const rota = rotas.map(r => ({
+        ...r,
+        total: Math.max(1, r.periodos) + periodosDeViagem(content, r.destino, destino),
+        score: pontuarRotaPlanejador(content, camp, camp.localAtual, r, restante),
+      }))
+        .filter(r => Number.isFinite(r.total)).sort((a, b) => a.score - b.score || a.total - b.total)[0];
       if (rota) return { tipo: 'viajar', destino: rota.destino };
       continue;
     }

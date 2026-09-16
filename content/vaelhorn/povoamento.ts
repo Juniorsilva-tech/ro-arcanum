@@ -281,6 +281,15 @@ function rotinaDe(
   return rotina;
 }
 
+function expedienteDe(rotina: NPC['rotina'], localBase: string, ocupacao: string): NPC['expediente'] {
+  const periodos = PERIODOS_DIA.filter((p) => rotina[p] !== undefined && rotina[p] !== localBase);
+  const noturno = /crime|ladra|agiota|contrabandista|boticária|viajante/.test(ocupacao);
+  return {
+    diasTrabalho: noturno ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5],
+    periodos: periodos.length ? periodos : ['manha', 'tarde'],
+  };
+}
+
 function nomeUnico(rng: RngState, usados: Set<string>): string {
   for (let i = 0; i < 40; i++) {
     const n = nextFloat(rng) < 0.45
@@ -313,6 +322,7 @@ function povoar(local: Local, faccoesValidas: Set<string>, usados: Set<string>, 
     // gente com os mesmos hábitos, mas a taverneira de Tessel e a de Corveira
     // deixam de viver o mesmo dia.
     const feitio = pick(rng, FEITIOS);
+    const rotina = rotinaDe(papel.ritmo, local, viz, feitio);
     const npc: NPC = {
       id: `morador_${local.id}_${i}`,
       nome,
@@ -320,7 +330,8 @@ function povoar(local: Local, faccoesValidas: Set<string>, usados: Set<string>, 
       ocupacao: papel.ocupacao,
       faccaoId: faccao,
       localBase: local.id,
-      rotina: rotinaDe(papel.ritmo, local, viz, feitio),
+      rotina,
+      expediente: expedienteDe(rotina, local.id, papel.ocupacao),
       vozNarrativa: pick(rng, VOZES),
       personalidade: pick(rng, INDOLES),
       corpo: pick(rng, CORPOS),

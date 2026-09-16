@@ -68,6 +68,13 @@ export type LacoTipo =
   | 'desconfia'
   | 'sangue';
 
+// Turno de trabalho individual. O expediente decide se a rotina pode ocorrer
+// naquele dia/período; o destino concreto continua vindo de `rotina`.
+export type ExpedienteNPC = {
+  diasTrabalho: number[]; // 0 = domingo ... 6 = sábado
+  periodos: Periodo[];
+};
+
 // ── Efeitos: patches que a engine aplica ao estado.
 export type Efeito =
   | { tipo: 'recurso'; recurso: string; delta: number }
@@ -237,6 +244,7 @@ export type NPC = {
   faccaoId: string;
   localBase: string;
   rotina: Partial<Record<Periodo, string>>; // eles se movem (GDD §10.3)
+  expediente?: ExpedienteNPC;
   vozNarrativa: string;
   personalidade: string;
   // Como ela é de corpo. O narrador descreve gente, não fichas — e num jogo
@@ -254,6 +262,17 @@ export type NPC = {
   // que contam como reforço um do outro; `forca` é o poder dela nesse
   // embate; `rivalNome`/`rivalForca` descrevem o que ela enfrenta.
   duelo?: { grupo: string; forca: number; rivalNome: string; rivalForca: number; faccaoGanho?: string };
+};
+
+// ── Convicção / Reflexão Cognitiva sintetizada pelo NPC (GDD §10.4 / Stanford Reflexão).
+export type Conviccao = {
+  id: string;
+  texto: string;
+  valencia: 'afeto' | 'desconfianca' | 'cautela' | 'temor';
+  intensidade: number; // 1 a 5
+  turno: number;
+  dia: number;
+  baseadaEmTipos: string[];
 };
 
 // ── Estado dinâmico de NPC por campanha (GDD §10.1).
@@ -276,6 +295,9 @@ export type NpcDinamico = {
     tipo?: string;
     dia?: number;
   }[];
+  // Reflexões cognitivas sintetizadas e acumulador de pontos emocionais
+  conviccoes?: Conviccao[];
+  pontosReflexao?: number;
 };
 
 // ── Local (GDD §7).

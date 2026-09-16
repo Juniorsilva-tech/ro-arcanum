@@ -10,6 +10,7 @@ import {
   crescerImpulsos,
   atributosBase,
   narrarComFallback,
+  narrarComModeloStream,
   CAPITULO_MAX_PERIODOS,
   equipar as equiparEngine,
   desequipar as desequiparEngine,
@@ -42,6 +43,7 @@ import {
   avancarMundo,
   normalizarCampanha,
   registrarMarco,
+  registrarNaCronica,
   NOME_PERIODO,
   PERIODOS,
   type OpcaoResolvida,
@@ -52,6 +54,8 @@ import {
   alternarCompanheiro,
   executarAcaoMundo,
   type AcaoMundo,
+  obterTokenNousAtual,
+  iniciarMonitoramentoNous,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -67,8 +71,12 @@ import {
   salvarConfig,
   carregarConfig,
   configPadrao,
+  exportarCampanha,
+  importarCampanha,
+  slotAtual,
   type ConfigApp,
 } from './storage';
+
 import { classificarAcaoLivre } from './freeAction';
 
 export type Tela =
@@ -184,6 +192,7 @@ interface GameState {
   config: ConfigApp;
   rascunho: Rascunho;
   iaStatus: 'off' | 'pensando' | 'ok' | 'erro';
+  textoStreaming?: string;
   iaErro?: string;
   // Turno já resolvido pela engine, esperando o narrador. Guardar isso é o que
   // permite tentar de novo sem repetir a ação nem gastar tempo do mundo.
@@ -245,6 +254,8 @@ interface GameState {
   testarSeNarraAdulto: () => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string }>;
   testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
   tentarNarrarDeNovo: () => Promise<void>;
+  exportarSave: () => Promise<void>;
+  importarSave: (json: string) => Promise<void>;
 }
 
 // Verbos que abrem direto a luta contra um chefe (GDD §17).
@@ -260,6 +271,18 @@ function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => vo
   if (!content || !camp) return;
   const cena = montarCena(content, camp);
   set({ cena });
+}
+
+function chaveEfetiva(cfg: ConfigApp): string | undefined {
+  const manual = cfg.apiKey?.trim();
+  if (manual) return manual;
+  if (cfg.provider === 'nous') {
+    const bridgeToken = obterTokenNousAtual();
+    if (bridgeToken) return bridgeToken;
+    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
+    if (envKey.trim()) return envKey.trim();
+  }
+  return undefined;
 }
 
 /**
@@ -287,8 +310,10 @@ export const useGame = create<GameState>((set, get) => ({
   config: configPadrao,
   rascunho: { nome: '', atributos: atributosBase() },
   iaStatus: 'off',
+  textoStreaming: undefined,
 
   async init() {
+    iniciarMonitoramentoNous();
     const config = await carregarConfig();
     await carregarSlotAtivo();
     // Save de antes dos slots vira slot 0. O antigo nao e' apagado.
@@ -879,30 +904,34 @@ export const useGame = create<GameState>((set, get) => ({
 
   async testarChaveApi() {
     const { config } = get();
-    if (!config.apiKey) return { ok: false, erro: 'Sem chave.' };
+    const chave = chaveEfetiva(config);
+    if (!chave) return { ok: false, erro: 'Sem chave.' };
     const { testarChave } = await import('@/engine');
-    return testarChave({ provider: config.provider, apiKey: config.apiKey, modelo: config.modelo });
+    return testarChave({ provider: config.provider, apiKey: chave, modelo: config.modelo });
   },
 
   async buscarModelosGratis() {
     const { config } = get();
-    const { listarModelosOpenRouter } = await import('@/engine');
-    return listarModelosOpenRouter(config.apiKey, true);
+    const chave = chaveEfetiva(config);
+    const { listarModelos } = await import('@/engine');
+    return listarModelos(config.provider, chave, true);
   },
 
   // Responde de uma vez a pergunta que não se responde pelo slug: este modelo
   // narra sexo, ou recusa?
   async testarSeNarraAdulto() {
     const { config } = get();
-    if (!config.apiKey) return { narra: false, recusou: false, erro: 'Sem chave salva.' };
+    const chave = chaveEfetiva(config);
+    if (!chave) return { narra: false, recusou: false, erro: 'Sem chave salva.' };
     const { testarCenaAdulta } = await import('@/engine');
-    return testarCenaAdulta({ provider: config.provider, apiKey: config.apiKey, modelo: config.modelo });
+    return testarCenaAdulta({ provider: config.provider, apiKey: chave, modelo: config.modelo });
   },
 
   // Diagnóstico honesto: roda o MESMO caminho do jogo e mostra o que voltou.
   async testarNarracaoReal() {
     const { config } = get();
-    if (!config.apiKey) return { ok: false, erro: 'Sem chave salva.' };
+    const chave = chaveEfetiva(config);
+    if (!chave) return { ok: false, erro: 'Sem chave salva.' };
     const content = get().content ?? bundlePorId('vaelhorn')!;
     const camp =
       get().camp ??
@@ -920,7 +949,7 @@ export const useGame = create<GameState>((set, get) => ({
       efeitosAplicados: [],
     } as unknown as Parameters<typeof narrarComFallback>[4];
     const res = await narrarComFallback(
-      { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo },
+      { provider: config.provider, apiKey: chave, modelo: config.modelo },
       content,
       camp,
       cena.contexto,
@@ -939,7 +968,49 @@ export const useGame = create<GameState>((set, get) => ({
     if (!pend || get().ocupado) return;
     await narrar(get, set, pend.fato, pend.acaoLivre);
   },
+
+  // Exporta a campanha ativa como JSON e dispara download no browser.
+  async exportarSave() {
+    const { camp } = get();
+    if (!camp) { set({ avisoSave: 'Sem campanha para exportar.' }); return; }
+    try {
+      const json = exportarCampanha(camp);
+      const nome = `arcanum-${camp.personagem.nome.toLowerCase().replace(/\s+/g, '-')}-dia${camp.calendario.dia}.json`;
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nome;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      set({ avisoSave: `Erro ao exportar: ${String(e).slice(0, 120)}` });
+    }
+  },
+
+  // Importa uma campanha de um JSON e a carrega no jogo.
+  async importarSave(json: string) {
+    const r = importarCampanha(json);
+    if (!r.ok) { set({ avisoSave: `Erro ao importar: ${r.erro}` }); return; }
+    const camp = r.valor;
+    const content = bundlePorId(camp.cenarioId);
+    if (!content) { set({ avisoSave: 'Cenário do save importado não foi encontrado.' }); return; }
+    await salvarCampanha(camp);
+    set({
+      camp,
+      content,
+      feed: [nf('Campanha importada. Retomando de onde você salvou.', 'sistema', { abreTurno: true })],
+      cena: undefined,
+      temSave: true,
+      avisoSave: undefined,
+      tela: 'jogo',
+      ocupado: true,
+    });
+    recomputarCena(get, set);
+    await narrar(get, set, 'Você retoma de onde a campanha importada estava.');
+  },
 }));
+
 
 // Persiste o retrato da tela (feed + cena) toda vez que ele muda, enquanto
 // houver uma campanha em andamento — é o que faz "continuar" retomar
@@ -1054,7 +1125,9 @@ async function narrar(
   const cena = montarCena(content, { ...camp });
   set({ cena, pendente: { fato } });
 
-  if (!config.apiKey) {
+  const chave = chaveEfetiva(config);
+
+  if (!chave) {
     // Narrador canônico local (GDD §20, P0: o jogo tem que rodar sem rede e
     // sem modelo). As peças já existiam — 'fato' é a frase que a própria
     // engine escreve reagindo ao grau do teste (construirFato em turn.ts), e
@@ -1062,12 +1135,14 @@ async function narrar(
     // ações reais do jogo. Isto só estava sendo descartado por um retorno
     // antecipado aqui, que travava o jogo pedindo chave.
     const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
+    registrarNaCronica(camp, fato);
     set({
       camp: { ...camp },
       feed: [...get().feed, nf(fato, 'narracao')],
       cena: { ...cena, opcoes: grade },
       iaStatus: 'off',
       iaErro: undefined,
+      textoStreaming: undefined,
       ocupado: false,
       pendente: undefined,
     });
@@ -1080,15 +1155,19 @@ async function narrar(
   const pedido = { fato, acaoLivre, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
     typeof narrarComFallback
   >[4];
-  const cfg = { provider: config.provider, apiKey: config.apiKey, modelo: config.modelo };
+  const cfg = { provider: config.provider, apiKey: chave, modelo: config.modelo };
 
   // Uma segunda tentativa automática: falha de rede não deve virar impasse.
-  let res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
+  set({ textoStreaming: '' });
+  let res = await narrarComModeloStream(cfg, content, camp, cena.contexto, pedido, (parcial) => {
+    set({ textoStreaming: parcial });
+  });
   if (!res.texto) res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
 
   const cenaAtual = get().cena;
   if (res.texto) {
     const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}_${feedSeq}`);
+    registrarNaCronica(camp, res.texto);
     const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
     const achado = entregarAchado(content, camp, res.achado);
     if (achado) extras.push(achado);
@@ -1105,6 +1184,7 @@ async function narrar(
         : cenaAtual,
       iaStatus: 'ok',
       ocupado: false,
+      textoStreaming: undefined,
       pendente: undefined,
     });
     await persistir(camp, set);
@@ -1112,7 +1192,7 @@ async function narrar(
   }
 
   // Falhou de novo: o turno fica guardado, esperando "tentar de novo".
-  set({ iaStatus: 'erro', iaErro: res.erro ?? 'sem resposta', ocupado: false });
+  set({ iaStatus: 'erro', iaErro: res.erro ?? 'sem resposta', ocupado: false, textoStreaming: undefined });
 }
 
 

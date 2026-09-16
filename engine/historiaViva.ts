@@ -69,14 +69,23 @@ export function cidadeDoLocal(content: ContentBundle, camp: Campaign, local: str
   return id ? camp.vivo?.cidades[id] : undefined;
 }
 
-export function localEfetivo(camp: Campaign, npc: NPC, periodo: Periodo = periodoAtual(camp.calendario)): string | undefined {
+export function localEfetivo(camp: Campaign, npc: NPC, periodo: Periodo = periodoAtual(camp.calendario), content?: ContentBundle): string | undefined {
   if (camp.npcState[npc.id]?.vivo === false) return;
   if ((camp.grupo ?? []).includes(npc.id)) return camp.localAtual;
   const pessoa = camp.vivo?.pessoas[npc.id];
   if (pessoa?.viagem) return; // In transit, not simultaneously at both ends.
   if (pessoa?.deslocado || pessoa?.objetivo === 'cativo') return pessoa.local;
+  const expediente = npc.expediente;
+  if (expediente && pessoa) {
+    // Dia zero da campanha começa numa segunda-feira para o calendário do
+    // mundo; o deslocamento +1 mantém saves antigos determinísticos.
+    const diaDaSemana = (camp.calendario.dia + 1) % 7;
+    const doenteOuFaminto = (pessoa.saude ?? 100) < 45 || (pessoa.fome ?? 0) > 80;
+    const emExpediente = expediente.diasTrabalho.includes(diaDaSemana) && expediente.periodos.includes(periodo);
+    if (doenteOuFaminto || !emExpediente) return pessoa.casa ?? npc.localBase;
+  }
   const previsto = npc.rotina[periodo] ?? npc.localBase;
-  return recolhidoPeloMedo(camp, npc, previsto) ? npc.localBase : previsto;
+  return recolhidoPeloMedo(camp, npc, previsto, content) ? npc.localBase : previsto;
 }
 
 /**
@@ -97,7 +106,7 @@ export function localEfetivo(camp: Campaign, npc: NPC, periodo: Periodo = period
  */
 export const INSEGURANCA_QUE_RECOLHE = 55;
 
-function recolhidoPeloMedo(camp: Campaign, npc: NPC, previsto: string): boolean {
+function recolhidoPeloMedo(camp: Campaign, npc: NPC, previsto: string, content?: ContentBundle): boolean {
   if (previsto === npc.localBase) return false;
   if (npc.combatente) return false;
   // Ameaça ativa no lugar para onde a pessoa iria: ninguém vai capinar o campo
@@ -109,7 +118,8 @@ function recolhidoPeloMedo(camp: Campaign, npc: NPC, previsto: string): boolean 
   // só se resolve o caso direto. Na prática cobre os moradores gerados, cujo
   // `localBase` É o assentamento; um NPC escrito à mão que mora na taverna não
   // sente o medo difuso, só a ameaça concreta acima.
-  const cidade = camp.vivo?.cidades[npc.localBase];
+  const cidadeId = content ? cidadeIdDoLocal(content, camp, npc.localBase) : npc.localBase;
+  const cidade = cidadeId ? camp.vivo?.cidades[cidadeId] : undefined;
   return !!cidade && cidade.inseguranca >= INSEGURANCA_QUE_RECOLHE;
 }
 

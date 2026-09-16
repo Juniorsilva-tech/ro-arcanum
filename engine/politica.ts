@@ -14,7 +14,7 @@ export function processarPolitica(content: ContentBundle, camp: Campaign): void 
       if (g.lider && anterior !== g.lider) {
         if (anterior) g.sucessoes++;
         g.legitimidade = anterior ? 40 : 65;
-        registrarFato(camp, { tipo: anterior ? 'sucessao' : 'lideranca', local: localEfetivo(camp, candidatos[0]) ?? candidatos[0].localBase, texto: `${candidatos[0].nome} assumiu a liderança de ${content.faccoes.find(f => f.id === id)?.nome ?? id}.`, atores: [g.lider, ...(anterior ? [anterior] : [])], publico: true });
+        registrarFato(camp, { tipo: anterior ? 'sucessao' : 'lideranca', local: localEfetivo(camp, candidatos[0], undefined, content) ?? candidatos[0].localBase, texto: `${candidatos[0].nome} assumiu a liderança de ${content.faccoes.find(f => f.id === id)?.nome ?? id}.`, atores: [g.lider, ...(anterior ? [anterior] : [])], publico: true });
       }
     }
     const dominios = Object.entries(v.cidades).filter(([, c]) => c.governo === id);

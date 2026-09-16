@@ -107,7 +107,7 @@ export function cruzarRotinas(content: ContentBundle, camp: Campaign, periodo: P
   const porLocal = new Map<string, NPC[]>();
   for (const npc of todosNpcs(content, camp)) {
     if (!camp.npcState[npc.id]?.vivo) continue;
-    const onde = localEfetivo(camp, npc, periodo);
+    const onde = localEfetivo(camp, npc, periodo, content);
     if (!onde || camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') continue;
     const arr = porLocal.get(onde) ?? [];
     arr.push(npc);

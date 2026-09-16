@@ -43,7 +43,7 @@ function localDeGuerra(content: ContentBundle, camp: Campaign, a: string, b: str
 
 function causarBaixa(content: ContentBundle, camp: Campaign, faccao: string, local: string): void {
   const candidatos = todosNpcs(content, camp).filter(n =>
-    n.faccaoId === faccao && localEfetivo(camp, n) === local && camp.npcState[n.id]?.vivo && !(camp.grupo ?? []).includes(n.id));
+    n.faccaoId === faccao && localEfetivo(camp, n, undefined, content) === local && camp.npcState[n.id]?.vivo && !(camp.grupo ?? []).includes(n.id));
   if (!candidatos.length || nextFloat(camp.rng) >= .08) return;
   const vitima = pick(camp.rng, candidatos);
   camp.npcState[vitima.id].vivo = false;

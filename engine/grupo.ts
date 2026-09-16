@@ -16,7 +16,7 @@ export function alternarCompanheiro(content: ContentBundle, camp: Campaign, npcI
   const npc = npcPorId(content, camp, npcId);
   if (!npc?.combatente) return { ok: false, motivo: 'essa pessoa não atua como combatente' };
   if (!camp.npcState[npcId]?.vivo) return { ok: false, motivo: `${npc.nome} está morto` };
-  const local = localEfetivo(camp, npc);
+  const local = localEfetivo(camp, npc, undefined, content);
   if (camp.vivo?.pessoas[npcId]?.objetivo === 'cativo') return { ok: false, motivo: 'essa pessoa está em cativeiro' };
   if (local !== camp.localAtual) return { ok: false, motivo: `${npc.nome} não está aqui agora` };
   const confianca = camp.npcState[npcId]?.eixos.confianca ?? 0;

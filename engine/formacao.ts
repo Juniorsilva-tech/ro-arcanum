@@ -21,7 +21,7 @@ export function processarFormacao(content: ContentBundle, camp: Campaign, npc: N
       && (estado.vida ?? n.combatente.vida) > 0 && (estado.idade ?? n.idade) >= 18
       && (civil?.saude ?? 100) >= 65 && (civil?.fome ?? 0) <= 40
       && civil?.objetivo !== 'cativo' && !civil?.viagem
-      && localEfetivo(camp, n) === localEfetivo(camp, npc);
+      && localEfetivo(camp, n, undefined, content) === localEfetivo(camp, npc, undefined, content);
   });
   if (!mentor) return false;
   f.mentor = mentor.id; f.sessoes++; p.moedas--; p.objetivo = 'treinar';

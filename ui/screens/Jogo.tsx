@@ -63,6 +63,7 @@ export function Jogo() {
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
   const iaStatus = useGame((s) => s.iaStatus);
   const iaErro = useGame((s) => s.iaErro);
+  const textoStreaming = useGame((s) => s.textoStreaming);
   // Ter chave liga a IA; sem chave, o narrador local (engine) assume — o
   // jogo nunca fica parado por falta de chave (GDD §20, P0).
   const iaLigada = useGame((s) => !!s.config.apiKey);
@@ -189,8 +190,10 @@ export function Jogo() {
           )}
           {ocupado ? (
             <View style={styles.gerandoBox}>
-              <ActivityIndicator color={cores.ouro} size="large" />
-              <Text style={styles.gerandoTitulo}>O narrador está escrevendo…</Text>
+              {textoStreaming ? (
+                <Text style={styles.streamingTexto}>{textoStreaming}<Text style={styles.streamingCursor}>▌</Text></Text>
+              ) : <ActivityIndicator color={cores.ouro} size="large" />}
+              <Text style={styles.gerandoTitulo}>{textoStreaming ? 'O narrador está escrevendo…' : 'O narrador está escrevendo…'}</Text>
               <Text style={styles.gerandoSub}>as novas opções aparecem em instantes</Text>
             </View>
           ) : pendente ? (
@@ -474,7 +477,12 @@ function OpcaoCena({
   const selos = [aposta.chance, aposta.custo, aposta.perigo].filter(Boolean) as string[];
   return (
     <Pressable
-      style={({ pressed }) => [styles.opcao, daIA && styles.opcaoIA, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.opcao, 
+        daIA && styles.opcaoIA, 
+        pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+      ]}
       onPress={onPress}
     >
       {!!op.natureza && <Text style={styles.opcaoEixo}>{NOME_NATUREZA[op.natureza]}</Text>}
@@ -521,8 +529,13 @@ function LinhaVerbo({
   return (
     <Pressable
       disabled={!disponivel}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !disponivel }}
       onPress={onPress}
-      style={({ pressed }) => [styles.verbo, pressed && disponivel ? { opacity: 0.7 } : null]}
+      style={({ pressed }) => [
+        styles.verbo, 
+        pressed && disponivel ? { opacity: 0.8, transform: [{ scale: 0.98 }] } : null
+      ]}
     >
       <View style={{ flex: 1 }}>
         <Text
@@ -705,6 +718,8 @@ const styles = StyleSheet.create({
   },
   gerandoTitulo: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 22, marginTop: esp.sm },
   gerandoSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
+  streamingTexto: { fontFamily: fontes.serif, color: cores.vellum, fontSize: 18, lineHeight: 27, alignSelf: 'stretch' },
+  streamingCursor: { color: cores.ouro },
   travado: { fontFamily: fontes.mono, color: cores.linha, fontSize: 11, paddingVertical: esp.md },
   semNarradorBox: {
     marginTop: esp.lg,

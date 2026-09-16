@@ -49,13 +49,20 @@ export function CabecalhoJogo() {
   const acento = content.cenario.acentoCor;
   return (
     <View style={styles.cabecalho}>
-      <Pressable onPress={() => irPara('entrada')}>
+      <Pressable onPress={() => irPara('entrada')} accessibilityRole="button">
         <Text style={[styles.marca, { color: acento }]}>ARCANUM</Text>
       </Pressable>
       <View style={styles.icones}>
         {ICONES.map((i) => (
-          <Pressable key={i.tela} onPress={() => irPara(i.tela)} hitSlop={8}>
-            <Text style={styles.icone} accessibilityLabel={i.nome}>
+          <Pressable 
+            key={i.tela} 
+            onPress={() => irPara(i.tela)} 
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={i.nome}
+            style={({ pressed }) => (pressed ? { opacity: 0.7, transform: [{ scale: 0.95 }] } : null)}
+          >
+            <Text style={styles.icone}>
               {i.glifo}
             </Text>
           </Pressable>
@@ -69,7 +76,13 @@ export function BarraVoltar({ titulo }: { titulo: string }) {
   const voltar = useGame((s) => s.voltar);
   return (
     <View style={styles.barraVoltar}>
-      <Pressable onPress={voltar} hitSlop={8} style={styles.voltarBtn}>
+      <Pressable 
+        onPress={voltar} 
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Voltar"
+        style={({ pressed }) => [styles.voltarBtn, pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }]}
+      >
         <Text style={styles.voltarGlifo}>‹</Text>
         <Text style={styles.voltarTxt}>voltar</Text>
       </Pressable>

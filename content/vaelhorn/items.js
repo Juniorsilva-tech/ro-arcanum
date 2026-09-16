@@ -1,0 +1,188 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.itensVaelhorn = void 0;
+function it(x) {
+    const base = {
+        peso: 1,
+        valor: 5,
+        raridade: 'comum',
+        empilhavel: x.slot === 'consumivel' || x.slot === 'material' || x.slot === 'misc',
+        ...x,
+    };
+    if (base.slot === 'arma' && !base.atributoAtaque) {
+        base.atributoAtaque = base.alcance === 'distancia' ? 'precisao' : 'fisico';
+    }
+    return base;
+}
+const MERC = ['mercado'];
+const TAV = ['taverna'];
+const MERC_TAV = ['mercado', 'taverna'];
+exports.itensVaelhorn = [
+    // ───────────────────────────── ARMAS corpo a corpo
+    it({ id: 'punho_de_ferro', nome: 'Punho de ferro', descricao: 'Manoplas cravejadas para quem prefere o próprio braço.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 8, dano: { base: 5, dispersao: 0.4, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'adaga', nome: 'Adaga', descricao: 'Curta, rápida, fácil de esconder.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 10, dano: { base: 7, dispersao: 0.35, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'faca_do_acougueiro', nome: 'Faca do açougueiro', descricao: 'Larga e cega o bastante para doer mais.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 9, dano: { base: 8, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'espada_curta', nome: 'Espada curta', descricao: 'Confiável na mão de quem sabe medir a distância.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 22, dano: { base: 9, dispersao: 0.3, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'rapieira', nome: 'Rapieira', descricao: 'Lâmina fina que busca as frestas da guarda.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 30, atributoAtaque: 'precisao', dano: { base: 10, dispersao: 0.25, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'espada_longa', nome: 'Espada longa', descricao: 'O peso certo entre alcance e controle.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 45, dano: { base: 12, dispersao: 0.3, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'cimitarra', nome: 'Cimitarra', descricao: 'Curva, feita para o corte que continua.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 34, dano: { base: 11, dispersao: 0.35, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'maca', nome: 'Maça', descricao: 'Quando a malha não deixa a lâmina entrar, o osso ainda quebra.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 26, dano: { base: 13, dispersao: 0.4, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'machado_de_guerra', nome: 'Machado de guerra', descricao: 'Cai pesado; perdoa pouco de quem erra o tempo.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 40, dano: { base: 14, dispersao: 0.5, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'lanca', nome: 'Lança', descricao: 'Alcança antes de ser alcançada.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 24, dano: { base: 11, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'martelo_de_guerra', nome: 'Martelo de guerra', descricao: 'Duas mãos, uma intenção só.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 55, dano: { base: 16, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'montante', nome: 'Montante', descricao: 'Espada enorme; abre espaço onde havia gente.', slot: 'arma', alcance: 'corpo', peso: 6, valor: 70, dano: { base: 18, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'cajado_de_carvalho', nome: 'Cajado de carvalho', descricao: 'Apoio na estrada, arma no aperto — e foco para a arte.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 14, dano: { base: 7, dispersao: 0.3, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'adaga_de_prata', nome: 'Adaga de prata', descricao: 'A prata morde o que a noite cospe.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 60, raridade: 'notavel', dano: { base: 9, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+    // Antes só saía de saque de chefe oni — agora também se forja de verdade,
+    // na Vila que Ninguém Encontra Duas Vezes (content/vaelhorn/locations.ts,
+    // vila_ferreiros), pela mão de Hotaru Haganezuka. O preço alto continua
+    // fazendo sentido: não é um item de loja qualquer.
+    it({ id: 'lamina_nichirin', nome: 'Lâmina Nichirin', descricao: 'Aço que muda de cor na mão de quem a empunha. Contra carne que se recompõe sozinha, é a única resposta que fica.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 120, raridade: 'notavel', dano: { base: 11, dispersao: 0.3, tipo: 'cortante' }, contraOni: true, lojas: ['vila_ferreiros'] }),
+    // ───────────────────────────── ARMAS à distância
+    it({ id: 'funda', nome: 'Funda', descricao: 'Uma pedra, um giro, um estalo seco.', slot: 'arma', alcance: 'distancia', peso: 1, valor: 6, dano: { base: 6, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'arco_curto', nome: 'Arco curto', descricao: 'Leve e rápido entre as árvores.', slot: 'arma', alcance: 'distancia', peso: 2, valor: 25, dano: { base: 8, dispersao: 0.4, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'arco_longo', nome: 'Arco longo', descricao: 'Pede braço, paga em alcance.', slot: 'arma', alcance: 'distancia', peso: 3, valor: 48, dano: { base: 12, dispersao: 0.4, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'besta', nome: 'Besta', descricao: 'Lenta para recarregar, brutal ao soltar.', slot: 'arma', alcance: 'distancia', peso: 4, valor: 55, dano: { base: 14, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+    // ───────────────────────────── ARMADURAS
+    it({ id: 'roupa_acolchoada', nome: 'Roupa acolchoada', descricao: 'Pano grosso; melhor que a própria pele, pouco melhor.', slot: 'armadura', peso: 3, valor: 12, defesa: 1, lojas: MERC }),
+    it({ id: 'gibao_de_couro', nome: 'Gibão de couro', descricao: 'Flexível, silencioso, honesto.', slot: 'armadura', peso: 4, valor: 28, defesa: 2, lojas: MERC }),
+    it({ id: 'couro_batido', nome: 'Couro batido', descricao: 'Couro endurecido no fogo e no uso.', slot: 'armadura', peso: 6, valor: 45, defesa: 3, lojas: MERC }),
+    it({ id: 'brunea', nome: 'Brunea de anéis', descricao: 'Anéis costurados no couro; peso que se sente na estrada.', slot: 'armadura', peso: 8, valor: 70, defesa: 4, lojas: MERC }),
+    it({ id: 'cota_de_malha', nome: 'Cota de malha', descricao: 'Mil elos contra o corte. O gume que passar, passou.', slot: 'armadura', peso: 12, valor: 110, defesa: 5, lojas: MERC }),
+    it({ id: 'meia_placa', nome: 'Meia-placa', descricao: 'Aço nos pontos que importam.', slot: 'armadura', peso: 18, valor: 200, raridade: 'notavel', defesa: 7, lojas: MERC }),
+    it({ id: 'placa_completa', nome: 'Armadura de placas', descricao: 'Uma fortaleza que anda — e que cansa.', slot: 'armadura', peso: 26, valor: 400, raridade: 'rara', defesa: 9, lojas: MERC }),
+    // ───────────────────────────── ESCUDOS
+    it({ id: 'broquel', nome: 'Broquel', descricao: 'Pequeno, para desviar mais que aparar.', slot: 'escudo', peso: 2, valor: 10, defesa: 1, lojas: MERC }),
+    it({ id: 'escudo_gasto', nome: 'Escudo gasto', descricao: 'Madeira rachada e ferro torto, mas ainda de pé.', slot: 'escudo', peso: 4, valor: 8, defesa: 1, lojas: MERC }),
+    it({ id: 'escudo_de_madeira', nome: 'Escudo de madeira', descricao: 'Redondo, largo, confiável.', slot: 'escudo', peso: 5, valor: 24, defesa: 2, lojas: MERC }),
+    it({ id: 'escudo_de_ferro', nome: 'Escudo de ferro', descricao: 'Pesado; um muro na mão esquerda.', slot: 'escudo', peso: 8, valor: 60, defesa: 3, lojas: MERC }),
+    // ───────────────────────────── ACESSÓRIOS
+    it({ id: 'manto_de_viagem', nome: 'Manto de viagem', descricao: 'Lã grossa contra o frio e os olhares.', slot: 'acessorio', peso: 2, valor: 15, defesa: 1, lojas: MERC_TAV }),
+    it({ id: 'anel_de_sinete', nome: 'Anel de sinete', descricao: 'O brasão de uma casa que talvez ainda importe.', slot: 'acessorio', peso: 0, valor: 40, raridade: 'notavel' }),
+    it({ id: 'amuleto_sao_vandro', nome: 'Amuleto de São Vandro', descricao: 'Estanho gasto; dizem que afasta o mau-olhado.', slot: 'acessorio', peso: 0, valor: 18, defesa: 1 }),
+    // ───────────────────────────── CONSUMÍVEIS
+    it({ id: 'racao', nome: 'Ração', descricao: 'Pão duro, queijo, carne-seca. Enche.', slot: 'consumivel', peso: 1, valor: 2, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 3 }, { tipo: 'impulso', impulso: 'fome', delta: -40 }], lojas: MERC_TAV }),
+    it({ id: 'refeicao_quente', nome: 'Refeição quente', descricao: 'Um ensopado que devolve a alma ao corpo.', slot: 'consumivel', peso: 1, valor: 4, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 6 }, { tipo: 'impulso', impulso: 'fome', delta: -60 }], lojas: TAV }),
+    it({ id: 'cerveja', nome: 'Caneca de cerveja', descricao: 'Rala, morna, e ainda assim bem-vinda.', slot: 'consumivel', peso: 1, valor: 2, efeitosUso: [{ tipo: 'impulso', impulso: 'solidao', delta: -12 }, { tipo: 'impulso', impulso: 'tedio', delta: -12 }, { tipo: 'pressao', pressao: 'sanidade', delta: 1 }], lojas: TAV }),
+    it({ id: 'vinho', nome: 'Vinho tinto', descricao: 'O bom vinho mente com elegância.', slot: 'consumivel', peso: 1, valor: 6, efeitosUso: [{ tipo: 'impulso', impulso: 'solidao', delta: -20 }, { tipo: 'pressao', pressao: 'sanidade', delta: 2 }], lojas: TAV }),
+    it({ id: 'pocao_cura_menor', nome: 'Poção de cura menor', descricao: 'Vermelha, amarga, salva-vidas.', slot: 'consumivel', peso: 1, valor: 25, raridade: 'notavel', efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 12 }], lojas: MERC }),
+    it({ id: 'pocao_cura', nome: 'Poção de cura', descricao: 'Fecha o que não devia ter aberto.', slot: 'consumivel', peso: 1, valor: 55, raridade: 'rara', efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 25 }], lojas: MERC }),
+    it({ id: 'tonico_de_mana', nome: 'Tônico de mana', descricao: 'Um gole azul que reacende o poço.', slot: 'consumivel', peso: 1, valor: 40, raridade: 'notavel', efeitosUso: [{ tipo: 'recurso', recurso: 'mana', delta: 8 }], lojas: MERC }),
+    it({ id: 'elixir_de_vigor', nome: 'Elixir de vigor', descricao: 'Fôlego engarrafado.', slot: 'consumivel', peso: 1, valor: 30, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 15 }, { tipo: 'condicao', condicao: 'exausto', adicionar: false }], lojas: MERC }),
+    it({ id: 'erva_calmante', nome: 'Erva calmante', descricao: 'Fumegada, acalma a mente que se despedaça.', slot: 'consumivel', peso: 0, valor: 12, efeitosUso: [{ tipo: 'pressao', pressao: 'sanidade', delta: -14 }], lojas: MERC }),
+    it({ id: 'antidoto', nome: 'Antídoto', descricao: 'Contra o veneno que já está dentro.', slot: 'consumivel', peso: 0, valor: 20, efeitosUso: [{ tipo: 'condicao', condicao: 'envenenado', adicionar: false }], lojas: MERC }),
+    it({ id: 'incenso_de_purga', nome: 'Incenso de purga', descricao: 'A fumaça branca alivia a mancha — um pouco.', slot: 'consumivel', peso: 0, valor: 35, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -10 }], lojas: MERC }),
+    // ───────────────────────────── FERRAMENTAS (algumas concedem verbos — §13.6)
+    it({ id: 'gazua', nome: 'Gazua', descricao: 'Um jeito de conversar com fechaduras.', slot: 'ferramenta', peso: 0, valor: 15, concedeVerbo: 'arrombar', lojas: MERC }),
+    it({ id: 'alaude', nome: 'Alaúde', descricao: 'Madeira leve e cordas gastas; ainda cantam.', slot: 'ferramenta', peso: 2, valor: 30, concedeVerbo: 'tocar', lojas: MERC_TAV }),
+    it({ id: 'tocha', nome: 'Tocha', descricao: 'Luz contra o escuro, e um aviso a quem espreita.', slot: 'ferramenta', peso: 1, valor: 2, empilhavel: true, lojas: MERC }),
+    it({ id: 'corda', nome: 'Corda (15 passos)', descricao: 'Sobe, amarra, estrangula — conforme a necessidade.', slot: 'ferramenta', peso: 2, valor: 5, lojas: MERC }),
+    it({ id: 'pe_de_cabra', nome: 'Pé de cabra', descricao: 'Persuade portas e tampas a ceder.', slot: 'ferramenta', peso: 3, valor: 10, lojas: MERC }),
+    it({ id: 'kit_de_costura_de_carne', nome: 'Kit de sutura', descricao: 'Agulha, linha encerada e coragem.', slot: 'ferramenta', peso: 1, valor: 18, lojas: MERC }),
+    // ───────────────────────────── MATERIAIS
+    it({ id: 'veneno_de_frasco', nome: 'Veneno em frasco', descricao: 'Um fio verde que se passa na lâmina ou na taça.', slot: 'material', peso: 0, valor: 28, concedeVerbo: 'envenenar', lojas: MERC }),
+    it({ id: 'po_de_tumba', nome: 'Pó de tumba', descricao: 'Cinza de nomes esquecidos. O padre paga bem por isto.', slot: 'material', peso: 0, valor: 20, raridade: 'notavel' }),
+    it({ id: 'osso_talhado', nome: 'Osso talhado', descricao: 'Marcas que não deveriam significar nada — e significam.', slot: 'material', peso: 0, valor: 30, raridade: 'rara' }),
+    it({ id: 'ervas_secas', nome: 'Ervas secas', descricao: 'Cura, tempero ou veneno, depende da mão.', slot: 'material', peso: 0, valor: 4, lojas: MERC }),
+    it({ id: 'pena_de_corvo', nome: 'Pena de corvo', descricao: 'Preta, lustrosa, colhida da Mata.', slot: 'material', peso: 0, valor: 3 }),
+    it({ id: 'minerio_de_ferro', nome: 'Minério de ferro', descricao: 'Bruto; espera a forja.', slot: 'material', peso: 3, valor: 6, lojas: MERC }),
+    it({ id: 'couro_cru', nome: 'Couro cru', descricao: 'Da última caçada.', slot: 'material', peso: 2, valor: 5, lojas: MERC }),
+    // ───────────────────────────── MISC
+    it({ id: 'grimorio_gasto', nome: 'Grimório gasto', descricao: 'Páginas soltas e uma letra que não é sua.', slot: 'misc', peso: 2, valor: 50, raridade: 'notavel' }),
+    it({ id: 'moeda_antiga', nome: 'Moeda antiga', descricao: 'De um reino que a ponte engoliu.', slot: 'misc', peso: 0, valor: 12 }),
+    it({ id: 'mapa_rasgado', nome: 'Mapa rasgado', descricao: 'Falta o canto onde estava o X.', slot: 'misc', peso: 0, valor: 8 }),
+    // ═════════════════════════════════════════════════════════════════════════
+    // SEGUNDA LEVA — o vale inteiro, não só a praça
+    // ═════════════════════════════════════════════════════════════════════════
+    // ───────────────────────────── ARMAS corpo a corpo
+    it({ id: 'porrete', nome: 'Porrete', descricao: 'Um galho com nó na ponta. Quem não tem nada começa aqui.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 3, dano: { base: 6, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'foice_de_ceifa', nome: 'Foice de ceifa', descricao: 'Feita para trigo. Adaptada sem esforço.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 12, dano: { base: 10, dispersao: 0.5, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'picareta_de_mina', nome: 'Picareta de mina', descricao: 'Perfura pedra. Não faz distinção.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 16, dano: { base: 12, dispersao: 0.45, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'machadinha', nome: 'Machadinha', descricao: 'Curta e má; boa para lenha e para brigas apertadas.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 14, dano: { base: 9, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'estilete', nome: 'Estilete', descricao: 'Fino como uma desculpa. Cabe na manga.', slot: 'arma', alcance: 'corpo', peso: 0, valor: 18, atributoAtaque: 'precisao', dano: { base: 6, dispersao: 0.25, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'sabre_de_cavalaria', nome: 'Sabre de cavalaria', descricao: 'Curvo, gasto na guarda, com iniciais que não são suas.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 52, raridade: 'notavel', dano: { base: 13, dispersao: 0.3, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'mangual', nome: 'Mangual', descricao: 'A corrente ignora o escudo e encontra o que há atrás.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 44, dano: { base: 14, dispersao: 0.55, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'alabarda', nome: 'Alabarda', descricao: 'Corta, perfura e puxa. Três armas cansadas de esperar.', slot: 'arma', alcance: 'corpo', peso: 6, valor: 62, dano: { base: 15, dispersao: 0.35, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'lanca_de_javali', nome: 'Lança de javali', descricao: 'Travessão logo abaixo da ponta, para o que vem correndo não subir pela haste.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 30, dano: { base: 12, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'bastao_ferrado', nome: 'Bastão ferrado', descricao: 'Carvalho com anéis de ferro. O tipo de arma que não parece arma.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 20, dano: { base: 10, dispersao: 0.35, tipo: 'contusão' }, lojas: MERC }),
+    it({ id: 'espada_bastarda', nome: 'Espada bastarda', descricao: 'Uma mão ou duas, conforme o dia exigir.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 78, raridade: 'notavel', dano: { base: 15, dispersao: 0.32, tipo: 'cortante' }, lojas: MERC }),
+    it({ id: 'lamina_dos_corvos', nome: 'A Lâmina dos Corvos', descricao: 'O aço é escuro e não reflete quem o segura.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 320, raridade: 'unica', dano: { base: 16, dispersao: 0.28, tipo: 'cortante' } }),
+    it({ id: 'martelo_do_dunn', nome: 'Martelo de Duna', descricao: 'A marca da ferreira está do lado de dentro, onde só ela veria.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 190, raridade: 'rara', dano: { base: 17, dispersao: 0.4, tipo: 'contusão' } }),
+    // ───────────────────────────── ARMAS à distância
+    it({ id: 'dardos', nome: 'Punhado de dardos', descricao: 'Leves, sujos, atirados sem cerimônia.', slot: 'arma', alcance: 'distancia', peso: 1, valor: 8, dano: { base: 6, dispersao: 0.45, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'arco_de_caca', nome: 'Arco de caça', descricao: 'O arco de Neve tem um irmão feio: este.', slot: 'arma', alcance: 'distancia', peso: 2, valor: 34, dano: { base: 10, dispersao: 0.35, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'besta_de_mao', nome: 'Besta de mão', descricao: 'Cabe sob o manto e resolve conversas curtas.', slot: 'arma', alcance: 'distancia', peso: 2, valor: 70, raridade: 'notavel', dano: { base: 11, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'besta_pesada', nome: 'Besta pesada', descricao: 'Atravessa placa. Depois pede um minuto de paciência.', slot: 'arma', alcance: 'distancia', peso: 6, valor: 95, raridade: 'notavel', dano: { base: 17, dispersao: 0.28, tipo: 'perfurante' }, lojas: MERC }),
+    it({ id: 'faca_de_arremesso', nome: 'Facas de arremesso', descricao: 'Três, balanceadas, gastas de tanto treino.', slot: 'arma', alcance: 'distancia', peso: 1, valor: 22, dano: { base: 8, dispersao: 0.35, tipo: 'perfurante' }, lojas: MERC }),
+    // ───────────────────────────── ARMADURAS
+    it({ id: 'habito_de_la', nome: 'Hábito de lã', descricao: 'A roupa da capela. Protege pouco e explica muito.', slot: 'armadura', peso: 2, valor: 8, defesa: 1, lojas: ['capela'] }),
+    it({ id: 'avental_de_forja', nome: 'Avental de forja', descricao: 'Couro grosso queimado por mil fagulhas.', slot: 'armadura', peso: 5, valor: 20, defesa: 2, lojas: MERC }),
+    it({ id: 'peles_de_cacador', nome: 'Peles de caçador', descricao: 'Quentes, silenciosas, com cheiro de mata.', slot: 'armadura', peso: 5, valor: 38, defesa: 3, lojas: MERC }),
+    it({ id: 'cota_de_escamas', nome: 'Cota de escamas', descricao: 'Placas costuradas como telhas. Barulhenta e boa.', slot: 'armadura', peso: 14, valor: 145, defesa: 6, lojas: MERC }),
+    it({ id: 'cota_do_regimento', nome: 'Cota do regimento', descricao: 'A insígnia foi arrancada, mas a costura ainda diz de onde veio.', slot: 'armadura', peso: 12, valor: 130, raridade: 'notavel', defesa: 5 }),
+    it({ id: 'armadura_do_vigia', nome: 'Armadura da vigia', descricao: 'Leve o bastante para subir a torre, grossa o bastante para descer inteiro.', slot: 'armadura', peso: 9, valor: 160, raridade: 'notavel', defesa: 6 }),
+    // ───────────────────────────── ESCUDOS
+    it({ id: 'tampa_de_barril', nome: 'Tampa de barril', descricao: 'Improviso da taverna. Funciona uma vez.', slot: 'escudo', peso: 3, valor: 2, defesa: 1, lojas: TAV }),
+    it({ id: 'escudo_da_guarda', nome: 'Escudo da guarda', descricao: 'Pintado com as cores de Halvet, lascado no canto direito.', slot: 'escudo', peso: 6, valor: 45, defesa: 3 }),
+    it({ id: 'paves', nome: 'Pavês', descricao: 'Um portão que se carrega. Ninguém corre com isto.', slot: 'escudo', peso: 12, valor: 90, raridade: 'notavel', defesa: 4, lojas: MERC }),
+    // ───────────────────────────── ACESSÓRIOS
+    it({ id: 'capuz_de_lona', nome: 'Capuz de lona', descricao: 'Encobre o rosto sem parecer que encobre.', slot: 'acessorio', peso: 1, valor: 9, lojas: MERC }),
+    it({ id: 'botas_de_marcha', nome: 'Botas de marcha', descricao: 'Solado duplo. A estrada dói menos.', slot: 'acessorio', peso: 2, valor: 26, defesa: 1, lojas: MERC }),
+    it({ id: 'luvas_de_couro', nome: 'Luvas de couro', descricao: 'Firmam a corda, a lâmina e o nervo.', slot: 'acessorio', peso: 0, valor: 14, lojas: MERC }),
+    it({ id: 'cinto_de_ferramentas', nome: 'Cinto de ferramentas', descricao: 'Tudo à mão, nada no chão.', slot: 'acessorio', peso: 2, valor: 22, lojas: MERC }),
+    it({ id: 'colar_de_dentes', nome: 'Colar de dentes', descricao: 'Um dente por caçada. Quem conta, entende o aviso.', slot: 'acessorio', peso: 0, valor: 35, raridade: 'notavel' }),
+    it({ id: 'anel_de_junco', nome: 'Anel de junco', descricao: 'Trançado à beira do lago. Não deveria durar tanto.', slot: 'acessorio', peso: 0, valor: 45, raridade: 'rara', defesa: 1 }),
+    it({ id: 'medalha_da_ponte', nome: 'Medalha da Ponte', descricao: 'Dada aos que puxaram gente da água naquela noite.', slot: 'acessorio', peso: 0, valor: 70, raridade: 'rara', defesa: 1 }),
+    it({ id: 'talisma_de_cinza', nome: 'Talismã de cinza', descricao: 'Cinza de Mir num saquinho de linho. Esquenta perto de ruína.', slot: 'acessorio', peso: 0, valor: 110, raridade: 'rara' }),
+    // ───────────────────────────── CONSUMÍVEIS
+    it({ id: 'pao_preto', nome: 'Pão preto', descricao: 'Pesado, azedo, honesto.', slot: 'consumivel', peso: 1, valor: 1, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 2 }, { tipo: 'impulso', impulso: 'fome', delta: -25 }], lojas: MERC_TAV }),
+    it({ id: 'peixe_defumado', nome: 'Peixe defumado', descricao: 'Do Espelho de Halvet, curado na fumaça de amieiro.', slot: 'consumivel', peso: 1, valor: 3, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 4 }, { tipo: 'impulso', impulso: 'fome', delta: -45 }], lojas: MERC }),
+    it({ id: 'aguardente', nome: 'Aguardente', descricao: 'Queima descendo e apaga subindo.', slot: 'consumivel', peso: 1, valor: 8, efeitosUso: [{ tipo: 'impulso', impulso: 'tedio', delta: -25 }, { tipo: 'recurso', recurso: 'vigor', delta: 4 }, { tipo: 'pressao', pressao: 'sanidade', delta: 4 }], lojas: TAV }),
+    it({ id: 'cha_de_raiz', nome: 'Chá de raiz', descricao: 'Amargo. Limpa a cabeça de quem bebeu demais ontem.', slot: 'consumivel', peso: 0, valor: 5, efeitosUso: [{ tipo: 'condicao', condicao: 'bebado', adicionar: false }, { tipo: 'pressao', pressao: 'sanidade', delta: -5 }], lojas: MERC }),
+    it({ id: 'unguento_de_sebo', nome: 'Unguento de sebo', descricao: 'Fede. Fecha corte pequeno em uma noite.', slot: 'consumivel', peso: 0, valor: 14, efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 7 }], lojas: MERC }),
+    it({ id: 'pocao_cura_maior', nome: 'Poção de cura maior', descricao: 'Cara como um mês de trabalho, e vale.', slot: 'consumivel', peso: 1, valor: 120, raridade: 'rara', efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 45 }], lojas: MERC }),
+    it({ id: 'tonico_de_mana_maior', nome: 'Tônico de mana maior', descricao: 'Azul-escuro, denso, com gosto de tempestade.', slot: 'consumivel', peso: 1, valor: 90, raridade: 'rara', efeitosUso: [{ tipo: 'recurso', recurso: 'mana', delta: 20 }], lojas: MERC }),
+    it({ id: 'oleo_de_lamina', nome: 'Óleo de lâmina', descricao: 'Passa-se no gume antes da briga que se sabe que virá.', slot: 'consumivel', peso: 0, valor: 18, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 5 }], lojas: MERC }),
+    it({ id: 'sal_bento', nome: 'Sal bento', descricao: 'Uma linha no chão que a madre jura que segura.', slot: 'consumivel', peso: 0, valor: 26, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -6 }, { tipo: 'pressao', pressao: 'sanidade', delta: -6 }], lojas: ['capela'] }),
+    it({ id: 'fumo_de_nadja', nome: 'Fumo de Nadja', descricao: 'Enrolado apertado. Tira a dor e um pedaço da manhã seguinte.', slot: 'consumivel', peso: 0, valor: 16, efeitosUso: [{ tipo: 'recurso', recurso: 'vida', delta: 6 }, { tipo: 'pressao', pressao: 'sanidade', delta: 5 }], lojas: ['acampamento'] }),
+    it({ id: 'compressa_de_ervas', nome: 'Compressa de ervas', descricao: 'Morna, apertada sobre o roxo. Devolve o fôlego.', slot: 'consumivel', peso: 0, valor: 10, efeitosUso: [{ tipo: 'recurso', recurso: 'vigor', delta: 8 }, { tipo: 'condicao', condicao: 'ferido', adicionar: false }], lojas: MERC }),
+    it({ id: 'agua_benta', nome: 'Água benta', descricao: 'Um frasco de vidro leitoso. Ferve perto do que não devia andar.', slot: 'consumivel', peso: 0, valor: 22, raridade: 'notavel', efeitosUso: [{ tipo: 'pressao', pressao: 'corrupcao', delta: -8 }], lojas: ['capela'] }),
+    // ───────────────────────────── FERRAMENTAS
+    it({ id: 'lanterna_surda', nome: 'Lanterna surda', descricao: 'Só ilumina para onde a portinhola aponta.', slot: 'ferramenta', peso: 2, valor: 24, lojas: MERC }),
+    it({ id: 'pedra_de_amolar', nome: 'Pedra de amolar', descricao: 'O som que precede toda briga bem planejada.', slot: 'ferramenta', peso: 1, valor: 6, concedeVerbo: 'reparar', lojas: MERC }),
+    it({ id: 'pa_de_coveiro', nome: 'Pá de coveiro', descricao: 'A de Oda tem o cabo lustroso de uso.', slot: 'ferramenta', peso: 4, valor: 9, concedeVerbo: 'profanar', lojas: MERC }),
+    it({ id: 'vara_de_pesca', nome: 'Vara de pesca', descricao: 'A desculpa perfeita para passar o dia parado.', slot: 'ferramenta', peso: 2, valor: 7, lojas: MERC }),
+    it({ id: 'armadilha_de_aco', nome: 'Armadilha de aço', descricao: 'Fecha na canela e não pergunta de quem é.', slot: 'ferramenta', peso: 5, valor: 32, lojas: MERC }),
+    it({ id: 'papel_e_tinta', nome: 'Papel e tinta', descricao: 'Caro. Poucos na vila sabem para que serve.', slot: 'ferramenta', peso: 1, valor: 20, concedeVerbo: 'estudar', lojas: MERC }),
+    it({ id: 'incensario', nome: 'Incensário', descricao: 'Bronze fosco com corrente curta. Cheira a capela mesmo vazio.', slot: 'ferramenta', peso: 2, valor: 28, concedeVerbo: 'benzer', lojas: ['capela'] }),
+    it({ id: 'circulo_de_giz', nome: 'Giz de ritual', descricao: 'Riscar o chão certo é metade da arte.', slot: 'ferramenta', peso: 0, valor: 25, raridade: 'notavel', concedeVerbo: 'realizar_ritual', lojas: MERC }),
+    it({ id: 'lente_de_aumento', nome: 'Lente de aumento', descricao: 'Vidro polido num aro de latão. Mostra o que a pressa esconde.', slot: 'ferramenta', peso: 0, valor: 40, raridade: 'notavel', lojas: MERC }),
+    it({ id: 'saco_de_contrabando', nome: 'Saco de fundo falso', descricao: 'Duas camadas de lona e uma consciência tranquila.', slot: 'ferramenta', peso: 1, valor: 30, concedeVerbo: 'contrabandear' }),
+    // ───────────────────────────── MATERIAIS
+    it({ id: 'dente_lobo', nome: 'Dente de lobo', descricao: 'Amarelo, curvo, ainda afiado.', slot: 'material', peso: 0, valor: 7 }),
+    it({ id: 'garra_curva', nome: 'Garra curva', descricao: 'Arrancada com a raiz. Vale mais assim.', slot: 'material', peso: 0, valor: 9 }),
+    it({ id: 'pele_de_urso', nome: 'Pele de urso', descricao: 'Pesa como um corpo morto e aquece como três.', slot: 'material', peso: 6, valor: 40, raridade: 'notavel' }),
+    it({ id: 'escama_de_junco', nome: 'Escama de junco', descricao: 'Verde-lodo, dura, quase bonita.', slot: 'material', peso: 0, valor: 6 }),
+    it({ id: 'glandula_de_veneno', nome: 'Glândula de veneno', descricao: 'Não fure. Nadja sabe o que fazer com ela.', slot: 'material', peso: 0, valor: 24, raridade: 'notavel' }),
+    it({ id: 'osso_limpo', nome: 'Osso limpo', descricao: 'Sem uma grama de carne. Ninguém sabe quem limpou.', slot: 'material', peso: 1, valor: 5 }),
+    it({ id: 'unha_de_carnical', nome: 'Unha de carniçal', descricao: 'Preta na base, e o preto não sai.', slot: 'material', peso: 0, valor: 26, raridade: 'notavel' }),
+    it({ id: 'sebo_bruto', nome: 'Sebo bruto', descricao: 'Vira vela, unguento ou nada.', slot: 'material', peso: 1, valor: 3, lojas: MERC }),
+    it({ id: 'sal_grosso', nome: 'Sal grosso', descricao: 'A carga que faz a estrada valer o risco.', slot: 'material', peso: 2, valor: 10, lojas: MERC }),
+    it({ id: 'carvao', nome: 'Carvão', descricao: 'Sem ele a forja é só uma pedra vazia.', slot: 'material', peso: 2, valor: 4, lojas: MERC }),
+    it({ id: 'fio_de_prata', nome: 'Fio de prata', descricao: 'Enrolado num carretel de osso. A prata morde o que a noite cospe.', slot: 'material', peso: 0, valor: 45, raridade: 'notavel', lojas: MERC }),
+    it({ id: 'estilhaco_de_pedra', nome: 'Estilhaço de pedra', descricao: 'Da galeria funda. Ainda morno quando ninguém olha.', slot: 'material', peso: 1, valor: 15, raridade: 'notavel' }),
+    it({ id: 'lasca_de_gargula', nome: 'Lasca de gárgula', descricao: 'Uma garra de granito partida na junta.', slot: 'material', peso: 1, valor: 38, raridade: 'rara' }),
+    it({ id: 'agua_do_espelho', nome: 'Água do Espelho', descricao: 'Num frasco tampado. Reflete o que estava lá antes de você.', slot: 'material', peso: 0, valor: 55, raridade: 'rara' }),
+    it({ id: 'cinza_de_mir', nome: 'Cinza de Mir', descricao: 'Não suja os dedos. Isso é o que assusta.', slot: 'material', peso: 0, valor: 80, raridade: 'rara' }),
+    it({ id: 'la_crua', nome: 'Lã crua', descricao: 'Ensebada, direto do lombo.', slot: 'material', peso: 2, valor: 4, lojas: MERC }),
+    it({ id: 'cera_de_vela', nome: 'Cera de vela', descricao: 'Raspada dos castiçais da capela. A igreja não sente falta.', slot: 'material', peso: 0, valor: 3, lojas: MERC }),
+    // ───────────────────────────── MISC / TESOUROS
+    it({ id: 'selo_partido', nome: 'Selo partido', descricao: 'Chumbo com um símbolo que se recusa a ser lembrado.', slot: 'misc', peso: 0, valor: 200, raridade: 'unica' }),
+    it({ id: 'livro_caixa', nome: 'Livro-caixa da casa', descricao: 'Duas colunas de números e uma verdade só.', slot: 'misc', peso: 2, valor: 90, raridade: 'rara' }),
+    it({ id: 'carta_lacrada', nome: 'Carta lacrada', descricao: 'O lacre está inteiro. Por enquanto.', slot: 'misc', peso: 0, valor: 15 }),
+    it({ id: 'insignia_da_guarda', nome: 'Insígnia da guarda', descricao: 'Latão com a torre de Halvet. Abre portas e fecha bocas.', slot: 'misc', peso: 0, valor: 30, raridade: 'notavel' }),
+    it({ id: 'relogio_de_areia', nome: 'Relógio de areia', descricao: 'A areia desce mais devagar do que deveria.', slot: 'misc', peso: 1, valor: 65, raridade: 'rara' }),
+    it({ id: 'chave_enferrujada', nome: 'Chave enferrujada', descricao: 'De alguma porta deste vale. Uma só.', slot: 'misc', peso: 0, valor: 10 }),
+    it({ id: 'colher_de_prata', nome: 'Colher de prata', descricao: 'Com o brasão da casa de pedra gasto pelo uso.', slot: 'misc', peso: 0, valor: 35 }),
+    it({ id: 'retrato_em_miniatura', nome: 'Retrato em miniatura', descricao: 'Uma dama jovem demais para ser quem parece.', slot: 'misc', peso: 0, valor: 55, raridade: 'notavel' }),
+];

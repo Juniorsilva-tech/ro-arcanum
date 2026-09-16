@@ -1268,3 +1268,374 @@ antigo.
 
 Arquivos: `content/vaelhorn/elenco-continente.ts` (novo),
 `engine/elenco.selftest.ts` (novo), `content/vaelhorn/index.ts`, `package.json`.
+
+---
+
+## Sessão 22 — Gemini — Reflexão Cognitiva dos NPCs, Integração Nous Research (Hermes) e Verificação Real da Área de IA
+
+### Objetivo
+1. Pesquisar e analisar referências de engines de RPG abertas no GitHub (`waidrin`, `generative_agents`, `NarrativeEngine-P`, `ai-town`).
+2. Implementar evolução arquitetural inspirada em Stanford Generative Agents: ciclo determinístico de reflexão cognitiva para os NPCs.
+3. Integrar API da Nous Research (Hermes) com base nas configurações locais (`~/.hermes/auth.json`), suportando modelos gratuitos (`upstage/solar-pro4:free`, `meituan/longcat-2.0:free`, `stepfun/step-3.7-flash:free`, etc.).
+4. Validar empiricamente todas as 4 ferramentas do painel de testes de IA da interface (`testarChave`, `buscarModelos`, `testarAdulto`, `testarNarracao`).
+5. Identificar e calibrar os melhores modelos para prosa fantástica em português e cenas adultas sem recusa.
+
+### O que foi implementado
+1. **Reflexão Cognitiva dos NPCs**:
+   - `Conviccao` em `engine/types.ts`: sínteses permanentes da postura emocional de cada NPC (`afeto`, `desconfianca`, `cautela`, `temor`) com intensidade e histórico.
+   - `engine/reflexao.ts`: motor determinístico com `LIMIAR_REFLEXAO = 10` e teto `MAX_CONVICCOES = 3`.
+   - `engine/memoria.ts`: liga `registrarLembranca()` ao acumulador de reflexão.
+   - `engine/llm.ts`: injeção de `conviccoesSobreVoce` no pacote de contexto enviado ao narrador.
+   - `engine/reflexao.selftest.ts`: 6 testes dedicados.
+2. **Integração Nous Research (Hermes)**:
+   - Provedor `'nous'` em `LlmProvider` (`engine/llm.ts`, `ui/storage.ts`, `ui/store.ts`).
+   - `chamarNous()`, `listarModelosNous()`, `testarChave()`, `testarCenaAdulta()`, `narrarComFallback()`.
+   - UI em `ui/screens/Sistema.tsx` com seletor dedicado "Nous (Hermes)", chips de modelos e busca viva.
+3. **Avaliação Empírica de Modelos Adultos e de Prosa**:
+   - `meituan/longcat-2.0:free` identificado como o campeão gratuito: narra cenas adultas explícitas sem recusa moralizante, prosa de altíssimo nível em PT-BR e acentuação UTF-8 perfeita.
+   - Inserido como destaque em `MODELOS_PARA_CENA_ADULTA` e marcado como `permissivo`.
+
+### Testes Executados
+- `npm run typecheck` (`tsc --noEmit`): 0 erros.
+- `scripts/testar_area_ia.ts`:
+  - `buscarModelos`: OK (412ms, 7 modelos gratuitos retornados).
+  - `testarChave`: OK (`{ ok: true }`).
+  - `testarAdulto`: OK (detecta com fidelidade se o modelo narra ou recusa).
+  - `testarNarracaoReal`: OK (1.817 caracteres gerados com 3 opções e tags de natureza).
+- `npm run test:engine`: 17 suítes verdes + 6 campanhas de 10 anos (>120.000 ações) sem travas e 0 violações de invariante.
+- `npm run test:jornadas` & `npm run test:casas`: 100% OK.
+- `expo export --platform web`: Build de produção gerado com sucesso (345 módulos em 8.3s).
+
+### Arquivos alterados / criados
+- `engine/types.ts`
+- `engine/reflexao.ts` (novo)
+- `engine/reflexao.selftest.ts` (novo)
+- `engine/memoria.ts`
+- `engine/llm.ts`
+- `ui/storage.ts`
+- `ui/store.ts`
+- `ui/screens/Sistema.tsx`
+- `package.json`
+- `scripts/testar_area_ia.ts` (novo)
+- `scripts/testar_modelos_adultos.ts` (novo)
+
+
+---
+
+## Sessão 19 — Gemini Antigravity — Renovação Imperceptível do Token Nous (Hermes)
+
+### Objetivo
+Token OAuth da Nous expira a cada 60 min. Pedido: renovação imperceptível sem interrupção do jogo.
+
+### Implementado
+
+metro.config.js (novo): Middleware Metro com GET /api/hermes/token e POST /api/hermes/refresh. Browser chama no mesmo origin (localhost:8081).
+
+engine/hermesBridge.ts (novo): Cache dinâmico em memória. obterTokenNousAtual() cascadeia memoria -> env -> auth.json -> .env.local. renovarTokenNous() usa endpoint Metro (browser) ou hermes CLI (Node) com deduplicacao. iniciarMonitoramentoNous() timer preventivo a cada 15min.
+
+engine/llm.ts: resolverApiKey usa bridge. chamarNous, listarModelosNous, testarChave fazem retry transparente sob 401.
+
+ui/store.ts: init() chama iniciarMonitoramentoNous. chaveEfetiva usa bridge.
+
+ui/screens/Sistema.tsx: Status de renovação automatica visivel na UI.
+
+### Testes
+- npm run typecheck: 0 erros.
+- npm run test:engine: 100% aprovado, 6 campanhas de 10 anos, 0 violacoes.
+- scripts/test_hermes_bridge.ts: token lido, testarChave ok, renovacao forcada ok, chamada pos-renovacao ok.
+- expo export --platform web: exit code 0.
+
+### Arquivos modificados/criados
+metro.config.js, engine/hermesBridge.ts, engine/index.ts, engine/llm.ts, ui/store.ts, ui/screens/Sistema.tsx, scripts/test_hermes_bridge.ts
+
+
+
+---
+
+## Sessao 20 - Gemini Antigravity - Melhorias do jogo (em andamento)
+
+### Objetivo
+Implementar 5 melhorias baseadas em jogos comparaveis: streaming de narracao, export/import de save, mapa visual, painel de relacoes visual e cronica pesquisavel.
+
+### Concluido ate aqui
+
+#### Feature 1 - Export/Import de Save (COMPLETO)
+
+`ui/store.ts`: adicionadas acoes `exportarSave()` e `importarSave()` na interface `GameState` e implementacao no `useGame`. `exportarSave` gera JSON via `exportarCampanha()` e dispara download via `document.createElement('a')`. `importarSave` le o JSON, valida via `importarCampanha()`, salva no slot ativo e recarrega o jogo. Tambem adicionados imports de `exportarCampanha`, `importarCampanha` e `slotAtual` de `./storage`.
+
+`ui/screens/Sistema.tsx`: adicionados botoes "Exportar save (.json)" e "Importar save (.json)" na secao Campanha. Importacao via `document.createElement('input')` com `FileReader`. Estilos `botaoImportar`, `botaoImportarTxt`, `botaoImportarSub` adicionados ao StyleSheet.
+
+#### Feature 3 - Cronica Pesquisavel (QUASE COMPLETO - faltam estilos)
+
+`ui/screens/Paineis.tsx`: componente `Cronica()` reescrito. Unifica `camp.cronica[]` (historico persistido, ordem reversa) + `feed` da sessao atual. Campo de busca por texto. Filtros por tipo: Tudo / Narracao / Ecos / Sistema. Contagem de entradas visiveis. Estilos ainda nao adicionados.
+
+### O que falta - PROXIMA SESSAO deve fazer:
+
+#### 1. Estilos da Cronica (urgente - vai quebrar no typecheck)
+
+Adicionar ao `StyleSheet.create({...})` no final de `ui/screens/Paineis.tsx`:
+
+```
+cronicaFiltros: { marginBottom: esp.md, gap: esp.sm },
+cronicaBusca: { fontFamily: fontes.mono, color: cores.vellum, fontSize: 13, borderWidth: 1, borderColor: cores.linha, borderRadius: 8, padding: esp.sm, marginBottom: esp.sm },
+cronicaChips: { flexDirection: 'row', gap: esp.sm, flexWrap: 'wrap' },
+cronicaChip: { borderWidth: 1, borderColor: cores.linha, borderRadius: 6, paddingHorizontal: esp.sm, paddingVertical: 3 },
+cronicaChipAtivo: { borderColor: cores.ouro, backgroundColor: cores.fundo3 },
+cronicaChipTxt: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11 },
+cronicaChipTxtAtivo: { color: cores.ouro },
+cronicaEntrada: { marginBottom: esp.md, paddingBottom: esp.md, borderBottomWidth: 1, borderBottomColor: cores.fundo3 },
+cronicaTurno: { color: cores.mudo, fontSize: 10, marginBottom: 2 },
+cronicaTexto: { fontSize: 17, lineHeight: 26 },
+```
+
+#### 2. Typecheck e testes
+
+Nao foram executados nesta sessao. Rodar antes de qualquer coisa:
+
+```
+npm run typecheck
+npm run test:engine
+```
+
+#### 3. Feature 2 - Streaming da Narracao (nao iniciada)
+
+`engine/llm.ts`: criar `narrarComStream(cfg, userMsg, sistema, onChunk, onDone)`. Adicionar `stream: true` ao body de `chamarNous` e `chamarOpenRouter`. Ler chunks SSE via `TextDecoder`. Chamar `onChunk(delta)` a cada pedaco e `onDone(textoCompleto)` ao fim.
+
+`ui/store.ts`: adicionar campo `textoStreaming?: string` no `GameState`. Em `narrar()`, usar `narrarComStream` com callbacks. `onChunk` faz `set({ textoStreaming: acumulado })`. `onDone` chama `interpretarResposta`, finaliza estado, limpa `textoStreaming`.
+
+`ui/screens/Jogo.tsx`: ler `textoStreaming` do store. Se ativo, mostrar texto acumulado com cursor piscando `|` no lugar do spinner de `ActivityIndicator`.
+
+#### 4. Feature 4 - Painel de Relacoes Visual (nao iniciada)
+
+`ui/screens/Paineis.tsx`: reescrever `Vinculos()`. Adicionar filtros: todos / aliados / rivais / familia / mortos. Ordenar por soma dos eixos. Cards com medidores visuais, convicoes ativas, 2 memorias recentes tipadas, selos de estado.
+
+#### 5. Feature 5 - Mapa Visual (nao iniciada)
+
+`content/vaelhorn/mapa.ts` (novo): `POSICOES_VAELHORN: Record<string, { x: number; y: number }>` coordenadas dos locais em grade 100x100.
+
+`ui/screens/MapaVisual.tsx` (novo): Views com posicao absoluta, fog of war baseado em `camp.locaisVisitados` e `camp.flags[oculto.flag]`. Locais nao visitados = nao renderiza. Locais com dica = ponto escurecido. Locais descobertos = nome + icone + cor se local atual.
+
+`ui/screens/Paineis.tsx`: integrar `MapaVisual` acima da lista de rotas no componente `Mapa()`.
+
+### Arquivos modificados nesta sessao
+
+- `ui/store.ts`
+- `ui/screens/Sistema.tsx`
+- `ui/screens/Paineis.tsx`
+
+### Proxima acao recomendada
+
+1. Adicionar estilos da Cronica em `Paineis.tsx`
+2. Rodar `npm run typecheck` - corrigir erros se houver
+3. Rodar `npm run test:engine`
+4. Continuar com Feature 2 (streaming)
+
+### Atualizacao da Sessao 20 — Codex (16/09/2026)
+
+O estado foi auditado antes de editar. A exportacao/importacao de save ja
+estava implementada e foi preservada. A Cronica foi concluida no bloco de UI:
+
+- `ui/screens/Paineis.tsx`: removido o campo `dia` inexistente no tipo canonico
+  de cronica (`turno`, `texto`, `tipo`); adicionados os estilos dos filtros,
+  chips, busca e entradas historicas.
+- `npm run typecheck`: passou sem erros.
+- `npm run test:engine`: passou em 176,1 s; suites de reflexao, povoamento,
+  expansao, causalidade, assentamentos e narracao verdes, seis campanhas de
+  dez anos executadas e nenhuma violacao de invariante.
+
+#### Feature 2 — Streaming da narracao (implementado nesta continuacao)
+
+- `engine/llm.ts`: `narrarComModeloStream` e leitor SSE para OpenRouter/Nous,
+  com renovacao Hermes em 401 e fallback para resposta comum quando o runtime
+  nao oferece `ReadableStream`. O texto parcial so e extraido do campo
+  `narracao`; JSON incompleto nunca e mostrado como prosa final.
+- `ui/store.ts`: novo `textoStreaming`; o turno permanece ocupado e a campanha
+  so recebe a narração/opcoes depois da validacao completa por
+  `interpretarResposta`. Falha de streaming reutiliza o fallback existente.
+- `ui/screens/Jogo.tsx`: exibe a prosa parcial com cursor enquanto o narrador
+  trabalha; sem dados parciais, mantém o indicador anterior.
+
+`npm run typecheck` passou depois da integração. Painel visual de relações e
+mapa visual continuam pendentes. Nenhuma alteração das implementações herdadas
+foi revertida.
+
+Validação adicional: `npx expo export --platform web` passou (346 módulos,
+bundle web gerado em `dist`).
+
+#### Feature 4 — Painel visual de relações (implementado nesta continuacao)
+
+- `ui/screens/Paineis.tsx`: filtros `Todos`, `Aliados`, `Rivais`, `Família` e
+  `Mortos`, com contagem e ordenação por intensidade dos eixos.
+- Cada cartão agora exibe convicções cognitivas ativas e as duas memórias mais
+  recentes, além dos medidores existentes, segredos e ações de grupo.
+- A classificação é apenas apresentação: não cria confiança, rivalidade ou
+  morte; usa exclusivamente `npcState`, parentesco e laços já canônicos.
+
+Validação desta etapa: `npm run typecheck` passou e `npx expo export
+--platform web` passou (344 módulos).
+
+#### Feature 5 — Mapa visual (implementado nesta continuacao)
+
+- `content/vaelhorn/mapa.ts`: coordenadas determinísticas de apresentação por
+  local/região; não substituem nem alteram as rotas da engine.
+- `ui/screens/MapaVisual.tsx`: mapa em grade com local atual destacado,
+  lugares visitados nomeados e destinos ainda não visitados representados como
+  pontos de interrogação. A visibilidade usa `locaisVisitados` e
+  `rotasVisiveis`, mantendo fog of war coerente com o save.
+- `ui/screens/Paineis.tsx`: mapa integrado acima da lista de rotas.
+
+Validação final da Sessão 20: `npm run typecheck` passou e `npx expo export
+--platform web` passou (348 módulos). As cinco features previstas estão agora
+implementadas; os testes de engine continuam verdes após a alteração anterior,
+e esta última etapa foi somente de apresentação.
+
+## Estado atual — prioridade seguinte (Codex, 16/09/2026)
+
+Os blocos antigos que dizem que as Features 2, 4 e 5 estão pendentes são
+histórico da Sessão 20 e ficam superseded por seu registro final acima. As
+pendências de engenharia que continuam válidas são:
+
+1. Rotina por sublocal/expediente e reação de NPC autoral à insegurança difusa.
+2. Regressão real de Nemesis (perda de nível/adaptações, não só de servos).
+3. Marca do Caçador como progressão excepcional com custo e consequência.
+4. Balanceamento fino do planejador entre urgência, perigo e estado do jogador.
+
+### Etapa iniciada — planejador sensível a perigo
+
+`engine/planejadorSim.ts` agora calcula custo de rota com `perigoEfetivoDaRota`.
+Em prazo apertado, o tempo domina; com folga, personagem abaixo de 50% da vida
+prioriza segurança. A engine continua escolhendo apenas arestas reais e não
+consome RNG.
+
+`engine/causal.selftest.ts` ganhou o caso de rota curta perigosa versus rota
+mais longa segura. `npm run typecheck` e `npx tsx engine/causal.selftest.ts`
+passaram.
+
+Validação completa posterior: `npm run test:engine` passou em 158,7 s, com
+seis campanhas de dez anos e zero violações de invariante.
+
+Próximo passo recomendado: medir o planejador em campanha longa e depois
+implementar sublocais/expediente, que é a base necessária para o mundo reagir
+com precisão antes de mexer no Nemesis.
+
+### Etapa seguinte — medo da cidade alcança NPCs autorais
+
+`engine/historiaViva.ts` passou a aceitar o `ContentBundle` opcional em
+`localEfetivo`. Quando disponível, a cidade-pai é resolvida por rota antes de
+avaliar insegurança; assim um NPC escrito à mão que mora numa taverna, capela
+ou outro sublocal também se recolhe quando a cidade entra em pânico. Os
+chamadores de disponibilidade, convívio, formação, grupo, autonomia, guerra e
+política foram atualizados para fornecer o mapa. Chamadas antigas sem content
+continuam funcionando com o comportamento compatível.
+
+`engine/povoamento.selftest.ts` ganhou o caso autoral: com insegurança 90, o
+NPC abandona o sublocal e retorna à cidade-pai. `npm run typecheck` e
+`npx tsx engine/povoamento.selftest.ts` passaram.
+
+Após a integração, `npm run test:engine` passou em 169,8 s: seis campanhas de
+dez anos e zero violações de invariante.
+
+O expediente visual entre sublocais ainda é a próxima camada: a regra de medo
+agora está correta, mas a rotina dos moradores gerados continua usando os
+destinos geográficos existentes (`rotina`), sem um modelo explícito de turno
+de trabalho, folga e doença.
+
+### Etapa seguinte — expediente individual (em validação)
+
+`engine/types.ts` ganhou `ExpedienteNPC` (`diasTrabalho` e `periodos`). O
+gerador de povoamento agora atribui expediente determinístico por ofício;
+`localEfetivo` aplica folga semanal, doença/fome e só permite a rotina no
+turno de trabalho. A rotina continua definindo o destino, portanto não foram
+criados locais fictícios nem atalhos no mapa.
+
+O typecheck passou. A execução de `npx tsx engine/povoamento.selftest.ts` e da
+suíte completa ficou temporariamente bloqueada pelo ambiente Node, que falhou
+antes de carregar o teste com `uv_os_get_passwd ... ENOMEM`; não é falha de
+assertion do jogo. Reexecutar quando o runtime liberar recursos. Os testes
+anteriores à alteração continuam registrados acima como verdes.
+
+### Tentativa de validação — 16/09/2026
+
+`npm run typecheck` passou novamente. `npx tsx engine/povoamento.selftest.ts` e
+`npm run test:engine` continuam falhando antes do primeiro teste com o mesmo
+`uv_os_get_passwd ... ENOMEM`. O bloqueio é do runtime/ambiente, não de uma
+asserção ou erro de compilação do projeto.
+
+### Validação alternativa concluída — 16/09/2026
+
+Como o `tsx` continuou bloqueado pelo `uv_os_get_passwd`, os arquivos da
+engine foram compilados com `tsc` para um diretório temporário ignorado e
+executados diretamente com Node. O selftest de povoamento passou, incluindo
+as três asserções novas de expediente (turno, doença e folga). As 17 suítes da
+engine e `simLongo 10 6` também passaram: seis campanhas de dez anos, zero
+violações de invariante, em 165,6 s.
+
+---
+
+## Sessão 23 — Claude — dois defeitos vistos em jogo pelo dono
+
+### Estado encontrado
+Trabalho não commitado de outro agente (Gemini Antigravity): 141 arquivos,
+1.276 linhas. O registro dele diz, na própria seção "o que falta": *"Nao foram
+executados nesta sessao"* sobre typecheck e testes, e avisa que a Crônica
+"vai quebrar no typecheck". Rodei antes de tocar em qualquer coisa: `tsc`
+estava limpo — os estilos que faltavam já tinham sido acrescentados por alguém.
+
+### Defeito 1 — "só escreve a primeira palavra"
+
+O streaming da narração aparecia truncado no painel e **congelava**.
+
+Causa em `parcialNarracao` (engine/llm.ts): o extrator usava
+`"((?:\.|[^"\])*)`, que para na primeira aspa **não escapada**. Modelo
+pequeno erra escape o tempo todo — escreve `"narracao": "Ela diz "sim" e sai."`
+Como a função devolvia sempre o mesmo fragmento curto a cada pedaço novo do
+stream, a tela nunca mais atualizava.
+
+Reproduzido em bancada antes de corrigir, com seis formatos reais de resposta:
+
+| entrada | antes | depois |
+| --- | --- | --- |
+| JSON correto | ok | ok |
+| aspas não escapadas | **`"Ela diz "`** | inteiro |
+| prosa crua, sem JSON | **vazio** | inteiro |
+| cerca de markdown | sobrava `"}\`\`\`` | limpo |
+| chave acentuada (`narração`) | **vazio** | inteiro |
+
+O parcial agora é deliberadamente tolerante: ele existe para MOSTRAR, não para
+validar. A validação continua sendo de `interpretarResposta`, no fim, que é
+quem impede texto cru de virar cena.
+
+### Defeito 2 — "não segue a história que está posta"
+
+O narrador recebia o estado do mundo e **nenhuma linha do texto que ele mesmo
+tinha acabado de escrever**. O pacote tinha 40 campos — fatos, rumores,
+presentes, convicções, arcos — e nenhum era a cena anterior. Cada chamada
+começava do zero, então o modelo reabria a cena, reapresentava quem já estava
+ali e ignorava a conversa em curso.
+
+`camp.cronica` existia em `Campaign` desde o começo, nascia `[]` na criação,
+era preservada na migração — e **ninguém nunca escreveu nela**. Duas coisas
+dependiam disso e não funcionavam: a tela de crônica (que só via a sessão
+corrente) e a continuidade do narrador.
+
+- `registrarNaCronica()` em `engine/memoria.ts`: grava, ignora vazio, recusa
+  duplicata seguida, teto de 200 entradas (o save inteiro passa por JSON a
+  cada gravação).
+- `ui/store.ts` grava nos dois pontos onde uma narração vira feed.
+- `engine/llm.ts` leva `cenasAnteriores` (as duas últimas) no pacote, com
+  instrução explícita de continuidade — sem a instrução o campo seria ignorado.
+
+### Testes
+`engine/narracao.selftest.ts`, novo, ligado ao `test:engine`. Cobre os seis
+formatos de resposta, a garantia de que o parcial nunca encolhe entre pedaços,
+e o ciclo da crônica incluindo o teto e a deduplicação.
+
+`tsc` limpo · `test:engine` (18 suítes + 6 campanhas de 10 anos, 0 violações) ·
+jornadas · casas · `expo export` OK.
+
+### Pendências do Gemini que continuam abertas
+Features 4 e 5 do plano dele (painel de relações visual, mapa visual) não foram
+iniciadas. A lista grande do dono segue: consequências visíveis, Diretor de
+Arcos, rotina urbana, Nemesis que perde, Marca do Caçador + linhagem, ação
+livre 2.0, risco de combate, E2E — mais ações de ganhar dinheiro/treinar e
+itens raros.

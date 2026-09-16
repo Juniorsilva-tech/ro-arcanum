@@ -288,6 +288,25 @@ const moradoresDe = (localId: string) => C.npcs.filter(n => n.localBase === loca
     const saem = lavradoras.filter(n => assinaturaDoDia(n).includes('F')).length;
     ok(saem / lavradoras.length > 0.7, `Quem trabalha fora continua saindo (${saem}/${lavradoras.length})`);
   }
+
+  const comExpediente = C.npcs.filter(n => n.id.startsWith('morador_') && n.expediente);
+  ok(comExpediente.length >= 100, `${comExpediente.length} moradores têm expediente individual`);
+  const trabalhador = comExpediente.find(n => n.expediente!.periodos.some(p => (n.rotina[p] ?? n.localBase) !== n.localBase));
+  if (trabalhador) {
+    const c = nova('expediente');
+    const din = c.npcState[trabalhador.id];
+    const pessoa = c.vivo!.pessoas[trabalhador.id];
+    const periodo = trabalhador.expediente!.periodos.find(p => (trabalhador.rotina[p] ?? trabalhador.localBase) !== trabalhador.localBase)!;
+    ok(localEfetivo(c, trabalhador, periodo) === trabalhador.rotina[periodo], 'Expediente permite deslocamento no turno de trabalho');
+    pessoa.saude = 20;
+    ok(localEfetivo(c, trabalhador, periodo) === pessoa.casa, 'Doença interrompe expediente e leva NPC para casa');
+    pessoa.saude = 100;
+    c.calendario.dia = 6; // domingo; o expediente comum trabalha de segunda a sexta
+    if (!trabalhador.expediente!.diasTrabalho.includes(0)) {
+      ok(localEfetivo(c, trabalhador, periodo) === pessoa.casa, 'Folga semanal interrompe expediente');
+    }
+    void din;
+  }
 }
 
 // ── A rotina reage ao estado do mundo ─────────────────────────────────────
@@ -349,6 +368,15 @@ const moradoresDe = (localId: string) => C.npcs.filter(n => n.localBase === loca
     const depois = foraAgora(periodoComSaida!);
     ok(depois < emPaz, `Ameaça ativa no destino esvazia o caminho (${emPaz} → ${depois})`);
   }
+
+  // NPC autoral que mora numa sublocalização também sente a insegurança da
+  // cidade-pai quando o mapa é fornecido à resolução de presença.
+  const autoral = { ...C.npcs[0], id: 'npc_autoral_medo', localBase: cidadeId.id, rotina: { [periodoComSaida!]: alvo ?? cidadeId.id } };
+  const comAutoral = { ...C, npcs: [...C.npcs, autoral] };
+  c.npcState[autoral.id] = { vivo: true, eixos: {}, memoria: [], tensao: 0 };
+  c.vivo!.pessoas[autoral.id] = { natal: cidadeId.id, casa: cidadeId.id, local: cidadeId.id, deslocado: false, objetivo: 'rotina', moedas: 20, fome: 0, saude: 100, habilidade: 1, prestigio: 0, proximaDecisao: c.calendario.dia + 3, parceiros: {}, filhos: [] };
+  c.vivo!.cidades[cidadeId.id].inseguranca = 90;
+  ok(localEfetivo(c, autoral, periodoComSaida!, comAutoral) === cidadeId.id, 'NPC autoral se recolhe no sublocal quando a cidade entra em pânico');
 }
 
 console.log('Testes de povoamento e lugares ocultos passaram.');

@@ -82,7 +82,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
       if (p.objetivo !== 'cacar') p.casa = p.local;
       registrarFato(camp, { tipo: 'mudanca', local: p.local, texto: `${npc.nome} chegou e estabeleceu uma nova moradia.`, atores: [npc.id], publico: true });
     }
-    const local = localEfetivo(camp, npc) ?? p.local;
+    const local = localEfetivo(camp, npc, undefined, content) ?? p.local;
     const cidadeId = cidadeIdDoLocal(content, camp, local), c = cidadeId && v.cidades[cidadeId];
     if (!c) continue;
     p.fome = Math.max(0, Math.min(100, p.fome + (c.fomeDias ? 6 : -12)));
@@ -128,7 +128,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
       treinarNpc(camp, npc, 1);
     } else {
       p.objetivo = 'rotina';
-      const conhecida = elenco.find(n => n.id !== npc.id && camp.npcState[n.id]?.vivo && (camp.npcState[n.id]?.idade ?? n.idade) >= 18 && n.especie !== 'oni' && localEfetivo(camp, n) === local && !n.parentesco && !npc.parentesco);
+      const conhecida = elenco.find(n => n.id !== npc.id && camp.npcState[n.id]?.vivo && (camp.npcState[n.id]?.idade ?? n.idade) >= 18 && n.especie !== 'oni' && localEfetivo(camp, n, undefined, content) === local && !n.parentesco && !npc.parentesco);
       if (conhecida) {
         p.parceiros[conhecida.id] = Math.min(100, (p.parceiros[conhecida.id] ?? 0) + 3);
         const outra = v.pessoas[conhecida.id];

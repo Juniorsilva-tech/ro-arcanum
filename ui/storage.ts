@@ -166,7 +166,7 @@ export async function apagarSessao(): Promise<void> {
 // ── Configuração ──────────────────────────────────────────────────────────
 
 export type ConfigApp = {
-  provider: 'openrouter' | 'anthropic';
+  provider: 'openrouter' | 'anthropic' | 'nous';
   apiKey?: string;
   modelo: string;
   /** @deprecated o narrador é obrigatório; mantido só para saves antigos. */
