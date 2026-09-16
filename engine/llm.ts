@@ -39,6 +39,9 @@ export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
 // substitui esta lista pela lista viva da sua conta.
 export const SUGESTOES_OPENROUTER = [
+  'nousresearch/hermes-3-llama-3.1-405b:free', // Nous gratis, primeira escolha
+  'nousresearch/deephermes-3-mistral-24b-preview:free',
+  'nousresearch/deephermes-3-llama-3-8b-preview:free',
   'deepseek/deepseek-chat-v3-0324:free', // qualidade alta, pouco filtro em ficção
   'cognitivecomputations/dolphin3.0-mistral-24b:free', // linhagem sem filtro
   'nousresearch/hermes-3-llama-3.1-405b', // permissivo, bom em prosa
@@ -60,7 +63,73 @@ export const SUGESTOES_OPENROUTER = [
 //
 // Os de baixo custam frações de centavo por cena. Dez dólares de crédito duram
 // muito e resolvem o problema de vez.
+/**
+ * Fabricante do modelo, para a tela agrupar.
+ *
+ * O slug da OpenRouter ja carrega o dono antes da barra ("nousresearch/..."),
+ * mas o slug e' identificador e nao nome: "sao10k" e "thedrummer" sao apelidos
+ * de quem afinou o modelo, nao marcas que alguem reconheca numa lista. Por
+ * isso o nome legivel fica declarado.
+ */
+export const FABRICANTE: Record<string, string> = {
+  nousresearch: 'Nous Research',
+  sao10k: 'Sao10K',
+  thedrummer: 'TheDrummer',
+  gryphe: 'Gryphe',
+  cognitivecomputations: 'Cognitive Computations',
+  deepseek: 'DeepSeek',
+  mistralai: 'Mistral AI',
+  meta: 'Meta',
+  'meta-llama': 'Meta',
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  google: 'Google',
+  qwen: 'Qwen',
+  microsoft: 'Microsoft',
+  undi95: 'Undi95',
+  neversleep: 'NeverSleep',
+  latitudegames: 'Latitude Games',
+  infermatic: 'Infermatic',
+  nvidia: 'NVIDIA',
+  cohere: 'Cohere',
+};
+
+/** Nome do fabricante a partir do slug. Desconhecido vira o proprio prefixo. */
+export function fabricanteDe(id: string): string {
+  const dono = id.split('/')[0]?.toLowerCase() ?? '';
+  return FABRICANTE[dono] ?? (dono ? dono[0].toUpperCase() + dono.slice(1) : 'Outros');
+}
+
+/**
+ * Agrupa uma lista de modelos por fabricante, preservando a ordem em que os
+ * fabricantes aparecem na lista original — e' assim que a Nous continua no
+ * topo sem precisar de uma regra separada de ordenacao.
+ */
+export function agruparPorFabricante<T extends { id: string }>(
+  modelos: T[],
+): { fabricante: string; modelos: T[] }[] {
+  const grupos = new Map<string, T[]>();
+  for (const m of modelos) {
+    const f = fabricanteDe(m.id);
+    (grupos.get(f) ?? grupos.set(f, []).get(f)!).push(m);
+  }
+  return [...grupos].map(([fabricante, modelos]) => ({ fabricante, modelos }));
+}
+
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
+  // ── Nous Research, de graça ───────────────────────────────────────────────
+  //
+  // Pedido do dono: os Hermes gratuitos primeiro na lista. Eles são a melhor
+  // aposta grátis para esta cena — a família Hermes é afinada para seguir
+  // instrução sem recusar, que é exatamente o que o narrador precisa.
+  //
+  // Continua valendo o aviso do bloco acima: endpoint grátis some, muda de
+  // nome e tem teto diário. Se a narração começar a falhar, troque para um
+  // pago aqui embaixo; custa frações de centavo por cena.
+  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', nota: 'Nous grátis, o maior: melhor prosa da lista sem pagar', pago: false },
+  { id: 'nousresearch/deephermes-3-llama-3-8b-preview:free', nota: 'Nous grátis, pequeno e rápido; cena curta', pago: false },
+  { id: 'nousresearch/deephermes-3-mistral-24b-preview:free', nota: 'Nous grátis, meio-termo: aguenta diálogo', pago: false },
+
   // ── Custam crédito, e é o que realmente funciona ──────────────────────────
   { id: 'sao10k/l3.3-euryale-70b', nota: 'o melhor para cena adulta longa; escreve diálogo sozinho', pago: true },
   { id: 'thedrummer/rocinante-12b', nota: 'baratíssimo e nunca trava; bom para começar', pago: true },

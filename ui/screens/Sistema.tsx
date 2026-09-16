@@ -12,6 +12,7 @@ import {
   MODELO_PADRAO_ANTHROPIC,
   perfilDoModelo,
   MODELOS_PARA_CENA_ADULTA,
+  agruparPorFabricante,
   todosNpcs,
 } from '@/engine';
 
@@ -268,23 +269,31 @@ export function Config() {
           <TextoMono style={{ color: cores.mudo, marginBottom: esp.xs }}>
             Para cena adulta (toque para usar):
           </TextoMono>
-          {MODELOS_PARA_CENA_ADULTA.map((m) => (
-            <Pressable
-              key={m.id}
-              style={[styles.linhaRec, modelo === m.id && styles.linhaRecAtiva]}
-              onPress={() => {
-                setModelo(m.id);
-                setConfig({ modelo: m.id });
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.recId}>{m.id.replace(':free', '')}</Text>
-                <Text style={styles.recNota}>{m.nota}</Text>
-              </View>
-              <Text style={[styles.recSelo, m.pago ? styles.recPago : styles.recGratis]}>
-                {m.pago ? 'crédito' : 'grátis'}
-              </Text>
-            </Pressable>
+          {/* Agrupado por fabricante: a lista crua misturava marcas e o mesmo
+              nome aparecia em pontos distantes. A ordem dos grupos segue a
+              primeira aparicao na lista, entao a Nous continua no topo. */}
+          {agruparPorFabricante(MODELOS_PARA_CENA_ADULTA).map((grupo) => (
+            <View key={grupo.fabricante} style={{ marginBottom: esp.sm }}>
+              <TextoMono style={styles.fabricante}>{grupo.fabricante.toUpperCase()}</TextoMono>
+              {grupo.modelos.map((m) => (
+                <Pressable
+                  key={m.id}
+                  style={[styles.linhaRec, modelo === m.id && styles.linhaRecAtiva]}
+                  onPress={() => {
+                    setModelo(m.id);
+                    setConfig({ modelo: m.id });
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.recId}>{m.id.split('/')[1]?.replace(':free', '') ?? m.id}</Text>
+                    <Text style={styles.recNota}>{m.nota}</Text>
+                  </View>
+                  <Text style={[styles.recSelo, m.pago ? styles.recPago : styles.recGratis]}>
+                    {m.pago ? 'crédito' : 'grátis'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           ))}
           <TextoMono style={{ color: cores.linha, marginTop: esp.xs }}>
             Os ":free" vivem caindo e, quando existem, costumam vir de provedor que modera —
@@ -410,6 +419,13 @@ export function Config() {
 }
 
 const styles = StyleSheet.create({
+  fabricante: {
+    color: cores.ouro,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    marginTop: esp.sm,
+    marginBottom: esp.xs,
+  },
   cartelaSelo: { letterSpacing: 3, color: cores.mudo, marginBottom: esp.sm },
   fecho: { color: cores.vellum, fontSize: 20, lineHeight: 30 },
   linha: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: esp.sm },
