@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Saída de compilação do TypeScript ao lado do fonte.
+# A engine e o conteúdo são .ts; qualquer .js irmão é artefato de build e
+# entrou no repositório por engano numa sessão anterior.
+engine/*.js
+content/vaelhorn/*.js
