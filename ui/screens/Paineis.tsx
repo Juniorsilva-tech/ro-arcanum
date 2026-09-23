@@ -357,7 +357,7 @@ export function Ficha() {
       <View style={styles.attrRow}>
         <Text style={styles.invItem}>Armadura</Text>
         <TextoMono style={{ color: cores.vellum }}>
-          {p.equipado.armadura ? itemPorId(content, p.equipado.armadura)?.nome : '—'}
+          {p.equipado.armadura ? itemPorId(content, p.equipado.armadura, p)?.nome : '—'}
         </TextoMono>
       </View>
 
@@ -366,7 +366,7 @@ export function Ficha() {
           <Divisor label="inventário" />
           {Object.entries(p.inventario).map(([id, qtd]) => (
             <View key={id} style={styles.attrRow}>
-              <Text style={styles.invItem}>{itemPorId(content, id)?.nome ?? id.replace(/_/g, ' ')}</Text>
+              <Text style={styles.invItem}>{itemPorId(content, id, p)?.nome ?? id.replace(/_/g, ' ')}</Text>
               <TextoMono>×{qtd}</TextoMono>
             </View>
           ))}

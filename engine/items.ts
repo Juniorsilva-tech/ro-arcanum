@@ -14,8 +14,13 @@ export function estoqueNaLoja(content: ContentBundle, camp: Campaign, itemId: st
   return cidadeDoLocal(content, camp, camp.localAtual)?.estoque[itemId] ?? (camp.vivo ? 0 : 12);
 }
 
-export function itemPorId(content: ContentBundle, id: string): Item | undefined {
-  return content.itens.find((i) => i.id === id);
+/**
+ * Resolve um item pelo id. Passe o personagem sempre que ele estiver à mão:
+ * sem ele, peças forjadas (engine/forja.ts) não são encontradas — ficam na
+ * mochila como id solto, sem nome, sem dano e impossíveis de equipar.
+ */
+export function itemPorId(content: ContentBundle, id: string, p?: Personagem): Item | undefined {
+  return content.itens.find((i) => i.id === id) ?? p?.itensForjados?.find((i) => i.id === id);
 }
 
 const SLOTS_EQUIPAVEIS: ItemSlot[] = ['arma', 'armadura', 'escudo', 'acessorio'];
@@ -25,7 +30,7 @@ export function ehEquipavel(item: Item): boolean {
 }
 
 export function armaEquipada(content: ContentBundle, p: Personagem): Item | undefined {
-  return p.equipado.arma ? itemPorId(content, p.equipado.arma) : undefined;
+  return p.equipado.arma ? itemPorId(content, p.equipado.arma, p) : undefined;
 }
 
 // Bônus de defesa vindo de armadura + escudo equipados.
@@ -33,7 +38,7 @@ export function bonusDefesaEquip(content: ContentBundle, p: Personagem): number 
   let b = 0;
   for (const id of [p.equipado.armadura, p.equipado.escudo]) {
     if (!id) continue;
-    b += itemPorId(content, id)?.defesa ?? 0;
+    b += itemPorId(content, id, p)?.defesa ?? 0;
   }
   return b;
 }
@@ -42,7 +47,7 @@ export function bonusDefesaEquip(content: ContentBundle, p: Personagem): number 
 export function cargaAtual(content: ContentBundle, p: Personagem): number {
   let total = 0;
   for (const [id, qtd] of Object.entries(p.inventario)) {
-    total += (itemPorId(content, id)?.peso ?? 0) * qtd;
+    total += (itemPorId(content, id, p)?.peso ?? 0) * qtd;
   }
   return Math.round(total * 10) / 10;
 }
@@ -50,7 +55,7 @@ export function cargaAtual(content: ContentBundle, p: Personagem): number {
 export function equipar(content: ContentBundle, camp: Campaign, itemId: string): { ok: boolean; motivo?: string } {
   const p = camp.personagem;
   if ((p.inventario[itemId] ?? 0) <= 0) return { ok: false, motivo: 'você não tem esse item' };
-  const item = itemPorId(content, itemId);
+  const item = itemPorId(content, itemId, p);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   if (!ehEquipavel(item)) return { ok: false, motivo: 'não é equipável' };
   p.equipado[item.slot as 'arma' | 'armadura' | 'escudo' | 'acessorio'] = itemId;
@@ -68,7 +73,7 @@ export function usarConsumivel(
 ): { ok: boolean; motivo?: string } {
   const p = camp.personagem;
   if ((p.inventario[itemId] ?? 0) <= 0) return { ok: false, motivo: 'você não tem esse item' };
-  const item = itemPorId(content, itemId);
+  const item = itemPorId(content, itemId, p);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   if (item.slot !== 'consumivel' || !item.efeitosUso) return { ok: false, motivo: 'não dá para usar isso' };
   for (const ef of item.efeitosUso) aplicarEfeito(camp, ef);
@@ -121,7 +126,7 @@ export function vender(
 ): { ok: boolean; motivo?: string } {
   const p = camp.personagem;
   if ((p.inventario[itemId] ?? 0) <= 0) return { ok: false, motivo: 'você não tem esse item' };
-  const item = itemPorId(content, itemId);
+  const item = itemPorId(content, itemId, p);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   // desequipa se estiver vendendo o último equipado
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
@@ -143,7 +148,7 @@ export function vender(
 export function verbosConcedidos(content: ContentBundle, p: Personagem): Set<string> {
   const out = new Set<string>();
   for (const id of Object.keys(p.inventario)) {
-    const v = itemPorId(content, id)?.concedeVerbo;
+    const v = itemPorId(content, id, p)?.concedeVerbo;
     if (v) out.add(v);
   }
   return out;

@@ -17,9 +17,11 @@ import { localEfetivo } from './historiaViva';
 import { treinarNpc } from './progressaoNpc';
 import { concederDespertar } from './progresso';
 import { multiplicadorDeDescanso, condicoesTratadasAoDescansar } from './classe';
+import { forjar } from './forja';
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
+  | { tipo: 'forjar'; molde: string; material: string }
   | { tipo: 'treinar_companheiro'; npcId: string }
   | { tipo: 'consolidar_legado' }
   | { tipo: 'missao'; id: string; escolha: 'aceitar' | 'ajudar' | 'negociar' | 'investigar' | 'confrontar' }
@@ -88,6 +90,12 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     if (noticia) noticia.conhecimento = 'rumor';
     descobrirNoticias(content, camp);
     return terminar(noticia ? `Você ouviu: ${noticia.texto}` : 'Você ouviu as notícias locais. Não surgiu informação nova.');
+  }
+  // A forja cuida do próprio tempo (engine/forja.ts): avança os períodos e o
+  // mundo ela mesma, porque o tempo gasto depende de a peça ter saído ou não.
+  if (acao.tipo === 'forjar') {
+    const r = forjar(content, camp, acao.molde, acao.material);
+    return { ok: r.ok, texto: r.texto };
   }
   if (acao.tipo === 'descansar') {
     const custo = c ? 3 : 0;

@@ -1,5 +1,5 @@
 // ARCANUM · Inventário e equipamento (GDD §32 P1, §13.6).
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
 import { TextoSerif, TextoMono, Divisor, Selo, Botao } from '../components';
@@ -11,6 +11,9 @@ import {
   cargaAtual,
   bonusDefesaEquip,
   derivados,
+  ondeForjar,
+  receitasDisponiveis,
+  COMBUSTIVEL,
   type Item,
   type ItemSlot,
 } from '@/engine';
@@ -48,7 +51,20 @@ export function Inventario() {
   const usarItem = useGame((s) => s.usarItem);
   const venderItem = useGame((s) => s.venderItem);
   const irPara = useGame((s) => s.irPara);
+  const acaoMundo = useGame((s) => s.acaoMundo);
   const p = camp.personagem;
+  const [ultimaForja, setUltimaForja] = useState<string | null>(null);
+
+  // A forja só aparece onde se pode forjar (engine/forja.ts decide o lugar).
+  const onde = ondeForjar(content, camp);
+  const carvao = p.inventario[COMBUSTIVEL] ?? 0;
+  const receitas = onde.pode ? receitasDisponiveis(camp).filter((r) => r.temMaterial) : [];
+  const forjarPeca = async (molde: string, material: string) => {
+    const antes = p.itensForjados?.length ?? 0;
+    await acaoMundo({ tipo: 'forjar', molde, material });
+    const depois = useGame.getState().camp?.personagem.itensForjados ?? [];
+    setUltimaForja(depois.length > antes ? `Saiu da bigorna: ${depois[depois.length - 1].nome}.` : 'A forja não pegou. Veja o registro.');
+  };
 
   const carga = cargaAtual(content, p);
   const cargaMax = derivados(p).cargaMax;
@@ -56,7 +72,7 @@ export function Inventario() {
   const d = derivados(p, defBonus);
 
   const entradas = Object.entries(p.inventario)
-    .map(([id, qtd]) => ({ item: itemPorId(content, id), qtd, id }))
+    .map(([id, qtd]) => ({ item: itemPorId(content, id, camp.personagem), qtd, id }))
     .filter((e) => e.item) as { item: Item; qtd: number; id: string }[];
 
   const slots: ('arma' | 'armadura' | 'escudo' | 'acessorio')[] = ['arma', 'armadura', 'escudo', 'acessorio'];
@@ -75,7 +91,7 @@ export function Inventario() {
       <Divisor label="Equipado" />
       {slots.map((s) => {
         const id = p.equipado[s];
-        const item = id ? itemPorId(content, id) : undefined;
+        const item = id ? itemPorId(content, id, camp.personagem) : undefined;
         return (
           <View key={s} style={styles.equipRow}>
             <View style={{ flex: 1 }}>
@@ -132,6 +148,39 @@ export function Inventario() {
           </View>
         </View>
       ))}
+
+      {onde.pode && (
+        <>
+          <Divisor label="Forja" />
+          <TextoMono style={{ color: cores.mudo }}>
+            {onde.ferreira ? `${onde.ferreira.nome} empresta a bigorna e olha o seu trabalho.` : 'Há uma forja acesa aqui.'}
+            {` Carvão: ${carvao}. Cada peça gasta um carvão e quatro períodos do dia.`}
+          </TextoMono>
+          {ultimaForja && <TextoMono style={{ color: cores.verdigris }}>{ultimaForja}</TextoMono>}
+          {carvao < 1 && <TextoMono>Sem carvão a forja é só uma pedra vazia.</TextoMono>}
+          {carvao >= 1 && receitas.length === 0 && (
+            <TextoMono>Falta material: minério, prata, lascas de gárgula, ossos, dentes, garras, couro ou peles.</TextoMono>
+          )}
+          {carvao >= 1 &&
+            receitas.map(({ molde, material }) => (
+              <View key={`${molde.id}-${material.item}`} style={styles.itemRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.slotItem}>
+                    {molde.nome} de {material.rotulo}
+                  </Text>
+                  <TextoMono style={{ color: cores.linha }}>
+                    {molde.quantidade}× {material.rotulo} · {rotuloSlot(molde.slot)}
+                    {molde.dano ? ` · dano base ${molde.dano.base}` : ''}
+                    {molde.defesa !== undefined ? ` · defesa base ${molde.defesa}` : ''}
+                  </TextoMono>
+                </View>
+                <Pressable style={styles.miniBtn} onPress={() => forjarPeca(molde.id, material.item)}>
+                  <Text style={styles.miniBtnTxt}>forjar</Text>
+                </Pressable>
+              </View>
+            ))}
+        </>
+      )}
 
       <View style={{ height: esp.lg }} />
       <Botao titulo="Ir à loja" variante="acento" onPress={() => irPara('loja')} />

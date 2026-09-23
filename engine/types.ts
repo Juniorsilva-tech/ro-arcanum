@@ -191,6 +191,12 @@ export type Personagem = {
   inventario: Record<string, number>;
   equipado: Equipado;
   artesConhecidas: string[];
+  /**
+   * Peças que o próprio personagem forjou (engine/forja.ts). Mesmo padrão de
+   * `artesCriadas`: o catálogo do conteúdo é fixo, e o que o jogador cria mora
+   * na campanha. `itemPorId` procura aqui quando recebe o personagem.
+   */
+  itensForjados?: Item[];
   // Fusões de estilo já criadas nesta vida — limite de 3 (ver engine/fusao.ts).
   fusoesFeitas?: number;
   alcunhas: string[];

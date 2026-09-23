@@ -38,7 +38,7 @@ export function Combate() {
   // catálogo estático — senão um estilo recém-criado nunca aparece aqui.
   const artes = artesConhecidasResolvidas(content, camp);
   const consumiveis = Object.keys(p.inventario)
-    .map((id) => itemPorId(content, id))
+    .map((id) => itemPorId(content, id, camp.personagem))
     .filter((i) => i && i.slot === 'consumivel');
 
   return (

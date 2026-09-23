@@ -29,7 +29,7 @@ export function Loja() {
   const aVenda = itensDaLoja(content, local.id);
 
   const meus = Object.entries(p.inventario)
-    .map(([id, qtd]) => ({ item: itemPorId(content, id), qtd, id }))
+    .map(([id, qtd]) => ({ item: itemPorId(content, id, camp.personagem), qtd, id }))
     .filter((e) => e.item) as { item: Item; qtd: number; id: string }[];
 
   const temLoja = aVenda.length > 0;

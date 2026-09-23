@@ -22,6 +22,7 @@ import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
+import { itemPorId } from './items';
 import { conviccoesDoNpc } from './reflexao';
 import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
 import {
@@ -375,7 +376,7 @@ export function montarPacote(
 ) {
   const p = camp.personagem;
   const narrativa = contextoNarrativo(camp, ctx);
-  const nomeItem = (id: string) => content.itens.find((i) => i.id === id)?.nome ?? id;
+  const nomeItem = (id: string) => itemPorId(content, id, p)?.nome ?? id;
 
   // O que ele carrega, com o nome exato do catálogo.
   const inventario = Object.entries(p.inventario)
