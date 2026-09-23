@@ -19,8 +19,34 @@ export type PerfilOni = {
   origem: 'canon_adaptado' | 'original';
 };
 
+export type TracosNemesis = {
+  imunidades?: string[];
+  fraquezas?: string[];
+  odios?: string[];
+};
+
+export type RelacoesNemesis = {
+  liderId?: string;
+  servosIds?: string[];
+  irmaoDeSangueId?: string;
+};
+
+export type CheatDeathNemesis = {
+  vezes: number;
+  diaRetorno?: number;
+  cicatrizOrigem?: string;
+  tecnicaSobrevivida?: string;
+};
+
 export type RivalPersistente = {
-  evolucao?: { nivel: number; servos: number; papel: 'errante' | 'predador' | 'agente'; plano: 'alimentar' | 'ocultar' | 'perseguir'; proximaAcao: number; ultimaEmboscada?: number; refugio: string; adaptacoes: Record<string, number> };
+  evolucao?: { nivel: number; servos: number; papel: 'errante' | 'predador' | 'agente'; plano: 'alimentar' | 'ocultar' | 'perseguir'; proximaAcao: number; ultimaEmboscada?: number; refugio: string; adaptacoes: Record<string, number>; cicatrizes?: string[] };
+  cicatrizes?: string[];
+  titulo?: string;
+  tracos?: TracosNemesis;
+  cheatDeath?: CheatDeathNemesis;
+  relacoes?: RelacoesNemesis;
+  traumaJogador?: boolean;
+  ultimoBark?: string;
   id: string;
   criaturaId: string;
   nome: string;
@@ -50,4 +76,5 @@ export type EstadoTatico = {
   preso?: number;
   frio?: number;
   revelado?: boolean;
+  emFuria?: number;
 };

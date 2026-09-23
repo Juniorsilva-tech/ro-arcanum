@@ -26,9 +26,19 @@ import {
   LIMITE_FUSOES,
   type AttrKey,
   type EstadoEntrada,
+  type ContentBundle,
   todosNpcs,
   calcularContexto,
   retratoProgressaoNpc,
+  obterOcupantesSubespaco,
+  TRIBOS_CATALOGO,
+  PROJETOS_CATALOGO,
+  verificarSupressaoMana,
+  avaliarReacaoHumanosPresenca,
+  type SetorTrabalhoSubespaco,
+  type TriboAcolhida,
+  type EstrategiaCompanhia,
+  type ModoKai,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -36,6 +46,9 @@ export function Ficha() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
   const jogarCarta = useGame((s) => s.jogarCartaMemoria);
+  const executarTreinoQuaseMorte = useGame((s) => s.executarTreinoQuaseMorteAcao);
+  const alternarSakai = useGame((s) => s.alternarSakaiModoAcao);
+  const [msgTreino, setMsgTreino] = useState<string | null>(null);
   const p = camp.personagem;
   const nomes = content.cenario.nomesAtributos;
   const d = derivados(p, bonusDefesaEquip(content, p));
@@ -46,9 +59,15 @@ export function Ficha() {
     <Pagina>
       <BarraVoltar titulo="Ficha" />
       <TextoSerif style={{ fontSize: 30, color: cores.ouro }}>{p.nome}</TextoSerif>
-      <TextoMono style={{ marginBottom: esp.md }}>
-        {classe?.nome} · {p.idade ?? 18} anos · nível {p.nivel} · {p.xp} xp · {p.dinheiro} moedas
-      </TextoMono>
+      {content.cenario.id === 'tsukimichi' ? (
+        <TextoMono style={{ marginBottom: esp.md }}>
+          {classe?.nome} · {p.idade ?? 18} anos · {p.cartaoAventureiro?.registrado ? `Guilda: Rank ${p.cartaoAventureiro.rank} (Oficial: Nv. 1 · Poder Incomensurável)` : 'Sem registro na Guilda (Poder Não Mensurado)'} · {p.dinheiro} moedas
+        </TextoMono>
+      ) : (
+        <TextoMono style={{ marginBottom: esp.md }}>
+          {classe?.nome} · {p.idade ?? 18} anos · nível {p.nivel} · {p.xp} xp · {p.dinheiro} moedas
+        </TextoMono>
+      )}
       {camp.genese && (
         <TextoMono style={{ color: cores.linha, marginBottom: esp.md, fontStyle: 'italic' }}>
           {camp.genese.marca === 'tragedia'
@@ -60,6 +79,187 @@ export function Ficha() {
               ? ' · aprendeu tudo devagar'
               : ''}
         </TextoMono>
+      )}
+
+      {p.cartaoAventureiro?.registrado ? (
+        <Card acento={cores.ouro}>
+          <View style={styles.linhaTitulo}>
+            <TextoSerif style={{ fontSize: 20, color: cores.ouro }}>
+              Cartão da Guilda de Tsige · Rank {p.cartaoAventureiro.rank}
+            </TextoSerif>
+            <Selo texto="PARÂMETROS QUEBRADOS" cor={cores.ouro} />
+          </View>
+          <TextoMono style={{ color: cores.vellum, marginTop: 6, fontSize: 13 }}>
+            Nível Oficial da Orbe: 1 (Erro de Medição / Overflow de Mana)
+          </TextoMono>
+          <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+            Poder Real da Alma: Incomensurável (Fora do sistema de bênçãos da Deusa)
+          </TextoMono>
+          <TextoMono style={{ color: cores.mudo, marginTop: 4 }}>
+            Referência de Níveis do Mundo: Campeões da Guilda ~Nv. 350–400 · Bestas Primordiais Nv. 1200–2000
+          </TextoMono>
+          <TextoMono style={{ color: cores.linha, marginTop: 4, fontStyle: 'italic' }}>
+            A orbe de cristal de Tsige não foi concebida para mensurar sua assinatura de mana. Para a recepcionista você é um mero Rank E descartável; para a Wasteland, uma calamidade andando.
+          </TextoMono>
+        </Card>
+      ) : content.cenario.id === 'tsukimichi' ? (
+        <Card acento={cores.linha}>
+          <View style={styles.linhaTitulo}>
+            <TextoSerif style={{ fontSize: 18, color: cores.mudo }}>
+              Guilda de Aventureiros · Sem Registro
+            </TextoSerif>
+            <Selo texto="NÃO AVALIADO" cor={cores.linha} />
+          </View>
+          <TextoMono style={{ color: cores.mudo, marginTop: 4 }}>
+            Você ainda não possui Cartão de Aventureiro nem Rank oficial na Guilda.
+          </TextoMono>
+          <TextoMono style={{ color: cores.linha, marginTop: 2 }}>
+            Visite a Guilda de Aventureiros em Tsige para tocar na Orbe de Medição e avaliar sua assinatura de mana.
+          </TextoMono>
+        </Card>
+      ) : null}
+
+      {p.sakai?.desbloqueado && (
+        <Card acento={cores.violeta}>
+          <View style={styles.linhaTitulo}>
+            <TextoSerif style={{ fontSize: 18, color: cores.violeta }}>
+              Kai (Sakai) · Domínio Divino Inato (Nível {p.sakai.nivel})
+            </TextoSerif>
+            {p.sakai.modoAtivo ? (
+              <Selo texto={`ATIVO: ${p.sakai.modoAtivo.toUpperCase()}`} cor={cores.ouro} />
+            ) : (
+              <Selo texto="INATIVO" cor={cores.linha} />
+            )}
+          </View>
+          <TextoMono style={{ color: cores.linha, marginTop: 2, fontStyle: 'italic' }}>
+            Dádiva primordial concedida por Tsukuyomi — controle do vácuo de mana que governa sentidos, barreiras, fortalecimento e magia.
+          </TextoMono>
+
+          {/* Descrição do modo ativo */}
+          {p.sakai.modoAtivo === 'percepcao' && (
+            <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+              ◆ Percepção Ativa: visão 360° que mapeia seres vivos e antecipa movimentos (+acerto e revelação de rotas).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'fortalecimento' && (
+            <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>
+              ◆ Fortalecimento Ativo: mana infundido nas fibras musculares e esqueleto (+dano físico massivo e defesa sólida).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'magia' && (
+            <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>
+              ◆ Magia Ativa: correntes arcanas condensadas e aceleradas (+dano mágico massivo e amplificação arcana).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'audicao' && (
+            <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+              ◆ Audição Ativa: captação sônica e acústica a quilômetros, anulando qualquer chance de emboscada (+acerto e iniciativa).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'barreira_magica' && (
+            <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+              ◆ Barreira Mágica Ativa: película impenetrável de mana puro que dispersa feitiços e maldições (+defesa mágica).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'barreira_fisica' && (
+            <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>
+              ◆ Barreira Física Ativa: compressão espacial que bloqueia lâminas, projéteis e impacto cinético (+defesa física).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'cura' && (
+            <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+              ◆ Cura Ativa: manto regenerativo nutrindo tecidos corporais (+cura contínua).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'supressao' && (
+            <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>
+              ◆ Supressão Ativa: aura oculta para impedir que hyumans e feras entrem em pânico (+defesa equilibrada).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'destruicao' && (
+            <TextoMono style={{ color: cores.cinabrio, marginTop: 4 }}>
+              ◆ Destruição Ativa: fio de corte espacial singular que ignora qualquer armadura ou defesa (+dano puro).
+            </TextoMono>
+          )}
+          {p.sakai.modoAtivo === 'sentidos' && (
+            <TextoMono style={{ color: cores.verdigris, marginTop: 4 }}>
+              ◆ Sentidos Cósmicos Ativos: visão espectral e percepção temporal acelerada (+acerto e evasão).
+            </TextoMono>
+          )}
+
+          {/* Botões de alternância rápida dos modos dominados */}
+          <View style={{ marginTop: esp.sm, paddingTop: esp.sm, borderTopWidth: 1, borderTopColor: cores.linha }}>
+            <TextoMono style={{ color: cores.mudo, fontSize: 11, marginBottom: 4 }}>
+              Modos Dominados (toque para ativar/desativar):
+            </TextoMono>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs }}>
+              {p.sakai.modosDisponiveis.map((m) => {
+                const ativo = p.sakai?.modoAtivo === m;
+                const rotulos: Record<string, string> = {
+                  percepcao: 'Percepção',
+                  fortalecimento: 'Fortalecimento',
+                  magia: 'Magia',
+                  audicao: 'Audição',
+                  barreira_magica: 'Barreira Mágica',
+                  barreira_fisica: 'Barreira Física',
+                  cura: 'Cura',
+                  supressao: 'Supressão',
+                  destruicao: 'Destruição',
+                  sentidos: 'Sentidos',
+                };
+                return (
+                  <Botao
+                    key={m}
+                    titulo={`${ativo ? '✓ ' : ''}${rotulos[m] ?? m}`}
+                    variante={ativo ? 'primario' : 'fantasma'}
+                    onPress={async () => {
+                      await alternarSakai(m);
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          <TextoMono style={{ color: cores.mudo, marginTop: esp.sm, fontSize: 11 }}>
+            Treinos Realizados: {p.sakai.treinosRealizados ?? 0} · Domínio Acumulado: {p.sakai.experienciaTreino ?? 0} XP
+          </TextoMono>
+        </Card>
+      )}
+
+      {content.cenario.id === 'tsukimichi' && (
+        <Card acento={cores.cinabrio}>
+          <View style={styles.linhaTitulo}>
+            <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>
+              Concentração Total · Quase-Morte Consciente
+            </TextoSerif>
+            <Selo texto={`CICLOS: ${p.treinoQuaseMorte?.ciclosConcluidos ?? 0}`} cor={cores.cinabrio} />
+          </View>
+          <TextoMono style={{ color: cores.linha, marginTop: 4, fontStyle: 'italic' }}>
+            Disciplina extrema de foco no Vazio para qualquer caminho (espada, arco, magia primordial ou combate marcial): a respiração cessa, o coração silencia e o corpo experimenta a morte clínica temporária. Ao despertar do vácuo, o recipiente de mana estilhaça limites e expande permanentemente.
+          </TextoMono>
+          <TextoMono style={{ color: cores.verdigris, marginTop: 6 }}>
+            ◆ Mana Máximo Expandido: +{p.treinoQuaseMorte?.manaExpandidoTotal ?? 0} (Capacidade Total: {p.recursosMax.mana ?? 10})
+          </TextoMono>
+          <TextoMono style={{ color: cores.mudo, marginTop: 2, fontSize: 12 }}>
+            A cada ciclo de renascimento consciente, atributos (Precisão, Resiliência, Raciocínio, Físico) transcendem a escala dos mortais e o Domínio do Kai evolui (+40 XP).
+          </TextoMono>
+          {msgTreino && (
+            <TextoMono style={{ color: cores.ouro, marginTop: 6, fontStyle: 'italic' }}>
+              {msgTreino}
+            </TextoMono>
+          )}
+          <View style={{ marginTop: 8 }}>
+            <Botao
+              titulo="Executar Ciclo de Quase-Morte Consciente"
+              variante="primario"
+              onPress={async () => {
+                const msg = await executarTreinoQuaseMorte();
+                setMsgTreino(msg);
+              }}
+            />
+          </View>
+        </Card>
       )}
 
       {camp.memoriasInfancia && camp.memoriasInfancia.length > 0 && (
@@ -185,9 +385,9 @@ function Deriv({ nome, v }: { nome: string; v: number }) {
   );
 }
 
-function nomeRecurso(content: any, id: string): string {
+function nomeRecurso(content: ContentBundle, id: string): string {
   if (id === 'vida') return 'Vida';
-  return content.cenario.recursos.find((r: any) => r.id === id)?.nome ?? id;
+  return content.cenario.recursos.find((r) => r.id === id)?.nome ?? id;
 }
 
 function pontuacaoVinculo(din: { eixos: Record<string, number>; vivo: boolean } | undefined): number {
@@ -219,7 +419,15 @@ export function Vinculos() {
   const resgatar = useGame(s => s.resgatarFamiliar);
   const alternarCompanheiro = useGame(s => s.alternarCompanheiroAcao);
   const agirMundo = useGame(s => s.acaoMundo);
+  const acolherTribo = useGame(s => s.acolherTriboAcao);
+  const definirAlocacao = useGame(s => s.definirAlocacaoTrabalhoAcao);
+  const iniciarConstrucao = useGame(s => s.iniciarConstrucaoAcao);
+  const avancarCiclo = useGame(s => s.avancarCicloSubespacoAcao);
+  const definirEstrategia = useGame(s => s.definirEstrategiaCompanhiaAcao);
+  const despacharCaravana = useGame(s => s.despacharCaravanaAcao);
+  const alternarSakai = useGame(s => s.alternarSakaiModoAcao);
   const [avisoGrupo, setAvisoGrupo] = useState('');
+  const [avisoAsora, setAvisoAsora] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'aliados' | 'rivais' | 'familia' | 'mortos'>('todos');
 
   const elenco = todosNpcs(content, camp);
@@ -325,6 +533,491 @@ export function Vinculos() {
           </Card>
         );
       })}
+
+      {camp.asora && Object.keys(camp.asora.contratos).length > 0 && (
+        <>
+          <Divisor label="contratos de alma · servas de asora" />
+          <TextoSerif style={styles.intro}>
+            Entidades ancestrais unidas por pacto de alma. A lealdade e o afeto moldam a harmonia de Asora.
+          </TextoSerif>
+          {Object.values(camp.asora.contratos).map((c) => (
+            <Card key={c.id} acento={c.ativaNoGrupo ? cores.ouro : '#5B9BD5'}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 20 }}>{c.nomeConcedido} · {c.titulo}</TextoSerif>
+                {c.nivelGuilda && <Selo texto={`NV. ${c.nivelGuilda}`} cor={cores.ouro} />}
+              </View>
+              {c.ativaNoGrupo && (
+                <View style={{ marginVertical: 4 }}>
+                  <Selo texto="COMPANHEIRA ATIVA NO GRUPO" cor={cores.verdigris} />
+                </View>
+              )}
+              <TextoSerif style={{ marginTop: esp.sm, color: cores.vellum, fontSize: 16, lineHeight: 24 }}>
+                {c.formaHumanoide.personalidade}
+              </TextoSerif>
+              <TextoMono style={{ color: cores.linha, marginTop: 4 }}>
+                Vestes: {c.formaHumanoide.vestes}
+              </TextoMono>
+              <TextoMono style={{ marginTop: 6, color: cores.vellum }}>
+                Pacto: {c.proporcao} · Lealdade: {c.lealdade}% · Afeto: {c.afeto}% · Ciúme: {c.ciume}%
+              </TextoMono>
+              <TextoMono style={{ color: cores.mudo, marginTop: 2 }}>
+                Papel em Asora: {c.papelAsora ?? 'companheira'} · Forma original: {c.formaOriginal}
+              </TextoMono>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {camp.asora && (() => {
+        const asora = camp.asora;
+        const temContrato = Object.keys(asora.contratos).length > 0;
+        if (!asora.desbloqueado || !temContrato) {
+          return (
+            <>
+              <Divisor label="subespaço dimensional · selado" />
+              <Card acento={cores.mudo}>
+                <View style={styles.linhaTitulo}>
+                  <TextoSerif style={{ fontSize: 18, color: cores.mudo }}>
+                    Subespaço Dimensional Selado
+                  </TextoSerif>
+                  <Selo texto="AGUARDANDO PACTO" cor={cores.mudo} />
+                </View>
+                <TextoSerif style={{ marginTop: esp.sm, color: cores.vellum, fontSize: 15, lineHeight: 22 }}>
+                  O domínio dimensional autônomo permanece selado. Nas lendas da Wasteland, o subespaço só desperta quando o convocado firma um Contrato de Alma (Pacto Mestre-Servo) com uma Besta Primordial do Ermo (como Shen no Desfiladeiro ou a Calamidade Voraz no Pântano).
+                </TextoSerif>
+                <TextoMono style={{ marginTop: esp.sm, color: cores.ouro, fontSize: 12 }}>
+                  Explore a Grande Terra Desolada para avistar, subjugar e pactuar com as feras ancestrais.
+                </TextoMono>
+              </Card>
+            </>
+          );
+        }
+
+        return (
+          <>
+            <Divisor label={`subespaço dimensional · ${asora.nome || 'soberania pessoal'}`} />
+            {avisoAsora ? (
+              <Card acento={cores.ouro}>
+                <TextoSerif style={{ color: cores.ouro, fontSize: 15 }}>{avisoAsora}</TextoSerif>
+              </Card>
+            ) : null}
+
+            {/* 1. SOBERANIA & DADOS GERAIS */}
+            <Card acento="#5B9BD5">
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 20, color: '#5B9BD5' }}>
+                  {asora.nome || 'Subespaço Pessoal'}
+                </TextoSerif>
+                <Selo texto="SOBERANIA DIMENSIONAL" cor="#5B9BD5" />
+              </View>
+              <TextoMono style={{ marginTop: 6, color: cores.vellum }}>
+                População Total: {asora.populacao} cidadãos acolhidos · Segurança: {asora.seguranca}% · Harmonia: {asora.harmonia}%
+              </TextoMono>
+              <TextoMono style={{ color: cores.linha, marginTop: 4 }}>
+                Estoques: {asora.estoques.comida} alimentos · {asora.estoques.seda} seda celestial · {asora.estoques.minerio} minério estelar · {asora.estoques.draupnir} anéis Draupnir
+              </TextoMono>
+              <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>
+                Ferramentas Rúnicas Disponíveis: {asora.recursosEspeciais?.ferramentasDisponiveis ?? 0} (Elder Dwarves) · Madeira Nobre: {asora.recursosEspeciais?.madeiraNobre ?? 0}
+              </TextoMono>
+
+              {/* Presença de quem está no subespaço agora */}
+              {(() => {
+                const dadosPresenca = obterOcupantesSubespaco(camp);
+                return (
+                  <View style={{ marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: cores.linha }}>
+                    <TextoSerif style={{ fontSize: 15, color: '#5B9BD5' }}>
+                      Ocupação do Subespaço no Momento:
+                    </TextoSerif>
+                    <TextoMono style={{ color: dadosPresenca.jogadorPresente ? cores.verdigris : cores.mudo, marginTop: 2, fontSize: 12 }}>
+                      Status do Soberano: {dadosPresenca.jogadorPresente ? 'Presente no subespaço' : 'Fora (no mundo exterior)'}
+                    </TextoMono>
+                    <TextoMono style={{ color: cores.vellum, marginTop: 2, fontSize: 11 }}>
+                      Presentes agora: {dadosPresenca.ocupantes.length > 0 ? dadosPresenca.ocupantes.map((o) => `${o.nome} [${o.papel}]`).join(' · ') : 'Nenhum ocupante registrado'}
+                    </TextoMono>
+                  </View>
+                );
+              })()}
+            </Card>
+
+            {/* 2. CONTENÇÃO DE MANA & SUPRESSÃO COM O KAI */}
+            <Card acento={verificarSupressaoMana(camp).suprimido ? cores.verdigris : cores.cinabrio}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18, color: verificarSupressaoMana(camp).suprimido ? cores.verdigris : cores.cinabrio }}>
+                  Contenção de Mana & Domínio do Kai (Sakai)
+                </TextoSerif>
+                <Selo
+                  texto={verificarSupressaoMana(camp).suprimido ? 'MANA SUPRIMIDO' : 'AURA TRANSBORDANDO'}
+                  cor={verificarSupressaoMana(camp).suprimido ? cores.verdigris : cores.cinabrio}
+                />
+              </View>
+              <TextoSerif style={{ marginTop: 4, color: cores.vellum, fontSize: 14 }}>
+                {verificarSupressaoMana(camp).motivo}
+              </TextoSerif>
+              <TextoMono style={{ marginTop: 4, color: cores.linha, fontSize: 12 }}>
+                Reação nos Mercados Humanos: {avaliarReacaoHumanosPresenca(camp).descricaoNarrativa}
+              </TextoMono>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm, marginTop: esp.sm }}>
+                <Botao
+                  titulo="Ativar Sakai: Supressão"
+                  variante={camp.personagem.sakai?.modoAtivo === 'supressao' ? 'primario' : 'fantasma'}
+                  onPress={async () => setAvisoAsora(await alternarSakai('supressao'))}
+                />
+                <Botao
+                  titulo="Ativar Sakai: Fortalecimento"
+                  variante={camp.personagem.sakai?.modoAtivo === 'fortalecimento' ? 'primario' : 'fantasma'}
+                  onPress={async () => setAvisoAsora(await alternarSakai('fortalecimento'))}
+                />
+                {camp.personagem.sakai?.modoAtivo ? (
+                  <Botao
+                    titulo="Desativar Sakai (Modo Normal)"
+                    variante="fantasma"
+                    onPress={async () => setAvisoAsora(await alternarSakai(camp.personagem.sakai!.modoAtivo!))}
+                  />
+                ) : null}
+              </View>
+            </Card>
+
+            {/* 3. AFAZERES DO SUBESPAÇO & ALOCAÇÃO DE TRABALHO */}
+            <Card acento={cores.ouro}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>
+                  Frentes de Trabalho & Afazeres de Asora
+                </TextoSerif>
+                <Selo texto="ORGANIZAÇÃO LABORAL" cor={cores.ouro} />
+              </View>
+              <TextoSerif style={{ color: cores.vellum, marginTop: 4, fontSize: 14 }}>
+                Distribua a população acolhida pelos afazeres práticos. O canteiro de obras requer operários ativos para erguer monumentos.
+              </TextoSerif>
+
+              {(() => {
+                const aloc = asora.alocacaoTrabalho ?? {
+                  agricultura: 0,
+                  mineracao: 0,
+                  forja_ferramentas: 0,
+                  tecelagem: 0,
+                  seguranca_patrulha: 0,
+                  construcao_obras: 0,
+                };
+                const totalAlocado = Object.values(aloc).reduce((a, b) => a + b, 0);
+                const livres = Math.max(0, asora.populacao - totalAlocado);
+
+                const setores: { id: SetorTrabalhoSubespaco; nome: string; desc: string }[] = [
+                  { id: 'agricultura', nome: 'Agricultura & Plantações', desc: 'Produz alimentos em grande escala' },
+                  { id: 'mineracao', nome: 'Mineração & Pedreiras', desc: 'Extrai minério estelar das montanhas' },
+                  { id: 'forja_ferramentas', nome: 'Forjas de Ferramentas (Anões)', desc: 'Gera ferramentas rúnicas para construções' },
+                  { id: 'tecelagem', nome: 'Ateliê & Fiação de Seda', desc: 'Produz seda mágica e vestes' },
+                  { id: 'seguranca_patrulha', nome: 'Patrulhas de Fronteira', desc: 'Eleva a segurança territorial' },
+                  { id: 'construcao_obras', nome: 'Canteiro de Obras Ativo', desc: 'Trabalha nas grandes construções' },
+                ];
+
+                const alterar = async (setor: SetorTrabalhoSubespaco, delta: number) => {
+                  const atual = aloc[setor] ?? 0;
+                  const novo = Math.max(0, atual + delta);
+                  if (delta > 0 && livres < delta) {
+                    setAvisoAsora('Não há trabalhadores livres suficientes em repouso.');
+                    return;
+                  }
+                  const res = await definirAlocacao({ [setor]: novo });
+                  setAvisoAsora(res);
+                };
+
+                return (
+                  <View style={{ marginTop: esp.sm }}>
+                    <TextoMono style={{ color: livres > 0 ? cores.verdigris : cores.mudo, marginBottom: esp.xs }}>
+                      Trabalhadores em Repouso/Reserva: {livres} de {asora.populacao}
+                    </TextoMono>
+                    {setores.map((s) => (
+                      <View
+                        key={s.id}
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          paddingVertical: 4,
+                          borderBottomWidth: 1,
+                          borderBottomColor: cores.fundo3,
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <TextoMono style={{ color: cores.vellum, fontSize: 13 }}>
+                            {s.nome}: <Text style={{ color: cores.ouro, fontWeight: 'bold' }}>{aloc[s.id] ?? 0}</Text>
+                          </TextoMono>
+                          <TextoMono style={{ color: cores.mudo, fontSize: 10 }}>{s.desc}</TextoMono>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <Pressable
+                            onPress={() => alterar(s.id, -5)}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              backgroundColor: cores.fundo3,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ color: cores.vellum, fontSize: 12 }}>-5</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => alterar(s.id, 5)}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              backgroundColor: cores.linha,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ color: cores.ouro, fontSize: 12 }}>+5</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+
+                    <View style={{ marginTop: esp.md }}>
+                      <Botao
+                        titulo="Avançar Ciclo de Trabalho (Colheita & Produção)"
+                        variante="primario"
+                        onPress={async () => setAvisoAsora(await avancarCiclo())}
+                      />
+                    </View>
+                  </View>
+                );
+              })()}
+            </Card>
+
+            {/* 4. POVOAMENTO ORGÂNICO & TRIBOS ACOLHIDAS */}
+            <Card acento="#5B9BD5">
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18, color: '#5B9BD5' }}>
+                  Tribos da Wasteland & Povoamento Orgânico
+                </TextoSerif>
+                <Selo texto="DEMI-HUMANOS" cor="#5B9BD5" />
+              </View>
+              <TextoSerif style={{ color: cores.vellum, marginTop: 4, fontSize: 14 }}>
+                A população do subespaço não surge por decreto: cada tribo resgatada na Wasteland traz conhecimentos, trabalhadores e matérias-primas únicas.
+              </TextoSerif>
+
+              {/* Tribos já acolhidas */}
+              <View style={{ marginTop: esp.sm }}>
+                <TextoMono style={{ color: cores.ouro, fontSize: 13, marginBottom: 4 }}>Tribos Integradas:</TextoMono>
+                {asora.tribosAcolhidas && Object.keys(asora.tribosAcolhidas).length > 0 ? (
+                  Object.values(asora.tribosAcolhidas).map((t) => (
+                    <View key={t.id} style={{ marginBottom: 4, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: cores.verdigris }}>
+                      <TextoMono style={{ color: cores.vellum, fontSize: 12 }}>
+                        {t.nome} ({t.populacao} membros): {t.especialidade}
+                      </TextoMono>
+                    </View>
+                  ))
+                ) : (
+                  <TextoMono style={{ color: cores.mudo, fontSize: 12 }}>Nenhuma tribo acolhida formalmente ainda.</TextoMono>
+                )}
+              </View>
+
+              {/* Tribos disponíveis para acolher */}
+              {(() => {
+                const naoAcolhidas = (Object.keys(TRIBOS_CATALOGO) as (keyof typeof TRIBOS_CATALOGO)[]).filter(
+                  (tid) => !asora.tribosAcolhidas?.[tid],
+                );
+                if (naoAcolhidas.length === 0) return null;
+                return (
+                  <View style={{ marginTop: esp.md, paddingTop: esp.sm, borderTopWidth: 1, borderTopColor: cores.linha }}>
+                    <TextoMono style={{ color: '#5B9BD5', fontSize: 13, marginBottom: 6 }}>
+                      Tribos Resgatáveis na Wasteland:
+                    </TextoMono>
+                    {naoAcolhidas.map((tid) => {
+                      const def = TRIBOS_CATALOGO[tid];
+                      return (
+                        <View key={tid} style={{ marginBottom: esp.sm, backgroundColor: cores.fundo3, padding: esp.sm, borderRadius: 6 }}>
+                          <TextoSerif style={{ fontSize: 16, color: cores.vellum }}>{def.nome}</TextoSerif>
+                          <TextoMono style={{ color: cores.mudo, fontSize: 11, marginTop: 2 }}>{def.descricao}</TextoMono>
+                          <TextoMono style={{ color: cores.ouro, fontSize: 11, marginTop: 2 }}>
+                            Especialidade: {def.especialidade} (+{def.populacaoInicial} indivíduos)
+                          </TextoMono>
+                          <View style={{ marginTop: esp.xs }}>
+                            <Botao
+                              titulo={`Acolher ${def.nome} em Asora`}
+                              variante="fantasma"
+                              onPress={async () => setAvisoAsora(await acolherTribo(tid))}
+                            />
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })()}
+            </Card>
+
+            {/* 5. CANTEIRO DE OBRAS & GRANDES PROJETOS */}
+            <Card acento={cores.ouro}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>
+                  Canteiro de Obras & Grandes Monumentos
+                </TextoSerif>
+                <Selo texto="INFRAESTRUTURA" cor={cores.ouro} />
+              </View>
+              <TextoSerif style={{ color: cores.vellum, marginTop: 4, fontSize: 14 }}>
+                Obras que eram impossíveis por falta de materiais ou de ferramentas rúnicas dos anões tornam-se viáveis conforme Asora progride.
+              </TextoSerif>
+
+              {/* Obra em andamento */}
+              {asora.projetoEmAndamento ? (
+                <View style={{ marginTop: esp.sm, padding: esp.sm, backgroundColor: cores.fundo3, borderRadius: 6, borderLeftWidth: 3, borderLeftColor: cores.ouro }}>
+                  <TextoSerif style={{ fontSize: 16, color: cores.ouro }}>
+                    Obra em Execução: {asora.projetoEmAndamento.nome}
+                  </TextoSerif>
+                  <TextoMono style={{ color: cores.vellum, fontSize: 12, marginTop: 2 }}>
+                    Ciclos Restantes: {asora.projetoEmAndamento.turnosRestantes} · Operários Dedicados: {asora.projetoEmAndamento.operariosAlocados}
+                  </TextoMono>
+                </View>
+              ) : null}
+
+              {/* Catálogo de Projetos */}
+              <View style={{ marginTop: esp.md }}>
+                <TextoMono style={{ color: cores.ouro, fontSize: 13, marginBottom: 6 }}>Projetos Catalogados:</TextoMono>
+                {Object.values(PROJETOS_CATALOGO).map((proj) => {
+                  const concluido = asora.projetosConcluidos?.includes(proj.id);
+                  const emAndamento = asora.projetoEmAndamento?.id === proj.id;
+                  const ferrDisp = asora.recursosEspeciais?.ferramentasDisponiveis ?? 0;
+                  const semFerramentas = ferrDisp < proj.custo.ferramentas;
+                  const operariosAlocados = asora.alocacaoTrabalho?.construcao_obras ?? 0;
+                  const semOperarios = operariosAlocados < proj.operariosNecessarios;
+                  const semTribo = proj.triboObrigatoria && !asora.tribosAcolhidas?.[proj.triboObrigatoria];
+
+                  return (
+                    <View
+                      key={proj.id}
+                      style={{
+                        marginBottom: esp.sm,
+                        padding: esp.sm,
+                        backgroundColor: concluido ? cores.fundo3 + '88' : cores.fundo3,
+                        borderRadius: 6,
+                        borderLeftWidth: 2,
+                        borderLeftColor: concluido ? cores.verdigris : emAndamento ? cores.ouro : cores.linha,
+                      }}
+                    >
+                      <View style={styles.linhaTitulo}>
+                        <TextoSerif style={{ fontSize: 16, color: concluido ? cores.verdigris : cores.vellum }}>
+                          {proj.nome}
+                        </TextoSerif>
+                        {concluido ? (
+                          <Selo texto="CONCLUÍDO" cor={cores.verdigris} />
+                        ) : emAndamento ? (
+                          <Selo texto="EM EXECUÇÃO" cor={cores.ouro} />
+                        ) : null}
+                      </View>
+                      <TextoMono style={{ color: cores.mudo, fontSize: 11, marginTop: 2 }}>{proj.descricao}</TextoMono>
+                      <TextoMono style={{ color: cores.linha, fontSize: 11, marginTop: 2 }}>
+                        Custos: {proj.custo.comida} comida · {proj.custo.minerio} minério · {proj.custo.seda} seda · {proj.custo.ferramentas} ferramentas rúnicas · Operários: {proj.operariosNecessarios}
+                      </TextoMono>
+                      <TextoMono style={{ color: cores.ouro, fontSize: 11, marginTop: 2 }}>
+                        Efeito Permanente: {proj.beneficioDescricao}
+                      </TextoMono>
+
+                      {!concluido && !emAndamento && !asora.projetoEmAndamento && (
+                        <View style={{ marginTop: esp.xs }}>
+                          {semTribo ? (
+                            <TextoMono style={{ color: cores.cinabrio, fontSize: 11 }}>
+                              Requer acolhimento da tribo necessária ({proj.triboObrigatoria}).
+                            </TextoMono>
+                          ) : semFerramentas ? (
+                            <TextoMono style={{ color: cores.cinabrio, fontSize: 11 }}>
+                              Ferramentas insuficientes ({ferrDisp}/{proj.custo.ferramentas}). Encomende às forjas dos Elder Dwarves.
+                            </TextoMono>
+                          ) : semOperarios ? (
+                            <TextoMono style={{ color: cores.cinabrio, fontSize: 11 }}>
+                              Aloque pelo menos {proj.operariosNecessarios} operários no Canteiro de Obras.
+                            </TextoMono>
+                          ) : (
+                            <Botao
+                              titulo="Iniciar Construção"
+                              variante="primario"
+                              onPress={async () => setAvisoAsora(await iniciarConstrucao(proj.id))}
+                            />
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </Card>
+
+            {/* 6. COMPANHIA MERCANTIL & ESTRATÉGIAS COMERCIAIS */}
+            {asora.companhiaMercantil?.fundada ? (
+              <Card acento={cores.ouro}>
+                <View style={styles.linhaTitulo}>
+                  <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>
+                    Companhia Mercantil: {asora.companhiaMercantil.nome}
+                  </TextoSerif>
+                  <Selo texto={`NÍVEL COMERCIAL ${asora.companhiaMercantil.nivelComercial}`} cor={cores.ouro} />
+                </View>
+                <TextoMono style={{ color: cores.vellum, marginTop: 4 }}>
+                  Riqueza Acumulada: {asora.companhiaMercantil.ouroAcumulado} moedas de ouro · Caravanas Despachadas: {asora.companhiaMercantil.caravanasEnviadas}
+                </TextoMono>
+                <TextoMono style={{ color: cores.linha, marginTop: 2 }}>
+                  Renda Periódica por Ciclo: +{asora.companhiaMercantil.rendaPorCiclo} moedas de ouro
+                </TextoMono>
+                {asora.companhiaMercantil.gerenteDesignada && (
+                  <TextoMono style={{ color: cores.verdigris, marginTop: 2 }}>
+                    Gerente Geral em Tsige: {asora.companhiaMercantil.gerenteDesignada} (+20 bônus mercantil)
+                  </TextoMono>
+                )}
+
+                {/* Seletor de Estratégia Comercial */}
+                <View style={{ marginTop: esp.sm, paddingTop: esp.sm, borderTopWidth: 1, borderTopColor: cores.linha }}>
+                  <TextoMono style={{ color: cores.ouro, fontSize: 12, marginBottom: 4 }}>
+                    Estratégia de Lojas & Produtos em Tsige:
+                  </TextoMono>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs }}>
+                    {(
+                      [
+                        ['remedios_e_pocao', 'Remédios & Poções'],
+                        ['tecidos_e_vestes', 'Tecidos & Vestes'],
+                        ['armas_e_ferramentas', 'Armas & Ferramentas'],
+                        ['graos_e_mantimentos', 'Grãos & Mantimentos'],
+                      ] as const
+                    ).map(([estId, estLabel]) => {
+                      const ativo = (asora.companhiaMercantil?.estrategiaAtual ?? 'graos_e_mantimentos') === estId;
+                      return (
+                        <Botao
+                          key={estId}
+                          titulo={estLabel}
+                          variante={ativo ? 'primario' : 'fantasma'}
+                          onPress={async () => setAvisoAsora(await definirEstrategia(estId))}
+                        />
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={{ marginTop: esp.md }}>
+                  <Botao
+                    titulo="Despachar Caravana Comercial para Tsige"
+                    variante="primario"
+                    onPress={async () => setAvisoAsora(await despacharCaravana())}
+                  />
+                </View>
+              </Card>
+            ) : null}
+
+            {/* 7. INVESTIGAÇÃO DOS HERÓIS HUMANOS */}
+            {asora.investigacaoHerois && asora.investigacaoHerois.nivelAlerta > 0 && (
+              <Card acento={cores.cinabrio}>
+                <View style={styles.linhaTitulo}>
+                  <TextoSerif style={{ fontSize: 16, color: cores.cinabrio }}>
+                    Heróis dos Reinos Humanos em Alerta: {asora.investigacaoHerois.nivelAlerta}%
+                  </TextoSerif>
+                  <Selo texto="INVESTIGAÇÃO ATIVA" cor={cores.cinabrio} />
+                </View>
+                <TextoMono style={{ color: cores.mudo, marginTop: 4, fontSize: 11 }}>
+                  {asora.investigacaoHerois.batedoresEnviados
+                    ? 'Batedores arcanos de Limia (Hibiki) e espiões imperiais de Gritonia (Tomoki) investigam ondas de choque e vazamentos de mana na Wasteland.'
+                    : 'Repercussão das batalhas e lendas da Calamidade ambulante.'}
+                </TextoMono>
+              </Card>
+            )}
+          </>
+        );
+      })()}
     </Pagina>
   );
 }
@@ -462,13 +1155,19 @@ export function Mapa() {
         return (
           <Card key={r.destino} onPress={() => viajar(r.destino)} acento={r.perigo >= 4 ? cores.cinabrio : undefined}>
             <View style={styles.linhaTitulo}>
-              <TextoSerif style={{ fontSize: 20 }}>{conhecido ? dest.nome : 'Rumo desconhecido'}</TextoSerif>
+              <TextoSerif style={{ fontSize: 20 }}>{dest.nome}</TextoSerif>
+              {!conhecido && <Selo texto="não explorado" cor={cores.ouro} />}
               {r.perigo >= 4 && <Selo texto="perigoso" cor={cores.cinabrio} />}
             </View>
             <TextoMono style={{ marginTop: 2 }}>
               {r.periodos === 0 ? 'ao lado' : `${r.periodos} período(s) de viagem`}
-              {conhecido ? ` · ${dest.tipo}` : ''}
+              {` · ${dest.regiao} · ${dest.tipo}`}
             </TextoMono>
+            {camp.personagem.sakai?.desbloqueado && (
+              <TextoMono style={{ color: cores.ouro, marginTop: 2 }}>
+                ✦ Sakai: presença de {dest.regiao} captada na direção deste rumo.
+              </TextoMono>
+            )}
             <TextoMono>Risco da rota: {r.perigo}/10. Viagens à noite aumentam a chance de encontro. Esse risco não garante adversários do seu nível.</TextoMono>
           </Card>
         );

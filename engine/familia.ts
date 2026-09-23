@@ -1,6 +1,6 @@
 import type { AttrKey, Campaign, ContentBundle, NPC, NpcDinamico } from './types';
 import { nextFloat, nextInt, pick } from './rng';
-import { concederDespertar } from './progresso';
+import { concederDespertar, recalcularRecursosMaximos } from './progresso';
 
 export type CondicaoParente = 'livre' | 'cativo' | 'desaparecido' | 'morto';
 export type ParenteCampanha = {
@@ -122,7 +122,78 @@ function eventoTalento(idade: number): EventoInfancia {
   ] };
 }
 
+function eventoAosSeisTsukimichi(_camp: Campaign, _familia: FamiliaState): EventoInfancia {
+  return {
+    id: 'tsukimichi_mana_oculto',
+    idade: 6,
+    titulo: 'O Transbordar do Mana Interior',
+    descricao:
+      'Seu corpo acumula uma reserva colossal de mana que a atmosfera da Terra não consegue dispersar. Lâmpadas piscavam quando suas emoções oscilavam e o ar ao seu redor ondulava em calor invisível.',
+    opcoes: [
+      {
+        id: 'conter_mana',
+        rotulo: 'Treinar a contenção e o controle fino de energia',
+        descricao: 'Aumenta resiliência e foco mental para não queimar o ambiente.',
+      },
+      {
+        id: 'fortalecer_fisico',
+        rotulo: 'Fortalecer a musculatura e a respiração',
+        descricao: 'Aumenta físico e resiliência corporal para suportar a carga de mana que transborda.',
+      },
+    ],
+  };
+}
+
+function eventoAosDezTsukimichi(_camp: Campaign, _familia: FamiliaState): EventoInfancia {
+  return {
+    id: 'tsukimichi_invocacao_deusa',
+    idade: 10,
+    titulo: 'A Invocação e a Rejeição da Deusa',
+    descricao:
+      'Um pilar de luz sagrado te arrancou da Terra para cumprir o pacto antigo de seus pais! Mas ao ver seu rosto diante do trono celestial, a Deusa torceu o nariz: "Que criatura feiosa e repugnante! Meu mundo é apenas para pessoas bonitas!". Ela te negou qualquer bênção celestial, roubou sua capacidade de falar com hyumans e te baniu em queda livre da estratosfera para a Wasteland!',
+    opcoes: [
+      {
+        id: 'encarar_deusa',
+        rotulo: 'Sustentar o olhar da Deusa com frieza inabalável',
+        descricao: 'Desperta a Presença Soberana e eleva sua autoridade mental.',
+      },
+      {
+        id: 'preparar_impacto',
+        rotulo: 'Comprimir todo o mana corporal para absorver o impacto da queda',
+        descricao: 'Eleva resiliência e precisão corporal ao extremo durante a descida colossal.',
+      },
+    ],
+  };
+}
+
+function eventoAosQuatorzeTsukimichi(_camp: Campaign, _familia: FamiliaState): EventoInfancia {
+  return {
+    id: 'tsukimichi_queda_wasteland',
+    idade: 14,
+    titulo: 'A Cratera da Wasteland e o Despertar no Ermo',
+    descricao:
+      'O impacto da queda abriu uma cratera colossal na Grande Terra Desolada (Wasteland). Ao abrir os olhos com as memórias do banimento da Deusa gravadas na alma, você se ergue no miasma da terra calcinada. Ao redor, ossadas de leviatãs e bestas vorazes espreitam no nevoeiro vermelho. O jogo de sobrevivência, pactos de alma e soberania começa aqui — a civilização de Tsige jaz além do horizonte e você só entrará lá se escolher cruzar o Portão do Ermo.',
+    opcoes: [
+      {
+        id: 'erguer_wasteland',
+        rotulo: 'Erguer-se na cratera da Wasteland e dominar o ermo aos 18 anos',
+        descricao: 'Inicia sua jornada autônoma diretamente na Borda Desolada da Wasteland, onde bestas ancestrais aguardam um pacto de alma.',
+      },
+      {
+        id: 'marchar_tsige',
+        rotulo: 'Sobreviver ao ermo e firmar seus passos na Borda da Wasteland',
+        descricao: 'Conclui a transição para a vida adulta na cratera da Wasteland, onde sua lenda começa.',
+      },
+    ],
+  };
+}
+
 function proximoEvento(camp: Campaign, familia: FamiliaState, idade: number): EventoInfancia {
+  if (camp.cenarioId === 'tsukimichi') {
+    if (idade === 6) return eventoAosSeisTsukimichi(camp, familia);
+    if (idade === 10) return eventoAosDezTsukimichi(camp, familia);
+    return eventoAosQuatorzeTsukimichi(camp, familia);
+  }
   if (idade === 6) return eventoAosSeis(camp, familia);
   if (idade === 10) return nextFloat(camp.rng) < .45 ? eventoCativeiro(10) : eventoTalento(10);
   return { id: 'partida', idade: 14, titulo: 'A vida adulta se aproxima', descricao: 'O mundo oferece um caminho, enquanto sua família ainda cobra presença.', opcoes: [
@@ -132,8 +203,96 @@ function proximoEvento(camp: Campaign, familia: FamiliaState, idade: number): Ev
   ] };
 }
 
+function iniciarFamiliaTsukimichi(content: ContentBundle, camp: Campaign): void {
+  const membros: ParenteCampanha[] = [
+    {
+      id: 'tsukimichi_pai',
+      nome: 'Kazuhiko',
+      parentesco: 'pai',
+      idadeNoNascimento: 26,
+      ocupacao: 'mestre de kyudo e exilado do outro mundo',
+      talento: 'precisao',
+      prestigio: 8,
+      condicao: 'livre',
+      prodigio: true,
+    },
+    {
+      id: 'tsukimichi_mae',
+      nome: 'Yuko',
+      parentesco: 'mae',
+      idadeNoNascimento: 24,
+      ocupacao: 'antiga nobre hyuman exilada na Terra',
+      talento: 'raciocinio',
+      prestigio: 7,
+      condicao: 'livre',
+      prodigio: false,
+    },
+    {
+      id: 'tsukimichi_irma_1',
+      nome: 'Arisa',
+      parentesco: 'irma',
+      idadeNoNascimento: 2,
+      ocupacao: 'estudante universitária no Japão',
+      talento: 'social',
+      prestigio: 4,
+      condicao: 'livre',
+      prodigio: false,
+    },
+    {
+      id: 'tsukimichi_irma_2',
+      nome: 'Mari',
+      parentesco: 'irma',
+      idadeNoNascimento: -2,
+      ocupacao: 'estudante colegial no Japão',
+      talento: 'precisao',
+      prestigio: 3,
+      condicao: 'livre',
+      prodigio: false,
+    },
+  ];
+
+  const familia: FamiliaState = {
+    versao: 1,
+    prologoConcluido: false,
+    idadeJogador: 0,
+    patrimonio: 35,
+    prestigio: 8,
+    membros,
+    historia: [],
+  };
+
+  familia.eventoAtual = {
+    id: 'origem_japao',
+    idade: 0,
+    titulo: 'A Linhagem Oculta no Japão Moderno',
+    descricao:
+      'Você nasceu e cresceu no Japão contemporâneo como filho de Kazuhiko e Yuko. Uma infância com suas irmãs, cercada por um mistério que seus pais nunca revelaram: ambos eram nativos de um mundo mágico governado por uma Deusa e fugiram para a Terra através de um pacto secreto.',
+    opcoes: [
+      {
+        id: 'crescer_kyudo',
+        rotulo: 'Dedicar a juventude ao clube de Kyudo e tiro com arco tradicional',
+        descricao: 'Treina precisão extrema, postura e calma absoluta da mente.',
+      },
+      {
+        id: 'estudar_segredo',
+        rotulo: 'Investigar os manuscritos e anotações arcanas esquecidas no sótão',
+        descricao: 'Aumenta raciocínio e percepção dos mistérios mágicos da família.',
+      },
+    ],
+  };
+
+  camp.familia = familia;
+  camp.personagem.idade = 0;
+  camp.npcsProcedurais = membros.map(npcDeParente);
+  for (const m of membros) camp.npcState[m.id] = estadoNpc(content, m.idadeNoNascimento);
+}
+
 export function iniciarFamilia(content: ContentBundle, camp: Campaign): void {
   if (camp.familia) return;
+  if (content.cenario.id === 'tsukimichi') {
+    iniciarFamiliaTsukimichi(content, camp);
+    return;
+  }
   const g = camp.genese!;
   const paiTalento = maiorTalento(g.paiAtributos);
   const maeTalento = maiorTalento(g.maeAtributos);
@@ -214,6 +373,55 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
     if (opcaoId === 'aprendizado') { camp.personagem.pericias.oficio = 1; alterarAtributo(camp, 'raciocinio'); }
     if (opcaoId === 'defender') { alterarAtributo(camp, 'fisico'); alterarAtributo(camp, 'resiliencia'); camp.flags['defendeu_familia'] = true; }
     if (opcaoId === 'fugir') { f.patrimonio = Math.max(0, f.patrimonio - 10); camp.personagem.dinheiro += 20; for (const m of f.membros) camp.npcState[m.id].eixos.confianca -= 8; }
+  } else if (evento.id === 'origem_japao') {
+    if (opcaoId === 'crescer_kyudo') {
+      alterarAtributo(camp, 'precisao', 2);
+      alterarAtributo(camp, 'raciocinio', 1);
+      texto += ' A dedicação ao Kyudo treinou sua precisão e serenidade sob pressão.';
+    } else {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      texto += ' O estudo dos manuscritos arcanos despertou seu intelecto e percepção mágica.';
+    }
+  } else if (evento.id === 'tsukimichi_mana_oculto') {
+    if (opcaoId === 'conter_mana') {
+      alterarAtributo(camp, 'resiliencia', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      texto += ' Você aprendeu a restringir o fluxo de mana para não incinerar o ambiente.';
+    } else {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'resiliencia', 1);
+      texto += ' Seu corpo físico se fortaleceu para conter a pressão colossal de mana.';
+    }
+  } else if (evento.id === 'tsukimichi_invocacao_deusa') {
+    if (opcaoId === 'encarar_deusa') {
+      alterarAtributo(camp, 'raciocinio', 2);
+      camp.personagem.pressoes.presenca = (camp.personagem.pressoes.presenca ?? 0) + 10;
+      texto += ' Você sustentou o olhar da Deusa com desdém; sua presença interior se tornou inabalável.';
+    } else {
+      alterarAtributo(camp, 'resiliencia', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      texto += ' Você comprimiu o mana corporal e manteve a mente lúcida durante a queda da estratosfera.';
+    }
+  } else if (evento.id === 'tsukimichi_queda_wasteland') {
+    alterarAtributo(camp, 'fisico', 3);
+    alterarAtributo(camp, 'resiliencia', 3);
+    alterarAtributo(camp, 'percepcao', 2);
+    alterarAtributo(camp, 'raciocinio', 2);
+    if (!camp.personagem.sakai) {
+      camp.personagem.sakai = {
+        desbloqueado: true,
+        nivel: 1,
+        experienciaTreino: 0,
+        treinosRealizados: 0,
+        modosDisponiveis: ['percepcao'],
+        modoAtivo: undefined,
+      };
+    }
+    recalcularRecursosMaximos(camp);
+    camp.personagem.recursos.vida = camp.personagem.recursosMax.vida;
+    camp.personagem.recursos.mana = camp.personagem.recursosMax.mana;
+    texto += ' Você se ergue da cratera nas terras calcinadas da Wasteland aos 18 anos. Seu corpo sobre-humano adaptado à gravidade da Terra e seu oceano de mana incomensurável são sua única lei. A jornada começa aqui no ermo.';
   }
   f.historia.push({ idade: evento.idade, texto });
   const proximaIdade = evento.idade === 0 ? 6 : evento.idade === 6 ? 10 : evento.idade === 10 ? 14 : 18;
@@ -234,6 +442,30 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
   f.eventoAtual = proximoEvento(camp, f, proximaIdade);
   return { ok: true, texto };
 }
+
+/**
+ * Conclui o prólogo da infância imediatamente, estabelecendo o personagem aos 18 anos
+ * com a família atualizada e recursos calculados. Permite ao jogador pular o prólogo
+ * e entrar diretamente no jogo sem passar pelas etapas intermediárias.
+ */
+export function concluirPrologoInfancia(content: ContentBundle, camp: Campaign): void {
+  const f = camp.familia;
+  if (!f) return;
+  f.idadeJogador = 18;
+  camp.personagem.idade = 18;
+  for (const m of f.membros) {
+    const idade = m.idadeNoNascimento + 18;
+    if (camp.npcState[m.id]) camp.npcState[m.id].idade = idade;
+    const npc = camp.npcsProcedurais?.find(n => n.id === m.id);
+    if (npc && idade >= 18 && (m.parentesco === 'irma' || m.parentesco === 'irmao')) {
+      npc.ocupacao = m.prodigio ? 'jovem prodígio' : 'trabalhador da família';
+    }
+  }
+  f.prologoConcluido = true;
+  f.eventoAtual = undefined;
+  camp.personagem.dinheiro += Math.floor(f.patrimonio / 4);
+}
+
 
 export function resumoFamilia(camp: Campaign): string[] {
   return (camp.familia?.membros ?? []).map(m => `${m.nome}, ${m.parentesco}: ${m.ocupacao}; ${m.condicao}${m.prodigio ? '; prodígio' : ''}.`);

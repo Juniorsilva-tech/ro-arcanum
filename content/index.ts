@@ -1,6 +1,6 @@
-// ARCANUM · Registro de cenários. Um cenário completo no MVP: Vaelhorn (GDD §37).
 import type { ContentBundle } from '../engine/types';
 import { conteudoVaelhorn } from './vaelhorn';
+import { conteudoTsukimichi } from './tsukimichi';
 
 export type CenarioDisponivel = {
   id: string;
@@ -13,18 +13,17 @@ export type CenarioDisponivel = {
   acentoCor: string;
 };
 
-// Um mundo só: Vaelhorn. O registro chegou a listar oito outros cenários
-// como placeholder de roadmap ("EM BREVE") — removidos por decisão de
-// produto: nada de vitrine multi-mitologia antes de o primeiro mundo estar
-// pronto. Reintroduzir cenários novos aqui é trabalho para quando Vaelhorn
-// estiver maduro, não antes.
+// Dois mundos independentes: Vaelhorn (campanha clássica medieval sombria)
+// e Tsukimichi (expansão isekai com Tsige, Wasteland e Subespaço de Asora).
 export const cenariosDisponiveis: CenarioDisponivel[] = [
   { id: 'vaelhorn', nome: 'Vaelhorn', genero: 'Medieval sombrio', pressoes: 'Sanidade · Corrupção', premium: false, disponivel: true, bundle: conteudoVaelhorn, acentoCor: '#CFA82D' },
+  { id: 'tsukimichi', nome: 'Tsukimichi: O Novo Mundo', genero: 'Isekai Fantasia', pressoes: 'Sobrecarga de Mana · Presença', premium: false, disponivel: true, bundle: conteudoTsukimichi, acentoCor: '#5B9BD5' },
 ];
 
 export function bundlePorId(id: string): ContentBundle | undefined {
   return cenariosDisponiveis.find((c) => c.id === id)?.bundle;
 }
 
-export { conteudoVaelhorn };
+export { conteudoVaelhorn, conteudoTsukimichi };
 export { encontrosPorTipo } from './vaelhorn/bestiary';
+

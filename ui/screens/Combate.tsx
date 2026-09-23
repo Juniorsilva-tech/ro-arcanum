@@ -18,6 +18,7 @@ export function Combate() {
   const combUsar = useGame((s) => s.combUsar);
   const combFugir = useGame((s) => s.combFugir);
   const fecharLuta = useGame((s) => s.fecharLuta);
+  const alternarSakai = useGame((s) => s.alternarSakaiModoAcao);
 
   const s = camp.combate;
   if (!s) {
@@ -151,6 +152,22 @@ export function Combate() {
               {!!s.ambiente?.abrigoSolar && <Acao nome="Abrir cobertura" onPress={() => combTatica('expor_sol')} />}
               {camp.localAtual === 'castelo_infinito' && !!camp.flags['matou.nakime'] && <Acao nome="Romper o castelo" onPress={() => combTatica('romper_castelo')} />}
             </View>
+
+            {p.sakai?.desbloqueado && (
+              <>
+                <Divisor label={`domínio do kai · ${p.sakai.modoAtivo ? `ativo: ${p.sakai.modoAtivo}` : 'inativo'}`} />
+                <View style={styles.chips}>
+                  {p.sakai.modosDisponiveis.map((m) => (
+                    <Acao
+                      key={m}
+                      nome={`${p.sakai?.modoAtivo === m ? '✓ ' : ''}Kai: ${m}`}
+                      cor={p.sakai?.modoAtivo === m ? cores.ouro : undefined}
+                      onPress={() => alternarSakai(m)}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
 
             {artes.length > 0 && (
               <>

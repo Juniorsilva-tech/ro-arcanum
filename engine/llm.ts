@@ -24,6 +24,11 @@ import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { conviccoesDoNpc } from './reflexao';
 import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
+import {
+  obterOcupantesSubespaco,
+  verificarSupressaoMana,
+  avaliarReacaoHumanosPresenca,
+} from './tsukimichi';
 
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous';
 
@@ -541,6 +546,75 @@ export function montarPacote(
     // "Você tentou elogiar Aldrica — deu certo" e não tinha como saber que o
     // elogio precisava ser DITO em voz alta na cena.
     acaoDoJogador: acao,
+    tsukimichi:
+      content.cenario.id === 'tsukimichi'
+        ? {
+            subespacoSoberano: camp.asora?.desbloqueado
+              ? {
+                  nome: camp.asora.nome || 'Subespaço Pessoal',
+                  ondeEstaOJogador: (camp.localAtual ?? '').startsWith('asora_')
+                    ? `O protagonista está DENTRO do seu subespaço (setor: ${camp.localAtual})`
+                    : `O protagonista está no mundo exterior (local: ${content.locais.find((l) => l.id === camp.localAtual)?.nome ?? camp.localAtual})`,
+                  quemEstaNoSubespacoAgora: obterOcupantesSubespaco(camp).resumoPresenca,
+                  ocupantesDetalhados: obterOcupantesSubespaco(camp).ocupantes,
+                  populacao: camp.asora.populacao,
+                  tribosAcolhidas: camp.asora.tribosAcolhidas
+                    ? Object.values(camp.asora.tribosAcolhidas).map(
+                        (t) => `${t.nome} (${t.populacao} membros): ${t.especialidade}`,
+                      )
+                    : [],
+                  alocacaoTrabalho: camp.asora.alocacaoTrabalho ?? {},
+                  ferramentasRunicasDisponiveis: camp.asora.recursosEspeciais?.ferramentasDisponiveis ?? 0,
+                  obrasExistentes: Object.values(camp.asora.obras).map((o) => `${o.nome} (Nv. ${o.nivel}): ${o.descricao}`),
+                  projetosMonumentaisConcluidos: camp.asora.projetosConcluidos ?? [],
+                  obraEmAndamento: camp.asora.projetoEmAndamento
+                    ? `${camp.asora.projetoEmAndamento.nome} (${camp.asora.projetoEmAndamento.turnosRestantes} ciclos restantes, ${camp.asora.projetoEmAndamento.operariosAlocados} operários ativos)`
+                    : 'Nenhuma obra no canteiro no momento',
+                  vidaCotidiana:
+                    camp.asora.populacao > 0 && Object.keys(camp.asora.tribosAcolhidas ?? {}).length > 0
+                      ? Object.values(camp.asora.tribosAcolhidas ?? {})
+                          .map((t) => `${t.nome} (${t.especialidade})`)
+                          .join('; ')
+                      : 'Dimensão virgem e serena: sem tribos residentes ou operários assentados ainda. O vasto território aguarda acolher povos que nele busquem refúgio.',
+                  companhiaMercantil: camp.asora.companhiaMercantil?.fundada
+                    ? {
+                        nome: camp.asora.companhiaMercantil.nome,
+                        nivel: camp.asora.companhiaMercantil.nivelComercial,
+                        ouroAcumulado: camp.asora.companhiaMercantil.ouroAcumulado,
+                        estrategiaAtual: camp.asora.companhiaMercantil.estrategiaAtual ?? 'graos_e_mantimentos',
+                        gerenteDesignada: camp.asora.companhiaMercantil.gerenteDesignada ?? 'Sem gerente designada',
+                        escoltaCaravana: camp.asora.companhiaMercantil.escoltaDesignada ?? 'sem_escolta',
+                      }
+                    : 'Ainda não fundada (abrir filial em Tsige para comercializar excedentes do subespaço e enriquecer)',
+                }
+              : 'Ainda não desbloqueado (abre após selar o primeiro contrato de alma)',
+            servasProtetoras: camp.asora?.contratos
+              ? Object.values(camp.asora.contratos)
+                  .filter((c) => c.ativaNoGrupo)
+                  .map((c) => ({
+                    nome: c.nomeConcedido,
+                    titulo: c.titulo,
+                    lealdade: c.lealdade,
+                    regraProtecao:
+                      'LEALDADE ABSOLUTA: Protegem o Mestre de qualquer insulto, palavra insolente ou desrespeito de Humanos. Reagem na hora com fúria intimidadora, sacando armas ou liberando mana esmagador.',
+                  }))
+              : [],
+            supressaoDeMana: {
+              status: verificarSupressaoMana(camp),
+              reacaoNoLocal: avaliarReacaoHumanosPresenca(camp),
+              regra:
+                'Se o protagonista NÃO estiver contendo seu mana (por vestes rúnicas, anéis Draupnir ou Sakai no modo supressão) em cidades ou vilas de Humanos, seu mana colossal vazando aterroriza instintivamente as pessoas, causando desmaios, comerciantes ajoelhando em pânico e guardas tremendo.',
+            },
+            heroisDosReinosHumanos: {
+              herois:
+                'Tomoki Iwahashi (Império militar de Gritonia / Olho do Encanto) e Hibiki Otonashi (Reino Santo de Limia / Espadachim Carismática).',
+              nivelAlerta: camp.asora?.investigacaoHerois?.nivelAlerta ?? 0,
+              investigacaoAtiva: camp.asora?.investigacaoHerois?.batedoresEnviados
+                ? 'Batedores de Limia e espiões de Gritonia investigando crateras e mana de batalhas devastadoras'
+                : 'Normal',
+            },
+          }
+        : undefined,
   };
 }
 
@@ -597,12 +671,19 @@ const INSTRUCAO_SISTEMA =
   '  A interface lê esse colchete para mostrar de quem é cada fala, e o remove do texto. ' +
   'Sem ele, a tela atribui a fala à pessoa errada — é o pior defeito que uma cena pode ' +
   'ter. Nunca ponha duas falas na mesma linha, e nunca deixe uma fala sem colchete.\n' +
+  '• FALANTES ANÔNIMOS OU DA MULTIDÃO: Se quem fala for um guarda, soldado, mercador ou alguém ' +
+  'da multidão, use a ocupação ou [Voz] entre colchetes (ex: [Soldado], [Guarda], [Mercador], [Voz]). ' +
+  'NUNCA use o nome de uma cidade ou região como falante (ex: NUNCA [Tsige] ou [Asora]). Cidades não falam.\n' +
+  '• NÃO ATRIBUA A [você] O QUE O JOGADOR APENAS OUVE: se um mercador ou soldado grita de pavor na praça ' +
+  'ou entre os armazéns e o protagonista apenas ouve ou observa, essa fala NUNCA é de [você] — ' +
+  'identifique quem gritou ([Soldado], [Mercador], [Voz]). Só use [você] quando o jogador de fato falar.\n' +
   '• O resultado da ação aparece NA FALA e no gesto, não num aviso. Se deu certo, ela ' +
   'cede alguma coisa: uma informação, um sorriso, uma cadeira. Se falhou, ela corta.\n' +
   '\nVERDADE — a engine manda:\n' +
   '0) "mundo.premissa" é a lei deste lugar. Toda cena tem que caber nela: quem manda, ' +
   'quem trabalha, quem olha o jogador de que jeito. Nunca contrarie a premissa.\n' +
   '1) Narre APENAS o fato consumado informado. Nunca invente outro resultado.\n' +
+  '1a) QUEDA NA WASTELAND E SOLIDÃO INICIAL: Quando o protagonista estiver na Grande Terra Desolada (wasteland_fronteira, cratera ou ermo) e "presentes" estiver vazio, ele acabou de ser banido pela Deusa e despencar da estratosfera. Ele está COMPLETAMENTE SÓ. Não invente nenhum companheiro, NPC ou aliado com ele. NUNCA imponha caminhos ou objetivos forçados: ele é livre para explorar o miasma, sondar com o Kai, caçar feras selvagens ou marchar para onde ele decidir.\n' +
   '2) Cite apenas pessoas e lugares que estão no pacote de contexto. Cada presente vem ' +
   'com "voz", "indole" e "corpo" — use os três: é assim que ela vira gente e não ficha. ' +
   'Descreva corpo com franqueza adulta quando a cena chegar perto, sem eufemismo covarde ' +

@@ -19,32 +19,105 @@ export function MapaVisual({ content, camp }: { content: ContentBundle; camp: Ca
         const atual = id === camp.localAtual;
         const pos = posicaoMapa(id, local.regiao);
         return (
-          <View key={id} style={[styles.ponto, { left: `${pos.x}%`, top: `${pos.y}%` }, atual && styles.pontoAtual, !conhecido && styles.pontoOculto]}>
-            <View style={[styles.pino, atual && styles.pontoAtualPino]} />
-            {conhecido && <Text numberOfLines={1} style={[styles.nome, atual && styles.nomeAtual]}>{local.nome}</Text>}
-            {!conhecido && <Text style={styles.interrogacao}>?</Text>}
+          <View
+            key={id}
+            style={[
+              styles.ponto,
+              { left: `${pos.x}%`, top: `${pos.y}%` },
+              atual && styles.pontoAtual,
+              !conhecido && styles.pontoOculto,
+            ]}
+          >
+            <View
+              style={[
+                styles.pino,
+                atual && styles.pontoAtualPino,
+                !conhecido && styles.pinoNaoVisitado,
+              ]}
+            >
+              {!conhecido && <Text style={styles.interrogacaoNoPino}>?</Text>}
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.nome,
+                atual && styles.nomeAtual,
+                !conhecido && styles.nomeNaoVisitado,
+              ]}
+            >
+              {local.nome}
+            </Text>
           </View>
         );
       })}
       <View style={styles.legenda}>
-        <Text style={styles.legendaTxt}>● conhecido</Text>
-        <Text style={styles.legendaTxt}>? rumor ou rota não visitada</Text>
+        <Text style={[styles.legendaTxt, { color: cores.ouro }]}>● atual</Text>
+        <Text style={styles.legendaTxt}>● visitado</Text>
+        <Text style={styles.legendaTxt}>? rota a explorar</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mapa: { height: 300, marginVertical: esp.md, borderWidth: 1, borderColor: cores.linha, borderRadius: 10, backgroundColor: cores.fundo2, overflow: 'hidden', position: 'relative' },
+  mapa: {
+    height: 310,
+    marginVertical: esp.md,
+    borderWidth: 1,
+    borderColor: cores.linha,
+    borderRadius: 10,
+    backgroundColor: cores.fundo2,
+    overflow: 'hidden',
+    position: 'relative',
+  },
   grade: { ...StyleSheet.absoluteFill, opacity: 0.12, backgroundColor: cores.verdigris },
-  ponto: { position: 'absolute', width: 100, alignItems: 'center', transform: [{ translateX: -50 }, { translateY: -8 }] },
+  ponto: {
+    position: 'absolute',
+    width: 110,
+    alignItems: 'center',
+    transform: [{ translateX: -55 }, { translateY: -8 }],
+  },
   pontoAtual: { zIndex: 3 },
-  pontoOculto: { opacity: 0.55 },
-  pino: { width: 13, height: 13, borderRadius: 7, backgroundColor: cores.verdigris, borderWidth: 2, borderColor: cores.bistre },
+  pontoOculto: { opacity: 0.85 },
+  pino: {
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: cores.verdigris,
+    borderWidth: 2,
+    borderColor: cores.bistre,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pontoAtualPino: { backgroundColor: cores.ouro },
-  nome: { maxWidth: 98, color: cores.mudo, fontFamily: fontes.mono, fontSize: 9, textAlign: 'center', marginTop: 3 },
-  nomeAtual: { color: cores.ouro },
-  interrogacao: { color: cores.linha, fontFamily: fontes.monoMedium, fontSize: 13, marginTop: -1 },
-  legenda: { position: 'absolute', bottom: 8, left: 10, right: 10, flexDirection: 'row', justifyContent: 'space-between' },
+  pinoNaoVisitado: {
+    backgroundColor: cores.bistre,
+    borderColor: cores.verdigris,
+    borderStyle: 'dashed',
+  },
+  interrogacaoNoPino: {
+    color: cores.verdigris,
+    fontFamily: fontes.monoMedium,
+    fontSize: 9,
+    lineHeight: 11,
+  },
+  nome: {
+    maxWidth: 106,
+    color: cores.mudo,
+    fontFamily: fontes.mono,
+    fontSize: 9,
+    textAlign: 'center',
+    marginTop: 3,
+  },
+  nomeAtual: { color: cores.ouro, fontFamily: fontes.monoMedium },
+  nomeNaoVisitado: { color: cores.linha, fontSize: 8.5 },
+  legenda: {
+    position: 'absolute',
+    bottom: 8,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   legendaTxt: { color: cores.mudo, fontFamily: fontes.mono, fontSize: 9 },
 });

@@ -48,3 +48,4 @@ export * from './cidades';
 export * from './nemesis';
 export * from './reflexao';
 export * from './hermesBridge';
+export * from './tsukimichi';

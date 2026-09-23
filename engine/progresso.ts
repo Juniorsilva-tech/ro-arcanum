@@ -63,9 +63,17 @@ export function recalcularRecursosMaximos(camp: Campaign): void {
   // Vigor e mana tambem acompanham o nivel, de forma mais discreta.
   for (const id of Object.keys(p.recursosMax)) {
     if (id === 'vida') continue;
-    const max = recursoMaximo(id, p.atributos) + Math.floor(p.nivel / 2);
+    const antesRecurso = p.recursosMax[id] || 1;
+    const estavaCheio = (p.recursos[id] ?? antesRecurso) >= antesRecurso;
+    let max = recursoMaximo(id, p.atributos, camp.cenarioId) + Math.floor((p.nivel - 1) / 2);
+    if (camp.cenarioId === 'tsukimichi' && id === 'mana') {
+      max = 200 + modificador(p.atributos.raciocinio) * 15 + Math.floor((p.nivel - 1) * 5);
+    }
+    if (id === 'mana' && (p.treinoQuaseMorte?.manaExpandidoTotal ?? 0) > 0) {
+      max += p.treinoQuaseMorte!.manaExpandidoTotal;
+    }
     p.recursosMax[id] = max;
-    p.recursos[id] = Math.min(max, p.recursos[id] ?? max);
+    p.recursos[id] = estavaCheio ? max : Math.min(max, p.recursos[id] ?? max);
   }
 }
 
@@ -82,6 +90,12 @@ export function ganhoDeVidaPorNivel(camp: Campaign): number {
 }
 export function vidaMaxima(camp: Campaign): number {
   const p = camp.personagem;
+  if (camp.cenarioId === 'tsukimichi') {
+    const vidaBaseTsukimichi = 220;
+    const ganhoNivel = 10 + Math.max(0, modificador(p.atributos.resiliencia) * 2);
+    return Math.round((vidaBaseTsukimichi + modificador(p.atributos.resiliencia) * 10
+      + (p.nivel - 1) * ganhoNivel) * multiplicadoresDeIdentidade(camp).vida);
+  }
   return Math.round((VIDA_BASE + modificador(p.atributos.resiliencia) * 4
     + (p.nivel - 1) * ganhoDeVidaPorNivel(camp)) * multiplicadoresDeIdentidade(camp).vida);
 }

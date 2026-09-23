@@ -21,6 +21,7 @@ import { avancarMundo, multiplicadorDePreco } from './mundo';
 import { criarAmeacaLocal, atualizarAmeacas, ajudarReconstrucao } from './continuidade';
 import { alternarCompanheiro } from './grupo';
 import { calcularContexto } from './availability';
+import { processarNemesis } from './nemesis';
 import type { Campaign } from './types';
 
 let testes = 0;
@@ -275,4 +276,176 @@ teste('Companheiro exige vínculo e presença, luta com sua técnica e conserva 
   assert(c.npcState.tanjiro.tensao < tensao);
 });
 
+teste('Derrota de Nemesis causa regressão de nível, dispersão de servos, quebra de adaptação e cicatrizes', () => {
+  const c = luta(['oni_faminto']);
+  const s = c.combate!;
+  const inimigo = s.atores.find(a => !a.ehJogador && !a.ehAliado)!;
+  const rivalId = inimigo.rivalId!;
+  const rival = c.kimetsu!.rivais[rivalId];
+
+  // Simula Nemesis já experiente com nível 3 e 4 servos e adaptação à técnica de água
+  rival.evolucao = {
+    nivel: 3,
+    servos: 4,
+    papel: 'agente',
+    plano: 'perseguir',
+    proximaAcao: c.calendario.dia + 7,
+    refugio: c.localAtual,
+    adaptacoes: { respiracao_agua_primeira_forma: 2 },
+  };
+
+  // Jogador usa a primeira forma de água com espada comum para derrotar sem decapitar com nichirin
+  inimigo.vida = 1;
+  c.personagem.inventario.espada_curta = 1;
+  c.personagem.equipado.arma = 'espada_curta';
+  c.personagem.atributos.precisao = 20;
+  const resConjura = jogadorConjura(C, c, 'respiracao_agua_primeira_forma', inimigo.id);
+  assert(resConjura.ok, 'Deveria conjurar técnica com espada');
+  // O oni sem postura recua do confronto
+  inimigo.retirado = true;
+  jogadorDefende(C, c);
+
+  assert(s.terminado, 'Combate deveria terminar');
+  assert.equal(s.resultado, 'vitoria');
+  assert(rival.vivo, 'Oni sobreviveu sem nichirin/sol mas sofreu derrota');
+
+  // Verifica regressão real de nível e servos
+  assert.equal(rival.evolucao.nivel, 2);
+  assert.equal(rival.evolucao.servos, 2);
+  assert.equal(rival.evolucao.plano, 'ocultar');
+  assert.equal(rival.evolucao.adaptacoes.respiracao_agua_primeira_forma, 1);
+
+  // Verifica aquisição de cicatriz
+  assert(rival.cicatrizes && rival.cicatrizes.length > 0, 'Deveria ter adquirido cicatrizes');
+  assert(rival.cicatrizes.includes('cicatriz_agua_primeira_forma'), 'Cicatriz deve referenciar a técnica');
+  assert(rival.comportamento!.recuperarAte >= c.calendario.dia + 14, 'Recuperação deve ser estendida');
+});
+
+teste('Nemesis: Vetores de parâmetros (imunidade a veneno, fobia a fogo e fúria por sangue)', () => {
+  const c = luta(['oni_faminto']);
+  const s = c.combate!;
+  const inimigo = s.atores.find(a => !a.ehJogador && !a.ehAliado)!;
+  const rival = c.kimetsu!.rivais[inimigo.rivalId!];
+
+  // Atribui traços
+  rival.tracos = {
+    imunidades: ['imune_veneno'],
+    fraquezas: ['fobia_fogo'],
+    odios: ['furia_sangue'],
+  };
+
+  // Testa imunidade a veneno: veneno de glicínia não suprime regeneração
+  c.personagem.inventario.dose_glicinia = 2;
+  c.personagem.inventario.adaga = 1;
+  c.personagem.equipado.arma = 'adaga';
+  c.personagem.artesConhecidas.push('respiracao_inseto_ferrao');
+  const resVeneno = jogadorConjura(C, c, 'respiracao_inseto_ferrao', inimigo.id);
+  if (resVeneno.ok) {
+    assert(s.log.some(l => l.includes('desenvolveu tolerância à glicínia')), 'Deveria acusar imunidade a veneno');
+    assert.equal(inimigo.imuneRegenTurnos ?? 0, 0);
+  }
+
+  // Testa fobia a fogo: técnica de fogo reduz moral
+  const moralAntes = s.moralInimiga;
+  c.personagem.inventario.espada_curta = 1;
+  c.personagem.equipado.arma = 'espada_curta';
+  c.personagem.artesConhecidas.push('respiracao_chamas_primeira_forma');
+  const resFogo = jogadorConjura(C, c, 'respiracao_chamas_primeira_forma', inimigo.id);
+  if (resFogo.ok) {
+    assert(s.moralInimiga < moralAntes, 'Moral deveria cair com fobia a fogo');
+    assert(s.log.some(l => l.includes('fobia ativada')), 'Deveria registrar log de fobia');
+  }
+
+  // Testa fúria por sangue: quando vida fica <= 40%
+  inimigo.vida = Math.floor(inimigo.vidaMax * 0.2);
+  const acertoAntes = inimigo.acerto;
+  jogadorDefende(C, c); // avança para turno do inimigo
+  assert(inimigo.tatico?.emFuria, 'Deveria ativar estado de fúria');
+  assert(inimigo.acerto > acertoAntes, 'Deveria ganhar bônus de acerto na fúria');
+});
+
+teste('Nemesis: Ação tática Humilhar quebra nível, dispersa servos e imprime trauma psicológico', () => {
+  const c = luta(['oni_faminto']);
+  const s = c.combate!;
+  const inimigo = s.atores.find(a => !a.ehJogador && !a.ehAliado)!;
+  const rival = c.kimetsu!.rivais[inimigo.rivalId!];
+
+  rival.evolucao = {
+    nivel: 3,
+    servos: 4,
+    papel: 'agente',
+    plano: 'perseguir',
+    proximaAcao: c.calendario.dia + 7,
+    refugio: c.localAtual,
+    adaptacoes: {},
+  };
+
+  // Enfraquece o inimigo para permitir humilhação
+  inimigo.vida = Math.floor(inimigo.vidaMax * 0.2);
+  jogadorAcaoTatica(C, c, 'humilhar', inimigo.id);
+
+  assert(s.terminado, 'Combate deveria encerrar com fuga humilhada');
+  assert.equal(s.resultado, 'vitoria');
+  assert.equal(rival.traumaJogador, true);
+  assert.equal(rival.evolucao.nivel, 1);
+  assert.equal(rival.evolucao.servos, 0);
+  assert(rival.titulo?.includes('Humilhado'), 'Deveria receber o título de Humilhado');
+});
+
+teste('Nemesis: Pipeline Cheat Death programa retorno com título procedural, cicatriz e adaptação', () => {
+  const c = luta(['oni_faminto']);
+  const s = c.combate!;
+  const inimigo = s.atores.find(a => !a.ehJogador && !a.ehAliado)!;
+  const rival = c.kimetsu!.rivais[inimigo.rivalId!];
+
+  rival.rancor = 4;
+  c.personagem.inventario.lamina_nichirin = 1;
+  c.personagem.equipado.arma = 'lamina_nichirin';
+  inimigo.vida = Math.floor(inimigo.vidaMax * 0.1);
+
+  // Decapita o oni
+  jogadorAcaoTatica(C, c, 'decapitar', inimigo.id);
+  assert(s.terminado, 'Combate deveria terminar após decapitação');
+  assert.equal(rival.vivo, true);
+  assert(rival.comportamento!.recuperarAte > c.calendario.dia, 'Deveria estar em recuperação oculta');
+  assert(rival.cheatDeath, 'Deveria ter agendado Cheat Death');
+  assert(rival.cheatDeath.diaRetorno! > c.calendario.dia, 'Deveria definir dia de retorno');
+
+  // Avança o tempo até o dia de retorno e processa o Nemesis
+  c.calendario.dia = rival.cheatDeath.diaRetorno!;
+  processarNemesis(C, c);
+
+  assert.equal(rival.vivo, true);
+  assert(rival.titulo?.includes('Renascido'), 'Deveria ganhar título de Renascido');
+  assert(rival.cicatrizes?.some(x => x.includes('quase_morte')), 'Deveria trazer cicatriz de quase-morte');
+  assert.equal(rival.evolucao?.plano, 'perseguir');
+});
+
+teste('Nemesis: Vingança de Irmão de Sangue ativa perseguição e ódio vingativo', () => {
+  const c = campanha();
+  c.kimetsu = { versao: 1, sequencia: 2, rivais: {} };
+  const oniA = C.criaturas.find(x => x.oni && !x.perfilOni?.identidade)!;
+
+  c.kimetsu.rivais['oni_irmao_1'] = {
+    id: 'oni_irmao_1', criaturaId: oniA.id, nome: 'Oni Alfa',
+    vivo: true, vida: oniA.vida, local: c.localAtual, ultimoDia: c.calendario.dia,
+    reencontros: 0, vitorias: 0, fugas: 0, rancor: 2, memoria: [],
+    relacoes: { irmaoDeSangueId: 'oni_irmao_2' },
+  };
+  c.kimetsu.rivais['oni_irmao_2'] = {
+    id: 'oni_irmao_2', criaturaId: oniA.id, nome: 'Oni Beta',
+    vivo: false, vida: 0, local: c.localAtual, ultimoDia: c.calendario.dia,
+    reencontros: 1, vitorias: 0, fugas: 0, rancor: 1, memoria: [],
+  };
+
+  processarNemesis(C, c);
+
+  const alfa = c.kimetsu.rivais['oni_irmao_1'];
+  assert.equal(alfa.rancor, 10);
+  assert.equal(alfa.evolucao?.plano, 'perseguir');
+  assert(alfa.tracos?.odios?.includes('furia_vinganca_sangue'), 'Deveria ganhar ódio furia_vinganca_sangue');
+  assert(alfa.titulo?.includes('Vingador'), 'Deveria ganhar título de Vingador');
+});
+
 console.log(`${testes} testes de integração Kimetsu/continuidade passaram.`);
+

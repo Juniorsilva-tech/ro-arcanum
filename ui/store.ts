@@ -49,6 +49,7 @@ import {
   type OpcaoResolvida,
   type Contexto,
   resolverEtapaInfancia,
+  concluirPrologoInfancia,
   resgatarParente,
   intervirNaGuerra,
   alternarCompanheiro,
@@ -56,6 +57,19 @@ import {
   type AcaoMundo,
   obterTokenNousAtual,
   iniciarMonitoramentoNous,
+  acolherTriboWasteland,
+  definirAlocacaoTrabalho,
+  iniciarProjetoConstrucao,
+  avancarCicloSubespaco,
+  definirEstrategiaCompanhia,
+  despacharCaravanaMercantil,
+  ativarSakai,
+  processarAcaoLivreKai,
+  executarTreinoConcentracaoQuaseMorte,
+  type SetorTrabalhoSubespaco,
+  type TriboAcolhida,
+  type EstrategiaCompanhia,
+  type ModoKai,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -215,10 +229,20 @@ interface GameState {
   pontosRestantes: () => number;
   iniciarCampanha: () => Promise<void>;
   avancarInfancia: (opcaoId: string) => Promise<void>;
+  pularInfancia: () => Promise<void>;
   resgatarFamiliar: (id: string, modo: 'resgate' | 'infiltracao') => Promise<void>;
   alternarCompanheiroAcao: (id: string) => Promise<string>;
   apoiarFaccao: (id: string) => Promise<void>;
   abandonar: () => Promise<void>;
+
+  acolherTriboAcao: (triboId: TriboAcolhida['id']) => Promise<string>;
+  definirAlocacaoTrabalhoAcao: (alocacao: Partial<Record<SetorTrabalhoSubespaco, number>>) => Promise<string>;
+  iniciarConstrucaoAcao: (projetoId: string) => Promise<string>;
+  avancarCicloSubespacoAcao: () => Promise<string>;
+  definirEstrategiaCompanhiaAcao: (estrategia: EstrategiaCompanhia) => Promise<string>;
+  despacharCaravanaAcao: () => Promise<string>;
+  alternarSakaiModoAcao: (modo: ModoKai) => Promise<string>;
+  executarTreinoQuaseMorteAcao: () => Promise<string>;
 
   agirVerbo: (verboId: string, alvoId?: string) => Promise<void>;
   agirOpcao: (op: OpcaoResolvida, alvoId?: string) => Promise<void>;
@@ -331,13 +355,18 @@ export const useGame = create<GameState>((set, get) => ({
     set({ telaAnterior: get().tela, tela: t });
   },
   voltar() {
-    set({ tela: get().telaAnterior === get().tela ? 'jogo' : get().telaAnterior });
+    const { tela, telaAnterior, rascunho } = get();
+    if (tela === 'infancia' && rascunho.marcaInfancia) {
+      set({ rascunho: { ...rascunho, marcaInfancia: undefined } });
+      return;
+    }
+    set({ tela: telaAnterior === tela ? 'jogo' : telaAnterior });
   },
 
   novoJogo() {
     set({
-      // Um mundo só, Vaelhorn: não passa mais pela tela de escolher cenário.
       rascunho: { nome: '', atributos: atributosBase(), cenarioId: 'vaelhorn' },
+      telaAnterior: 'entrada',
       tela: get().config.avisoAceito ? 'classe' : 'aviso17',
     });
   },
@@ -369,7 +398,8 @@ export const useGame = create<GameState>((set, get) => ({
     // colocava fala na boca do jogador que ele nunca disse).
     const sessao = await carregarSessao<SessaoSalva>();
     if (sessao?.feed?.length) {
-      set({ camp, content, feed: sessao.feed, cena: sessao.cena, tela: 'jogo', ocupado: false });
+      const cena = sessao.cena ?? montarCena(content, camp);
+      set({ camp, content, feed: sessao.feed, cena, tela: 'jogo', ocupado: false });
       return;
     }
 
@@ -393,20 +423,24 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   escolherCenario(id) {
-    set({ rascunho: { ...get().rascunho, cenarioId: id }, tela: 'classe' });
+    set({
+      rascunho: { ...get().rascunho, cenarioId: id },
+      telaAnterior: 'cenario',
+      tela: get().config.avisoAceito ? 'classe' : 'aviso17',
+    });
   },
   escolherClasse(id) {
-    set({ rascunho: { ...get().rascunho, classeId: id }, tela: 'origem' });
+    set({ rascunho: { ...get().rascunho, classeId: id }, telaAnterior: 'classe', tela: 'origem' });
   },
   escolherOrigem(id) {
-    set({ rascunho: { ...get().rascunho, origemId: id }, tela: 'infancia' });
+    set({ rascunho: { ...get().rascunho, origemId: id }, telaAnterior: 'origem', tela: 'infancia' });
   },
   escolherMarcaInfancia(id) {
     // Fica na mesma tela: ela passa a mostrar o segundo passo (a reação).
     set({ rascunho: { ...get().rascunho, marcaInfancia: id } });
   },
   escolherReacaoInfancia(id) {
-    set({ rascunho: { ...get().rascunho, reacaoInfancia: id }, tela: 'criacao' });
+    set({ rascunho: { ...get().rascunho, reacaoInfancia: id }, telaAnterior: 'infancia', tela: 'criacao' });
   },
 
   ajustarAtributo(k, delta) {
@@ -461,11 +495,54 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
     const cena = montarCena(content, camp);
+    const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
     const memoria = camp.familia.historia.map(h => `Aos ${h.idade}: ${h.texto}`).join(' ');
-    set({ camp: { ...camp }, cena, tela: 'jogo', feed: [], ocupado: true });
     const genesePrefacio = camp.genese ? fatoDeAbertura(camp.genese, camp.personagem.nome) + ' ' : '';
-    await narrar(get, set, `${genesePrefacio}${memoria} Aos dezoito anos, a vida adulta começa. ${cena.narracao}`);
+    const textoAbertura = camp.cenarioId === 'tsukimichi'
+      ? `Descartado da presença da Deusa, seu corpo abriu uma cratera na Grande Terra Desolada. Você se ergue sozinho nas terras calcinadas da Wasteland aos dezoito anos. Completamente só, sem ninguém ao seu lado e sem trilhos pré-determinados — apenas seu mana colossal, o domínio do Kai e um mundo desconhecido à sua frente. ${cena.narracao}`
+      : `${genesePrefacio}${memoria} Aos dezoito anos, a vida adulta começa. ${cena.narracao}`;
+
+    // Entrega a cena imediatamente com as opções da engine, sem travar em tela em branco
+    set({
+      camp: { ...camp },
+      cena: { ...cena, opcoes: grade },
+      tela: 'jogo',
+      feed: [nf(textoAbertura, 'narracao')],
+      ocupado: false,
+    });
+    await persistir(camp, set);
+
+    const chave = chaveEfetiva(get().config);
+    if (chave) {
+      try {
+        await narrar(get, set, textoAbertura);
+      } catch {
+        set({ ocupado: false });
+      }
+    }
   },
+
+  async pularInfancia() {
+    const { content, camp } = get();
+    if (!content || !camp?.familia) return;
+    concluirPrologoInfancia(content, camp);
+    const cena = montarCena(content, camp);
+    const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
+    const genesePrefacio = camp.genese ? fatoDeAbertura(camp.genese, camp.personagem.nome) + ' ' : '';
+    const textoAbertura = camp.cenarioId === 'tsukimichi'
+      ? `Descartado da presença da Deusa, seu corpo atinge a Grande Terra Desolada em queda livre da estratosfera. Você se ergue sozinho na cratera da Wasteland aos dezoito anos. Nenhum aliado, nenhum caminho pré-programado: você é livre para explorar, treinar, caçar ou marchar para onde quiser. ${cena.narracao}`
+      : `${genesePrefacio}A infância ficou para trás. Aos dezoito anos, sua vida adulta começa. ${cena.narracao}`;
+    registrarNaCronica(camp, textoAbertura);
+    set({
+      camp: { ...camp },
+      cena: { ...cena, opcoes: grade },
+      tela: 'jogo',
+      feed: [nf(textoAbertura, 'narracao')],
+      ocupado: false,
+    });
+    await persistir(camp, set);
+  },
+
 
   async resgatarFamiliar(id, modo) {
     const { camp } = get();
@@ -486,6 +563,79 @@ export const useGame = create<GameState>((set, get) => ({
     set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
     await persistir(camp, set);
     return texto;
+  },
+
+  async acolherTriboAcao(triboId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = acolherTriboWasteland(camp, triboId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async definirAlocacaoTrabalhoAcao(alocacao) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = definirAlocacaoTrabalho(camp, alocacao);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async iniciarConstrucaoAcao(projetoId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = iniciarProjetoConstrucao(camp, projetoId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async avancarCicloSubespacoAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = avancarCicloSubespaco(camp);
+    const texto = r.eventos.length > 0 ? r.eventos.join(' | ') : 'Ciclo de Asora avançou sem eventos extraordinários.';
+    set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
+    await persistir(camp, set);
+    return texto;
+  },
+
+  async definirEstrategiaCompanhiaAcao(estrategia) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = definirEstrategiaCompanhia(camp, estrategia);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async despacharCaravanaAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = despacharCaravanaMercantil(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async alternarSakaiModoAcao(modo) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = ativarSakai(camp, modo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async executarTreinoQuaseMorteAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = executarTreinoConcentracaoQuaseMorte(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
   },
 
   async apoiarFaccao(id) {
@@ -811,6 +961,23 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     const t = texto.trim();
     if (!t) return;
+
+    // Domínio do Kai (Sakai): intercepta e resolve comandos livres do Kai diretamente na engine
+    const resKai = processarAcaoLivreKai(t, camp);
+    if (resKai) {
+      set({
+        camp: { ...camp },
+        feed: [
+          ...get().feed,
+          nf(t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) }),
+          nf(resKai.mensagem, 'sistema'),
+        ],
+      });
+      await persistir(camp, set);
+      await narrar(get, set, `Você canalizou o Domínio do Kai: ${resKai.mensagem}. Situação: ${t}`, t);
+      return;
+    }
+
     const cls = classificarAcaoLivre(t, content, get().cena?.contexto);
     if (cls) {
       // 'cacar' e os verbos de chefe abrem combate estruturado de verdade

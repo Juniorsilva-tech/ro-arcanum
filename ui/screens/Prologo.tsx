@@ -8,11 +8,22 @@ import { useGame } from '../store';
 export function PrologoInfancia() {
   const camp = useGame(s => s.camp)!;
   const avancar = useGame(s => s.avancarInfancia);
+  const pular = useGame(s => s.pularInfancia);
   const f = camp.familia!;
   const evento = f.eventoAtual;
+
+  const etapaNum = f.idadeJogador === 0 ? 1 : f.idadeJogador === 6 ? 2 : f.idadeJogador === 10 ? 3 : 4;
+  const etapaRotulo = f.idadeJogador === 0
+    ? 'NASCIMENTO (0 ANOS)'
+    : f.idadeJogador === 6
+    ? 'INFÂNCIA (6 ANOS)'
+    : f.idadeJogador === 10
+    ? 'PRIMEIROS TESTES (10 ANOS)'
+    : 'RUMO À VIDA ADULTA (14 ANOS)';
+
   return (
     <Pagina>
-      <Rotulo cor={cores.ouro}>PRÓLOGO · {f.idadeJogador === 0 ? 'NASCIMENTO' : `${f.idadeJogador} ANOS`}</Rotulo>
+      <Rotulo cor={cores.ouro}>PRÓLOGO · ETAPA {etapaNum} DE 4 · {etapaRotulo}</Rotulo>
       <Titulo style={{ marginTop: esp.sm }}>{evento?.titulo ?? 'Sua infância'}</Titulo>
       <TextoSerif style={{ fontSize: 19, color: cores.vellum, marginBottom: esp.lg }}>{evento?.descricao}</TextoSerif>
 
@@ -37,6 +48,14 @@ export function PrologoInfancia() {
         {evento?.opcoes.map(o => (
           <Botao key={o.id} titulo={o.rotulo} sub={o.descricao} variante="acento" onPress={() => avancar(o.id)} />
         ))}
+        <View style={{ marginTop: esp.md }}>
+          <Botao
+            titulo="Pular infância"
+            sub="concluir o prólogo e começar a vida adulta aos 18 anos"
+            variante="fantasma"
+            onPress={pular}
+          />
+        </View>
       </View>
     </Pagina>
   );

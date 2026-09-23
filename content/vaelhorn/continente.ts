@@ -798,13 +798,14 @@ export function integrarContinente(base: Local[]): Local[] {
  */
 export const FATOR_ENTRE_REGIOES = 6;
 const FORA_DO_MUNDO = 'Fora do Mundo';
+const REGIOES_ESPECIAIS_ISOLADAS = new Set([FORA_DO_MUNDO, 'Subespaço de Asora']);
 
 function escalarTravessias(todos: Local[], porId: Map<string, Local>): void {
   for (const l of todos) {
-    if (l.regiao === FORA_DO_MUNDO) continue;
+    if (REGIOES_ESPECIAIS_ISOLADAS.has(l.regiao)) continue;
     l.rotas = l.rotas.map(r => {
       const destino = porId.get(r.destino);
-      if (!destino || destino.regiao === FORA_DO_MUNDO) return r;
+      if (!destino || REGIOES_ESPECIAIS_ISOLADAS.has(destino.regiao)) return r;
       if (r.periodos <= 0 || destino.regiao === l.regiao) return r;
       return { ...r, periodos: r.periodos * FATOR_ENTRE_REGIOES };
     });

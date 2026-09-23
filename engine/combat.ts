@@ -18,6 +18,7 @@ import { bonusDefesaEquip, armaEquipada } from './items';
 import { periodoAtual, avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
 import { aplicarFerimentoOni, haAbrigoSolar, obterRival, registrarConfronto, VERSAO_COMBATE } from './kimetsu';
+import type { RivalPersistente } from './kimetsuTypes';
 import { atualizarAmeacas } from './continuidade';
 import { npcPorId } from './elenco';
 import { registrarMorteFamiliar } from './familia';
@@ -25,7 +26,14 @@ import { registrarMarco } from './memoria';
 import { recolherDespojos } from './despojos';
 import { artePorId } from './fusao';
 import { processarSubidaDeNivel, concederDespertar } from './progresso';
-import { absorveuOPrimeiroGolpe, bonusDeFoco, registrarFoco, multiplicadorDeArte } from './classe';
+import {
+  absorveuOPrimeiroGolpe,
+  bonusDeFoco,
+  registrarFoco,
+  multiplicadorDeArte,
+  efeitoEspadachimAsora,
+  bonusArqueiroAzusa,
+} from './classe';
 import { multiplicadoresDeIdentidade } from './identidade';
 import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
 import { selarAlma, chimAlcancado } from './ascensao';
@@ -33,6 +41,7 @@ import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
 import { calcularContexto } from './availability';
 import { dominioDaArte, maestriaDe, registrarDemonstracao, treinar } from './aptidao';
+import { ENTIDADES_CONTRATAVEIS, realizarContratoAlma } from './tsukimichi';
 
 export function criaturaPorId(content: ContentBundle, id: string): Criatura | undefined {
   return content.criaturas.find((c) => c.id === id);
@@ -145,10 +154,30 @@ export function defesaJogador(content: ContentBundle, camp: Campaign): number {
   // avancado simplesmente para de ser acertado por qualquer coisa do mundo —
   // e um mundo que nao acerta nao ameaca. Corpo treinado tem limite; quem
   // passa dele passa por tecnica (maestria) e equipamento, que nao tem teto.
-  return 10 + modificador(p.atributos.precisao) + modificador(p.atributos.resiliencia)
+  const base = 10 + modificador(p.atributos.precisao) + modificador(p.atributos.resiliencia)
     + bonusDefesaEquip(content, p)
     + Math.floor(Math.min(TETO_NIVEL_DEFESA, p.nivel) / 3)
     + Math.floor(maestriaDe(camp, 'espada') / 18);
+  // Bônus de Sakai: modos supressao, fortalecimento, sentidos, barreira_fisica, barreira_magica, magia ou cura elevam a defesa
+  const sakai = p.sakai;
+  let sakaiBonus = 0;
+  if (sakai?.modoAtivo === 'barreira_fisica') {
+    sakaiBonus = 14 + (sakai.nivel ?? 1) * 3;
+  } else if (sakai?.modoAtivo === 'barreira_magica') {
+    sakaiBonus = 12 + (sakai.nivel ?? 1) * 3;
+  } else if (sakai?.modoAtivo === 'supressao') {
+    sakaiBonus = 8 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'fortalecimento') {
+    sakaiBonus = 6 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'sentidos' || sakai?.modoAtivo === 'audicao') {
+    sakaiBonus = 4 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'magia') {
+    sakaiBonus = 4;
+  } else if (sakai?.modoAtivo === 'cura') {
+    sakaiBonus = 2;
+  }
+  const bonusCenarioDef = camp.cenarioId === 'tsukimichi' ? 14 : 0;
+  return base + sakaiBonus + bonusCenarioDef;
 }
 
 // Janela de critico: a fatia dos acertos que sai limpa. Aproveitar a abertura
@@ -166,8 +195,26 @@ export function acertoJogador(content: ContentBundle, camp: Campaign): number {
   // deixava de ter erro, e sem erro nao ha luta, so aritmetica. Passado o
   // teto, quem continua crescendo e' dano, vida e defesa.
   const TETO_NIVEL_ACERTO = 15;
-  return 10 + Math.min(TETO_NIVEL_ACERTO, p.nivel) + modificador(p.atributos[attr]) + (arma ? 2 : 0)
+  const base = 10 + Math.min(TETO_NIVEL_ACERTO, p.nivel) + modificador(p.atributos[attr]) + (arma ? 2 : 0)
     + Math.floor(maestriaDe(camp, 'espada') / 25);
+  // Bônus de Sakai: modos sentidos, audicao, percepcao, magia, destruicao ou fortalecimento elevam o acerto
+  const sakai = p.sakai;
+  let sakaiBonus = 0;
+  if (sakai?.modoAtivo === 'sentidos') {
+    sakaiBonus = 14 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'audicao') {
+    sakaiBonus = 12 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'percepcao') {
+    sakaiBonus = 10 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'magia') {
+    sakaiBonus = 8 + (sakai.nivel ?? 1) * 2;
+  } else if (sakai?.modoAtivo === 'destruicao') {
+    sakaiBonus = 5;
+  } else if (sakai?.modoAtivo === 'fortalecimento') {
+    sakaiBonus = 3 + (sakai.nivel ?? 1);
+  }
+  const bonusCenarioAcerto = camp.cenarioId === 'tsukimichi' ? 10 : 0;
+  return base + sakaiBonus + bonusCenarioAcerto;
 }
 
 // Dano do jogador. Antes era so' a arma — dois personagens com a mesma espada
@@ -183,7 +230,44 @@ export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano 
   const base = perfil.base * eficiencia
     + Math.max(0, modificador(p.atributos[attr]))
     + Math.floor(p.nivel / 3);
-  return { ...perfil, base: base * multiplicadoresDeIdentidade(camp).dano };
+
+  // Bônus de impacto muscular / compressão do Kai (Sakai)
+  const sakai = p.sakai;
+  let bonusDanoSakai = 0;
+  if (sakai?.modoAtivo === 'destruicao') {
+    bonusDanoSakai = 15 + (sakai.nivel ?? 1) * 3;
+  } else if (sakai?.modoAtivo === 'magia') {
+    bonusDanoSakai = 14 + (sakai.nivel ?? 1) * 3;
+  } else if (sakai?.modoAtivo === 'fortalecimento') {
+    bonusDanoSakai = 12 + (sakai.nivel ?? 1) * 4;
+  } else if (sakai?.modoAtivo === 'sentidos' || sakai?.modoAtivo === 'audicao') {
+    bonusDanoSakai = 3 + (sakai.nivel ?? 1);
+  }
+
+  const bonusCenarioDano = camp.cenarioId === 'tsukimichi' ? 28 : 0;
+  return { ...perfil, base: (base + bonusDanoSakai + bonusCenarioDano) * multiplicadoresDeIdentidade(camp).dano };
+}
+
+function gerarBarkReencontro(r: RivalPersistente): string {
+  if (r.cheatDeath?.vezes && r.cheatDeath.vezes > 0) {
+    return '— Você achou que tinha me matado?! O sangue corre mais fundo que sua lâmina!';
+  }
+  if (r.tracos?.odios?.includes('furia_vinganca_sangue')) {
+    return '— Você matou quem lutava ao meu lado! Vou arrancar suas entranhas por isso!';
+  }
+  if (r.traumaJogador) {
+    return '— Você... de novo não... mas desta vez eu não vou quebrar!';
+  }
+  if (r.memoria.at(-1)?.resultado === 'fuga') {
+    return '— Fugiu como um cão da última vez, e agora volta achando que algo mudou?!';
+  }
+  if (r.vitorias > 0 && r.memoria.at(-1)?.resultado === 'derrota') {
+    return '— Já derrubei você uma vez. Vou saborear sua queda novamente!';
+  }
+  if (r.cicatrizes?.some(c => c.includes('fogo') || c.includes('sol') || c.includes('hinokami'))) {
+    return '— Minha carne ainda queima onde seu golpe passou... Vou apagar essa vergonha com seu sangue!';
+  }
+  return '— Finalmente nos encontramos de novo. Nossas contas ainda não foram pagas!';
 }
 
 export function iniciarCombate(
@@ -203,9 +287,9 @@ export function iniciarCombate(
     ehJogador: true,
     vida: p.recursos.vida,
     vidaMax: p.recursosMax.vida,
-    defesa: defesaJogador(content, camp) + penMembros.defesa,
+    defesa: defesaJogador(content, camp) + penMembros.defesa + (camp.despertares?.includes('marca_do_cacador') ? 2 : 0),
     janelaCritica: janelaCriticaJogador(camp),
-    acerto: acertoJogador(content, camp) + penMembros.acerto,
+    acerto: acertoJogador(content, camp) + penMembros.acerto + (camp.despertares?.includes('marca_do_cacador') ? 3 : 0),
     dano: danoJogador(content, camp),
     condicoes: [],
     membrosPerdidos: [...(p.membrosPerdidos ?? [])],
@@ -242,16 +326,21 @@ export function iniciarCombate(
     const c = criaturaPorId(content, cid)!;
     const rival = obterRival(camp, c, ocupados, camp.localAtual, rivalAlvo);
     if (rival) ocupados.push(rival.id);
+    const penalidadeCicatriz = Math.min(4, (rival?.cicatrizes?.length ?? 0));
+    const penalidadeTrauma = rival?.traumaJogador ? 2 : 0;
+    const bonusVinganca = rival?.tracos?.odios?.includes('furia_vinganca_sangue') ? 3 : 0;
+    const nomeFinal = rival?.titulo ? `${rival.nome}, ${rival.titulo}` : (rival?.nome ?? c.nome);
     return {
       id: `inim_${i}_${cid}`,
-      nome: rival?.nome ?? c.nome,
+      nome: nomeFinal,
       ehJogador: false,
       vida: rival?.vida ?? c.vida,
       vidaMax: c.vida,
-      defesa: c.defesa + (rival?.evolucao?.nivel ?? 0),
-      acerto: c.acerto + (rival?.evolucao?.nivel ?? 0),
+      defesa: Math.max(1, c.defesa + (rival?.evolucao?.nivel ?? 0) - penalidadeCicatriz - penalidadeTrauma),
+      acerto: Math.max(1, c.acerto + (rival?.evolucao?.nivel ?? 0) - Math.floor(penalidadeCicatriz / 2) - penalidadeTrauma + bonusVinganca),
       dano: c.dano,
       criaturaId: cid,
+      nivelGuilda: c.nivelGuilda ?? (c.nivel >= 12 ? 1000 : c.nivel * 70),
       condicoes: [],
       oni: c.oni,
       imuneLuz: c.imuneLuz,
@@ -282,10 +371,52 @@ export function iniciarCombate(
     fase: 1,
   };
 
+
+  // ── Aura Esmagadora de Presença ──────────────────────────────────────────
+  // Quando o protagonista tem servas do Círculo Central ativas (Tomoe, Mio,
+  // Shiki etc.), o Sakai desbloqueado, ou está no cenário Tsukimichi, inimigos de baixo escalão (nivelGuilda
+  // ≤ 600 em Tsukimichi ou ≤ 400 sem chefe) sentem o peso do mana transcendental
+  // e entram em colapso moral imediato, fugindo sem lutar.
+  const temCirculoCentral = !!(camp.asora?.desbloqueado &&
+    Object.values(camp.asora.contratos ?? {}).some((c) => c.ativaNoGrupo));
+  const temSakai = !!(camp.personagem.sakai?.desbloqueado);
+
+  if (temCirculoCentral || temSakai) {
+    const tetoAura = camp.cenarioId === 'tsukimichi' ? 600 : 400;
+    const todosFracos = inimigos.every((ator) => {
+      const criatura = criaturaPorId(content, ator.criaturaId ?? '');
+      if (!criatura) return true;
+      if (criatura.chefe) return false; // Chefes resistem à aura
+      const ng = criatura.nivelGuilda ?? (criatura.nivel ? criatura.nivel * 70 : 0);
+      // Sem nivelGuilda: criatura comum de Vaelhorn, sempre considerada fraca perante a aura
+      return ng === 0 || ng <= tetoAura;
+    });
+
+    if (todosFracos && inimigos.length > 0) {
+      const auraDesc = temCirculoCentral
+        ? `A presença esmagadora do Mestre e de suas servas do Círculo Central faz o ar tremer. ${inimigos.map((i) => i.nome).join(', ')} sente o peso de um mana que não deveria existir e entra em colapso total de moral.`
+        : `O mana incomensurável do Sem-Bênção transpira pela pele e distorce a luz ao redor. ${inimigos.map((i) => i.nome).join(', ')} paralisa de terror diante de um poder avassalador que desafia a compreensão.`;
+      state.log.push(auraDesc);
+      state.moralInimiga = 0;
+    }
+  }
+
   camp.combate = state;
   for (const a of inimigos) {
     const r = a.rivalId && camp.kimetsu?.rivais[a.rivalId];
-    if (r && r.reencontros > 0) state.log.push(`${a.nome} reconhece você: ${r.reencontros} confronto(s) anterior(es).`);
+    if (r && r.reencontros > 0) {
+      const msgCicatriz = r.cicatrizes && r.cicatrizes.length > 0 ? ` Ele traz cicatrizes do embate anterior: ${r.cicatrizes.map(c => c.replace(/_/g, ' ')).join(', ')}.` : '';
+      const bark = gerarBarkReencontro(r);
+      r.ultimoBark = bark;
+      state.log.push(`${a.nome} reconhece você: ${r.reencontros} confronto(s) anterior(es).${msgCicatriz}`);
+      state.log.push(`${a.nome}: "${bark}"`);
+      if (r.tracos?.odios?.includes('furia_vinganca_sangue')) {
+        state.log.push(`${a.nome} arde em fúria vingativa pela morte do parceiro!`);
+      }
+      if (r.traumaJogador) {
+        state.log.push(`${a.nome} hesita ao cruzar olhares com você, tremendo sob o trauma da humilhação.`);
+      }
+    }
   }
   if (inimigos.length === 0) { encerrar(camp, 'vitoria', content); return state; }
   // Se algum inimigo age antes do jogador, processa até chegar a vez do jogador.
@@ -313,37 +444,105 @@ function resolverAtaque(
   contraOni = false,
 ): string {
   const evasao = (alvo.tatico?.esquiva ?? 0) > 0;
-  const defEfetiva = alvo.defesa + (alvo.defendendo ? 4 : 0) + (evasao ? 5 : 0) + (alvo.posicao === 'cobertura' ? 3 : alvo.posicao === 'flanco' ? -2 : 0);
+  const kyudo = bonusArqueiroAzusa(camp, atacante, alvo);
+  const defCobertura = kyudo.anulaCobertura ? 0 : alvo.posicao === 'cobertura' ? 3 : 0;
+  const defEfetiva =
+    alvo.defesa +
+    (alvo.defendendo ? 4 : 0) +
+    (evasao ? 5 : 0) +
+    defCobertura +
+    (alvo.posicao === 'flanco' ? -2 : 0);
   if (evasao) alvo.tatico!.esquiva!--;
-  const posicao = atacante.posicao === 'flanco' ? 3 : atacante.posicao === 'cobertura' ? -2 : 0;
+  const posicao =
+    atacante.posicao === 'flanco'
+      ? 3
+      : kyudo.anulaCobertura
+        ? 0
+        : atacante.posicao === 'cobertura'
+          ? -2
+          : 0;
   const foco = bonusDeFoco(camp, atacante, alvo.id);
-  const p = probabilidade(atacante.acerto + posicao + foco, defEfetiva, 4);
+  const p = probabilidade(atacante.acerto + posicao + foco + kyudo.bonusAcerto, defEfetiva, 4);
   const r = nextFloat(camp.rng);
   if (r >= p) {
     registrarFoco(camp, atacante, alvo.id, false);
     return `${atacante.nome} ataca ${alvo.nome} e erra.`;
   }
   registrarFoco(camp, atacante, alvo.id, true);
-  const crit = r < p * (atacante.janelaCritica ?? 0.25);
+  const efeitoAsora = efeitoEspadachimAsora(camp, atacante, alvo.id);
+  const crit = r < p * (atacante.janelaCritica ?? 0.25) || efeitoAsora.ruptura;
   const dano = calcularDano(camp.rng, perfil, crit);
+  dano.valor += efeitoAsora.bonusDano;
   if ((alvo.tatico?.guarda ?? 0) > 0) {
-    dano.valor = Math.max(1, Math.round(dano.valor * .35));
-    alvo.tatico!.guarda!--;
+    if (efeitoAsora.ignoraGuarda) {
+      alvo.tatico!.guarda = 0;
+    } else {
+      dano.valor = Math.max(1, Math.round(dano.valor * 0.35));
+      alvo.tatico!.guarda!--;
+    }
   }
   // Guardiao: o primeiro golpe de cada combate nao passa (engine/classe.ts).
   if (dano.valor > 0 && absorveuOPrimeiroGolpe(camp, alvo)) {
     return `${atacante.nome} acerta ${alvo.nome} — e o golpe morre na guarda. O primeiro sempre morre.`;
   }
+
+  // ── Manto Passivo de Mana & Vulnerabilidade Canônica de Tsukimichi ────────
+  let notaMantoTsukimichi = '';
+  if (alvo.ehJogador && camp.cenarioId === 'tsukimichi') {
+    const nivelGuildaAtacante = atacante.nivelGuilda ?? 0;
+    const ehNivel1000 = nivelGuildaAtacante >= 900;
+    const sakai = camp.personagem.sakai;
+    const temBarreiraKai = sakai?.modoAtivo === 'barreira_fisica' || sakai?.modoAtivo === 'barreira_magica';
+    const temProtecaoKai = temBarreiraKai || sakai?.modoAtivo === 'fortalecimento' || sakai?.modoAtivo === 'supressao';
+    const emGuarda = alvo.defendendo || (alvo.tatico?.guarda ?? 0) > 0 || evasao || temProtecaoKai;
+
+    if (!ehNivel1000) {
+      // Inimigos comuns ou sub-ápice da Wasteland / Tsige (< NvG 900)
+      if (temBarreiraKai) {
+        return `${atacante.nome} ataca ${alvo.nome} — o golpe colide contra a Barreira do Kai e se desfaz sem causar um único arranhão!`;
+      }
+      // O manto passivo e a musculatura hiperdensa da Terra absorvem quase todo o impacto
+      const danoAbsorvido = Math.floor(dano.valor * 0.85);
+      dano.valor = Math.max(1, Math.min(6, dano.valor - danoAbsorvido));
+      notaMantoTsukimichi = ` [Manto Passivo de Mana: ${danoAbsorvido} de dano absorvido pelo corpo hiperdenso da Terra]`;
+    } else {
+      // Entidade Ápice Nível 1.000+ (Sofia Bulga, Mitsurugi, Shen, Mio, Suzaku, General Io)
+      if (!emGuarda && (crit || r < p * 0.5)) {
+        // Exatamente a situação canônica descrita: sem nada, sem desvio, sem barreira: o golpe perfura ponto vital (garganta/olho)
+        dano.valor = Math.round(dano.valor * 2.2 + 25);
+        notaMantoTsukimichi = ` [⚠️ PERFURAÇÃO CRÍTICA EM PONTO VITAL! Desprotegido e sem desvio, o golpe de Nível 1.000+ perfura rente à garganta/olho antes que o mana responda!]`;
+      } else if (emGuarda) {
+        // Com guarda, esquiva ou barreira ativa: o choque colossal é contido
+        dano.valor = Math.max(8, Math.round(dano.valor * 0.45));
+        notaMantoTsukimichi = ` [Impacto Contido: sua guarda e reflexos de mana contêm a violência do golpe divino]`;
+      }
+    }
+  }
+
   alvo.vida = Math.max(0, alvo.vida - dano.valor);
   aplicarFerimentoOni(camp, alvo, contraOni);
-  const morte = alvo.vida <= 0 ? ` ${alvo.nome} cai.` : '';
+  const submissaoTsukimichi = camp.cenarioId === 'tsukimichi' && alvo.criaturaId && alvo.criaturaId in ENTIDADES_CONTRATAVEIS;
+  if (submissaoTsukimichi && alvo.vida <= 0) {
+    // Ilusões e reforços invocados pela besta primordial dissipam-se de imediato
+    for (const outro of (camp.combate?.atores ?? [])) {
+      if (outro.id !== alvo.id && !outro.ehJogador && !outro.ehAliado && outro.id.startsWith('reforco_')) {
+        outro.vida = 0;
+      }
+    }
+  }
+  const morte = alvo.vida <= 0
+    ? submissaoTsukimichi
+      ? ` ${alvo.nome} cai de joelhos, exausto e subjugado pelo seu oceano imensurável de mana!`
+      : ` ${alvo.nome} cai.`
+    : '';
   const lesao = alvo.vida > 0 ? avaliarAmputacao(camp, alvo, dano.valor) : undefined;
+  const notaRuptura = efeitoAsora.ruptura ? ' [Ruptura de Asora: o corte fatiou a guarda!]' : '';
   // Ordinary Nichirin enables finishing; suppression requires a separate effect.
   let notaOni = '';
   if (alvo.vida > 0 && alvo.oni && contraOni) {
     notaOni = ` Nichirin pode finalizar esse oni quando sua postura ceder.`;
   }
-  return `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''} — ${dano.valor} de dano ${dano.tipo}.${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
+  return `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''} — ${dano.valor} de dano ${dano.tipo}.${notaRuptura}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
 }
 
 // ── Ações do jogador ────────────────────────────────────────────────
@@ -351,7 +550,7 @@ export function jogadorAtaca(content: ContentBundle, camp: Campaign, alvoId: str
   const s = camp.combate;
   if (!s || s.terminado) return;
   const jog = jogadorAtor(s);
-  const alvo = s.atores.find((a) => a.id === alvoId);
+  const alvo = s.atores.find((a) => a.id === alvoId) ?? s.atores.find((a) => a.criaturaId === alvoId);
   if (!alvo || alvo.ehJogador || alvo.ehAliado || !vivo(alvo)) return;
   if (!podeAgir(camp)) return;
   jog.defendendo = false;
@@ -422,11 +621,28 @@ export function jogadorConjura(
         const ataque = { ...jog, acerto: jog.acerto + (tecnica.modo === 'precisao' ? 5 : 0) };
         const r = a.rivalId ? camp.kimetsu?.rivais[a.rivalId] : undefined;
         if (r?.memoria.slice(-2).some(m => m.tecnica === arteId)) ataque.acerto -= r.evolucao?.adaptacoes[arteId] ?? 2;
+        if (r?.cicatrizes?.some(c => c.includes(arteId.replace(/^respiracao_/, '')))) {
+          ataque.acerto += 2;
+          s.log.push(`O golpe explora a cicatriz deixada anteriormente em ${a.nome}!`);
+        }
+        if (r?.tracos?.imunidades?.includes('imune_corte') && tecnica.modo === 'corte') {
+          ataque.acerto -= 2;
+        }
         s.log.push(resolverAtaque(camp, ataque, a, { base: (tecnica.potencia + modificador(p.atributos.precisao)) * multiplicadoresDeIdentidade(camp).dano, dispersao: .2, tipo: 'corte' }, !!armaEquipada(content, p)?.contraOni));
         if (tecnica.modo === 'veneno' && a.vida < antes && a.oni && vivo(a)) {
-          a.imuneRegenTurnos = 3;
-          (a.tatico ??= {}).veneno = 3;
-          s.log.push('A glicínia entrou na ferida: regeneração suprimida por três turnos.');
+          if (r?.tracos?.imunidades?.includes('imune_veneno')) {
+            s.log.push(`${a.nome} desenvolveu tolerância à glicínia: a regeneração não foi contida!`);
+          } else {
+            const turnosVeneno = r?.tracos?.fraquezas?.includes('fobia_glicinia') ? 5 : 3;
+            a.imuneRegenTurnos = turnosVeneno;
+            (a.tatico ??= {}).veneno = turnosVeneno;
+            s.log.push(turnosVeneno === 3 ? 'A glicínia entrou na ferida: regeneração suprimida por três turnos.' : `A glicínia entrou na ferida: fobia explorada, regeneração suprimida por ${turnosVeneno} turnos.`);
+          }
+        }
+        if ((r?.tracos?.fraquezas?.includes('fobia_fogo') || r?.tracos?.fraquezas?.includes('fobia_sol')) && (arteId.includes('fogo') || arteId.includes('hinokami') || arteId.includes('sol'))) {
+          s.moralInimiga = Math.max(0, s.moralInimiga - 20);
+          (a.tatico ??= {}).guarda = 0;
+          s.log.push(`${a.nome} recua apavorado pelo calor abrasador: fobia ativada!`);
         }
       }
     }
@@ -631,7 +847,7 @@ function executarArteOni(camp: Campaign, a: CombatActor, jog: CombatActor): bool
   return false;
 }
 
-export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar';
+export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar' | 'humilhar';
 export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: AcaoTatica, alvoId?: string): void {
   const s = camp.combate;
   if (!s || s.terminado || s.ordem[s.turno] !== 'jogador') return;
@@ -699,6 +915,36 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
       alvo.vida = 0;
       aplicarFerimentoOni(camp, alvo, true);
       s.log.push(`Você executa o corte no pescoço de ${alvo.nome}.`);
+    } else if (acao === 'humilhar') {
+      if (!alvo?.oni) { s.log.push('Apenas oni ou adversários persistentes podem ser humilhados.'); return; }
+      if (alvo.vida > alvo.vidaMax * .3) { s.log.push('A postura ainda está firme: enfraqueça o adversário antes de quebrar seu espírito.'); return; }
+      const r = alvo.rivalId && camp.kimetsu?.rivais[alvo.rivalId];
+      if (r) {
+        r.traumaJogador = true;
+        if (r.evolucao) {
+          r.evolucao.nivel = Math.max(0, r.evolucao.nivel - 2);
+          r.evolucao.servos = 0;
+          r.evolucao.plano = 'ocultar';
+        }
+        r.titulo = r.titulo ? `${r.titulo}, o Humilhado` : 'o Humilhado';
+        r.rancor = Math.max(0, r.rancor - 2);
+        if (camp.vivo) {
+          registrarFato(camp, {
+            tipo: 'oni_humilhado',
+            local: camp.localAtual,
+            texto: `Você quebrou o orgulho de ${alvo.nome} e o poupou com desprezo. Sua autoridade entre os outros foi destruída.`,
+            atores: ['jogador', r.id],
+            publico: true,
+          });
+        }
+      }
+      alvo.vida = 0;
+      alvo.retirado = true;
+      s.log.push(`Você desarma ${alvo.nome} e o atira ao chão com desprezo. Arruinado psicologicamente, ele foge em desespero.`);
+      if (inimigosVivos(s).length === 0) {
+        encerrar(camp, 'vitoria', content);
+        return;
+      }
     }
   }
   jog.defendendo = false;
@@ -808,6 +1054,14 @@ function avancarAteJogador(content: ContentBundle, camp: Campaign): void {
 
     // Turno do inimigo.
     checarFaseChefe(content, camp, ator);
+    const rivalAtor = ator.rivalId ? camp.kimetsu?.rivais[ator.rivalId] : undefined;
+    if (rivalAtor?.tracos?.odios?.some(o => o === 'furia_sangue' || o === 'furia_ao_sangrar')) {
+      if (ator.vida <= ator.vidaMax * 0.4 && !(ator.tatico?.emFuria ?? 0)) {
+        (ator.tatico ??= {}).emFuria = 3;
+        ator.acerto += 2;
+        s.log.push(`${ator.nome} sangra copiosamente e entra em frenesi assassino! (+2 acerto)`);
+      }
+    }
     if (moralQuebrada(camp, s)) return;
     const jog = jogadorAtor(s);
     const alvos = s.atores.filter(a => (a.ehJogador || a.ehAliado) && vivo(a));
@@ -894,6 +1148,7 @@ function checarFaseChefe(content: ContentBundle, camp: Campaign, ator: CombatAct
           acerto: reforco.acerto,
           dano: reforco.dano,
           criaturaId: reforco.id,
+          nivelGuilda: reforco.nivelGuilda ?? (reforco.nivel >= 12 ? 1000 : reforco.nivel * 70),
           condicoes: [],
           oni: reforco.oni,
         };
@@ -953,6 +1208,35 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
         if (camp.vivo) registrarFato(camp, { tipo: 'rendicao', local: camp.localAtual, texto: `${a.nome} se rendeu a você e foi entregue à custódia local.`, atores: ['jogador'], publico: true });
         continue;
       }
+
+      // ── Subjugação de Bestas Lendárias & Contrato de Alma (Tsukimichi) ──────
+      if (camp.cenarioId === 'tsukimichi' && c.id in ENTIDADES_CONTRATAVEIS) {
+        xp += c.xp;
+        camp.flags[`subjugou.${c.id}`] = true;
+        camp.flags[`contrato.${c.id}`] = true;
+        registrarMarco(camp, `você subjugou a entidade primordial ${c.nome}`);
+
+        const jaContratada = camp.asora?.contratos?.[c.id];
+        if (!jaContratada) {
+          const resContrato = realizarContratoAlma(camp, c.id, '2:8');
+          if (resContrato.sucesso && resContrato.contrato) {
+            const servaNome = resContrato.contrato.nomeConcedido;
+            let msgLog = '';
+            if (c.id === 'dragao_shen') {
+              msgLog = `As ilusões espaciais de Muteki Shen se desfazem perante o seu oceano imensurável de mana. O Dragão Superior cai de joelhos fascinado, assume a forma da nobre espadachim ${servaNome} e sela o Contrato de Alma (2:8)! O subespaço de Asora despertou.`;
+            } else if (c.id === 'aranha_calamidade') {
+              msgLog = `Seu fluxo infinito de mana inunda a escuridão da Calamidade Voraz, saciando sua fome milenar pela primeira vez. A monstruosa aranha é tomada por êxtase e devoção absoluta, assumindo a forma da bela ${servaNome} e selando o Contrato de Alma (2:8)!`;
+            } else if (c.id === 'fenix_suzaku') {
+              msgLog = `As chamas solares de Suzaku se curvam perante a sua presença dominante. A soberana do fogo assume forma humanoide, curvando a cabeça como sua serva leal sob o Contrato de Alma (2:8)!`;
+            } else {
+              msgLog = `${c.nome} reconhece sua supremacia absoluta e sela o Contrato de Alma (2:8), assumindo forma humanoide como ${servaNome} a serviço do Mestre!`;
+            }
+            s.log.push(msgLog);
+          }
+        }
+        continue;
+      }
+
       xp += c.xp;
       // Marca a presa: missões podem exigir a queda de uma criatura específica.
       camp.flags[`matou.${c.id}`] = true;
@@ -970,6 +1254,15 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       if (c.oni && c.id.startsWith('lua_')) {
         if (concederDespertar(camp, 'derrubou_uma_lua', `você enfrentou ${c.nome}, um dos doze, e voltou`)) {
           s.log.push('Você enfrentou um dos doze e está de pé. Quase ninguém no mundo pode dizer isso.');
+        }
+      }
+      // A Marca do Caçador: combustão da força vital em caçadores que superam uma Lua ou chefe oni.
+      const usaRespiracao = p.artesConhecidas.some(a => a.startsWith('respiracao_') || a.startsWith('hinokami_'));
+      if (c.oni && (c.id.startsWith('lua_') || c.chefe) && usaRespiracao) {
+        if (concederDespertar(camp, 'marca_do_cacador', 'veias ardentes e chamas gravadas na carne — a Marca do Caçador despertou')) {
+          p.cicatrizes ??= [];
+          if (!p.cicatrizes.includes('marca_do_cacador')) p.cicatrizes.push('marca_do_cacador');
+          s.log.push('Uma queimação insuportável rompe sob sua pele: a Marca do Caçador se manifesta.');
         }
       }
       // Pilar de almas da Ascensão (ver engine/ascensao.ts): só chefes oni de
@@ -1039,6 +1332,11 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       const npc = npcPorId(content, camp, a.npcId!);
       const nivelMaior = Math.max(1, ...s.atores.filter(i => !i.ehJogador && !i.ehAliado).map(i => criaturaPorId(content, i.criaturaId ?? '')?.nivel ?? 1));
       if (npc) treinarNpc(camp, npc, a.retirado ? .25 : 1, resultado === 'vitoria' ? nivelMaior * 2 : nivelMaior * .5);
+    }
+  }
+  if (camp.despertares?.includes('marca_do_cacador')) {
+    for (const pressao of Object.keys(p.pressoes)) {
+      p.pressoes[pressao] = Math.min(100, (p.pressoes[pressao] ?? 0) + 2);
     }
   }
   clampRecursos(p);

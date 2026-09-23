@@ -55,8 +55,9 @@ export function FimCapitulo() {
         <Divisor label="o que mudou" />
         <Linha rotulo="Nível" valor={`${p.nivel} · ${p.xp} xp`} />
         <Linha rotulo="No bolso" valor={`${p.dinheiro} moedas`} />
-        <Linha rotulo="Sanidade" valor={`${Math.round(p.pressoes.sanidade ?? 0)}/100`} />
-        <Linha rotulo="Corrupção" valor={`${Math.round(p.pressoes.corrupcao ?? 0)}/100`} />
+        {content.cenario.pressoes.map((pr) => (
+          <Linha key={pr.id} rotulo={pr.nome} valor={`${Math.round(p.pressoes[pr.id] ?? 0)}/100`} />
+        ))}
 
         <Divisor label="quem te conhece agora" />
         {conhecidos.length === 0 ? (

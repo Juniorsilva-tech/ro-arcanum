@@ -15,6 +15,8 @@ export const LEGADOS = {
   // treinar sozinho: dependem de outra pessoa — quem ensinou, ou quem contou.
   mestre_esgotado: { nome: 'O aluno que passou', vida: 1.15, dano: 1.25, descricao: 'Aprendeu tudo que um mestre tinha. A partir daqui o caminho não tem mais quem o mostre.' },
   nome_conhecido: { nome: 'O nome que corre sozinho', vida: 1.2, dano: 1.2, descricao: 'Dizem seu nome em lugares onde você nunca pôs os pés. Isso abre portas e atrai coisas.' },
+  // A Marca do Caçador: combustão da vitalidade em troca de poder fulminante.
+  marca_do_cacador: { nome: 'Marca do Caçador', vida: 1.25, dano: 1.4, descricao: 'A queimação vital gravada na pele. Cortes fulminantes e percepção transparente, cobrados na expectativa do corpo.' },
 } as const;
 
 export function legadosConquistados(camp: Campaign) {

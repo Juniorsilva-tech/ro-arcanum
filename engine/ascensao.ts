@@ -52,6 +52,20 @@ export function processarEnvelhecimentoJogador(camp: Campaign): void {
   p.idade = idadeJogador(camp) + 1;
   sincronizarIdadeFamilia(camp);
   if (chimAlcancado(camp)) return; // imortalidade biológica de verdade — o corpo parou de contar
+
+  // Consequência biológica da Marca do Caçador: o corpo arde acelerado e não ultrapassa 25 anos impune.
+  if (camp.despertares?.includes('marca_do_cacador') && p.idade >= 25) {
+    p.recursosMax.vida = Math.max(25, (p.recursosMax.vida ?? 100) - 8);
+    p.recursos.vida = Math.min(p.recursos.vida, p.recursosMax.vida);
+    const anosAlem = p.idade - 25;
+    const chanceTributo = Math.min(0.40, 0.10 + anosAlem * 0.05);
+    if (nextFloat(camp.rng) < chanceTributo) {
+      p.recursos.vida = 0;
+      registrarMarco(camp, `dia ${camp.calendario.dia}: aos ${p.idade} anos, o tributo vital da Marca do Caçador cobrou a dívida final do sangue.`);
+      return;
+    }
+  }
+
   if (p.idade < IDADE_MORTE_MIN_JOGADOR) return;
   const chance = Math.min(IDADE_MORTE_CHANCE_MAX_JOGADOR, (p.idade - IDADE_MORTE_MIN_JOGADOR) * 0.02);
   if (nextFloat(camp.rng) < chance) {

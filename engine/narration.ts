@@ -140,6 +140,150 @@ function opcoesCanonicas(content: ContentBundle, camp: Campaign, ctx: Contexto):
     });
   });
 
+  // Registro na Guilda de Aventureiros de Tsige: disponível em Tsige enquanto não registrado
+  if (
+    content.cenario.id === 'tsukimichi' &&
+    !camp.personagem.cartaoAventureiro?.registrado &&
+    ctx.local.regiao === 'Tsige'
+  ) {
+    out.push({
+      id: 'registrar_guilda_tsige',
+      rotulo:
+        ctx.local.id === 'tsige_guilda_aventureiros'
+          ? 'Tocar na Orbe de Cristal e registrar-se na Guilda'
+          : 'Ir à Guilda de Aventureiros · Apresentar-se à Orbe de Medição',
+      dica: 'Apresentar sua assinatura de mana para avaliação da orbe e emissão do Cartão de Aventureiro',
+      custoPeriodos: 1,
+      origem: 'cena',
+      efeitos: [{ tipo: 'flag', chave: 'acao.registrar_guilda', valor: true }],
+    });
+  }
+
+  // Encontros e Pactos de Alma com Bestas Lendárias na Wasteland (Despertar de Asora)
+  if (content.cenario.id === 'tsukimichi') {
+    // Opções de autonomia e exploração na Borda da Wasteland (pós-queda da estratosfera)
+    if (ctx.local.id === 'wasteland_fronteira') {
+      out.push({
+        id: 'sondar_wasteland_kai',
+        rotulo: 'Expandir a percepção do Kai sobre as correntes do ermo',
+        dica: 'Estender a membrana de mana para mapear fendas, fluxos mágicos e ninhos distantes da Wasteland',
+        custoPeriodos: 0,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.sondar_wasteland_kai', valor: true }],
+      });
+
+      out.push({
+        id: 'cacar_feras_wasteland',
+        rotulo: 'Rastrear e confrontar feras selvagens no miasma',
+        dica: 'Caçar leviatãs ou bestas atrozes da Wasteland para testar o fio da lâmina e a força bruta',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.cacar_feras_wasteland', valor: true }],
+      });
+
+      out.push({
+        id: 'meditar_cratera_wasteland',
+        rotulo: 'Concentrar a circulação de mana na cratera de impacto',
+        dica: 'Acalmar o impacto da queda celestial e condensar o mana violento que borbulha internamente',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.meditar_cratera', valor: true }],
+      });
+    }
+
+    // Treino de Concentração Total (Quase-Morte Consciente): disponível na Wasteland e em Asora
+    if (ctx.local.id.startsWith('wasteland_') || ctx.local.id.startsWith('asora_')) {
+      out.push({
+        id: 'treino_concentracao_quase_morte',
+        rotulo: 'Concentração Total · Atingir o Vácuo da Quase-Morte Consciente',
+        dica: 'Cessar respiração e batimentos; experimentar a morte temporária e retornar com mana expandido',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.treino_quase_morte', valor: true }],
+      });
+    }
+
+    if (ctx.local.id === 'wasteland_desfiladeiro' && !camp.asora?.contratos?.['dragao_shen']) {
+      out.push({
+        id: 'pacto_shen',
+        rotulo: 'Adentrar a névoa perpétua e desafiar o Dragão Superior Shen',
+        dica: 'Confrontar a besta colossal em combate de arena, quebrar suas ilusões com seu mana e subjugá-lo para selar o Pacto de Alma (Tomoe)',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.pacto_shen', valor: true }],
+      });
+    }
+
+    if (ctx.local.id === 'wasteland_pantano_bruma' && !camp.asora?.contratos?.['aranha_calamidade']) {
+      out.push({
+        id: 'pacto_aranha',
+        rotulo: 'Adentrar a teia de escuridão e enfrentar a Aranha da Calamidade',
+        dica: 'Combater a monstruosidade voraz, inundar sua fome milenar com mana infinito e subjugá-la para selar o Pacto de Alma (Mio)',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.pacto_aranha', valor: true }],
+      });
+    }
+
+    if (ctx.local.id === 'wasteland_ninho_fenix' && !camp.asora?.contratos?.['fenix_suzaku']) {
+      out.push({
+        id: 'pacto_suzaku',
+        rotulo: 'Escalar as rochas ardentes e desafiar a Fênix Suzaku',
+        dica: 'Enfrentar as chamas celestes em combate e domar a soberana do fogo para selar o Pacto de Alma (Suzaku)',
+        custoPeriodos: 1,
+        origem: 'cena',
+        efeitos: [{ tipo: 'flag', chave: 'acao.pacto_suzaku', valor: true }],
+      });
+    }
+
+    // Romance, Intimidade & Convivência com as Servas no Subespaço de Asora
+    if (ctx.local.id.startsWith('asora_') && camp.asora?.desbloqueado) {
+      if (camp.asora.contratos?.['aranha_calamidade']) {
+        out.push({
+          id: 'romance_mio_termas',
+          rotulo: 'Fontes Termais de Asora · Banho Privativo & Banquete com Mio',
+          dica: 'Relaxar nas águas termais enquanto Mio o alimenta com dengos devotos e ciúmes possessivos (+15% Afeto, restaura recursos)',
+          custoPeriodos: 1,
+          origem: 'cena',
+          efeitos: [{ tipo: 'flag', chave: 'acao.romance_mio', valor: true }],
+        });
+      }
+
+      if (camp.asora.contratos?.['dragao_shen']) {
+        out.push({
+          id: 'romance_tomoe_sake',
+          rotulo: 'Sob o Luar de Asora · Degustar Sake Raro & Noite de Bushido com Tomoe',
+          dica: 'Desfrutar de uma noite íntima ouvindo clássicos de época e poemas ao lado de uma Tomoe desarmada de afeto (+15% Afeto, restaura recursos)',
+          custoPeriodos: 1,
+          origem: 'cena',
+          efeitos: [{ tipo: 'flag', chave: 'acao.romance_tomoe', valor: true }],
+        });
+      }
+
+      if (camp.asora.contratos?.['fenix_suzaku']) {
+        out.push({
+          id: 'romance_suzaku_chamas',
+          rotulo: 'Terraços Celestes · Voo sob as Estrelas & Carícias com Suzaku',
+          dica: 'Aquecer o corpo sob as asas douradas e a submissão ardente de Suzaku (+15% Afeto, restaura recursos)',
+          custoPeriodos: 1,
+          origem: 'cena',
+          efeitos: [{ tipo: 'flag', chave: 'acao.romance_suzaku', valor: true }],
+        });
+      }
+
+      if (Object.keys(camp.asora.contratos ?? {}).length > 0) {
+        out.push({
+          id: 'romance_passeio_vila',
+          rotulo: 'Alamedas da Vila Central · Passeio Romântico com o Círculo Central',
+          dica: 'Caminhar de mãos dadas pelas ruas de Asora, aproveitando o carinho e mediando o ciúme adorável das servas',
+          custoPeriodos: 1,
+          origem: 'cena',
+          efeitos: [{ tipo: 'flag', chave: 'acao.romance_vila', valor: true }],
+        });
+      }
+    }
+  }
+
   // Cada pessoa presente é uma porta — não só a primeira. E a porta muda de
   // forma conforme o que já se sabe dela: sondar quem não confia em você não é
   // a mesma coisa que cobrar de quem já se abriu.

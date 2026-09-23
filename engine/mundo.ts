@@ -21,6 +21,7 @@ import { todosNpcs } from './elenco';
 import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
 import { processarCasas } from './casas';
+import { avancarCicloSubespaco } from './tsukimichi';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -215,6 +216,9 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarCasas(content, camp);
     processarContinuidade(content, camp);
     processarMundoVivo(content, camp);
+    if (camp.asora?.desbloqueado) {
+      avancarCicloSubespaco(camp);
+    }
     m.diaProcessado = dia;
   }
   } finally { camp.calendario = calendarioFinal; }

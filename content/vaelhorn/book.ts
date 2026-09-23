@@ -418,6 +418,24 @@ export const artesVaelhorn: Arte[] = [
   { id: 'respiracao_serpente_quinta_dobra', nome: 'Respiração da Serpente: Quinta Dobra — Enroscar Sinuoso e Venenoso', escola: 'Técnica', grau: 'rara', custo: { recurso: 'vigor', valor: 4 }, efeito: 'O corte segue uma trajetória que se curva no ar, difícil de prever e mais difícil ainda de desviar.' },
   { id: 'respiracao_vento_terceira_forma', nome: 'Respiração do Vento: Terceira Forma — Rajada de Corte Rasgado', escola: 'Técnica', grau: 'rara', custo: { recurso: 'vigor', valor: 5 }, efeito: 'Um golpe largo e violento, sem economia nenhuma de força — feito pra abrir espaço, não pra durar.' },
   { id: 'respiracao_som_quarta_nota', nome: 'Respiração do Som: Quarta Nota — Onda Sísmica de Duplo Golpe', escola: 'Técnica', grau: 'rara', custo: { recurso: 'vigor', valor: 4 }, efeito: 'Dois golpes num só tempo, no ritmo exato que confunde quem está contando os seus movimentos.' },
+  // ── Magias Primordiais Transversais (Pactos de Alma & Compressão de Mana)
+  {
+    id: 'pacto_das_nevoas',
+    nome: 'Pacto das Névoas Primordiais',
+    escola: 'Invocação',
+    grau: 'mitica',
+    custo: { recurso: 'mana', valor: 8 },
+    efeito: 'Rasga o véu entre os mundos para vincular a alma de uma entidade primordial (Tomoe, Mio, Shiki) ao invocador, concedendo intervenção em combate e atributos transcendentais.',
+    pressaoGerada: { medidor: 'sanidade', valor: 4 },
+  },
+  {
+    id: 'liberar_draupnir',
+    nome: 'Detonação de Draupnir',
+    escola: 'Evocação',
+    grau: 'rara',
+    custo: { recurso: 'mana', valor: 6 },
+    efeito: 'Detona o excesso de mana condensado num anel rúnico de Asora, disparando uma rajada anômala que oblitera armaduras e ignora defesas convencionais.',
+  },
 ];
 
 // ── IV. RELÍQUIAS (8) — incl. 2 Únicas com dono e 1 Perdida (GDD §13.5).
@@ -511,6 +529,14 @@ export const reliquiasVaelhorn: Reliquia[] = [
     usoPeloDono: 'Perto dela, o que você acabou de dizer some da sua boca antes de chegar ao outro.',
     viasDeTomada: ['Passar a noite inteira nas ruínas com ele', 'Trazer-lhe algo tirado do fogo de Mir'],
     localAtual: 'ruinas',
+  },
+  {
+    id: 'reliquia_orbe_das_nevoas',
+    nome: 'A Orbe das Névoas Primordiais',
+    descricao: 'Uma esfera translúcida onde brumas perpétuas giram sem cessar. Sussurros de um dragão ancestral e o eco de teias de escuridão vibram no interior do cristal.',
+    grau: 'mitica',
+    viasDeTomada: ['Encontrada nas profundezas do Ermo de Solgar onde o tecido do mundo afina', 'Despertada após dominar o Sakai de Percepção'],
+    localAtual: 'solgar',
   },
 ];
 

@@ -43,11 +43,17 @@ export function Entrada() {
         variante={temSave ? 'primario' : 'acento'}
         onPress={novoJogo}
       />
+      <Botao
+        titulo="Escolher mundo"
+        sub="Vaelhorn ou Tsukimichi (O Novo Mundo)"
+        variante="fantasma"
+        onPress={() => irPara('cenario')}
+      />
       <Botao titulo="Configurações" sub="narração por IA, chave de API" variante="fantasma" onPress={() => irPara('config')} />
 
       <Divisor />
       <TextoMono style={styles.rodape}>
-        Fatia vertical do GDD · cenário Vaelhorn · offline-first
+        Fatia vertical do GDD · Vaelhorn & Tsukimichi · offline-first
       </TextoMono>
     </Pagina>
   );

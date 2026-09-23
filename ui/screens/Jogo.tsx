@@ -93,6 +93,19 @@ export function Jogo() {
     return [...set].sort((a, b) => b.length - a.length);
   }, [content, camp]);
 
+  // Nomes de locais e regiões para não serem confundidos com pessoas falando
+  const nomesLocais = useMemo(() => {
+    if (!content) return [] as string[];
+    const set = new Set<string>();
+    for (const l of content.locais) {
+      set.add(l.nome);
+      const primeiro = l.nome.split(/[,\s]/)[0];
+      if (primeiro.length > 2) set.add(primeiro);
+      if (l.regiao) set.add(l.regiao);
+    }
+    return [...set];
+  }, [content]);
+
   // O que está aberto agora, sempre à vista: o jogador não devia precisar
   // rolar o histórico para lembrar o que estava fazendo.
   const objetivosAtivos = useMemo(() => {

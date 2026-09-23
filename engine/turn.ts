@@ -22,6 +22,14 @@ import { manaDeEstudo } from './classe';
 import { lembrarDoTurno } from './memoria';
 import { todosNpcs, npcPorId } from './elenco';
 import { dominioDaAcao, treinar, registrarDemonstracao } from './aptidao';
+import {
+  registrarNaGuildaTsige,
+  realizarContratoAlma,
+  ativarSakai,
+  executarTreinoConcentracaoQuaseMorte,
+  executarMomentoRomanceServa,
+} from './tsukimichi';
+import { iniciarCombate } from './combat';
 
 export type OpcaoResolvida = {
   id: string;
@@ -238,9 +246,60 @@ export function resolverIntencao(
     avancarMundo(content, camp);
   }
 
-  const fatoBase = verbo
+  let fatoBase = verbo
     ? construirFato(verbo, alvo, resultado)
     : `${rotulo}${resultado ? ` — ${NOME_GRAU[resultado.grau]}` : ''}.`;
+
+  if (
+    (intencao.tipo === 'opcao' && intencao.opcao.id === 'registrar_guilda_tsige') ||
+    (intencao.tipo === 'verbo' && intencao.verboId === 'registrar_guilda')
+  ) {
+    const resGuilda = registrarNaGuildaTsige(camp);
+    fatoBase = resGuilda.mensagem;
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'sondar_wasteland_kai') {
+    if (camp.personagem.sakai?.desbloqueado) {
+      ativarSakai(camp, 'percepcao');
+    }
+    fatoBase =
+      'Você expande a membrana do Kai como uma cúpula translúcida sobre a terra calcinada. A vastidão do miasma se abre aos seus sentidos: correntes colossais de mana pulsam a leste no Desfiladeiro do Dragão Adormecido envolto em bruma perpétua, enquanto a sudoeste jazem carcaças secas que marcam o caminho para o Portão do Ermo de Tsige. Feras espreitam além das dunas.';
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'cacar_feras_wasteland') {
+    fatoBase =
+      'Você marcha pelas dunas de cinza e rastreia pegadas monstruosas até um ninho de feras selvagens da Wasteland. As criaturas erguem as carapaças e investem com presas faiscantes.';
+    iniciarCombate(content, camp, ['lobo_chifre']);
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'meditar_cratera_wasteland') {
+    p.recursos.vida += 20;
+    p.recursos.vigor += 20;
+    fatoBase =
+      'Sentado nas rochas vitrificadas da cratera da queda, você fecha os olhos e guia o turbilhão primordial de mana que queima nas suas veias. O corpo assimila o impacto do desterro celestial, o vigor retoma o ritmo firme e a mente alcança o Vazio sereno.';
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'treino_concentracao_quase_morte') {
+    const resTreino = executarTreinoConcentracaoQuaseMorte(camp);
+    fatoBase = resTreino.mensagem;
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'pacto_shen') {
+    fatoBase =
+      'Você avança resoluto em direção ao Desfiladeiro do Dragão Adormecido. A névoa perpétua se fecha em labirintos ilusórios e a colossal silhueta de Muteki Shen desce dos céus com sopros de vácuo para desafiar sua força em combate!';
+    iniciarCombate(content, camp, ['dragao_shen']);
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'pacto_aranha') {
+    fatoBase =
+      'Você adentra as águas turvas do Pântano da Bruma. Fios negros de mana vibram no ar e a monstruosa Aranha da Calamidade emerge em frenesi faminto, pronta para a batalha!';
+    iniciarCombate(content, camp, ['aranha_calamidade']);
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'pacto_suzaku') {
+    fatoBase =
+      'Você atinge o cume ardente do Ninho da Fênix. O horizonte incendeia-se em chamas celestes quando Suzaku desce com plumas solares abrasadoras para o confronto!';
+    iniciarCombate(content, camp, ['fenix_suzaku']);
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'romance_mio_termas') {
+    const resRomance = executarMomentoRomanceServa(camp, 'aranha_calamidade', 'termas_mio');
+    fatoBase = resRomance.fato;
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'romance_tomoe_sake') {
+    const resRomance = executarMomentoRomanceServa(camp, 'dragao_shen', 'sake_tomoe');
+    fatoBase = resRomance.fato;
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'romance_suzaku_chamas') {
+    const resRomance = executarMomentoRomanceServa(camp, 'fenix_suzaku', 'chamas_suzaku');
+    fatoBase = resRomance.fato;
+  } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'romance_passeio_vila') {
+    const resRomance = executarMomentoRomanceServa(camp, '', 'passeio_vila');
+    fatoBase = resRomance.fato;
+  }
+
   const fato = cartaUsada ? `${fatoBase} (a memória de "${cartaUsada}" pesou na hora.)` : fatoBase;
 
   atualizarNpcs(camp, content, alvo, verbo, grau, rotulo);

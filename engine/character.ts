@@ -63,12 +63,14 @@ export function criarPersonagem(
 
   const recursos: Record<string, number> = { vida: 0 };
   const recursosMax: Record<string, number> = { vida: 0 };
-  const vidaMax = 20 + modificador(attrFinal.resiliencia) * 4;
+  const vidaMax = cenario.id === 'tsukimichi'
+    ? 220 + modificador(attrFinal.resiliencia) * 10
+    : 20 + modificador(attrFinal.resiliencia) * 4;
   recursos.vida = vidaMax;
   recursosMax.vida = vidaMax;
 
   cenario.recursos.forEach((r) => {
-    const max = recursoMaximo(r.id, attrFinal);
+    const max = recursoMaximo(r.id, attrFinal, cenario.id);
     recursos[r.id] = max;
     recursosMax[r.id] = max;
   });
@@ -100,9 +102,12 @@ export function criarPersonagem(
   };
 }
 
-export function recursoMaximo(id: string, a: Atributos): number {
+export function recursoMaximo(id: string, a: Atributos, cenarioId?: string): number {
   switch (id) {
     case 'mana':
+      if (cenarioId === 'tsukimichi') {
+        return 200 + modificador(a.raciocinio) * 15;
+      }
       return 8 + modificador(a.raciocinio) * 3;
     case 'vigor':
       return 10 + modificador(a.fisico) * 2 + modificador(a.resiliencia) * 2;

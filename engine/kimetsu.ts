@@ -58,20 +58,76 @@ export function registrarConfronto(camp: Campaign, resultado: 'vitoria' | 'derro
   for (const a of s.atores) {
     const r = a.rivalId && camp.kimetsu?.rivais[a.rivalId];
     if (!r) continue;
-    r.vida = a.vida;
-    r.vivo = !a.mortoDefinitivo && a.vida > 0;
+    const escapouDaMorte = (a.mortoDefinitivo || a.vida <= 0) && !a.perfilOni?.identidade && r.rancor >= 2 && (r.cheatDeath?.vezes ?? 0) < 2;
+
+    if (escapouDaMorte) {
+      // Pipeline Cheat Death: intercepta a morte e desvia para recuperação oculta
+      const cicatrizMorte = `cicatriz_quase_morte_${s.ultimaTecnica ? s.ultimaTecnica.replace(/^respiracao_/, '') : 'lamina'}`;
+      r.cheatDeath = {
+        vezes: (r.cheatDeath?.vezes ?? 0) + 1,
+        diaRetorno: camp.calendario.dia + 14,
+        tecnicaSobrevivida: s.ultimaTecnica,
+        cicatrizOrigem: cicatrizMorte,
+      };
+      r.cicatrizes ??= [];
+      if (!r.cicatrizes.includes(cicatrizMorte)) r.cicatrizes.push(cicatrizMorte);
+      r.vivo = true;
+      r.vida = 1;
+      if (r.evolucao) {
+        r.evolucao.nivel = Math.max(0, r.evolucao.nivel - 1);
+        r.evolucao.servos = Math.max(0, Math.floor(r.evolucao.servos / 2));
+        r.evolucao.plano = 'ocultar';
+      }
+      r.comportamento ??= { recuperarAte: 0, pistaAte: 0, ultimoFeito: 0, ultimaAmeacaPessoal: -100 };
+      r.comportamento.recuperarAte = Math.max(r.comportamento.recuperarAte, camp.calendario.dia + 14);
+    } else {
+      r.vida = a.vida;
+      r.vivo = !a.mortoDefinitivo && a.vida > 0;
+    }
+
     r.local = camp.localAtual;
     r.ultimoDia = camp.calendario.dia;
     r.reencontros++;
     if (r.vivo) r.rancor = Math.min(10, r.rancor + 1);
     if (resultado === 'derrota' && r.vivo) r.vitorias++;
     if (resultado === 'fuga') r.fugas++;
+
+    // Títulos procedurais baseados na história
+    if (r.vivo) {
+      if (r.vitorias >= 2) r.titulo = 'o Carrasco';
+      else if (r.fugas >= 2) r.titulo = 'o Evasivo';
+      else if ((r.cicatrizes?.length ?? 0) >= 3) r.titulo = 'o Retalhado';
+      else if ((r.evolucao?.servos ?? 0) >= 4) r.titulo = 'o Senhor da Matilha';
+    }
+
+    if (resultado === 'vitoria' && r.vivo && !escapouDaMorte) {
+      // Regressão real ao ser superado em combate mas sobreviver
+      if (r.evolucao) {
+        r.evolucao.nivel = Math.max(0, r.evolucao.nivel - 1);
+        r.evolucao.servos = Math.max(0, Math.floor(r.evolucao.servos / 2));
+        r.evolucao.plano = 'ocultar';
+        if (s.ultimaTecnica && r.evolucao.adaptacoes[s.ultimaTecnica]) {
+          r.evolucao.adaptacoes[s.ultimaTecnica] = Math.max(0, r.evolucao.adaptacoes[s.ultimaTecnica] - 1);
+        }
+      }
+      const cicatriz = s.ultimaTecnica
+        ? `cicatriz_${s.ultimaTecnica.replace(/^respiracao_/, '')}`
+        : 'marca_de_lamina_profunda';
+      r.cicatrizes ??= [];
+      if (!r.cicatrizes.includes(cicatriz)) r.cicatrizes.push(cicatriz);
+      if (r.evolucao) {
+        r.evolucao.cicatrizes ??= [];
+        if (!r.evolucao.cicatrizes.includes(cicatriz)) r.evolucao.cicatrizes.push(cicatriz);
+      }
+    }
     r.memoria.push({ dia: camp.calendario.dia, resultado, tecnica: s.ultimaTecnica, local: camp.localAtual,
       testemunhas: s.atores.filter(x => x.ehAliado && x.npcId && x.vida > 0).map(x => x.npcId!) });
     r.comportamento ??= { recuperarAte: 0, pistaAte: 0, ultimoFeito: 0, ultimaAmeacaPessoal: -100 };
     r.comportamento.pista = camp.localAtual;
     r.comportamento.pistaAte = camp.calendario.dia + 14;
-    if (r.vivo && a.vida < a.vidaMax * .4) r.comportamento.recuperarAte = camp.calendario.dia + 7;
+    if (r.vivo && (a.vida < a.vidaMax * .4 || resultado === 'vitoria')) {
+      r.comportamento.recuperarAte = Math.max(r.comportamento.recuperarAte, camp.calendario.dia + (resultado === 'vitoria' ? 14 : 7));
+    }
     r.memoria = r.memoria.slice(-12);
     if (!r.vivo && a.perfilOni?.identidade) camp.flags[`matou.${a.criaturaId}`] = true;
   }

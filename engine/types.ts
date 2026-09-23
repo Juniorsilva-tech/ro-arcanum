@@ -151,6 +151,8 @@ export type Item = {
   lojas?: string[];
   // Arma capaz de suprimir a regeneração de um oni (engine/combat.ts).
   contraOni?: boolean;
+  // Equipamento capaz de isolar e suprimir o vazamento de mana colossal entre humanos
+  suprimeMana?: boolean;
 };
 
 export type Equipado = {
@@ -159,6 +161,19 @@ export type Equipado = {
   escudo?: string;
   acessorio?: string;
 };
+
+// ── Modo do Domínio Inato Kai (Sakai)
+export type ModoKai =
+  | 'percepcao'
+  | 'fortalecimento'
+  | 'magia'
+  | 'audicao'
+  | 'barreira_magica'
+  | 'barreira_fisica'
+  | 'cura'
+  | 'supressao'
+  | 'destruicao'
+  | 'sentidos';
 
 // ── Personagem.
 export type Personagem = {
@@ -188,6 +203,28 @@ export type Personagem = {
   // (ver engine/vidanpc.ts e engine/ascensao.ts). Ausente em saves antigos:
   // cai no padrão de 20 (ver engine/migracao.ts).
   idade?: number;
+  // Expansão Tsukimichi: Cartão de Aventureiro da Guilda e Domínio de Sakai
+  cartaoAventureiro?: {
+    registrado: boolean;
+    nivelAparente: number; // Sempre 1 (Quebrador de Parâmetros / Erro de Medição da Deusa)
+    rank: 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
+    manaStatus: 'incomensuravel' | 'erro_overflow' | 'comum';
+    parametroQuebrado: boolean;
+    dataRegistro?: number;
+  };
+  sakai?: {
+    desbloqueado: boolean;
+    nivel: number;
+    experienciaTreino?: number;
+    treinosRealizados?: number;
+    modosDisponiveis: ModoKai[];
+    modoAtivo?: ModoKai;
+  };
+  treinoQuaseMorte?: {
+    ciclosConcluidos: number;
+    manaExpandidoTotal: number;
+    ultimoTreinoTurno?: number;
+  };
 };
 
 export type MembroId = 'braco_esquerdo' | 'braco_direito' | 'perna_esquerda' | 'perna_direita';
@@ -452,6 +489,8 @@ export type Criatura = {
   nome: string;
   descricao: string;
   nivel: number;
+  /** Nível público registrado na Guilda de Aventureiros (Escala Tsukimichi: 100-2000) */
+  nivelGuilda?: number;
   vida: number;
   defesa: number;
   acerto: number;
@@ -500,6 +539,7 @@ export type CombatActor = {
   dano?: PerfilDano;
   criaturaId?: string;
   condicoes: string[];
+  nivelGuilda?: number;
   // Turnos restantes em que a regeneração de oni fica suprimida, contados a
   // partir de um golpe com arma `contraOni`.
   imuneRegenTurnos?: number;
@@ -618,6 +658,8 @@ export type Campaign = {
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
   locaisVisitados: string[];
   segredosRevelados: string[];
+  // Expansão Tsukimichi: soberania de Asora e contratos de alma
+  asora?: AsoraState;
   ultimoResultado?: {
     grau: Grau;
     verboNome?: string;
@@ -642,3 +684,121 @@ export type Campaign = {
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };
+export type CampaignState = Campaign;
+
+// ── Expansão Tsukimichi (Contratos de Alma & Soberania de Asora)
+export type ProporcaoContrato = '2:8' | '1:9' | '5:5';
+
+export type ContratoAlma = {
+  id: string;
+  criaturaOriginalId: string;
+  nomeConcedido: string;
+  titulo: string;
+  /** Nível público registrado na Guilda de Aventureiros (Tomoe: 1320, Mio: 1500, etc.) */
+  nivelGuilda?: number;
+  proporcao: ProporcaoContrato;
+  formaOriginal: string;
+  formaHumanoide: {
+    aparencia: string;
+    vestes: string;
+    personalidade: string;
+    voz: string;
+  };
+  bonusConcedidos: Partial<Atributos>;
+  lealdade: number;
+  afeto: number;
+  ciume: number;
+  ativaNoGrupo: boolean;
+  papelAsora?: 'governante' | 'guardia' | 'artesa' | 'diplomata';
+};
+
+export type ObraAsora = {
+  id: 'lavoura_highland' | 'forja_anoes' | 'onsen_termas' | 'atelie_alkes' | 'quartel_lizards';
+  nome: string;
+  nivel: number;
+  maxNivel: number;
+  responsavel: string;
+  descricao: string;
+};
+
+export type OcupanteSubespaco = {
+  id: string;
+  nome: string;
+  papel: string;
+  localSetor: string;
+  tipo: 'jogador' | 'serva' | 'residente' | 'populacao';
+};
+
+export type SetorTrabalhoSubespaco =
+  | 'agricultura'
+  | 'mineracao'
+  | 'forja_ferramentas'
+  | 'tecelagem'
+  | 'seguranca_patrulha'
+  | 'construcao_obras';
+
+export type TriboAcolhida = {
+  id: 'orcs_highland' | 'elder_dwarves' | 'mist_lizards' | 'alkes' | 'homens_fera';
+  nome: string;
+  populacao: number;
+  especialidade: string;
+  dataAcolhimento: number;
+};
+
+export type EstrategiaCompanhia =
+  | 'remedios_e_pocao'
+  | 'tecidos_e_vestes'
+  | 'armas_e_ferramentas'
+  | 'graos_e_mantimentos';
+
+export type AsoraState = {
+  /** Nome personalizável do subespaço determinado pelo jogador (ex: 'Santuário do Vácuo', 'Reino de Jade', etc.) */
+  nome?: string;
+  desbloqueado: boolean;
+  populacao: number;
+  seguranca: number;
+  harmonia: number;
+  obras: Record<string, ObraAsora>;
+  estoques: { comida: number; seda: number; minerio: number; draupnir: number };
+  contratos: Record<string, ContratoAlma>;
+  tribosAcolhidas?: Record<string, TriboAcolhida>;
+  alocacaoTrabalho?: Record<SetorTrabalhoSubespaco, number>;
+  recursosEspeciais?: {
+    ferramentasDisponiveis: number;
+    madeiraNobre: number;
+  };
+  projetosConcluidos?: string[];
+  projetoEmAndamento?: {
+    id: string;
+    nome: string;
+    turnosRestantes: number;
+    operariosAlocados: number;
+  };
+  companhiaMercantil?: {
+    fundada: boolean;
+    nome: string;
+    nivelComercial: number;
+    ouroAcumulado: number;
+    rendaPorCiclo: number;
+    caravanasEnviadas: number;
+    estrategiaAtual?: EstrategiaCompanhia;
+    gerenteDesignada?: string;
+    escoltaDesignada?: 'sem_escolta' | 'guerreiros_orcs' | 'mist_lizards' | 'serva_de_elite';
+    lojasAbertas?: string[];
+  };
+  investigacaoHerois?: {
+    nivelAlerta: number;
+    batedoresEnviados: boolean;
+    decretosEmitidos: boolean;
+    ocorrencias: string[];
+  };
+  forjaAtiva?: {
+    itemEmForja?: string;
+    turnosRestantes?: number;
+    encomendadoPor?: string;
+  };
+  construcaoOrcs?: {
+    projeto?: string;
+    turnosRestantes?: number;
+  };
+};

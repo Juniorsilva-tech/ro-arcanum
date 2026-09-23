@@ -52,15 +52,24 @@ export function absorveuOPrimeiroGolpe(camp: Campaign, alvo: CombatActor): boole
  * numa luta longa.
  */
 export const CLASSE_ESPADACHIM = 'espadachim';
+export const CLASSE_ESPADACHIM_ASORA = 'espadachim_asora';
+export const CLASSE_ARQUEIRO_AZUSA = 'arqueiro_azusa';
+export const CLASSE_SEM_BENCAO = 'sem_bencao';
+export const CLASSE_AVENTUREIRO_TSIGE = 'aventureiro_tsige';
 export const TETO_FOCO_ESPADACHIM = 4;
 
+export function ehClasseEspadachim(camp: Campaign): boolean {
+  const c = classeDe(camp);
+  return c === CLASSE_ESPADACHIM || c === CLASSE_ESPADACHIM_ASORA;
+}
+
 export function bonusDeFoco(camp: Campaign, atacante: CombatActor, alvoId: string): number {
-  if (!atacante.ehJogador || classeDe(camp) !== CLASSE_ESPADACHIM) return 0;
+  if (!atacante.ehJogador || !ehClasseEspadachim(camp)) return 0;
   return atacante.focoAlvo === alvoId ? Math.min(TETO_FOCO_ESPADACHIM, atacante.focoAcertos ?? 0) : 0;
 }
 
 export function registrarFoco(camp: Campaign, atacante: CombatActor, alvoId: string, acertou: boolean): void {
-  if (!atacante.ehJogador || classeDe(camp) !== CLASSE_ESPADACHIM) return;
+  if (!atacante.ehJogador || !ehClasseEspadachim(camp)) return;
   if (atacante.focoAlvo !== alvoId) {
     atacante.focoAlvo = alvoId;
     atacante.focoAcertos = 0;
@@ -68,6 +77,55 @@ export function registrarFoco(camp: Campaign, atacante: CombatActor, alvoId: str
   // Errar não zera o acúmulo: quem insiste no mesmo alvo continua insistindo.
   // Trocar de alvo zera, e é só isso que zera.
   if (acertou) atacante.focoAcertos = (atacante.focoAcertos ?? 0) + 1;
+}
+
+export type EfeitoRupturaAsora = {
+  bonusDano: number;
+  ignoraGuarda: boolean;
+  ruptura: boolean;
+};
+
+/**
+ * Limites do Espadachim de Asora:
+ * - Cada acúmulo de foco gera +2 de dano puro imbuído com mana.
+ * - No foco máximo (4 acertos), descarrega a Ruptura de Asora:
+ *   o corte fatia o próprio espaço, anula a guarda inimiga e causa dano colossal.
+ */
+export function efeitoEspadachimAsora(
+  camp: Campaign,
+  atacante: CombatActor,
+  alvoId: string,
+): EfeitoRupturaAsora {
+  if (!atacante.ehJogador || classeDe(camp) !== CLASSE_ESPADACHIM_ASORA) {
+    return { bonusDano: 0, ignoraGuarda: false, ruptura: false };
+  }
+  const foco =
+    atacante.focoAlvo === alvoId ? Math.min(TETO_FOCO_ESPADACHIM, atacante.focoAcertos ?? 0) : 0;
+  const bonusDano = foco * 2;
+  const ruptura = foco >= TETO_FOCO_ESPADACHIM;
+  return {
+    bonusDano: bonusDano + (ruptura ? 8 : 0),
+    ignoraGuarda: ruptura,
+    ruptura,
+  };
+}
+
+/**
+ * Disciplina de Kyudo de Azusa:
+ * - Postura absoluta que ignora cobertura inimiga e adiciona +3 ao acerto cirúrgico.
+ */
+export function bonusArqueiroAzusa(
+  camp: Campaign,
+  atacante: CombatActor,
+  alvo: CombatActor,
+): { bonusAcerto: number; anulaCobertura: boolean } {
+  if (!atacante.ehJogador || classeDe(camp) !== CLASSE_ARQUEIRO_AZUSA) {
+    return { bonusAcerto: 0, anulaCobertura: false };
+  }
+  return {
+    bonusAcerto: 3,
+    anulaCobertura: alvo.posicao === 'cobertura',
+  };
 }
 
 // ── Caçadora ──────────────────────────────────────────────────────────────
@@ -189,6 +247,10 @@ export function efeitoDaClasse(camp: Campaign): string | undefined {
     case CLASSE_PENITENTE: return `Quanto mais ferida, mais forte a arte — até +${Math.round(TETO_PENITENTE * 100)}%.`;
     case CLASSE_ARCANISTA: return `Estudar devolve ${MANA_POR_ESTUDO} de mana.`;
     case CLASSE_BATEDOR: return `Conhece os atalhos: toda rota fica ${ALIVIO_DE_ROTA_BATEDOR} menos perigosa.`;
+    case CLASSE_ESPADACHIM_ASORA: return 'Caminho da Espada: acertos consecutivos somam acerto e dano. No foco máximo, o golpe atinge o Vazio, ignora guarda e desfere dano colossal.';
+    case CLASSE_ARQUEIRO_AZUSA: return 'Disciplina do Arco: tiros de mana ganham +3 de acerto cirúrgico e ignoram cobertura inimiga.';
+    case CLASSE_SEM_BENCAO: return 'Mago: reserva de mana colossal que abala a moral dos inimigos no início do combate.';
+    case CLASSE_AVENTUREIRO_TSIGE: return 'Aventureiro: adaptado à fronteira extrema com mobilidade e instinto tático.';
     default: return undefined;
   }
 }

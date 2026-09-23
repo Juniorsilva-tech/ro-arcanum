@@ -102,6 +102,38 @@ const RE_SO_ASPAS = /^["“«](.+)["”»][.,;!?]?$/s;
 const RE_MARCADOR = /^\s*\[\s*([^\]\n]{1,40}?)\s*\]\s*/;
 const MARCAS_DO_JOGADOR = new Set(['você', 'voce', 'vc', 'jogador', 'eu']);
 
+// Nomes de lugares, conceitos, entidades e termos do mundo que nunca são personagens falando
+export const NOMES_NAO_PERSONAGENS = new Set([
+  // Lugares e Regiões de Tsukimichi e Vaelhorn
+  'Tsige', 'Asora', 'Wasteland', 'Rotsgard', 'Limia', 'Gritonia', 'Halvern',
+  'Halvet', 'Mareu', 'Corveira', 'Tessel', 'Vintra', 'Solgar', 'Vaelhorn',
+  'Japão', 'Japao', 'Terra', 'Ermo', 'Ermos', 'Baixios', 'Planalto',
+  'Ubuyashiki', 'Castelo', 'Kyudo',
+  // Conceitos, Facções, Títulos, Entidades e Itens que não são pessoas
+  'Deusa', 'Deusas', 'Deus', 'Deuses', 'Calamidade', 'Calamidades',
+  'Guilda', 'Companhia', 'Kuzunoha', 'Irmandade', 'Igreja', 'Templo',
+  'Reino', 'Reinos', 'Império', 'Imperio', 'Impérios', 'Imperios',
+  'Katana', 'Draupnir', 'Sakai', 'Nichirin', 'Orbe', 'Portal',
+  'Humanos', 'Humano', 'Demônios', 'Demonios', 'Demônio', 'Demonio',
+  'Hyumans', 'Hyuman', 'Demi-humanos', 'Demi-humano', 'Orcs', 'Orc',
+  'Anões', 'Anoes', 'Anão', 'Anao', 'Alkes', 'Alke', 'Lizards',
+  'Gorin', 'Niten', 'Ichi', 'Musashi', 'Outono', 'Inverno', 'Primavera', 'Verão', 'Verao',
+]);
+
+// Papéis genéricos descritivos que podem falar em cenas de multidão/guarda.
+export const PAPEIS_GENERICOS_VALIDOS = new Set([
+  'soldado', 'guarda', 'sentinela', 'vigia', 'patrulheiro', 'cavaleiro',
+  'mercador', 'comerciante', 'lojista', 'vendedor', 'estalajadeiro', 'taverneiro',
+  'ferreiro', 'artesão', 'artesao', 'plebeu', 'camponês', 'campones', 'lavrador',
+  'homem', 'mulher', 'ancia', 'ancião', 'anciao', 'jovem', 'rapaz', 'garoto', 'menina',
+  'voz', 'voz na multidão', 'vozes', 'guerreiro', 'batedor', 'oficial', 'capitão', 'capitao',
+]);
+
+function capitalizar(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /**
  * Separa o marcador do texto. Devolve `quem: undefined` quando não há
  * marcador — e aí as camadas de inferência assumem.
@@ -117,6 +149,14 @@ function lerMarcador(
   const resto = linha.slice(m[0].length).trim();
   if (MARCAS_DO_JOGADOR.has(bruto.toLowerCase())) {
     return { quem: nomeJogador, resto };
+  }
+  // Se for nome de lugar ou conceito que não fala (ex: [Tsige], [Asora], [Calamidade])
+  if (NOMES_NAO_PERSONAGENS.has(bruto)) {
+    return { resto };
+  }
+  // Papéis descritivos válidos (ex: [Soldado], [Guarda], [Mercador], [Voz])
+  if (PAPEIS_GENERICOS_VALIDOS.has(bruto.toLowerCase())) {
+    return { quem: capitalizar(bruto), resto };
   }
   // O nome tem de ser de alguém que a cena conhece. Um marcador inventado
   // ("[a mulher]") é melhor tratado como fala sem dono do que como uma pessoa
@@ -145,12 +185,19 @@ function ehVocativo(t: string, nome: string, i: number): boolean {
 // sem ser mesmo quem falou. Cobre presente e pretérito — o narrador mistura
 // os dois.
 const RE_VERBO_FALA =
-  /\b(?:disse|diz|perguntou|pergunta|respondeu|responde|sussurrou|sussurra|murmurou|murmura|gritou|grita|insistiu|insiste|completou|completa|concordou|concorda|retrucou|retruca|provocou|provoca|reclamou|reclama|repetiu|repete|explicou|explica|ofereceu|oferece|avisou|avisa)\s+([\p{Lu}][\p{L}'-]*)/u;
+  /\b(?:disse|diz|perguntou|pergunta|respondeu|responde|sussurrou|sussurra|murmurou|murmura|gritou|grita|insistiu|insiste|completou|completa|concordou|concorda|retrucou|retruca|provocou|provoca|reclamou|reclama|repetiu|repete|explicou|explica|ofereceu|oferece|avisou|avisa)\s+(?:o|a|um|uma)?\s*([\p{L}'-]+)/u;
 
 function acharPorTag(linha: string, candidatos: string[]): string | undefined {
   const m = RE_VERBO_FALA.exec(linha);
   if (!m) return undefined;
-  return candidatos.find((n) => n === m[1] || m[1].startsWith(n)) ?? undefined;
+  const termo = m[1];
+  if (PAPEIS_GENERICOS_VALIDOS.has(termo.toLowerCase())) {
+    return capitalizar(termo);
+  }
+  if (NOMES_NAO_PERSONAGENS.has(termo)) {
+    return undefined;
+  }
+  return candidatos.find((n) => n === termo || termo.startsWith(n)) ?? undefined;
 }
 
 // ── A assinatura do próprio jogador ───────────────────────────────────────
@@ -259,15 +306,94 @@ const PALAVRAS_COMUNS_MAIUSCULAS = new Set([
 function ehTituloComArtigo(bruto: string, indice: number): boolean {
   return /\b[ao]\s$/.test(bruto.slice(Math.max(0, indice - 3), indice));
 }
-function nomesCitadosNoTexto(bruto: string): string[] {
+function nomesCitadosNoTexto(bruto: string, ignorar: string[] = []): string[] {
   const achados = new Set<string>();
+  const ignorarSet = new Set([...NOMES_NAO_PERSONAGENS, ...ignorar]);
   for (const m of bruto.matchAll(RE_NOME_NO_TEXTO)) {
     if (m.index === undefined) continue;
-    if (PALAVRAS_COMUNS_MAIUSCULAS.has(m[0])) continue;
+    const palavra = m[0];
+    if (PALAVRAS_COMUNS_MAIUSCULAS.has(palavra)) continue;
+    if (ignorarSet.has(palavra)) continue;
     if (ehTituloComArtigo(bruto, m.index)) continue;
-    achados.add(m[0]);
+
+    // Ignora se for precedido por termos geográficos ou de insígnia ("emblema de Tsige", "cidade de Tsige")
+    const antes = bruto.slice(Math.max(0, m.index - 25), m.index);
+    if (/\b(?:emblema|cidade|reino|vila|portão|portao|distrito|rua|praça|praca|estrada|lago|rio|floresta|bosque|vale|marca|costa|planalto)\s+de\s+$/i.test(antes)) {
+      continue;
+    }
+
+    achados.add(palavra);
   }
   return [...achados];
+}
+
+// Detecta se a prosa indica que o jogador é apenas um ouvinte/observador da cena
+const RE_JOGADOR_OUVE = new RegExp(
+  `\\b(?:você\\s+(?:ouviu|ouve|escuta|escutou|olha|olhou|observa|observou|viu|vê|sentiu|sente)|` +
+  `aos\\s+seus\\s+ouvidos|você\\s+não\\s+disse|em\\s+silêncio)\\b`,
+  'iu',
+);
+function prosaNarraJogadorOuvinte(prosa: string): boolean {
+  return RE_JOGADOR_OUVE.test(prosa);
+}
+
+// Detecta se a prosa descreve uma voz externa, clamor na multidão ou terceiro anônimo
+const RE_VOZ_DE_TERCEIRO = new RegExp(
+  `\\b(?:a\\s+voz\\s+(?:saiu|veio|ecoou|tremia|soou|gritou|sussurrou)|` +
+  `uma\\s+voz|vozes|alguém\\s+(?:gritou|disse|falou|exclamou)|ouviu-se|gritou\\s+alguém|` +
+  `grita\\s+alguém|de\\s+algum\\s+lugar|entre\\s+os\\s+armazéns|na\\s+multidão)\\b`,
+  'iu',
+);
+function prosaNarraVozDeTerceiro(prosa: string): boolean {
+  return RE_VOZ_DE_TERCEIRO.test(prosa);
+}
+
+// Extrai papel genérico/descritivo de um personagem na prosa (ex: soldado, guarda, mercador, voz na multidão)
+function extrairPapelGenerico(prosa: string): string | undefined {
+  if (!prosa) return undefined;
+
+  // Soldado / Guarda
+  if (/\b(?:soldado|homem\s+de\s+armadura|homem\s+em\s+armadura|homem\s+com\s+armadura|guarda|sentinela|vigia|patrulheiro|cavaleiro)\b/i.test(prosa)) {
+    if (/\bguarda\b/i.test(prosa)) return 'Guarda';
+    return 'Soldado';
+  }
+
+  // Mercador / Comerciante
+  if (/\b(?:mercador|mercadores|comerciante|comerciantes|lojista|vendedor)\b/i.test(prosa)) {
+    return 'Mercador';
+  }
+
+  // Plebeu / Homem / Mulher
+  if (/\b(?:uma\s+mulher)\b/i.test(prosa)) return 'Mulher';
+  if (/\b(?:um\s+homem)\b/i.test(prosa)) return 'Homem';
+  if (/\b(?:plebeu|camponês|campones|lavrador|morador)\b/i.test(prosa)) return 'Plebeu';
+
+  // Voz na multidão / Voz
+  if (/\b(?:a\s+voz\s+(?:saiu|veio|ecoou|tremia|soou)|uma\s+voz|vozes|alguém\s+gritou|entre\s+os\s+armazéns|na\s+multidão|no\s+meio\s+do\s+povo)\b/i.test(prosa)) {
+    return 'Voz na multidão';
+  }
+
+  return undefined;
+}
+
+function ehPapelGenerico(quem?: string): boolean {
+  if (!quem) return false;
+  const q = quem.toLowerCase();
+  return (
+    q === 'soldado' ||
+    q.startsWith('soldado') ||
+    q === 'guarda' ||
+    q.startsWith('guarda') ||
+    q === 'sentinela' ||
+    q === 'vigia' ||
+    q === 'mercador' ||
+    q === 'comerciante' ||
+    q === 'plebeu' ||
+    q === 'homem' ||
+    q === 'mulher' ||
+    q === 'voz' ||
+    q.startsWith('voz')
+  );
 }
 
 // Um nome que a própria fala usa como vocativo (o jogador chamando a NPC
@@ -324,7 +450,11 @@ function acharPorProximidade(
     }
     return achado;
   };
-  return acharUltimo(anterior.slice(-200)) ?? acharPrimeiro(seguinte.slice(0, 200));
+  const achado = acharUltimo(anterior.slice(-200)) ?? acharPrimeiro(seguinte.slice(0, 200));
+  if (achado) return achado;
+
+  // Se nenhum candidato com nome próprio foi encontrado, busca papéis genéricos descritos na prosa adjacente:
+  return extrairPapelGenerico(seguinte.slice(0, 250)) ?? extrairPapelGenerico(anterior.slice(-250));
 }
 
 // Converte a narração crua em blocos prontos para a tela. `nomeJogador`
@@ -344,10 +474,15 @@ function acharPorProximidade(
 //     proximidade (sinal fraco: mencionar alguém não é o mesmo que essa
 //     pessoa falar a seguir), seguido de outra rodada de alternância pra
 //     propagar o que essa passada conseguiu resolver.
-export function emBlocos(bruto: string, nomes: string[] = [], nomeJogador?: string): Bloco[] {
+export function emBlocos(
+  bruto: string,
+  nomes: string[] = [],
+  nomeJogador?: string,
+  locaisIgnorados: string[] = [],
+): Bloco[] {
   // Elenco conhecido primeiro (mais confiável), depois nomes só citados no
   // próprio texto (ver nomesCitadosNoTexto) — sem duplicar.
-  const candidatos = [...new Set([...nomes.filter(Boolean), ...nomesCitadosNoTexto(bruto)])];
+  const candidatos = [...new Set([...nomes.filter(Boolean), ...nomesCitadosNoTexto(bruto, locaisIgnorados)])];
   const paragrafos = emParagrafos(bruto);
   const out: Bloco[] = [];
 
@@ -362,7 +497,7 @@ export function emBlocos(bruto: string, nomes: string[] = [], nomeJogador?: stri
         out.push({ tipo: 'fala', texto: semTagNoFim(marcado.resto), quem: marcado.quem });
         continue;
       }
-      const bruto = marcado.resto;
+      const brutoTexto = marcado.resto;
       // Duas assinaturas fortes, nesta ordem: a de terceira pessoa ("disse
       // Elza") e a de segunda pessoa ("você pergunta"), que é como o narrador
       // marca as falas do próprio jogador. A segunda vem antes da adivinhação
@@ -370,32 +505,13 @@ export function emBlocos(bruto: string, nomes: string[] = [], nomeJogador?: stri
       // jogador ser atribuída à NPC citada na prosa ao lado.
       const porTag = acharPorTag(p, candidatos);
       const quem = porTag ?? (nomeJogador && ehFalaDoJogador(p) ? nomeJogador : undefined);
-      out.push({ tipo: 'fala', texto: semTagNoFim(bruto), quem });
+      out.push({ tipo: 'fala', texto: semTagNoFim(brutoTexto), quem });
     } else {
       out.push({ tipo: 'prosa', texto: p });
     }
   }
 
   const falas = out.filter((b): b is Extract<Bloco, { tipo: 'fala' }> => b.tipo === 'fala');
-
-  // Preenche pela dupla: uma fala sem dono ao lado de uma já resolvida
-  // herda o OUTRO nome da conversa — o jogador, se a vizinha for de outra
-  // pessoa; ou a outra pessoa (a primeira NPC que apareceu resolvida na
-  // cena), se a vizinha for do jogador.
-  const preencherPorAlternancia = () => {
-    if (!nomeJogador) return;
-    const outro = falas.map((f) => f.quem).find((q): q is string => !!q && q !== nomeJogador);
-    for (let i = 0; i < falas.length; i += 1) {
-      if (falas[i].quem) continue;
-      const vizinha = falas[i - 1] ?? falas[i + 1];
-      if (!vizinha?.quem) continue;
-      if (vizinha.quem === nomeJogador) {
-        if (outro) falas[i].quem = outro;
-      } else {
-        falas[i].quem = nomeJogador;
-      }
-    }
-  };
 
   const indicesDosParagrafos = out
     .map((b, i) => (b.tipo === 'fala' ? i : -1))
@@ -404,8 +520,12 @@ export function emBlocos(bruto: string, nomes: string[] = [], nomeJogador?: stri
     const i = indicesDosParagrafos[k];
     return i > 0 && out[i - 1].tipo === 'prosa' ? out[i - 1].texto : '';
   };
+  const prosaAbaixoDe = (k: number) => {
+    const i = indicesDosParagrafos[k];
+    return i < out.length - 1 && out[i + 1].tipo === 'prosa' ? out[i + 1].texto : '';
+  };
 
-  // Camada 2: o turno que a prosa já gastou. Roda ANTES da alternância, de
+  // Camada 1: o turno que a prosa já gastou falando pelo jogador. Roda ANTES da alternância, de
   // propósito — a alternância enxerga só falas citadas, então ela reivindicaria
   // esta linha para o jogador sem nunca saber que ele já falou na narração
   // logo acima.
@@ -420,27 +540,45 @@ export function emBlocos(bruto: string, nomes: string[] = [], nomeJogador?: stri
     }
   }
 
-  preencherPorAlternancia();
+  // Camada 2: busca por proximidade nas falas que ainda estão sem dono.
+  // Resolve primeiro o que a prosa direta nomeia ou descreve (inclusive papéis genéricos como Soldado, Guarda ou Voz na multidão).
+  for (let k = 0; k < falas.length; k += 1) {
+    if (falas[k].quem) continue;
+    const anterior = prosaAcimaDe(k);
+    const seguinte = prosaAbaixoDe(k);
+    falas[k].quem = acharPorProximidade(anterior, seguinte, falas[k].texto, candidatos);
+  }
 
-  if (falas.some((f) => !f.quem)) {
-    for (let k = 0; k < falas.length; k += 1) {
-      if (falas[k].quem) continue;
-      const i = indicesDosParagrafos[k];
-      // Só conta narração (prosa) de verdade como vizinha — o parágrafo de
-      // OUTRA fala carrega a própria tag de quem falou aquela linha, não
-      // desta. Sem isso, "— Pergunta? \n\n — Resposta — diz Vess." fazia a
-      // pergunta roubar o "Vess" que era tag da resposta seguinte.
-      const anterior = i > 0 && out[i - 1].tipo === 'prosa' ? out[i - 1].texto : '';
-      const seguinte = i < out.length - 1 && out[i + 1].tipo === 'prosa' ? out[i + 1].texto : '';
-      falas[k].quem = acharPorProximidade(anterior, seguinte, falas[k].texto, candidatos);
-      // Propaga IMEDIATAMENTE, antes de adivinhar a próxima fala por
-      // proximidade. A alternância (jogador/outro batendo de volta) é sinal
-      // mais confiável que "o parágrafo seguinte cita esse nome" — esse
-      // segundo sinal pode ser a REAÇÃO de quem ouviu, não quem falou (foi
-      // o que fez uma fala do jogador ser atribuída à NPC, por engano).
-      // Resolver na ordem e propagar a cada passo deixa a alternância vencer
-      // antes que o próximo palpite fraco tenha a chance de errar.
-      preencherPorAlternancia();
+  // Camada 3: alternância entre interlocutores conhecidos (1-on-1).
+  // Só atua se for diálogo de duas partes e a fala não tiver sinais de ser voz externa ou de ouvinte.
+  if (nomeJogador) {
+    const outro = falas.map((f) => f.quem).find((q): q is string => !!q && q !== nomeJogador && !ehPapelGenerico(q));
+    for (let i = 0; i < falas.length; i += 1) {
+      if (falas[i].quem) continue;
+      const vizinha = falas[i - 1] ?? falas[i + 1];
+      if (!vizinha?.quem) continue;
+
+      if (vizinha.quem === nomeJogador) {
+        if (outro) falas[i].quem = outro;
+      } else {
+        // Não alterna para o jogador se a vizinha for papel genérico da multidão/guarda
+        if (ehPapelGenerico(vizinha.quem)) continue;
+
+        const anterior = prosaAcimaDe(i);
+        const seguinte = prosaAbaixoDe(i);
+
+        // Se a prosa diz que o jogador está ouvindo/observando, jamais atribui a fala a ele
+        if (prosaNarraJogadorOuvinte(anterior) || prosaNarraJogadorOuvinte(seguinte)) {
+          continue;
+        }
+        // Se a prosa diz que é uma voz de terceiro/multidão
+        if (prosaNarraVozDeTerceiro(anterior) || prosaNarraVozDeTerceiro(seguinte)) {
+          falas[i].quem = 'Voz na multidão';
+          continue;
+        }
+
+        falas[i].quem = nomeJogador;
+      }
     }
   }
 
