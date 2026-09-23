@@ -365,9 +365,13 @@ export const useGame = create<GameState>((set, get) => ({
 
   novoJogo() {
     set({
-      rascunho: { nome: '', atributos: atributosBase(), cenarioId: 'vaelhorn' },
+      // O mundo é escolhido primeiro. Antes esta ação fixava 'vaelhorn' e pulava
+      // direto para a classe, e a tela de cenário nunca era alcançada: a DLC
+      // Tsukimichi estava registrada em content/index.ts e era impossível de
+      // jogar pela interface. escolherCenario() segue para o aviso ou a classe.
+      rascunho: { nome: '', atributos: atributosBase() },
       telaAnterior: 'entrada',
-      tela: get().config.avisoAceito ? 'classe' : 'aviso17',
+      tela: 'cenario',
     });
   },
 

@@ -39,7 +39,7 @@ export function Entrada() {
       )}
       <Botao
         titulo="Nova campanha"
-        sub="começar uma nova história em Vaelhorn"
+        sub="escolher o mundo e começar uma nova história"
         variante={temSave ? 'primario' : 'acento'}
         onPress={novoJogo}
       />

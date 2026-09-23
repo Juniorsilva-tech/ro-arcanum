@@ -16,7 +16,7 @@ export function EscolhaCenario() {
     <Pagina>
       <BarraVoltar titulo="Escolha o mundo" />
       <TextoSerif style={styles.intro}>
-        Nove mundos rodam sobre a mesma engine. Escolha o mundo para a sua jornada.
+        Cada mundo roda sobre a mesma engine, com gente, lugares e regras próprias. Escolha onde a sua história começa.
       </TextoSerif>
       {cenariosDisponiveis.map((c) => (
         <Card key={c.id} acento={c.acentoCor} onPress={c.disponivel ? () => escolher(c.id) : undefined}>
