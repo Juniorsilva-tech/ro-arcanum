@@ -100,6 +100,7 @@ import {
   type DesignacaoOficial,
   type PatenteMilitar,
   pagarPedagio,
+  talvezRevelarSegredo,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -1479,7 +1480,7 @@ async function executar(
 
   const r = resolverIntencao(content, camp, intencao);
   camp.capitulo.periodosDecorridos += r.custoPeriodos;
-  talvezRevelarSegredo(camp, r.alvo);
+  talvezRevelarSegredo(content, camp, r.alvo);
 
   if (rotuloEscolhido) {
     set({
@@ -1624,18 +1625,7 @@ async function narrar(
 }
 
 
-// Descoberta de segredo: se o jogador vigiou/ouviu/ganhou confiança alta.
-function talvezRevelarSegredo(camp: Campaign, alvo?: NPC) {
-  if (!alvo || !alvo.segredo) return;
-  const din = camp.npcState[alvo.id];
-  const confiancaAlta = (din?.eixos.confianca ?? 0) >= 12;
-  const vigiado = camp.flags[`vigiou.${alvo.id}`] === true;
-  if ((confiancaAlta || vigiado) && !camp.segredosRevelados.includes(alvo.id)) {
-    camp.segredosRevelados.push(alvo.id);
-    camp.flags[`segredo.${alvo.id}`] = true;
-    registrarMarco(camp, `você descobriu o que ${alvo.nome} escondia`);
-  }
-}
+// Descoberta de segredo: a regra e a consequência vivem em engine/segredos.ts.
 
 function checarCapitulo(get: () => GameState, set: (p: Partial<GameState>) => void) {
   const camp = get().camp;

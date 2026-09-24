@@ -471,6 +471,9 @@ export function montarPacote(
       // Família no elenco (engine/familiasNpc.ts): até três parentes, o nó da
       // família como a vizinhança conta, e o luto recente. Segredo não entra.
       familia: familiaParaNarrador(content, camp, n.id, ctx.presentes.map(x => x.id)),
+      // De onde ela veio, o que perdeu, o que quer (content/vaelhorn/historias-*.ts).
+      // Para aludir: a regra 2b do sistema proíbe revelar o que não foi descoberto.
+      historia: n.historia,
       situacaoCivil: camp.vivo?.pessoas[n.id] && { atividade: camp.vivo.pessoas[n.id].objetivo, prestigio: camp.vivo.pessoas[n.id].prestigio },
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
@@ -633,7 +636,7 @@ export function montarPacote(
 
 // Narrador de conto medieval, adulto. A única regra inviolável: todo personagem
 // é adulto. O modelo devolve JSON: narração + opções do próximo turno (§18.2).
-const INSTRUCAO_SISTEMA =
+export const INSTRUCAO_SISTEMA =
   CONTRATO_NARRATIVO +
   'Você é o narrador de ARCANUM, um romance de fantasia sombria em português do Brasil. ' +
   'A ENGINE decide o que aconteceu; você escreve a VOZ e propõe os próximos caminhos.\n' +
@@ -702,6 +705,9 @@ const INSTRUCAO_SISTEMA =
   'Descreva corpo com franqueza adulta quando a cena chegar perto, sem eufemismo covarde ' +
   'e sem virar catálogo.\n' +
   '2a) "parentesco" é uma barreira absoluta: pai, mãe, irmão e irmã jamais entram em romance ou sexo com o protagonista.\n' +
+  '2b) Um presente pode trazer "historia" (origem, ferida, desejo, medo) e "familia". Use para dar peso ao que ela diz e ' +
+  'cala: aluda, nunca recite, e não faça a pessoa contar a própria vida sem motivo. O jogador só sabe o segredo que está ' +
+  'em "segredoQueVoceSabe"; o que a história apenas insinua continua não dito.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +

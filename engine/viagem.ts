@@ -89,6 +89,9 @@ export function perigoEfetivoDaRota(
       break;
     }
   }
+  // Quem sabe a hora do Passo do Lobo (segredo da caçadora de Vintra, ver
+  // content/vaelhorn/segredos.ts) atravessa quando o que come lá não está.
+  if (camp.flags['sabe.hora_do_passo'] && (origem === 'passo_lobo' || destino === 'passo_lobo')) perigo -= 2;
   // Batedor conhece os atalhos (engine/classe.ts).
   return Math.max(0, perigo - alivioDeRota(camp));
 }

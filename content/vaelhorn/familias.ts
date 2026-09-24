@@ -552,7 +552,7 @@ export const familiasVaelhorn: FamiliaNpc[] = [
     nome: 'as do Porto do Sal',
     sede: 'porto_sal',
     tensao:
-      'A senhora do Porto do Sal deve dinheiro à própria filha, que é armeira e vende lâmina ao chefe do crime do porto. ' +
+      'A senhora do Porto do Sal deve dinheiro à própria filha armeira, e as duas não se falam na frente de ninguém. ' +
       'Nolan diz que a filha salvou a cidade num inverno ruim; Roan diz que salvou a mãe, e que não é a mesma coisa.',
     membros: [
       { npc: 'morador_porto_sal_0', papel: 'A mãe, senhora da cidade. Ressentida com quem subiu, e quem subiu mais depressa foi a filha.' },

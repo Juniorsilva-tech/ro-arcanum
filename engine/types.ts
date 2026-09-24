@@ -284,6 +284,18 @@ export type CartaMemoria = {
 };
 
 // ── NPC estático.
+export type HistoriaNpc = { origem: string; ferida: string; desejo: string; medo?: string };
+
+// O que muda no mundo quando o jogador descobre o segredo (engine/segredos.ts):
+// efeitos da engine (relação com outra pessoa, reputação, flag que destrava
+// verbo, item) e, se houver, uma missão viva que o segredo abre.
+export type ConsequenciaSegredo = {
+  texto: string;
+  efeitos?: Efeito[];
+  /** Só os tipos que o jogador fecha sem rival nem cativo (ver acoesMundo.ts). */
+  missao?: 'tratar' | 'abastecer' | 'reconstruir';
+};
+
 export type NPC = {
   especie?: 'humano' | 'oni' | 'espirito';
   parentesco?: 'pai' | 'mae' | 'irmao' | 'irma';
@@ -309,7 +321,10 @@ export type NPC = {
   // Como ela é de corpo. O narrador descreve gente, não fichas — e num jogo
   // adulto isso é parte do retrato, na mesma linha da voz e da índole.
   corpo?: string;
-  segredo?: { conteudo: string; comoDescobrir: string };
+  segredo?: { conteudo: string; comoDescobrir: string; consequencia?: ConsequenciaSegredo };
+  // De onde ela veio, o que perdeu, o que quer (engine/segredos.ts). Vai ao
+  // narrador para ele aludir, nunca para revelar o que o jogador não sabe.
+  historia?: HistoriaNpc;
   // Com quem ela tem história. É o que faz o vale ter vida própria: quando duas
   // se encontram numa rotina, a relação entre elas produz acontecimento sem o
   // jogador mexer um dedo (ver engine/convivio.ts).

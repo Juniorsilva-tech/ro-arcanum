@@ -658,3 +658,113 @@ e herança aparecem nas campanhas.
 
 ### Próximo passo
 Fase 3: histórias e segredos dos NPCs.
+
+---
+
+## Sessão 49 — Claude — Fase 3: histórias e segredos do elenco
+
+### Estado encontrado
+130 dos 246 NPCs sem segredo, nenhum com história escrita. A regra de
+descoberta de segredo morava na interface (`talvezRevelarSegredo` em
+`ui/store.ts`: confiança ≥ 12 ou ter vigiado) e descobrir não mudava nada
+além de uma flag e um marco. Dez segredos do povoamento eram **o mesmo texto**
+em pessoas de cidades diferentes ("Mentiu no depoimento da época. O
+desabamento..."). O segredo de Shinobu dizia que ela *perdeu* a irmã mais
+velha, e Kanae está viva no elenco.
+
+Simulação longa antes: a tabela da sessão 48.
+
+### O que foi feito
+- **`engine/segredos.ts`** (novo): `revelarSegredo` (lista, flag, marco e
+  consequência, uma vez só), `talvezRevelarSegredo` (a regra que saiu da
+  interface, mesma condição) e `aplicarConsequenciaDeSegredo`. O
+  `ui/store.ts` passa a chamar a engine. A simulação não revela segredos (não
+  revelava antes), então a campanha simulada não muda.
+- **Consequência declarada no conteúdo** (`ConsequenciaSegredo` em
+  `types.ts`): texto para o jogador, efeitos da engine e, opcional, missão
+  viva. Só `tratar`, `abastecer` e `reconstruir`: medi que `investigar` exige
+  rival Kimetsu e `resgatar` exige cativo — sem isso a missão nunca fecha. A
+  missão nasce no assentamento da pessoa. Efeito de relação também chega à
+  família dela (Fase 2).
+- **Duas flags ligadas a mecânica existente** em vez de decorativas: o
+  caminho de Orla (Juncal) grava `descoberto.toca_juncal`, que é a flag do
+  lugar oculto que já existia — a Toca do Juncal aparece no mapa; saber a
+  hora do Passo do Lobo (Sela o Surdo, Vintra) baixa 2 do perigo das rotas
+  do passo (`perigoEfetivoDaRota`).
+- **Conteúdo**, em arquivos à parte e aplicado por cima do elenco em
+  `content/vaelhorn/index.ts` (`enriquecerElenco`), sem mexer no gerador do
+  povoamento:
+  - `segredos.ts`: 130 segredos novos, 10 reescritos (os repetidos; um de cada
+    grupo ficou com o texto original), 36 consequências (23 em segredos novos
+    ou reescritos, 13 em segredos que já existiam — Bael e a ponte, o
+    livro-caixa de Teoda, o relatório costurado de Sibel, a caixa de Quim, a
+    lista de Brila...).
+  - `historias-vale.ts`, `historias-continente.ts`, `historias-costa.ts`,
+    `historias-kimetsu.ts`: **172 histórias** (origem, ferida, desejo, medo),
+    todas as 79 pessoas que lutam, ensinam, duelam ou aparecem em missão, e o
+    resto amarrado às famílias da Fase 2. Irmãs contam a mesma perda de lados
+    diferentes de propósito (Torana e Duna sobre a forja da mãe; as filhas
+    Verrão sobre o desabamento; Sanemi e Genya).
+  - Segredo de Shinobu corrigido em `npcs.ts`: "quase perdeu" a irmã, e foi o
+    veneno que a trouxe de volta (bate com o segredo novo de Kanae).
+- **Narrador**: cada presente leva `historia`; regra nova 2b no sistema
+  ("aluda, nunca recite; o jogador só sabe o segredo que está em
+  segredoQueVoceSabe"). `INSTRUCAO_SISTEMA` passou a ser exportada para o
+  teste conferir a regra.
+
+### Decisões e cuidado com vazamento
+Revisei cada história contra o segredo da própria pessoa e das outras, à
+mão, porque o teste automático só pega cópia literal. Reescrevi uns 40
+campos que entregavam segredo com outras palavras (Heska e o açude, Kesta e o
+braço, Pia lendo recados, Hotaru e o aprendiz, Perin e o muro, a dívida de
+Roan a Velha com o crime — que também vazava na tensão da família das do
+Porto do Sal e foi corrigida lá). A varredura de nomes do teste pegou um erro
+meu: escrevi "Aldeia do Ferro", e o lugar se chama Ferro Velho.
+
+Linha do tempo de Corveira: o desabamento foi há 12 anos (Sibel assinou o
+laudo aos 32 e tem 44). As idades nas histórias das Verrão, de Jarek e do
+Sexto seguem isso.
+
+### Arquivos
+Novos: `engine/segredos.ts`, `engine/historiasNpc.selftest.ts`,
+`content/vaelhorn/segredos.ts`, `content/vaelhorn/historias-vale.ts`,
+`content/vaelhorn/historias-continente.ts`, `content/vaelhorn/historias-costa.ts`,
+`content/vaelhorn/historias-kimetsu.ts`.
+Alterados: `engine/types.ts` (`HistoriaNpc`, `ConsequenciaSegredo`,
+`NPC.historia`), `engine/llm.ts`, `engine/viagem.ts`, `engine/index.ts`,
+`content/vaelhorn/index.ts`, `content/vaelhorn/npcs.ts` (Shinobu),
+`content/vaelhorn/familias.ts` (uma tensão), `ui/store.ts`, `package.json`.
+
+### Verificações
+- `historiasNpc.selftest.ts` (no `test:engine`): 0 NPCs sem segredo (246);
+  segredos sem repetição; 36 consequências com gente, item e facção que
+  existem; 172 histórias; os 73 prioritários que o bundle cita por id têm
+  história; três campos de 40+ caracteres, sem texto genérico nem repetido;
+  nenhuma história copia trecho de segredo de ninguém; nenhuma cita nome que
+  não existe (varre nome próprio contra elenco, lugares, regiões, facções,
+  criaturas e ausentes das famílias). Engine: o recibo de Ivo entra no
+  inventário e Brila passa a ter medo, uma vez só, e o save lembra; a farinha
+  de Pedravel abre missão de tratar; o Passo do Lobo fica menos perigoso
+  (7,3 → 5,3); a Toca do Juncal aparece; saber da ponte faz Ruvela (e a mãe,
+  Nadja) confiar em você; chantagem recusada antes e liberada depois; a regra
+  de descoberta (confiança 12, vigiar); pacote do narrador com história, sem
+  segredo antes e com segredo depois; regra 2b no sistema.
+- `familiasNpc.selftest.ts` continua verde com os textos novos.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `tsukimichi`, `expo export --platform web`: verdes.
+
+Simulação longa depois: **idêntica** à de antes, linha por linha (a
+simulação não revela segredos; histórias só vão ao narrador).
+
+### O que ficou faltando
+- Os moradores procedurais continuam com índole e voz de lista (a Fase 3
+  deu a 110 deles história e segredo próprios, não mexeu no gerador).
+- O Vale de Halvet tem as 41 histórias; das 246 pessoas, 74 ainda sem
+  história — quase todas moradores de cidade sem família nem papel em missão.
+- As consequências são aplicadas na descoberta; a UI mostra o texto no feed
+  pela crônica, mas não há painel próprio "o que mudou". Fica para a Fase 8
+  (consequências visíveis).
+- Não verificado com IA real (sem chave no ambiente).
+
+### Próximo passo
+Fase 4: casas nobres com gente dentro.

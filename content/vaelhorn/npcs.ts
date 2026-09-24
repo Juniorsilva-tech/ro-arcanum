@@ -949,7 +949,7 @@ export const npcsVaelhorn: NPC[] = [
     ensinaMestre: 'mestre_shinobu',
     duelo: { grupo: 'esquadrao_oculto', forca: 5, rivalNome: 'uma Lua Superior', rivalForca: 10, faccaoGanho: 'cacadores' },
     segredo: {
-      conteudo: 'Perdeu a irmã mais velha pra um oni e nunca mais empunhou uma lâmina que corta de verdade — a dela envenena, porque força bruta não é mais o caminho que escolheu.',
+      conteudo: 'Quase perdeu a irmã mais velha para um oni e nunca mais empunhou uma lâmina que corta de verdade — a dela envenena, porque foi o veneno, e não a força, que trouxe Kanae de volta.',
       comoDescobrir: 'Confiança alta, ou perguntar por que a lâmina dela é fina demais pra decapitar.',
     },
   },
