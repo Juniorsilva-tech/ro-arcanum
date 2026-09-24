@@ -14,7 +14,8 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   moinho: { x: 50.5, y: 60 },
   cemiterio: { x: 64, y: 58 },
   lago: { x: 39, y: 51 },
-  casa_senhorial: { x: 68.5, y: 60 },
+  // A Casa de Pedra é a sede da Casa de Halvet: fica no castelo desenhado.
+  casa_senhorial: { x: 68.5, y: 50 },
   acampamento: { x: 44, y: 58 },
   ruinas: { x: 77, y: 63 },
   estrada: { x: 52, y: 40 },
@@ -22,7 +23,8 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   mina: { x: 47.5, y: 65 },
   mansao_ubuyashiki: { x: 36, y: 30 },
   castelo_infinito: { x: 50, y: 10 },
-  vila_ferreiros: { x: 56.5, y: 67 },
+  // A vila escondida fica numa dobra da serra, não em cima da Mina de Corveira.
+  vila_ferreiros: { x: 62, y: 73.5 },
 
   // ── Marca de Tessel (Fronteira Militar Norte) ────────────────────
   tessel: { x: 46.5, y: 17 },
@@ -45,7 +47,7 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   aldeia_ferro: { x: 48, y: 69 },
   mina_corveira: { x: 56.5, y: 65 },
   colina_forcados: { x: 36, y: 70 },
-  mosteiro_alto: { x: 53, y: 60 },
+  mosteiro_alto: { x: 54, y: 62.5 },
   vila_terraco: { x: 40, y: 72 },
   forja_afundada: { x: 45, y: 78 },
 
@@ -63,25 +65,14 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   estrada_costeira: { x: 65, y: 79 },
   mercado_peixe: { x: 71, y: 78 },
 
-  // ── Bacia de Halvern e Baixios ───────────────────────────────────
-  halvern: { x: 68.5, y: 50 },
+  // ── Halvern e os Baixios ─────────────────────────────────────────
+  // Os Baixios ficam a oeste, no Rio-Verde: pelas rotas, o Juncal só se liga
+  // ao Vau de Pedra e ao lago do Vale. Antes estavam a leste, em cima da praça.
   estrada_real: { x: 58, y: 35 },
   vau_pedra: { x: 46.5, y: 44.5 },
-  charco_juncal: { x: 64, y: 56 },
-  vila_juncal: { x: 65, y: 61 },
-  toca_juncal: { x: 63, y: 65 },
-
-  // ── Legado / Aliases de compatibilidade ──────────────────────────
-  porto: { x: 69.5, y: 75 },
-  pantano: { x: 18.5, y: 60 },
-  mansao: { x: 68.5, y: 50 },
-  ferreiro: { x: 54, y: 62 },
-  vila: { x: 65, y: 61 },
-  bosque: { x: 44, y: 38 },
-  mosteiro: { x: 53, y: 60 },
-  quartel: { x: 64, y: 15 },
-  templo: { x: 64, y: 43 },
-  caverna: { x: 47.5, y: 63 },
+  charco_juncal: { x: 41.5, y: 47.5 },
+  vila_juncal: { x: 37.5, y: 47 },
+  toca_juncal: { x: 43.5, y: 50 },
 
   // ── Tsukimichi: Tsige (Sudoeste - Civilização Mercantil) ────────
   tsige_distrito_comercial: { x: 18, y: 72 },
@@ -106,14 +97,17 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   asora_atelie_seda: { x: 82, y: 40 },
 };
 
+// Grandes cidades marcadas na visão geral. O nome é o do jogo (o desenho do
+// mapa traz nomes antigos pintados, como "Tesselgarde"; a legenda segue a
+// engine). Toda id é um lugar de verdade: clicar viaja para lá.
 export const CAPITAIS_CONTINENTE = [
-  { id: 'tessel', nome: 'Tesselgarde', regiao: 'Marca de Tessel', x: 46.5, y: 17, tipo: 'Fortaleza do Norte' },
-  { id: 'corveira', nome: 'Corveiraborg', regiao: 'Planalto de Corveira', x: 43, y: 75, tipo: 'Cidadela das Forjas' },
-  { id: 'mareu', nome: 'Mareuborg', regiao: 'Costa de Mareu', x: 69.5, y: 75, tipo: 'Porto Imperial' },
-  { id: 'vintra', nome: 'Vintraborg', regiao: 'Bosque de Vintra', x: 28.5, y: 39, tipo: 'Baluarte dos Bosques' },
-  { id: 'solgar', nome: 'Solgar Capital', regiao: 'Ermo de Solgar', x: 25.5, y: 83, tipo: 'Entreposto do Deserto' },
-  { id: 'halvern', nome: 'Halvetia Capital', regiao: 'Vale de Halvet', x: 68.5, y: 60, tipo: 'Antiga Capital da Coroa' },
-  { id: 'taverna', nome: 'Vale de Halvet', regiao: 'Vale de Halvet', x: 58, y: 56, tipo: 'Coração do Vale' },
+  { id: 'tessel', nome: 'Tessel', regiao: 'Marca de Tessel', x: 46.5, y: 17, tipo: 'Cidade da fronteira norte' },
+  { id: 'corveira', nome: 'Corveira', regiao: 'Planalto de Corveira', x: 43, y: 75, tipo: 'Cidade das minas' },
+  { id: 'mareu', nome: 'Mareu', regiao: 'Costa de Mareu', x: 69.5, y: 75, tipo: 'Porto da guilda' },
+  { id: 'vintra', nome: 'Vintra', regiao: 'Bosque de Vintra', x: 28.5, y: 39, tipo: 'Vila do bosque' },
+  { id: 'solgar', nome: 'Solgar', regiao: 'Ermo de Solgar', x: 25.5, y: 83, tipo: 'Vila do oásis' },
+  { id: 'casa_senhorial', nome: 'A Casa de Pedra', regiao: 'Vale de Halvet', x: 68.5, y: 50, tipo: 'Sede da Casa de Halvet' },
+  { id: 'taverna', nome: 'A Rês Enforcada', regiao: 'Vale de Halvet', x: 58, y: 56, tipo: 'Coração do Vale de Halvet' },
 ];
 
 const REGIOES = [

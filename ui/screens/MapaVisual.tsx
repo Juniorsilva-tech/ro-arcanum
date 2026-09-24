@@ -292,7 +292,7 @@ export function MapaVisual({
                 <Text style={styles.feudoIcone}>👑</Text>
               </View>
               <Text style={styles.feudoNome}>
-                {camp.feudo?.casaDinastica?.nome ? `Casa ${camp.feudo.casaDinastica.nome}` : 'Seu Feudo'}
+                {camp.feudo?.casaDinastica?.nome ? `Casa ${camp.feudo.casaDinastica.nome}` : camp.feudo?.nome || 'Seu Feudo'}
               </Text>
             </View>
           )}

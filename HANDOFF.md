@@ -726,3 +726,28 @@ Achado e corrigido no teste:
 O servidor da porta 8081 (do outro lado) está quebrado desde o `npm ci` desta
 sessão (`expo/virtual/env` não resolve): precisa ser reiniciado. O da 8082
 funciona.
+
+### Mapa — revisão (sessão 58, depois da sessão 59 do outro agente)
+O trabalho do mapa do outro agente (sessão 59) estava parado desde 12:00 e com
+typecheck limpo; commitado como estava (`54bfbd5`) antes das correções, para
+ficar separado. Conferido desenhando os pontos do jogo sobre
+`assets/feudo/mapa_continente.jpg` (o canvas tem o tamanho da imagem, 1376×768):
+- **Capital inexistente**: `halvern` ("Halvetia Capital") não é local do jogo;
+  clicar para viajar pedia viagem a lugar nenhum. Virou `casa_senhorial` (A
+  Casa de Pedra, sede da Casa de Halvet), posta no castelo desenhado.
+- **Nomes inventados**: "Tesselgarde", "Corveiraborg", "Mareuborg",
+  "Vintraborg", "Solgar Capital" vinham do texto pintado na imagem. A legenda
+  agora usa os nomes do jogo (Tessel, Corveira, Mareu, Vintra, Solgar), e os
+  subtítulos inventados ("Porto Imperial") viraram descrições simples. **A
+  imagem continua com os nomes antigos pintados** — só uma imagem nova tira.
+- **Baixios no lugar errado**: Juncal, Juncal de Baixo e a Toca estavam a
+  leste, em cima da praça e do cemitério; pelas rotas só se ligam ao Vau de
+  Pedra e ao lago. Foram para oeste, no Rio-Verde.
+- A Vila dos Ferreiros (escondida) estava em cima da Mina de Corveira; o
+  Mosteiro do Alto, colado no moinho. Afastados.
+- 11 ids mortas na tabela (`templo`, `quartel`, `ferreiro`, `vila`, `bosque`,
+  `mosteiro`, `caverna`, `mansao`, `porto`, `pantano`, `halvern`) removidas;
+  nenhum código as usava como local.
+- O marcador do feudo mostra o nome da colônia (era "Seu Feudo").
+Resultado: 53 locais com coordenada, nenhuma capital inválida, nenhum par a
+menos de 3% um do outro.
