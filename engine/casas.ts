@@ -279,8 +279,19 @@ function abrirCeleiro(content: ContentBundle, camp: Campaign, casa: CasaNobre, e
 }
 
 /** A reputação com a casa chega a quem é da casa. */
+/**
+ * Estado da casa, criado com os valores de partida se ainda não existe. Antes
+ * só `processarCasas` criava: quem mexia na reputação antes do primeiro dia do
+ * mundo (um acordo feito no mesmo dia da fundação) mexia em nada.
+ */
+export function estadoDaCasa(camp: Campaign, casa: CasaNobre): EstadoCasa | undefined {
+  const mundo = camp.mundo;
+  if (!mundo) return undefined;
+  return (mundo.casas ??= {})[casa.id] ??= { legitimidade: 65, tesouro: casa.riqueza === 'alta' ? 140 : casa.riqueza === 'media' ? 90 : 50, influencia: 30, sucessoes: 0 };
+}
+
 export function mudarReputacaoCasa(content: ContentBundle, camp: Campaign, casa: CasaNobre, delta: number): void {
-  const estado = camp.mundo?.casas?.[casa.id];
+  const estado = estadoDaCasa(camp, casa);
   if (!estado || !delta) return;
   estado.reputacao = Math.max(-50, Math.min(50, (estado.reputacao ?? 0) + delta));
   for (const m of casa.membros ?? []) {
@@ -359,9 +370,8 @@ function casamentoPolitico(content: ContentBundle, camp: Campaign, casa: CasaNob
 
 export function processarCasas(content: ContentBundle, camp: Campaign): void {
   const mundo = camp.mundo; if (!mundo || !content.casas?.length) return;
-  mundo.casas ??= {};
   for (const casa of content.casas) {
-    const estado = mundo.casas[casa.id] ??= { legitimidade: 65, tesouro: casa.riqueza === 'alta' ? 140 : casa.riqueza === 'media' ? 90 : 50, influencia: 30, sucessoes: 0 };
+    const estado = estadoDaCasa(camp, casa)!;
     if (estado.ultimoDia === camp.calendario.dia) continue;
     estado.ultimoDia = camp.calendario.dia;
 

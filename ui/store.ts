@@ -735,9 +735,9 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   async resolverAudienciaAcao(opcaoId) {
-    const { camp } = get();
+    const { camp, content } = get();
     if (!camp) return '';
-    const r = resolverAudiencia(camp, opcaoId);
+    const r = resolverAudiencia(camp, opcaoId, content ?? undefined);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;

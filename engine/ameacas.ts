@@ -128,12 +128,15 @@ function candidatas(content: ContentBundle, camp: Campaign, s: SitioColonia): Ca
       peso: 0.002 * s.terreno.perigo * (inverno ? 2.5 : 1),
     });
   }
-  if (s.reivindicadaPor && !f.acordos?.includes(s.reivindicadaPor) && f.populacao >= 15) {
+  // A casa vem cobrar quando a colônia cresce sem acordo — e mais cedo se o
+  // enviado dela foi recusado (engine/renome.ts).
+  const hostil = (f.casasHostis ?? []).includes(s.reivindicadaPor ?? '');
+  if (s.reivindicadaPor && !f.acordos?.includes(s.reivindicadaPor) && f.populacao >= (hostil ? 8 : 15)) {
     const nomeCasa = content.casas?.find(c => c.id === s.reivindicadaPor)?.nome ?? s.reivindicadaPor;
     out.push({
       tipo: 'casa', origem: s.reivindicadaPor, nome: nomeCasa, forca: 40, tributo: 60,
       texto: `Cavaleiros com as cores de ${nomeCasa} vêm cobrar a terra que dizem ser deles.`,
-      peso: 0.002 + f.populacao / 20000,
+      peso: (0.002 + f.populacao / 20000) * (hostil ? 3 : 1),
     });
   }
   const oniVivo = Object.values(camp.kimetsu?.rivais ?? {}).some(r => r.vivo);

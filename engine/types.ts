@@ -1194,6 +1194,10 @@ export type FeudoState = {
   /** Ameaça anunciada e o que a assembleia decidiu (engine/ameacas.ts). */
   ameaca?: import('./ameacas').AmeacaColonia;
   ultimaAmeaca?: number;
+  /** Marcos de renome que já trouxeram enviado (engine/renome.ts). */
+  marcosRenome?: number[];
+  /** Casas cujo enviado foi recusado: vêm cobrar mais cedo. */
+  casasHostis?: string[];
   seqAmeacas?: number;
   /** Relatório da última batalha, para a tela. */
   ultimaBatalha?: { dia: number; nome: string } & import('./ameacas').ResultadoBatalha;

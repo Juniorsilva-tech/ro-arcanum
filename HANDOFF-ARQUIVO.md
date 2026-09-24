@@ -4634,3 +4634,372 @@ Fase 5 (estações, feras em bando, caravanas). O dono pediu nesta sessão para
 focar só em Vaelhorn: a Fase 7 (NPCs de Tsukimichi) fica de fora por enquanto.
 
 ---
+
+<!-- Sessões 51 a 53, movidas de HANDOFF.md na sessão 58 (Claude), sem edição. -->
+
+## Sessão 51 — Claude — Fase 5: estações, feras em bando, caravanas
+
+### Estado encontrado
+A estação mudava o clima e a lavoura (`cidades.ts`: fertilidade 0,8 no
+inverno) e mais nada. O encontro de viagem sorteava uma criatura do lugar e,
+em 20% das vezes, uma segunda — inclusive contra personagem de nível 1. Cidade
+com celeiro cheio e cidade com fome não se tocavam: cada uma resolvia sozinha.
+
+Simulação longa antes: a tabela da sessão 50.
+
+### O que foi feito
+- **Peso por estação no bestiário** (`Criatura.estacoes`, opcional): 13 feras
+  marcadas (lobo e lobo branco com fome no inverno, urso hibernando e voltando
+  com fome na primavera, serpente, aranha, morcegos e sanguessuga de verão,
+  corvo migrando e javali no outono, cão selvagem e gárgula no inverno). O peso escolhe **quem** aparece (sorteio ponderado) e mexe
+  na **chance** de haver encontro (média dos pesos do pool, limitada a
+  0,6–1,5): estrada de bicho de verão fica mais calma no inverno. Criatura sem
+  declaração pesa 1 — onis, fantasmas e o resto do bestiário não mudam.
+- **Feras em bando** (`Criatura.bando: {min, max}`): lobo, lobo branco, cão
+  selvagem, corvo e rato gigante vêm em grupo, com o mesmo teto por nível
+  dos bandos (`tetoDeGrupo` = 1 + nível/3, de 1 a 4). **Nível 1 e 2 nunca
+  enfrentam mais de um inimigo em encontro aleatório**: a segunda criatura
+  "de 20%" também passou a respeitar o teto.
+- **Inverno rigoroso** (`engine/estacoes.ts`): no inverno, chance de 1/40 por
+  dia de nevasca de 4 a 8 dias, com fato público no começo e no fim (degelo).
+  Durante ela, rota que toca `passo` ou `colina` fica +3 mais perigosa em
+  `perigoEfetivoDaRota`. Decisão: **perigo maior em vez de rota fechada** —
+  fechar podia prender o jogador do lado errado do Passo do Lobo por uma
+  semana sem aviso; o perigo maior deixa a escolha com ele. RNG derivado
+  (semente + dia): não consome o RNG da campanha. Estado em
+  `camp.mundo.invernoRigoroso` (opcional).
+- **Caravanas** (`engine/caravanas.ts`, `camp.caravanas` opcional): a cada 5
+  dias, a cidade com mais comida (≥ 280) manda até 90 medidas para a cidade
+  com fome mais perto (até 18 períodos de estrada), no máximo 3 na estrada.
+  Na chegada, bando ativo com 3+ homens na região da origem ou do destino
+  ataca com chance 35% + 3% por homem (teto 70%). Perdida: o grão vira tesouro
+  do bando, o destino fica 10 mais inseguro, fato público. Entregue: fato
+  público. **Escolta** (ação `escoltar_caravana`, botão "caravanas partindo"
+  em Comunidade): com bando na rota vira luta contra salteadores do bando (com
+  o teto por nível); vencida ou sem bando, a caravana chega de certeza e a
+  cidade paga 12 moedas e +1 de reputação na vila. Sem bandos no conteúdo
+  (Tsukimichi), não há caravanas.
+- Tela: aviso de nevasca e caravanas partindo em `MundoVivo.tsx`. Simulador:
+  encontros por estação, caravanas entregues e perdidas.
+
+### Arquivos
+Novos: `engine/estacoes.ts`, `engine/caravanas.ts`,
+`engine/estacoes.selftest.ts`, `engine/caravanas.selftest.ts`.
+Alterados: `engine/types.ts` (`Criatura.estacoes`, `Criatura.bando`,
+`Caravana`, `EstadoCaravanas`, `CombatState.caravana`),
+`content/vaelhorn/bestiary.ts`, `engine/viagem.ts`, `engine/mundo.ts`,
+`engine/bandos.ts` (`encontroContraCaravana`), `engine/combat.ts` (desfecho da
+escolta), `engine/acoesMundo.ts`, `engine/index.ts`, `engine/campanhaLonga.ts`,
+`ui/screens/MundoVivo.tsx`, `package.json` (os dois testes em `test:engine`).
+`HANDOFF.md`: sessões 43 a 45 movidas para `HANDOFF-ARQUIVO.md` (o arquivo
+passava de 880 linhas), texto intacto.
+
+### Verificações
+- `estacoes.selftest.ts`: pesos declarados; mais lobo no inverno que no verão
+  (544 contra 258 em 3.000 sorteios), quase nenhum urso nem serpente no
+  inverno; pool de bicho de verão com menos encontro no inverno; teto por
+  nível (nível 1: 0 grupos de 2+ em mais de 2.000 encontros e em 200 viagens
+  reais; nível 9 encontra matilha dentro do teto); nevasca chega, vira fato,
+  +3 no passo e 0 na planície, sobrevive ao save, degelo com fato; fora do
+  inverno não neva; o inverno não consome o RNG principal.
+- `caravanas.selftest.ts`: caravana sai da sobra para a fome, a carga sai do
+  celeiro, entrega soma no destino; sem fome, ninguém manda; com bando de 8
+  na rota, 19 de 30 atacadas, com tesouro do bando e insegurança do destino
+  subindo; escolta sem bando (entrega certa, 12 moedas), escolta com bando
+  (nível 1 luta contra 1 salteador; vencida, a caravana chega mesmo com bando
+  de 20); save idêntico; Tsukimichi sem caravanas.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 32  pop 4054  fome    0d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 29  pop 3635  fome    0d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 35  pop 4158  fome    0d  travas     0  violações 0  marca aos 24
+longa-3    10a  fim_do_prazo nível 28  pop 3679  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 31  pop 3859  fome    0d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 31  pop 4278  fome    0d  travas     0  violações 0
+```
+| | Sessão 50 | Sessão 51 |
+| --- | --- | --- |
+| nível final | 31,3 | 31,0 |
+| população | 3.866 | 3.944 |
+| derrotas | 19,8 | 18,7 |
+| fome no fim | 6 | 0 |
+| dias-cidade em fome | 2.621 | 617 |
+| mortes | 0 | 0 |
+
+Encontros por estação (média por campanha): primavera 164, verão 184,5,
+outono 177,7, inverno 171,2. Caravanas: 270,7 entregues e 20,8 perdidas por
+campanha (7%). Nível 1–5: 49,1% de vitória em 57 combates.
+
+### Problemas e decisões em aberto
+- **As caravanas quase acabaram com a fome** (dias-cidade em fome −76%). É o
+  efeito esperado de ligar sobra a falta, mas tira pressão das missões de
+  abastecer. Se o dono quiser mais fome no mundo, os botões são
+  `COMIDA_PARA_MANDAR` (280) e `CARGA_MAXIMA` (90) em `engine/caravanas.ts`.
+  Não mexi: nenhuma métrica de risco piorou.
+- A diferença entre estações existe mas é pequena na média (verão +12% sobre
+  a primavera), porque a maioria dos pools mistura feras de várias estações e
+  onis (peso 1). Aparece forte por fera (lobo, urso, serpente), que é o que o
+  jogador percebe.
+- `combat.ts` importa `caravanas.ts`, que importa `combat.ts`: import circular
+  só de funções, resolvido em tempo de chamada. Funciona; se um dia der
+  problema de ordem de carga, mova `registrarDesfechoCaravana` para um módulo
+  sem dependência de combate.
+
+### Próximo passo
+Fase 6 (cidades com identidade e a forja ao alcance).
+
+---
+
+## Sessão 52 — Claude — Fase 6: cidades com identidade e a forja ao alcance
+
+### Estado encontrado
+As 23 comunidades vivas tinham os mesmos cinco edifícios (lavoura, moradias,
+enfermaria, muralha, mercado), todos com teto 5. Corveira, construída em cima
+da mina, não se distinguia de Mareu, que vive do cais.
+
+A forja estava mais perto do que o plano supunha. Levantei cidade por cidade:
+a Feira Coberta, vizinha da taverna onde o jogo começa, tem ponto "ferraria",
+duas ferreiras escritas (Torana e Duna) e vende carvão e minério. As cinco
+cidades grandes já tinham ferreira ou armeira com ocupação clara e família da
+Fase 2: Wyn Bico-Fino (Corveira), Ysolt Boca-Seca (Solgar), Elna a Velha
+(Vintra), Vana do Fole (Tessel), Kelda Cais (Mareu). Por isso o item 2 do
+plano não pediu NPC novo. O que faltava era **provar** o caminho com teste, e
+ele tem um degrau: o dinheiro inicial (12) não paga carvão e dois minérios
+(16). Um turno de trabalho na comunidade (+6) resolve.
+
+Simulação longa antes: a tabela da sessão 51.
+
+### O que foi feito
+- **Um edifício por região**, declarado no conteúdo
+  (`content/vaelhorn/edificiosRegionais.ts`, tipo `EdificioRegional`); a
+  engine só aplica o efeito (`engine/edificiosRegionais.ts`). Cada um veio do
+  ponto que a descrição da cidade já tinha:
+  - **Fundição Alta** (Corveira, Wyn): vende carvão, minério e estilhaço de
+    pedra; Corveira passa a ter onde forjar mesmo sem ferreira presente, e a
+    peça forjada ali **não gasta carvão**.
+  - **Cais Grande** (Mareu): +5 de comida por dia; caravana que parte de
+    Mareu vai pela costa e corre metade do risco de emboscada.
+  - **Praça de Armas** (Tessel, Vana): muralha até o nível 8; a cada 15 dias
+    a ronda da guarnição tira um homem do maior bando da Marca de Tessel,
+    com fato público.
+  - **Cisterna Funda e Bazar** (Solgar, Ysolt): na seca a lavoura rende 0,55
+    em vez de 0,15; o bazar vende prata, poção de cura e tônico, e repõe
+    peça rara até 4 (o comum é 2).
+  - **Pátio da Madeira** (Vintra, Elna): vende carvão e couro; +0,6 de
+    materiais por dia para as obras.
+- Edifício regional funciona enquanto a cidade tem gente e integridade acima
+  de 20 (a régua da reposição do mercado): cidade arrasada apaga a fundição e
+  para a ronda.
+- **Capitais com teto 7** (Tessel, Corveira, Mareu), declarado por cidade
+  (`tetoEdificios`); o resto continua em 5. `iniciarObra` ganhou o `content`
+  como parâmetro opcional para saber o teto (sem ele, 5 — quem chamava antes
+  continua igual).
+- O que um edifício vende entra na lista de lojas do item quando o pacote de
+  conteúdo é montado (`lojasRegionais` em `content/vaelhorn/index.ts`): a loja
+  continua sendo lida do item, sem regra nova de comércio.
+- Tela: seção do edifício "só aqui" em Comunidade, nível "de N" em cada
+  edifício comum; a forja no Inventário mostra a fundição e libera a receita
+  sem carvão em Corveira. Narrador: `mundoPersistente.cidade.edificioProprio`.
+- Nenhum efeito consome RNG. Nenhum campo novo no save.
+
+### Arquivos
+Novos: `content/vaelhorn/edificiosRegionais.ts`, `engine/edificiosRegionais.ts`,
+`engine/edificiosRegionais.selftest.ts`.
+Alterados: `engine/types.ts` (`EfeitosRegionais`, `EdificioRegional`,
+`ContentBundle.edificiosRegionais`, `ContentBundle.tetoEdificios`),
+`content/vaelhorn/index.ts`, `engine/cidades.ts`, `engine/casas.ts`,
+`engine/acoesMundo.ts`, `engine/forja.ts`, `engine/caravanas.ts`,
+`engine/llm.ts`, `engine/index.ts`, `engine/campanhaLonga.ts`,
+`engine/jornadas.selftest.ts`, `ui/screens/MundoVivo.tsx`,
+`ui/screens/Inventario.tsx`, `package.json`.
+
+### Verificações
+- `edificiosRegionais.selftest.ts`: cinco edifícios, um por cidade, nenhuma
+  outra cidade com edifício; responsáveis existem no elenco; Vintra vende
+  carvão (antes não vendia), Corveira minério e pedra, Solgar prata e poção,
+  e o estoque vivo já nasce com isso; teto 7 nas capitais, 8 na muralha de
+  Tessel, 5 em Pedravel e em Tsukimichi; muralha 5 sobe em Tessel e não em
+  Pedravel. Efeito medido contra o mesmo mundo sem edifícios: Mareu com 295
+  de comida contra 195 em 20 dias; Solgar com 129 contra 79 em 10 dias de
+  seca; Vintra com 48 de materiais contra 30 em 30 dias; bazar repõe poção
+  até 4; ronda no dia 15 tira um homem do bando, fora do dia nada, Tessel
+  arrasada não patrulha; com bando de 8 na costa, 12 de 40 caravanas de Mareu
+  perdidas contra 21 sem o cais; em Corveira, na madrugada (sem ferreira
+  presente), sem a fundição não se forja e com ela sim, e a peça sai sem
+  carvão; na Feira Coberta sem carvão, não; Corveira arrasada apaga a
+  fundição.
+- `jornadas.selftest.ts`, **jornada da primeira forja**: campanha nova, da
+  taverna para a Feira Coberta pela viagem real, um turno de trabalho, compra
+  de carvão e dois minérios (16 moedas), lâmina curta de ferro forjada no dia
+  1 de jogo.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 33  pop 4402  fome    0d  travas     0  violações 0  marca aos 26
+longa-1     8a  morte        nível 31  pop 4085  fome    0d  travas     0  violações 0  marca aos 19 (morreu dela)
+longa-2    10a  fim_do_prazo nível 30  pop 4428  fome    0d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 29  pop 4390  fome    2d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 34  pop 3804  fome    0d  travas     0  violações 0  marca aos 24
+longa-5    10a  fim_do_prazo nível 31  pop 4353  fome    0d  travas     0  violações 0
+```
+| | Sessão 51 | Sessão 52 |
+| --- | --- | --- |
+| nível final | 31,0 | 31,3 |
+| população | 3.944 | 4.244 |
+| derrotas | 18,7 | 15,5 |
+| dias-cidade em fome | 617 | 572 |
+| obras de casa | 14,2 | 20,8 |
+| patrulhas de casa | 11,2 | 7,2 |
+| caravanas entregues / perdidas | 270,7 / 20,8 | 271,5 / 17,3 |
+| mortes | 0 | 1 (Marca) |
+
+Rondas da Praça de Armas: 19,7 por campanha. Peixe do Cais Grande: 17.642
+medidas por campanha (5 por dia, quase todo dia).
+
+**A morte de longa-1, investigada antes do commit.** É a regra da Fase 1
+funcionando, não efeito desta fase: a Marca despertou aos 19, o limite ficou
+em 25, e dali o tributo anual mata com 10%, 15%, 20%... — 25% a 39% de chance
+de morrer entre 26 e 27 anos. O simulador nunca procura a contenção na
+Mansão, então toda Marca cedo é um risco real nele. Esta fase não toca na
+Marca, no combate nem no consumo de RNG; ela muda o estado do mundo (comida,
+bandos), e isso embaralha o caminho de cada campanha — os despertares foram 2,
+1 e 3 nas sessões 50, 51 e 52. Registro para o dono: se quiser a simulação
+sem esse ruído, a política dela precisa aprender a ir conter a Marca; não
+mexi, porque mudaria a régua de comparação no meio do trabalho.
+As patrulhas de casa caíram porque a ronda de Tessel já tira homem do bando
+da Marca; as obras de casa subiram porque as capitais agora têm onde crescer.
+
+### Problemas e decisões em aberto
+- O Cais Grande ajuda Mareu todo dia; somado às caravanas, a fome ficou rara
+  no mundo (dias-cidade em fome 572 em 10 anos, contra 2.621 antes da
+  Fase 5). Os botões estão no conteúdo: `comidaPorDia` do cais e as
+  constantes de `engine/caravanas.ts`.
+- A bigorna da fundição fica em Corveira mesmo. Na boca da mina ou no Terraço
+  Sexto não conta.
+- Os três bandos caem em regiões sorteadas: em campanha sem bando na Marca de
+  Tessel, a ronda não tem em quem bater (a muralha 8 continua valendo).
+
+### Próximo passo
+Fase 8 (o mundo lembra e Diretor de Arcos). A Fase 7 (NPCs de Tsukimichi)
+ficou fora a pedido do dono.
+
+---
+
+## Sessão 53 — Claude — Fase 8: o mundo lembra e o Diretor de Arcos
+
+### Estado encontrado
+Mais do que o plano supunha já existia. O pacote do narrador dá peso 100 a
+fato com vínculo pessoal e 40 a fato do local, e tem `retornoAoLocal`
+(`engine/contextoNarrativo.ts`). A tela Crônica junta o feed da sessão e
+`camp.cronica`. Faltavam três coisas:
+1. uma linha escrita pela **engine** (não pela IA) quando o jogador volta a um
+   lugar onde fez algo;
+2. missão cumprida pelo jogador não tinha o jogador como ator
+   (`encerrarMissao` punha só `q.ator`), então não contava como feito dele;
+3. nada empurrava para perto do jogador o que já estava acontecendo longe
+   dele — o `processarDiretor` de `cidades.ts` só sorteia incidentes das
+   cidades.
+
+### O que foi feito
+- **O mundo lembra** (`engine/memoriaMundo.ts`):
+  - ao chegar a um lugar sem emboscada, se houver feito público do jogador ali
+    (ou na comunidade daquele lugar), de dia anterior e ainda não lembrado, a
+    engine escreve a linha. Um feito por chegada, cada feito uma vez;
+  - feitos que contam: capitão morto, capitão preso, esconderijo tomado,
+    derrota para capitão, obra-prima, missão cumprida, compromisso falhado,
+    caravana escoltada, trégua mediada. A linha abre com a reação da cidade e
+    segue com o texto do próprio fato ("Na Feira Coberta, gente que você não
+    conhece te cumprimenta pelo nome. Ainda contam: ...");
+  - o que não foi público (espionagem) a cidade não comenta.
+- `encerrarMissao`: missão aceita e cumprida, ou aceita e falhada, põe
+  `jogador` entre os atores. Oferta que expirou sem aceite e missão resolvida
+  por outros, não.
+- **Diretor de Arcos** (`engine/diretor.ts`, passe diário em `avancarMundo`).
+  Ordem fixa de prioridade:
+  1. compromisso a 2 dias ou menos do prazo (mensageiro);
+  2. capitão de bando vivo que caça o jogador ou guarda rancor;
+  3. pedido de ajuda na comunidade onde ele está (vira conhecido);
+  4. casa nobre com legitimidade abaixo de 30;
+  5. gente com quem ele tem relação, de luto há até 20 dias.
+
+  Regras do diretor:
+  - no máximo um gancho a cada 3 dias;
+  - o mesmo alvo não volta antes de 20 dias;
+  - não cria estado, não consome RNG, não age com o jogador cativo.
+- **Fila de avisos**: lembrança e gancho vão para `camp.memoriaMundo.avisos`
+  (no máximo 3) e para a crônica persistente como eco. O store consome a fila
+  antes de narrar e põe as linhas no feed. O narrador recebe as do dia em
+  `mundoLembra`, com a regra 2c: deixar aparecer num gesto ou fala, sem
+  repetir a frase nem inventar consequência.
+- **Crônica**: card "O que o mundo lembra de você", com os últimos 15 fatos em
+  que o jogador foi ator, em ordem, com dia e lugar.
+- Nomes de lugar com artigo viram contração ("Na Feira Coberta", "No Moinho
+  Parado"); região idem ("na Marca de Tessel", "no Vale de Halvet").
+- Simulador: ganchos do diretor e lembranças por campanha.
+
+### Arquivos
+Novos: `engine/memoriaMundo.ts`, `engine/diretor.ts`,
+`engine/diretor.selftest.ts`.
+Alterados: `engine/types.ts` (`Campaign.memoriaMundo`, opcional),
+`engine/missoesVivas.ts`, `engine/viagem.ts` (`ResultadoViagem.lembranca`),
+`engine/mundo.ts`, `engine/llm.ts`, `engine/index.ts`,
+`engine/campanhaLonga.ts`, `ui/store.ts`, `ui/screens/Paineis.tsx`,
+`package.json`.
+
+### Verificações
+- `diretor.selftest.ts`:
+  - memória:
+    - no mesmo dia do feito, nada; em outra cidade, nada;
+    - ao voltar, a linha com o texto do fato, uma vez só;
+    - a linha está no pacote do narrador e na crônica; a tela a consome uma vez;
+    - fato não público não é comentado;
+    - pelo caminho real (`viajar` ida e volta), a obra-prima é lembrada.
+  - missões:
+    - cumprida e compromisso falhado têm o jogador como ator; resolvida por
+      outros, não;
+    - a crônica do jogador sai em ordem.
+  - diretor:
+    - mensageiro a um dia do prazo; nenhum segundo gancho no mesmo dia nem
+      dentro do intervalo;
+    - não consome o RNG da campanha;
+    - capitão caçador e casa por um fio aparecem em 30 dias; cada gancho aponta
+      para estado que existe; nunca dois no intervalo; alvo sem repetir antes
+      de 20 dias; fila limitada;
+    - save idêntico; cativo sem mensageiro; pedido de ajuda vira conhecido.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 31  pop 3846  fome    0d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 29  pop 4123  fome    0d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 31  pop 4283  fome    0d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 28  pop 4171  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 29  pop 3656  fome    0d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 34  pop 4134  fome    0d  travas     0  violações 0
+```
+Médias: nível 30,3; população 4.036; derrotas 18,3; dias-cidade em fome 517;
+0 mortes. Diretor: 246,7 ganchos por campanha de 10 anos (um a cada ~15
+dias); 146 lembranças por campanha. Esta fase não mexe em combate nem em
+economia; a variação de nível, população e derrotas contra a sessão 52 está
+dentro da dispersão entre sementes (nas sessões 50 a 52 as derrotas foram
+19,8, 18,7 e 15,5).
+
+### Problemas e decisões em aberto
+- A lembrança só sai na chegada sem emboscada, e um feito por chegada: quem
+  fez muito num lugar recebe as lembranças aos poucos, uma por volta.
+- Os ganchos de casa e de capitão reaparecem a cada 20 dias enquanto o
+  estado durar. Se no celular parecer repetitivo, suba
+  `DIAS_PARA_REPETIR_ALVO` em `engine/diretor.ts`.
+- O texto da lembrança reaproveita o texto do fato. Os fatos antigos do jogo
+  foram escritos para o log e alguns soam secos depois do prefixo.
+
+### Próximo passo
+O dono pediu nesta sessão: procurar erros e coisas não ligadas no jogo, e
+depois aprofundar história (casas, cidades, armas lendárias, bestiário,
+personagens). Fase 9 (quebrar arquivos gigantes) fica para depois disso.

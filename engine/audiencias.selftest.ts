@@ -82,7 +82,8 @@ const esperarPedido = (c: Campaign, tipo: Audiencia['tipo'], preparar: () => voi
   const c = fundada('campo_ceifa', 'furto');
   const f = c.feudo!;
   let antes = 0;
-  const a = esperarPedido(c, 'furto', () => { f.comida = 100; f.seguranca = 10; antes = f.comida; })!;
+  // Furto pede colônia de 8+ pessoas e guarda fraca, e nem toda noite.
+  const a = esperarPedido(c, 'furto', () => { f.comida = 100; f.seguranca = 10; f.populacao = Math.max(f.populacao, 10); antes = f.comida; })!;
   ok(!!a && f.comida === antes - a.valores.sumiu, `o furto já tirou ${a?.valores.sumiu} de comida do celeiro`);
   const suspeita = a.envolvidos[0];
   const pop = f.populacao;
@@ -129,7 +130,7 @@ const esperarPedido = (c: Campaign, tipo: Audiencia['tipo'], preparar: () => voi
   const c = fundada('vau_pedra', 'rng');
   const f = c.feudo!;
   const cursor = c.rng.cursor;
-  for (let i = 0; i < 40; i++) { f.comida = 5; f.seguranca = 10; c.calendario.dia++; talvezAudiencia(C, c); }
+  for (let i = 0; i < 40; i++) { f.comida = 5; f.seguranca = 10; f.populacao = 10; c.calendario.dia++; talvezAudiencia(C, c); }
   ok(c.rng.cursor === cursor, 'as audiências não consomem o RNG da campanha');
   const volta = importar(exportar(c));
   ok(volta.ok && JSON.stringify(volta.valor.feudo!.audiencia) === JSON.stringify(f.audiencia), 'o pedido pendente volta igual do save');

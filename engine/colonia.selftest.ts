@@ -64,8 +64,20 @@ const dias = (c: Campaign, n: number, estacao?: Estacao) => {
 {
   const campo = fundada('campo_ceifa'), areia = fundada('ruina_areia');
   for (const c of [campo, areia]) { c.feudo!.comida = 100; c.feudo!.populacao = 10; }
-  dias(campo, 10, 'verao'); dias(areia, 10, 'verao');
-  ok(campo.feudo!.comida > areia.feudo!.comida + 20, `Em 10 dias, o Campo da Ceifa tem ${Math.round(campo.feudo!.comida)} de comida e a Ruína de Areia ${Math.round(areia.feudo!.comida)}`);
+  // Mede o que o TERRENO deu (roça + caça − consumo − tributo), pelo relatório
+  // do dia: desde as etapas D e E, furto e ameaça também mexem no celeiro, e
+  // este teste é sobre o terreno.
+  const saldo = (c: Campaign) => {
+    let t = 0;
+    for (let i = 0; i < 10; i++) {
+      c.calendario.dia++; c.calendario.estacao = 'verao';
+      const r = processarDiaColonia(C, c)!;
+      t += r.lavoura + r.selvagem - r.consumo - r.tributo;
+    }
+    return t;
+  };
+  const sCampo = saldo(campo), sAreia = saldo(areia);
+  ok(sCampo > sAreia + 20, `Em 10 dias, o terreno do Campo da Ceifa dá ${Math.round(sCampo)} de comida e o da Ruína de Areia ${Math.round(sAreia)}`);
   const clareiraM = modificadoresDoSitio(sitioDe(C, 'clareira_pedras')!).materiaisDia, areiaM = modificadoresDoSitio(sitioDe(C, 'ruina_areia')!).materiaisDia;
   const cl = fundada('clareira_pedras', 'madeira'), ar = fundada('ruina_areia', 'sem-madeira');
   for (const c of [cl, ar]) { c.feudo!.comida = 500; c.feudo!.materiais = 0; }

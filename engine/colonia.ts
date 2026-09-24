@@ -29,6 +29,7 @@ import { registrarMarco } from './memoria';
 import { obterFeudo } from './reino';
 import { talvezAudiencia } from './audiencias';
 import { processarAmeacas } from './ameacas';
+import { processarRenome, anunciarFundacao } from './renome';
 import { processarRebanhos, segurancaDosCavalos, type RelatorioRebanho } from './rebanhos';
 import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
 
@@ -158,6 +159,7 @@ export function fundarColonia(content: ContentBundle, camp: Campaign, nome: stri
   f.historicoEventos.push({ dia: camp.calendario.dia, texto });
   camp.cronica.push({ turno: camp.turno, tipo: 'sistema', texto });
   registrarMarco(camp, texto);
+  anunciarFundacao(camp, s);
   return { ok: true, mensagem: texto };
 }
 
@@ -288,6 +290,8 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   r.gente = processarGente(content, camp, s.regiao, s.terreno.passagem);
   // Ameaça: chega a anunciada, ou talvez se anuncia uma (engine/ameacas.ts).
   r.eventos.push(...processarAmeacas(content, camp, s));
+  // O renome muda o nível da colônia e traz enviados das casas (engine/renome.ts).
+  r.eventos.push(...processarRenome(content, camp, s));
   // Alguém pede para ser ouvido (engine/audiencias.ts).
   const audiencia = talvezAudiencia(content, camp);
   if (audiencia) r.eventos.push(`Pedem audiência: ${audiencia.texto}`);

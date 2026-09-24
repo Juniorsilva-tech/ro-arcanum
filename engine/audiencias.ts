@@ -15,8 +15,15 @@ import { createRng, nextFloat, seedFromString, type RngState } from './rng';
 import { ANIMAIS, totalDeAnimais, type AnimalColonia } from './rebanhos';
 import { sitioDe } from './colonia';
 import { registrarMarco } from './memoria';
+import { mudarReputacaoCasa } from './casas';
 
-export type TipoAudiencia = 'briga' | 'fome' | 'mercador' | 'furto' | 'casamento' | 'ferramentas';
+const nomeDaCasa = (content: ContentBundle | undefined, id?: string) => content?.casas?.find(c => c.id === id)?.nome ?? id ?? 'a casa';
+function reputacaoCasa(content: ContentBundle | undefined, camp: Campaign, id: string | undefined, delta: number) {
+  const casa = content?.casas?.find(c => c.id === id);
+  if (content && casa) mudarReputacaoCasa(content, camp, casa, delta);
+}
+
+export type TipoAudiencia = 'briga' | 'fome' | 'mercador' | 'furto' | 'casamento' | 'ferramentas' | 'enviado';
 
 export type OpcaoAudiencia = {
   id: string;
@@ -37,10 +44,12 @@ export type Audiencia = {
   envolvidos: string[];
   /** Números fixados na hora do pedido, para a escolha cobrar o que prometeu. */
   valores: Record<string, number>;
+  /** Casa que mandou o enviado (engine/renome.ts). */
+  origem?: string;
 };
 
 /** A cada quantos dias, no mínimo, alguém pede audiência. */
-export const INTERVALO_AUDIENCIA = 3;
+export const INTERVALO_AUDIENCIA = 5;
 export const DIAS_PARA_RESPONDER = 3;
 
 function rngDe(camp: Campaign, chave: string): RngState {
@@ -48,6 +57,10 @@ function rngDe(camp: Campaign, chave: string): RngState {
 }
 
 const primeiro = (nome: string) => nome.split(' ')[0];
+/** Concordância pelo gênero do colono: g(c, 'posta', 'posto'). */
+const g = (c: Colono, fem: string, masc: string) => (c.genero === 'm' ? masc : fem);
+/** Para duas pessoas: feminino só se as duas forem mulheres. */
+const g2 = (a: Colono, b: Colono, fem: string, masc: string) => (a.genero === 'f' && b.genero === 'f' ? fem : masc);
 const colonos = (f: FeudoState) => f.colonos ?? [];
 const porId = (f: FeudoState, id: string) => colonos(f).find(c => c.id === id);
 const mexerHumor = (c: Colono | undefined, d: number) => { if (c) c.humor = Math.max(0, Math.min(100, c.humor + d)); };
@@ -61,19 +74,20 @@ const ordem = (f: FeudoState, d: number) => { f.estabilidade = Math.max(0, Math.
 type Contexto = { passagem: number };
 type Gerador = (f: FeudoState, camp: Campaign, rng: RngState, ctx: Contexto) => Omit<Audiencia, 'id' | 'dia' | 'ate'> | undefined;
 
-const GERADORES: Record<TipoAudiencia, Gerador> = {
+// O enviado não se sorteia aqui: vem do renome (engine/renome.ts).
+const GERADORES: Record<Exclude<TipoAudiencia, 'enviado'>, Gerador> = {
   briga: (f) => {
     const briguentas = colonos(f).filter(c => c.temperamento === 'briguenta' || c.humor < 35);
     if (briguentas.length < 2) return undefined;
     const [a, b] = [...briguentas].sort((x, y) => x.humor - y.humor);
     return {
       tipo: 'briga', envolvidos: [a.id, b.id], valores: {},
-      texto: `${a.nome} e ${b.nome} brigaram na frente do poço, e a colônia inteira viu. Cada uma quer que você diga quem tinha razão.`,
+      texto: `${a.nome} e ${b.nome} brigaram na frente do poço, e a colônia inteira viu. ${g2(a, b, 'Cada uma', 'Cada um')} quer que você diga quem tinha razão.`,
       opcoes: [
-        { id: 'a', rotulo: `Dar razão a ${primeiro(a.nome)}`, efeito: `${primeiro(a.nome)} fica mais contente e leal; ${primeiro(b.nome)} fica ressentida.` },
-        { id: 'b', rotulo: `Dar razão a ${primeiro(b.nome)}`, efeito: `${primeiro(b.nome)} fica mais contente e leal; ${primeiro(a.nome)} fica ressentida.` },
-        { id: 'mediar', rotulo: 'Sentar as duas à mesma mesa', efeito: 'As duas melhoram um pouco; a ordem sobe. Custa 5 de ouro em vinho.' },
-        { id: 'punir', rotulo: 'Castigar as duas', efeito: 'A ordem sobe bem; as duas ficam de mau humor.' },
+        { id: 'a', rotulo: `Dar razão a ${primeiro(a.nome)}`, efeito: `${primeiro(a.nome)} fica mais ${g(a, 'contente e leal', 'contente e leal')}; ${primeiro(b.nome)} fica ${g(b, 'ressentida', 'ressentido')}.` },
+        { id: 'b', rotulo: `Dar razão a ${primeiro(b.nome)}`, efeito: `${primeiro(b.nome)} fica mais contente e leal; ${primeiro(a.nome)} fica ${g(a, 'ressentida', 'ressentido')}.` },
+        { id: 'mediar', rotulo: `Sentar ${g2(a, b, 'as duas', 'os dois')} à mesma mesa`, efeito: `${g2(a, b, 'As duas', 'Os dois')} melhoram um pouco; a ordem sobe. Custa 5 de ouro em vinho.` },
+        { id: 'punir', rotulo: `Castigar ${g2(a, b, 'as duas', 'os dois')}`, efeito: `A ordem sobe bem; ${g2(a, b, 'as duas', 'os dois')} ficam de mau humor.` },
       ],
     };
   },
@@ -104,8 +118,10 @@ const GERADORES: Record<TipoAudiencia, Gerador> = {
       ],
     };
   },
-  furto: (f) => {
-    if (f.seguranca >= 45 || colonos(f).length === 0) return undefined;
+  furto: (f, _camp, rng) => {
+    // Furto é de colônia com gente que não se conhece e guarda fraca — e nem
+    // toda noite: sem este sorteio próprio, era quase todo pedido.
+    if (f.seguranca >= 45 || f.populacao < 8 || colonos(f).length === 0 || nextFloat(rng) > 0.35) return undefined;
     const suspeita = [...colonos(f)].sort((x, y) => x.lealdade - y.lealdade)[0];
     const sumiu = Math.min(Math.floor(f.comida * 0.1), 20);
     if (sumiu < 3) return undefined;
@@ -113,8 +129,8 @@ const GERADORES: Record<TipoAudiencia, Gerador> = {
       tipo: 'furto', envolvidos: [suspeita.id], valores: { sumiu },
       texto: `Sumiram ${sumiu} de comida do celeiro durante a noite. Todo mundo olha para ${suspeita.nome}, que jura que não foi.`,
       opcoes: [
-        { id: 'expulsar', rotulo: `Expulsar ${primeiro(suspeita.nome)}`, efeito: 'Ela vai embora; a ordem sobe; a estrada fica sabendo que aqui se expulsa gente.' },
-        { id: 'perdoar', rotulo: 'Perdoar sem provas', efeito: `${primeiro(suspeita.nome)} fica grata e leal; a ordem cai um pouco.` },
+        { id: 'expulsar', rotulo: `Expulsar ${primeiro(suspeita.nome)}`, efeito: `${g(suspeita, 'Ela', 'Ele')} vai embora; a ordem sobe; a estrada fica sabendo que aqui se expulsa gente.` },
+        { id: 'perdoar', rotulo: 'Perdoar sem provas', efeito: `${primeiro(suspeita.nome)} fica ${g(suspeita, 'grata e leal', 'grato e leal')}; a ordem cai um pouco.` },
         { id: 'vigia', rotulo: 'Pôr vigia no celeiro (10 de ouro)', efeito: 'A segurança sobe; ninguém é acusado.' },
       ],
     };
@@ -128,8 +144,8 @@ const GERADORES: Record<TipoAudiencia, Gerador> = {
       texto: `${a.nome} e ${b.nome} querem se unir diante da colônia e pedem a sua bênção.`,
       opcoes: [
         { id: 'festa', rotulo: 'Abençoar com festa (15 de comida)', efeito: 'Todo mundo fica de melhor humor e a estrada comenta. Custa comida.' },
-        { id: 'simples', rotulo: 'Abençoar sem festa', efeito: 'As duas ficam felizes; o resto nem percebe.' },
-        { id: 'negar', rotulo: 'Negar', efeito: 'As duas ficam de mau humor e menos leais.' },
+        { id: 'simples', rotulo: 'Abençoar sem festa', efeito: `${g2(a, b, 'As duas', 'Os dois')} ficam felizes; o resto nem percebe.` },
+        { id: 'negar', rotulo: 'Negar', efeito: `${g2(a, b, 'As duas', 'Os dois')} ficam de mau humor e menos leais.` },
       ],
     };
   },
@@ -140,14 +156,14 @@ const GERADORES: Record<TipoAudiencia, Gerador> = {
       tipo: 'ferramentas', envolvidos: [oficineira.id], valores: { custo: 25 },
       texto: `${oficineira.nome} pede material para fazer ferramentas novas: diz que com as de agora a obra anda pela metade.`,
       opcoes: [
-        { id: 'dar', rotulo: 'Dar o material (25)', efeito: 'As obras em andamento adiantam um dia; ela fica contente.' },
-        { id: 'negar', rotulo: 'Negar', efeito: 'Ela fica de mau humor.' },
+        { id: 'dar', rotulo: 'Dar o material (25)', efeito: `As obras em andamento adiantam um dia; ${g(oficineira, 'ela', 'ele')} fica contente.` },
+        { id: 'negar', rotulo: 'Negar', efeito: `${g(oficineira, 'Ela', 'Ele')} fica de mau humor.` },
       ],
     };
   },
 };
 
-const ORDEM_DOS_PEDIDOS: TipoAudiencia[] = ['fome', 'briga', 'furto', 'casamento', 'ferramentas', 'mercador'];
+const ORDEM_DOS_PEDIDOS: Exclude<TipoAudiencia, 'enviado'>[] = ['fome', 'briga', 'furto', 'casamento', 'ferramentas', 'mercador'];
 
 /**
  * Talvez chegue um pedido hoje. Chamado no dia da colônia. Urgência primeiro
@@ -190,7 +206,7 @@ function rotacionar<T>(xs: T[], n: number): T[] {
 
 // ── A decisão ─────────────────────────────────────────────────────────────
 
-export function resolverAudiencia(camp: Campaign, opcaoId: string): { ok: boolean; mensagem: string } {
+export function resolverAudiencia(camp: Campaign, opcaoId: string, content?: ContentBundle): { ok: boolean; mensagem: string } {
   const f = camp.feudo;
   const a = f?.audiencia;
   if (!f || !a) return { ok: false, mensagem: 'Ninguém está pedindo audiência.' };
@@ -237,7 +253,7 @@ export function resolverAudiencia(camp: Campaign, opcaoId: string): { ok: boolea
 
     case 'furto:expulsar':
       if (x) { f.colonos = colonos(f).filter(c => c.id !== x.id); f.populacao = Math.max(0, f.populacao - 1); }
-      ordem(f, 5); renome(f, -2); texto = `${x?.nome ?? 'A suspeita'} foi posta para fora do portão.`; break;
+      ordem(f, 5); renome(f, -2); texto = x ? `${x.nome} foi ${g(x, 'posta', 'posto')} para fora do portão.` : 'A suspeita foi posta para fora do portão.'; break;
     case 'furto:perdoar': mexerHumor(x, 15); if (x) x.lealdade = Math.min(100, x.lealdade + 15); ordem(f, -3); texto = 'Você perdoou sem provas. Uns acharam justo; outros, fraco.'; break;
     case 'furto:vigia':
       if (f.tesouro < 10) return falta('ouro');
@@ -255,6 +271,23 @@ export function resolverAudiencia(camp: Campaign, opcaoId: string): { ok: boolea
       if (f.materiais < v.custo) return falta('material');
       f.materiais -= v.custo; for (const o of f.obrasEmAndamento) o.periodosRestantes = Math.max(0, o.periodosRestantes - 4);
       mexerHumor(x, 10); texto = 'Ferramentas novas. As obras adiantaram um dia.'; break;
+    case 'enviado:acordo':
+    case 'enviado:protecao': {
+      const preco = opcaoId === 'acordo' ? v.preco : v.protecao;
+      if (f.tesouro < preco) return falta('ouro');
+      f.tesouro -= preco;
+      if (a.origem && !(f.acordos ??= []).includes(a.origem)) f.acordos.push(a.origem);
+      f.casasHostis = (f.casasHostis ?? []).filter(c => c !== a.origem);
+      if (opcaoId === 'protecao') f.seguranca = Math.min(100, f.seguranca + 10);
+      reputacaoCasa(content, camp, a.origem, 5);
+      texto = opcaoId === 'acordo' ? `Acordo selado com ${nomeDaCasa(content, a.origem)}.` : `Acordo e patrulha de ${nomeDaCasa(content, a.origem)}: a estrada da colônia ficou mais segura.`;
+      registrarMarco(camp, texto);
+      break;
+    }
+    case 'enviado:recusar':
+      if (a.origem && !(f.casasHostis ??= []).includes(a.origem)) f.casasHostis.push(a.origem);
+      reputacaoCasa(content, camp, a.origem, -5);
+      texto = `O enviado de ${nomeDaCasa(content, a.origem)} foi embora sem acordo.`; break;
     case 'ferramentas:negar': mexerHumor(x, -10); texto = 'Sem ferramentas novas.'; break;
     default: return { ok: false, mensagem: 'Essa resposta não cabe a esse pedido.' };
   }

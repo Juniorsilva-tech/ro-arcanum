@@ -820,7 +820,8 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
   // 10. Atualiza Tier de Reino de acordo com o porte do feudo
   const totalEdificios = Object.values(feudo.edificios).reduce((a, b) => a + b, 0);
   const tierCalculado = Math.min(10, Math.max(1, Math.floor(totalEdificios / 3) + Math.floor(feudo.populacao / 50)));
-  if (tierCalculado > feudo.tierReino) {
+  // Colônia num sítio real tem o nível pelo renome (engine/renome.ts).
+  if (!comSitio && tierCalculado > feudo.tierReino) {
     feudo.tierReino = tierCalculado;
     const infoTier = obterTierReinoInfo(tierCalculado, feudo.bioma);
     const texto = `Evolução Histórica! ${feudo.nome} ascendeu para o ${infoTier.titulo}!`;
