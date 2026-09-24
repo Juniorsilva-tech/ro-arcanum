@@ -27,6 +27,7 @@ import { SITIO_POR_PONTO_ANTIGO } from '../content/vaelhorn/sitios';
 import { createRng, nextFloat, nextInt, seedFromString } from './rng';
 import { registrarMarco } from './memoria';
 import { obterFeudo } from './reino';
+import { processarRebanhos, segurancaDosCavalos, type RelatorioRebanho } from './rebanhos';
 import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
 
 // ── O terreno em números ──────────────────────────────────────────────────
@@ -179,6 +180,7 @@ export type RelatorioDia = {
   lavoura: number; selvagem: number; consumo: number; materiais: number; renda: number;
   tributo: number; eventos: string[];
   gente?: RelatorioGente;
+  rebanho?: RelatorioRebanho;
 };
 
 function rngDoDia(camp: Campaign, chave: string) {
@@ -222,6 +224,11 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   r.selvagem = m.comidaSelvagemDia * ef('caca');
   r.consumo = f.populacao * 0.12 * (inverno ? m.consumoInverno : 1);
   f.comida = Math.max(0, f.comida + r.lavoura - r.tributo + r.selvagem - r.consumo);
+  // O rebanho come depois da gente (o celeiro alimenta pessoas primeiro) e
+  // devolve ovo, leite, lã e tração (engine/rebanhos.ts).
+  r.rebanho = processarRebanhos(camp, s, inverno);
+  r.eventos.push(...r.rebanho.morreram);
+  if (r.rebanho.nasceram.length) r.eventos.push(`Nasceram crias: ${r.rebanho.nasceram.join(', ')}.`);
   if (f.comida === 0) {
     f.estabilidade = Math.max(0, f.estabilidade - 4);
     r.eventos.push('A comida acabou: a colônia passa fome.');
@@ -238,7 +245,7 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   f.remedios = Math.min(500, f.remedios + (f.edificios.boticario_hospital ?? 0) * 3 * ef('cura'));
 
   // Segurança tende à base do terreno + o que se construiu.
-  const alvoSeg = Math.min(100, m.segurancaBase + (f.edificios.muralha_baluarte ?? 0) * 15 + (f.edificios.quartel ?? 0) * 10 + (ef('guarda') - 0.6) * 25
+  const alvoSeg = Math.min(100, m.segurancaBase + (f.edificios.muralha_baluarte ?? 0) * 15 + (f.edificios.quartel ?? 0) * 10 + (ef('guarda') - 0.6) * 25 + segurancaDosCavalos(f)
     + (s.traco === 'trigo_do_marechal' && !f.acordos?.includes('tessel') ? 10 : 0));
   f.seguranca += Math.sign(alvoSeg - f.seguranca) * Math.min(2, Math.abs(alvoSeg - f.seguranca));
 

@@ -887,3 +887,32 @@ Pendente da sessão 57: etapa B da colônia (rascunho em
 typecheck, `test:engine` completo, jornadas, casas, vaelhorn_expansao, expo
 export: verdes. Simulação longa: 6/6 campanhas até o fim do prazo, 0 mortes,
 0 violações.
+
+### Nota: dois arquivos de terceiros entraram no commit `fd304af`
+O `git add -A` do commit da etapa B levou junto `scripts/RO ARCANUM.bat`
+(novo: inicializador do jogo no Windows, sobe o Expo e a ponte Hermes) e duas
+linhas alteradas em `scripts/sync_hermes.ts` (dica e `process.exitCode = 1`
+quando não há token). Não fui eu que escrevi. Conferido: nenhum dos dois tem
+chave ou token, só código que lê o `auth.json` do Hermes na máquina. Ficaram
+no commit. Se não deviam estar no repositório, é só remover.
+
+### Etapa C da colônia (animais) — feita
+- `engine/rebanhos.ts`: sete espécies com função real — galinha (ovo), cabra
+  e vaca (leite), ovelha (lã → ouro), porco (carne guardada, abate), mula
+  (material por dia), cavalo (segurança, teto de +15).
+- Todo animal come: o pasto do sítio (`terreno.pasto` × 6) sustenta um tanto,
+  o resto sai do celeiro como feno, depois da comida das pessoas. No inverno o
+  pasto cai a 20%. Sem feno, morre um animal por dia (o que mais come).
+- Crias só na primavera, só com casal, acumuladas em fração por espécie
+  (`criasAcumuladas`), e mais crias com responsável pelo ofício `rebanho`.
+  Rebanho apertado adoece mais; quem cuida segura.
+- Compra: só as espécies da região do sítio, no máximo `sitio.animais[x]`
+  por estação (`comprasAnimais`), pelo preço da ficha. Abate dá a carne da
+  ficha; mula e cavalo não se abatem.
+- Ligado em `processarDiaColonia` (relatório `rebanho`, eventos de cria e
+  morte) e na segurança (patrulha montada).
+- Tela: aba "Rebanho" no assentamento (`ui/screens/RebanhoColonia.tsx`).
+- Teste: `engine/rebanhos.selftest.ts` (25 checagens), no `test:engine`.
+- **Não feito da etapa C**: "cultivos por sítio" (plantas diferentes por
+  região). A lavoura continua pelo `solo` do terreno. Fica para quando houver
+  motivo de jogo além do nome da planta.

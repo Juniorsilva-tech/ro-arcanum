@@ -1181,6 +1181,10 @@ export type FeudoState = {
   seqColonos?: number;
   /** Animais da colônia por espécie (etapa C). */
   rebanhos?: Record<string, number>;
+  /** Frações de cria acumuladas na primavera, por espécie (engine/rebanhos.ts). */
+  criasAcumuladas?: Record<string, number>;
+  /** Animais comprados na estação corrente: a região só vende tantos por estação. */
+  comprasAnimais?: { estacao: string; qtd: Record<string, number> };
   ultimoRelatorio?: { dia: number } & import('./colonia').RelatorioDia;
 };
 
