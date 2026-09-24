@@ -1088,6 +1088,27 @@ export function Cronica() {
       <BarraVoltar titulo="Crônica" />
       {camp && <HistoriaViva />}
 
+      {camp && content && (() => {
+        // Bestiário: quem você já venceu, com o que o vale conta e o que
+        // serve na estrada (content/vaelhorn/bestiario-historias.ts).
+        const vencidas = content.criaturas.filter(c => camp.flags[`matou.${c.id}`] && (c.historia || c.sinais));
+        if (!vencidas.length) return null;
+        return (
+          <Card>
+            <TextoSerif>Bestiário</TextoSerif>
+            <TextoMono style={{ color: cores.mudo }}>O que você já venceu, e o que aprendeu com isso.</TextoMono>
+            {vencidas.map(c => (
+              <View key={c.id} style={{ marginTop: 10 }}>
+                <TextoSerif>{c.nome}</TextoSerif>
+                <TextoMono>{c.descricao}</TextoMono>
+                {c.historia && <TextoMono style={{ fontStyle: 'italic', marginTop: 4 }}>{c.historia}</TextoMono>}
+                {c.sinais && <TextoMono style={{ color: cores.ouro, marginTop: 4 }}>{c.sinais}</TextoMono>}
+              </View>
+            ))}
+          </Card>
+        );
+      })()}
+
       {camp && content && feitosDoJogador(content, camp).length > 0 && (
         <Card>
           <TextoSerif>O que o mundo lembra de você</TextoSerif>

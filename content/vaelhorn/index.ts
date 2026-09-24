@@ -19,6 +19,9 @@ import { familiasVaelhorn } from './familias';
 import { membrosDasCasas } from './casas-membros';
 import { edificiosRegionaisVaelhorn, tetoEdificiosVaelhorn } from './edificiosRegionais';
 import { LENDAS_ITENS, GUARDIOES_LENDARIOS, RELIQUIAS_DAS_CASAS } from './lendas';
+import { HISTORIAS_CRIATURAS } from './bestiario-historias';
+import { HISTORIAS_LOCAIS, DESCRICOES_CORRIGIDAS } from './historias-locais';
+import { HISTORIAS_CASAS } from './historias-casas';
 import { SEGREDOS_NOVOS, SEGREDOS_REESCRITOS, CONSEQUENCIAS } from './segredos';
 import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
@@ -100,7 +103,7 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   desafios: desafiosVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
-  casas: casasVaelhorn.map(h => ({ ...h, reliquias: RELIQUIAS_DAS_CASAS[h.id] })),
+  casas: casasVaelhorn.map(h => ({ ...h, reliquias: RELIQUIAS_DAS_CASAS[h.id], historia: HISTORIAS_CASAS[h.id] })),
   familias: familiasVaelhorn,
   edificiosRegionais: edificiosRegionaisVaelhorn,
   tetoEdificios: tetoEdificiosVaelhorn,
@@ -110,4 +113,25 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   localInicial: 'taverna',
 });
 
-export const conteudoVaelhorn: ContentBundle = { ...baseVaelhorn, npcs: enriquecerElenco(baseVaelhorn.npcs) };
+// A história nova dos lugares entra DEPOIS do povoamento: o povoamento sorteia
+// o segredo de cada morador a partir de Local.historia, e dar história a um
+// lugar que não tinha mudaria quem mora nele (nomes, ofícios, famílias que
+// apontam para esses ids). O bestiário entra depois do Kimetsu, que é quem
+// monta os onis com identidade.
+function comHistoriaDosLugares(locais: ContentBundle['locais']): ContentBundle['locais'] {
+  return locais.map(l => {
+    const historia = HISTORIAS_LOCAIS[l.id], descricao = DESCRICOES_CORRIGIDAS[l.id];
+    if (!historia && !descricao) return l;
+    return { ...l, historia: historia && !l.historia?.length ? historia : l.historia, descricaoBase: descricao ?? l.descricaoBase };
+  });
+}
+function comBestiario(criaturas: Criatura[]): Criatura[] {
+  return criaturas.map(c => HISTORIAS_CRIATURAS[c.id] ? { ...c, ...HISTORIAS_CRIATURAS[c.id] } : c);
+}
+
+export const conteudoVaelhorn: ContentBundle = {
+  ...baseVaelhorn,
+  npcs: enriquecerElenco(baseVaelhorn.npcs),
+  locais: comHistoriaDosLugares(baseVaelhorn.locais),
+  criaturas: comBestiario(baseVaelhorn.criaturas),
+};

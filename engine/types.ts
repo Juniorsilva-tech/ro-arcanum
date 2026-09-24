@@ -520,6 +520,9 @@ export type LivroState = {
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.
 export type Criatura = {
+  /** O que o vale sabe dela e o que serve na estrada (content/vaelhorn/bestiario-historias.ts). */
+  historia?: string;
+  sinais?: string;
   /**
    * Peso do encontro por estação (engine/estacoes.ts). 1 é o normal; 0 some
    * na estação (urso hibernando); 2 é o dobro (lobo com fome no inverno).

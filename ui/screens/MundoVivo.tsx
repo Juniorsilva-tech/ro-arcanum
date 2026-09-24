@@ -48,6 +48,7 @@ export function ComunidadeViva() {
       <Divisor label="casas nobres" />
       {(content.casas ?? []).filter(h => h.sede === camp.localAtual || h.territorio.includes(camp.localAtual)).map(h => <Card key={h.id}>
         <TextoMono>{descreverCasa(content, camp, h)}</TextoMono>
+        {h.historia?.map((par, i) => <TextoMono key={i} style={{ marginTop: 6, fontStyle: 'italic' }}>{par}</TextoMono>)}
       </Card>)}
     </>}
     {c && <Card>

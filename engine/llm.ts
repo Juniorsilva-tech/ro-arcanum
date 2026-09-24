@@ -452,7 +452,7 @@ export function montarPacote(
     // Linhas que a engine já mostrou hoje: o que a cidade lembra, ganchos.
     mundoLembra: avisosDoDia(camp).length ? avisosDoDia(camp) : undefined,
     mundoPersistente: {
-      casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id) || h.sede === ctx.local.id).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao, hoje: descreverCasa(content, camp, h) })),
+      casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id) || h.sede === ctx.local.id).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao, hoje: descreverCasa(content, camp, h), historia: h.historia?.join(' ') })),
       fatos: narrativa.fatos,
       confirmados: narrativa.confirmados,
       rumores: narrativa.rumores,

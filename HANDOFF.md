@@ -1175,3 +1175,60 @@ sem história, as quatro casas, e as 71 pessoas sem história com os 49
 segredos-modelo. A história nova de lugar entra no pacote DEPOIS do
 povoamento: o povoamento sorteia o segredo dos moradores a partir de
 `Local.historia`, e mexer nela antes mudaria quem mora em cada lugar.
+
+---
+
+## Sessão 55 — Claude — história: bestiário, lugares, casas
+
+### O que foi feito
+- **Bestiário** (`content/vaelhorn/bestiario-historias.ts`, `Criatura.historia`
+  e `Criatura.sinais`), para as **71 criaturas do vale**:
+  - fauna, gente da estrada, os mortos, os seres de Mir, os chefes com nome,
+    os guardiões das expedições, as presas dos contratos e os onis (as Luas,
+    no que a Casa Sem Nome sabe delas);
+  - `historia` é o que o vale conta; `sinais` é o que serve na estrada;
+  - aparece na Crônica, seção "Bestiário", só para o que o jogador já venceu
+    (flag `matou.<id>`, que o combate já gravava);
+  - ficaram de fora as feras da Grande Terra Desolada e de Tsige.
+- **Lugares** (`content/vaelhorn/historias-locais.ts`): os 19 lugares do
+  coração do vale não tinham história, e o narrador recebia
+  `historiaDesteLugar: []` justamente na taverna onde o jogo começa. Agora os
+  53 têm. Quatro descrições que contradiziam o mundo foram corrigidas: "o
+  senhor de Halvet", "os pescadores", "os mineiros" e o "Cristo de madeira"
+  da Capela de São Vandro.
+- **Casas** (`content/vaelhorn/historias-casas.ts`, `CasaNobre.historia`): a
+  origem, o que cada uma perdeu e o que a move. Aparece no card da casa, em
+  Comunidade, e vai ao narrador em `casasPresentes[].historia`.
+- As datas seguem o que o conteúdo já dizia: o cerco de Tessel há 18 anos, o
+  desabamento de Corveira há 12, a peste de Mareu há 40. As histórias foram
+  conferidas contra o elenco antes de entrar: Borka, Oda, Heska, Torana e
+  Duna, Lunn e a noite em que o sino não tocou, Ruvela.
+
+### Decisão importante
+O povoamento sorteia o segredo de cada moradora a partir de `Local.historia`.
+Dar história a um lugar que não tinha **mudaria quem mora nele**: nomes,
+ofícios e as famílias da Fase 2 que apontam para esses ids. A história nova
+entra no pacote depois do povoamento (`comHistoriaDosLugares` em
+`content/vaelhorn/index.ts`), e o teste prova que as 172 moradoras são as
+mesmas. A tabela da simulação longa saiu idêntica à da sessão 54, linha por
+linha.
+
+### Arquivos
+Novos: `content/vaelhorn/bestiario-historias.ts`,
+`content/vaelhorn/historias-locais.ts`, `content/vaelhorn/historias-casas.ts`,
+`engine/lore.selftest.ts`.
+Alterados: `engine/types.ts`, `content/vaelhorn/casas.ts`,
+`content/vaelhorn/index.ts`, `engine/llm.ts`, `ui/screens/Paineis.tsx`,
+`ui/screens/MundoVivo.tsx`, `package.json`.
+
+### Verificações
+- `lore.selftest.ts`:
+  - as 71 criaturas do vale com história e sinais, sem emoji, "Wasteland" ou
+    texto técnico;
+  - os 53 lugares com história e as descrições corrigidas;
+  - as 172 moradoras idênticas (nome, ofício, idade, lugar), e nenhum segredo
+    sorteado das linhas novas;
+  - o narrador recebe a história da taverna e a da Casa Tessel.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica à
+  anterior.
