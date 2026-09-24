@@ -34,6 +34,7 @@ import { crescerImpulsos } from './impulsos';
 import { avancarMundo } from './mundo';
 import { registrarMarco } from './memoria';
 import { registrarFato } from './historiaViva';
+import { forjaDaCidade } from './edificiosRegionais';
 
 // ── Moldes: a forma da peça ───────────────────────────────────────────────
 
@@ -168,7 +169,8 @@ const OFICIO_DE_FERREIRA = /ferreir|forj|armeir|bigorna/i;
 export function ondeForjar(content: ContentBundle, camp: Campaign): { pode: boolean; ferreira?: NPC; motivo?: string } {
   const ctx = calcularContexto(content, camp);
   const ferreira = ctx.presentes.find(n => OFICIO_DE_FERREIRA.test(ocupacaoEfetiva(camp, n) ?? ''));
-  const instalacaoForja = ctx.local.tipo === 'forja' || ctx.local.pontos?.some(p => /ferraria|forja|bigorna/i.test(p));
+  // A fundição de Corveira (edifício regional) empresta o fogo da cidade.
+  const instalacaoForja = ctx.local.tipo === 'forja' || ctx.local.pontos?.some(p => /ferraria|forja|bigorna/i.test(p)) || !!forjaDaCidade(content, camp);
   if (instalacaoForja || ferreira) return { pode: true, ferreira };
   return { pode: false, motivo: 'Não há forja aqui, nem ferreira que empreste a bigorna.' };
 }
@@ -282,7 +284,8 @@ export function forjar(
 
   const onde = ondeForjar(content, camp);
   if (!onde.pode) return { ok: false, texto: onde.motivo! };
-  if ((p.inventario[COMBUSTIVEL] ?? 0) < 1) {
+  const semCarvao = !!forjaDaCidade(content, camp)?.efeitos.forjaSemCarvao;
+  if (!semCarvao && (p.inventario[COMBUSTIVEL] ?? 0) < 1) {
     return { ok: false, texto: 'Sem carvão a forja é só uma pedra vazia.' };
   }
   if ((p.inventario[material.item] ?? 0) < molde.quantidade) {
@@ -290,7 +293,7 @@ export function forjar(
   }
 
   // O que entra na forja não volta.
-  p.inventario[COMBUSTIVEL] -= 1;
+  if (!semCarvao) p.inventario[COMBUSTIVEL] -= 1;
   p.inventario[material.item] -= molde.quantidade;
   if (catalisador) {
     p.inventario[catalisador.item] -= 1;

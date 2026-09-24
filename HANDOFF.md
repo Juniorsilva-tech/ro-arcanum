@@ -781,3 +781,140 @@ campanha (7%). Nível 1–5: 49,1% de vitória em 57 combates.
 
 ### Próximo passo
 Fase 6 (cidades com identidade e a forja ao alcance).
+
+---
+
+## Sessão 52 — Claude — Fase 6: cidades com identidade e a forja ao alcance
+
+### Estado encontrado
+As 23 comunidades vivas tinham os mesmos cinco edifícios (lavoura, moradias,
+enfermaria, muralha, mercado), todos com teto 5. Corveira, construída em cima
+da mina, não se distinguia de Mareu, que vive do cais.
+
+A forja estava mais perto do que o plano supunha. Levantei cidade por cidade:
+a Feira Coberta, vizinha da taverna onde o jogo começa, tem ponto "ferraria",
+duas ferreiras escritas (Torana e Duna) e vende carvão e minério. As cinco
+cidades grandes já tinham ferreira ou armeira com ocupação clara e família da
+Fase 2: Wyn Bico-Fino (Corveira), Ysolt Boca-Seca (Solgar), Elna a Velha
+(Vintra), Vana do Fole (Tessel), Kelda Cais (Mareu). Por isso o item 2 do
+plano não pediu NPC novo. O que faltava era **provar** o caminho com teste, e
+ele tem um degrau: o dinheiro inicial (12) não paga carvão e dois minérios
+(16). Um turno de trabalho na comunidade (+6) resolve.
+
+Simulação longa antes: a tabela da sessão 51.
+
+### O que foi feito
+- **Um edifício por região**, declarado no conteúdo
+  (`content/vaelhorn/edificiosRegionais.ts`, tipo `EdificioRegional`); a
+  engine só aplica o efeito (`engine/edificiosRegionais.ts`). Cada um veio do
+  ponto que a descrição da cidade já tinha:
+  - **Fundição Alta** (Corveira, Wyn): vende carvão, minério e estilhaço de
+    pedra; Corveira passa a ter onde forjar mesmo sem ferreira presente, e a
+    peça forjada ali **não gasta carvão**.
+  - **Cais Grande** (Mareu): +5 de comida por dia; caravana que parte de
+    Mareu vai pela costa e corre metade do risco de emboscada.
+  - **Praça de Armas** (Tessel, Vana): muralha até o nível 8; a cada 15 dias
+    a ronda da guarnição tira um homem do maior bando da Marca de Tessel,
+    com fato público.
+  - **Cisterna Funda e Bazar** (Solgar, Ysolt): na seca a lavoura rende 0,55
+    em vez de 0,15; o bazar vende prata, poção de cura e tônico, e repõe
+    peça rara até 4 (o comum é 2).
+  - **Pátio da Madeira** (Vintra, Elna): vende carvão e couro; +0,6 de
+    materiais por dia para as obras.
+- Edifício regional funciona enquanto a cidade tem gente e integridade acima
+  de 20 (a régua da reposição do mercado): cidade arrasada apaga a fundição e
+  para a ronda.
+- **Capitais com teto 7** (Tessel, Corveira, Mareu), declarado por cidade
+  (`tetoEdificios`); o resto continua em 5. `iniciarObra` ganhou o `content`
+  como parâmetro opcional para saber o teto (sem ele, 5 — quem chamava antes
+  continua igual).
+- O que um edifício vende entra na lista de lojas do item quando o pacote de
+  conteúdo é montado (`lojasRegionais` em `content/vaelhorn/index.ts`): a loja
+  continua sendo lida do item, sem regra nova de comércio.
+- Tela: seção do edifício "só aqui" em Comunidade, nível "de N" em cada
+  edifício comum; a forja no Inventário mostra a fundição e libera a receita
+  sem carvão em Corveira. Narrador: `mundoPersistente.cidade.edificioProprio`.
+- Nenhum efeito consome RNG. Nenhum campo novo no save.
+
+### Arquivos
+Novos: `content/vaelhorn/edificiosRegionais.ts`, `engine/edificiosRegionais.ts`,
+`engine/edificiosRegionais.selftest.ts`.
+Alterados: `engine/types.ts` (`EfeitosRegionais`, `EdificioRegional`,
+`ContentBundle.edificiosRegionais`, `ContentBundle.tetoEdificios`),
+`content/vaelhorn/index.ts`, `engine/cidades.ts`, `engine/casas.ts`,
+`engine/acoesMundo.ts`, `engine/forja.ts`, `engine/caravanas.ts`,
+`engine/llm.ts`, `engine/index.ts`, `engine/campanhaLonga.ts`,
+`engine/jornadas.selftest.ts`, `ui/screens/MundoVivo.tsx`,
+`ui/screens/Inventario.tsx`, `package.json`.
+
+### Verificações
+- `edificiosRegionais.selftest.ts`: cinco edifícios, um por cidade, nenhuma
+  outra cidade com edifício; responsáveis existem no elenco; Vintra vende
+  carvão (antes não vendia), Corveira minério e pedra, Solgar prata e poção,
+  e o estoque vivo já nasce com isso; teto 7 nas capitais, 8 na muralha de
+  Tessel, 5 em Pedravel e em Tsukimichi; muralha 5 sobe em Tessel e não em
+  Pedravel. Efeito medido contra o mesmo mundo sem edifícios: Mareu com 295
+  de comida contra 195 em 20 dias; Solgar com 129 contra 79 em 10 dias de
+  seca; Vintra com 48 de materiais contra 30 em 30 dias; bazar repõe poção
+  até 4; ronda no dia 15 tira um homem do bando, fora do dia nada, Tessel
+  arrasada não patrulha; com bando de 8 na costa, 12 de 40 caravanas de Mareu
+  perdidas contra 21 sem o cais; em Corveira, na madrugada (sem ferreira
+  presente), sem a fundição não se forja e com ela sim, e a peça sai sem
+  carvão; na Feira Coberta sem carvão, não; Corveira arrasada apaga a
+  fundição.
+- `jornadas.selftest.ts`, **jornada da primeira forja**: campanha nova, da
+  taverna para a Feira Coberta pela viagem real, um turno de trabalho, compra
+  de carvão e dois minérios (16 moedas), lâmina curta de ferro forjada no dia
+  1 de jogo.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 33  pop 4402  fome    0d  travas     0  violações 0  marca aos 26
+longa-1     8a  morte        nível 31  pop 4085  fome    0d  travas     0  violações 0  marca aos 19 (morreu dela)
+longa-2    10a  fim_do_prazo nível 30  pop 4428  fome    0d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 29  pop 4390  fome    2d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 34  pop 3804  fome    0d  travas     0  violações 0  marca aos 24
+longa-5    10a  fim_do_prazo nível 31  pop 4353  fome    0d  travas     0  violações 0
+```
+| | Sessão 51 | Sessão 52 |
+| --- | --- | --- |
+| nível final | 31,0 | 31,3 |
+| população | 3.944 | 4.244 |
+| derrotas | 18,7 | 15,5 |
+| dias-cidade em fome | 617 | 572 |
+| obras de casa | 14,2 | 20,8 |
+| patrulhas de casa | 11,2 | 7,2 |
+| caravanas entregues / perdidas | 270,7 / 20,8 | 271,5 / 17,3 |
+| mortes | 0 | 1 (Marca) |
+
+Rondas da Praça de Armas: 19,7 por campanha. Peixe do Cais Grande: 17.642
+medidas por campanha (5 por dia, quase todo dia).
+
+**A morte de longa-1, investigada antes do commit.** É a regra da Fase 1
+funcionando, não efeito desta fase: a Marca despertou aos 19, o limite ficou
+em 25, e dali o tributo anual mata com 10%, 15%, 20%... — 25% a 39% de chance
+de morrer entre 26 e 27 anos. O simulador nunca procura a contenção na
+Mansão, então toda Marca cedo é um risco real nele. Esta fase não toca na
+Marca, no combate nem no consumo de RNG; ela muda o estado do mundo (comida,
+bandos), e isso embaralha o caminho de cada campanha — os despertares foram 2,
+1 e 3 nas sessões 50, 51 e 52. Registro para o dono: se quiser a simulação
+sem esse ruído, a política dela precisa aprender a ir conter a Marca; não
+mexi, porque mudaria a régua de comparação no meio do trabalho.
+As patrulhas de casa caíram porque a ronda de Tessel já tira homem do bando
+da Marca; as obras de casa subiram porque as capitais agora têm onde crescer.
+
+### Problemas e decisões em aberto
+- O Cais Grande ajuda Mareu todo dia; somado às caravanas, a fome ficou rara
+  no mundo (dias-cidade em fome 572 em 10 anos, contra 2.621 antes da
+  Fase 5). Os botões estão no conteúdo: `comidaPorDia` do cais e as
+  constantes de `engine/caravanas.ts`.
+- A bigorna da fundição fica em Corveira mesmo. Na boca da mina ou no Terraço
+  Sexto não conta.
+- Os três bandos caem em regiões sorteadas: em campanha sem bando na Marca de
+  Tessel, a ronda não tem em quem bater (a muralha 8 continua valendo).
+
+### Próximo passo
+Fase 8 (o mundo lembra e Diretor de Arcos). A Fase 7 (NPCs de Tsukimichi)
+ficou fora a pedido do dono.

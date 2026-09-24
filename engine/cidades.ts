@@ -3,6 +3,7 @@ import type { TipoEdificio } from './vivoTypes';
 import { nextFloat, pick } from './rng';
 import { registrarFato } from './historiaViva';
 import { oferecerMissao } from './missoesVivas';
+import { aplicarEdificioRegional, fertilidadeNaSeca, tetoDeRaros, tetoDoEdificio } from './edificiosRegionais';
 
 export const EDIFICIOS: Record<TipoEdificio, { nome: string; materiais: number; dias: number; efeito: string }> = {
   lavoura: { nome: 'Lavoura', materiais: 35, dias: 24, efeito: 'Aumenta a produção diária de alimento.' },
@@ -12,9 +13,10 @@ export const EDIFICIOS: Record<TipoEdificio, { nome: string; materiais: number; 
   mercado: { nome: 'Mercado', materiais: 35, dias: 24, efeito: 'Melhora o comércio e o abastecimento.' },
 };
 
-export function iniciarObra(camp: Campaign, local: string, tipo: TipoEdificio): boolean {
+/** `content` dá o teto por cidade (capitais e edifício regional); sem ele, 5. */
+export function iniciarObra(camp: Campaign, local: string, tipo: TipoEdificio, content?: ContentBundle): boolean {
   const c = camp.vivo?.cidades[local], custo = EDIFICIOS[tipo];
-  if (!c || !custo || c.projeto || c.materiais < custo.materiais || c.edificios[tipo] >= 5) return false;
+  if (!c || !custo || c.projeto || c.materiais < custo.materiais || c.edificios[tipo] >= tetoDoEdificio(content, local, tipo)) return false;
   c.materiais -= custo.materiais;
   c.projeto = { tipo, progresso: 0, necessario: custo.dias * (1 + c.edificios[tipo] * .3) };
   registrarFato(camp, { tipo: 'obra_iniciada', local, texto: `Começou a construção de ${custo.nome.toLowerCase()}.`, atores: [], publico: true });
@@ -30,12 +32,13 @@ export function processarCidades(content: ContentBundle, camp: Campaign): void {
     const ameaca = camp.continuidade!.ameacas.some(a => a.local === id && a.estado !== 'resolvida');
     const guerra = camp.mundo?.guerraAtiva?.local === id;
     const condicao = Math.max(.15, povo.integridade / 100);
-    const fertilidade = c.secaAte > dia ? .15 : camp.calendario.estacao === 'inverno' ? .8 : 1.1;
+    const fertilidade = c.secaAte > dia ? fertilidadeNaSeca(content, camp, id) : camp.calendario.estacao === 'inverno' ? .8 : 1.1;
     // Residents also farm for subsistence; public farms improve their surplus.
     // Disease, damaged infrastructure and war reduce actual labour/output.
     const producao = povo.populacao * .20 * (1 + c.edificios.lavoura * .04) * fertilidade * condicao * (1 - c.doenca / 150) * (guerra ? .6 : 1);
     const consumo = povo.populacao * .15;
     c.comida = Math.max(0, Math.min(600, c.comida + producao - consumo - (guerra ? 5 : 0)));
+    aplicarEdificioRegional(content, camp, id, c, guerra);
     c.materiais = Math.min(250, c.materiais + (povo.populacao > 0 && !guerra ? condicao : 0));
     c.tesouro = Math.min(800, Math.max(0, c.tesouro + (povo.populacao > 0 ? c.edificios.mercado : 0) - (guerra ? 4 : 0)));
     c.remedios = Math.min(80, c.remedios + (povo.populacao > 0 ? c.edificios.enfermaria * .2 : 0));
@@ -90,14 +93,14 @@ export function processarCidades(content: ContentBundle, camp: Campaign): void {
     }
     if (dia % 14 === 0 && !c.projeto && !ameaca && !guerra) {
       const prioridades: TipoEdificio[] = c.fomeDias ? ['lavoura'] : povo.populacao > c.edificios.moradias * 50 ? ['moradias'] : ['lavoura', 'moradias', 'enfermaria', 'muralha', 'mercado'];
-      const tipo = prioridades.find(t => c.edificios[t] < 5);
-      if (tipo) iniciarObra(camp, id, tipo);
+      const tipo = prioridades.find(t => c.edificios[t] < tetoDoEdificio(content, id, t));
+      if (tipo) iniciarObra(camp, id, tipo, content);
     }
     // Merchants restock only where services and residents still exist.
     if (dia % 7 === 0 && povo.integridade > 20 && povo.populacao > 0 && !guerra) {
       for (const item of Object.keys(c.estoque)) {
         const comum = content.itens.find(i => i.id === item)?.raridade === 'comum';
-        c.estoque[item] = Math.min(comum ? 12 : 2, c.estoque[item] + (comum ? c.edificios.mercado : 1));
+        c.estoque[item] = Math.min(comum ? 12 : tetoDeRaros(content, camp, id), c.estoque[item] + (comum ? c.edificios.mercado : 1));
       }
     }
   }

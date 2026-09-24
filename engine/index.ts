@@ -60,4 +60,5 @@ export * from './familiasNpc';
 export * from './casas';
 export * from './estacoes';
 export * from './caravanas';
+export * from './edificiosRegionais';
 export * from './segredos';

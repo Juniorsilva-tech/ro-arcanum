@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useGame } from '../store';
 import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
-import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, caravanasPartindoAqui, invernoRigorosoAtivo, type TipoEdificio } from '@/engine';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, caravanasPartindoAqui, invernoRigorosoAtivo, edificioRegionalDe, descreverEdificioRegional, tetoDoEdificio, type TipoEdificio } from '@/engine';
 
 export function ComunidadeViva() {
   const camp = useGame(s => s.camp)!;
@@ -54,11 +54,16 @@ export function ComunidadeViva() {
       <TextoMono>Alimentos: {Math.floor(c.comida)} · materiais: {Math.floor(c.materiais)} · remédios: {Math.floor(c.remedios)}</TextoMono>
       <TextoMono>{c.fomeDias ? `Fome há ${c.fomeDias} dias.` : 'A comunidade está alimentada.'} {c.doenca > 0 ? `Doença: ${Math.ceil(c.doenca)}%.` : ''} Insegurança: {Math.ceil(c.inseguranca)}%.</TextoMono>
       <TextoMono>{c.governo ? `Governo: ${content.faccoes.find(f => f.id === c.governo)?.nome}.` : 'Comunidade autônoma.'} {governo && governo.lider ? `Liderança: ${nome(governo.lider)} · legitimidade ${Math.round(governo.legitimidade)}%.` : ''}</TextoMono>
+      {edificioRegionalDe(content, camp.localAtual) && <View style={{ marginTop: 10 }}>
+        <TextoSerif>{edificioRegionalDe(content, camp.localAtual)!.nome} · só aqui</TextoSerif>
+        <TextoMono>{edificioRegionalDe(content, camp.localAtual)!.descricao}</TextoMono>
+        <TextoMono>{descreverEdificioRegional(content, camp, camp.localAtual)}</TextoMono>
+      </View>}
       {c.projeto && <TextoMono>Em construção: {EDIFICIOS[c.projeto.tipo].nome} · {Math.floor(c.projeto.progresso)}/{Math.ceil(c.projeto.necessario)}. Fome, guerra e ameaças interrompem a obra.</TextoMono>}
       {(Object.keys(EDIFICIOS) as TipoEdificio[]).map(tipo => <View key={tipo} style={{ marginTop: 10 }}>
-        <TextoSerif>{EDIFICIOS[tipo].nome} · nível {c.edificios[tipo]}</TextoSerif>
+        <TextoSerif>{EDIFICIOS[tipo].nome} · nível {c.edificios[tipo]} de {tetoDoEdificio(content, camp.localAtual, tipo)}</TextoSerif>
         <TextoMono>{EDIFICIOS[tipo].efeito}</TextoMono>
-        {!c.projeto && c.edificios[tipo] < 5 && <Botao titulo={`Propor expansão · 15 moedas + ${EDIFICIOS[tipo].materiais} materiais públicos`} onPress={() => agir({ tipo: 'obra', edificio: tipo })} />}
+        {!c.projeto && c.edificios[tipo] < tetoDoEdificio(content, camp.localAtual, tipo) && <Botao titulo={`Propor expansão · 15 moedas + ${EDIFICIOS[tipo].materiais} materiais públicos`} onPress={() => agir({ tipo: 'obra', edificio: tipo })} />}
       </View>)}
     </Card>}
     {c?.governo && <>

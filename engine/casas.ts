@@ -27,6 +27,7 @@ import type { TipoEdificio } from './vivoTypes';
 import { createRng, nextFloat, seedFromString } from './rng';
 import { cidadeIdDoLocal, registrarFato } from './historiaViva';
 import { iniciarObra } from './cidades';
+import { tetoDoEdificio } from './edificiosRegionais';
 import { oferecerMissao } from './missoesVivas';
 import { estadoBandos, temBandos, encerrarBando } from './bandos';
 import { idadeAtual } from './vidanpc';
@@ -148,14 +149,14 @@ function assumir(content: ContentBundle, camp: Campaign, casa: CasaNobre, estado
  * escolhia mercado antes de lavoura, tomava o lugar da obra de comida, e a
  * simulação longa mostrou a conta — pico de fome de 6 para 43 dias.
  */
-function obraNecessaria(camp: Campaign, cidadeId: string): TipoEdificio | undefined {
+function obraNecessaria(content: ContentBundle, camp: Campaign, cidadeId: string): TipoEdificio | undefined {
   const c = camp.vivo?.cidades[cidadeId];
   const povo = camp.continuidade?.locais[cidadeId];
   if (!c || c.projeto || !povo) return undefined;
   const prioridades: TipoEdificio[] = c.fomeDias ? ['lavoura']
     : povo.populacao > c.edificios.moradias * 50 ? ['moradias']
     : ['lavoura', 'moradias', 'enfermaria', 'muralha', 'mercado'];
-  return prioridades.find(t => (c.edificios[t] ?? 0) < 5);
+  return prioridades.find(t => (c.edificios[t] ?? 0) < tetoDoEdificio(content, cidadeId, t));
 }
 
 function financiarObra(content: ContentBundle, camp: Campaign, casa: CasaNobre, estado: EstadoCasa): void {
@@ -195,12 +196,12 @@ function financiarObra(content: ContentBundle, camp: Campaign, casa: CasaNobre, 
     });
     return;
   }
-  const tipo = obraNecessaria(camp, cid);
+  const tipo = obraNecessaria(content, camp, cid);
   if (!tipo) return;
   // A casa compra o material que falta e põe a obra de pé.
   const antes = c.materiais;
   c.materiais += 60;
-  if (!iniciarObra(camp, cid, tipo)) { c.materiais = antes; return; }
+  if (!iniciarObra(camp, cid, tipo, content)) { c.materiais = antes; return; }
   estado.tesouro -= CUSTO_OBRA;
   estado.ultimaObra = dia;
   estado.obras = (estado.obras ?? 0) + 1;

@@ -268,7 +268,7 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
   if (acao.tipo === 'obra') {
     if (!local || local !== camp.localAtual || !c) return { ok: false, texto: 'Visite o centro da comunidade para propor uma obra.' };
     if (p.dinheiro < 15) return { ok: false, texto: 'A contribuição inicial custa 15 moedas.' };
-    if (!iniciarObra(camp, local, acao.edificio)) return { ok: false, texto: 'Já existe uma obra, faltam materiais ou esse edifício atingiu o limite.' };
+    if (!iniciarObra(camp, local, acao.edificio, content)) return { ok: false, texto: 'Já existe uma obra, faltam materiais ou esse edifício atingiu o limite.' };
     p.dinheiro -= 15;
     return terminar(`${EDIFICIOS[acao.edificio].nome}: a construção começou. Os trabalhadores precisam de paz e alimento para concluí-la.`);
   }

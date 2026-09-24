@@ -17,12 +17,13 @@ import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
 import { casasVaelhorn } from './casas';
 import { familiasVaelhorn } from './familias';
 import { membrosDasCasas } from './casas-membros';
+import { edificiosRegionaisVaelhorn, tetoEdificiosVaelhorn } from './edificiosRegionais';
 import { SEGREDOS_NOVOS, SEGREDOS_REESCRITOS, CONSEQUENCIAS } from './segredos';
 import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
 import { HISTORIAS_COSTA } from './historias-costa';
 import { HISTORIAS_KIMETSU } from './historias-kimetsu';
-import type { NPC } from '../../engine/types';
+import type { Item, NPC } from '../../engine/types';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -55,6 +56,16 @@ function enriquecerElenco(npcs: NPC[]): NPC[] {
   });
 }
 
+// O que um edifício regional vende entra na lista de lojas do item: a loja
+// continua sendo lida do item (engine/items.ts), sem regra nova de comércio.
+function lojasRegionais(itens: Item[]): Item[] {
+  return itens.map(i => {
+    const extras = edificiosRegionaisVaelhorn.filter(e => e.efeitos.vende?.includes(i.id)).map(e => e.cidade);
+    if (!extras.length) return i;
+    return { ...i, lojas: [...new Set([...(i.lojas ?? []), ...extras])] };
+  });
+}
+
 const baseVaelhorn: ContentBundle = integrarKimetsu({
   cenario: vaelhorn,
   classes: classesVaelhorn,
@@ -66,13 +77,15 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,
   reliquias: reliquiasVaelhorn,
-  itens: itensVaelhorn,
+  itens: lojasRegionais(itensVaelhorn),
   criaturas: [...criaturasVaelhorn, ...criaturasDeDesafio],
   desafios: desafiosVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
   casas: casasVaelhorn,
   familias: familiasVaelhorn,
+  edificiosRegionais: edificiosRegionaisVaelhorn,
+  tetoEdificios: tetoEdificiosVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,
   encontrosPorTipo,
   encontrosPorRegiao,

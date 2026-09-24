@@ -18,6 +18,7 @@ import { cidadeIdDoLocal, registrarFato } from './historiaViva';
 import { periodosDeViagem } from './missoesVivas';
 import { estadoBandos, temBandos, encontroContraCaravana, prepararCombateDeBando } from './bandos';
 import { iniciarCombate } from './combat';
+import { fatorAtaqueCaravana } from './edificiosRegionais';
 
 export const INTERVALO_DESPACHO = 5;
 export const MAX_CARAVANAS_NA_ESTRADA = 3;
@@ -84,7 +85,8 @@ function resolverChegada(content: ContentBundle, camp: Campaign, e: EstadoCarava
   const destino = camp.vivo!.cidades[c.destino];
   const bando = c.escoltada ? undefined : bandoNaRota(content, camp, c);
   const rng = createRng((camp.rng.seed ^ seedFromString(`caravana:${c.id}`)) >>> 0);
-  if (bando && nextFloat(rng) < chanceDeAtaque(bando.membros)) {
+  // Caravana que sai de cidade com cais vai pela costa (edifício regional).
+  if (bando && nextFloat(rng) < chanceDeAtaque(bando.membros) * fatorAtaqueCaravana(content, camp, c.origem)) {
     c.estado = 'perdida';
     e.perdidas++;
     bando.tesouro += Math.round(c.carga / 10);

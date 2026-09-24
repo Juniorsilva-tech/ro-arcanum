@@ -612,6 +612,42 @@ export type CombatActor = {
 // Laços simétricos ('irmas', 'conjuges', 'primas'): a ordem não importa.
 // Irmã, avó, tia e prima também são deduzidas dos laços de mãe e pai.
 export type LacoFamiliarTipo = 'mae' | 'pai' | 'avo' | 'tia' | 'irmas' | 'conjuges' | 'primas';
+// Edifício que só uma cidade tem (engine/edificiosRegionais.ts). Dado de
+// conteúdo: o cenário declara, a engine aplica.
+export type EfeitosRegionais = {
+  /** Itens que passam a ser vendidos na cidade (somados às lojas do item). */
+  vende?: string[];
+  /** A cidade tem onde forjar, mesmo sem ferreira presente. */
+  forja?: boolean;
+  /** Forjar na cidade não consome carvão. */
+  forjaSemCarvao?: boolean;
+  /** Comida que entra no celeiro todo dia (peixe, caça). */
+  comidaPorDia?: number;
+  /** Materiais públicos extras por dia (madeira, pedra). */
+  materiaisPorDia?: number;
+  /** Multiplica a chance de emboscada das caravanas que partem daqui. */
+  fatorAtaqueCaravana?: number;
+  /** Teto da muralha acima do teto comum da cidade. */
+  tetoMuralha?: number;
+  /** A cada N dias, a guarnição derruba um salteador de bando da região. */
+  patrulhaCadaDias?: number;
+  /** Fertilidade durante a seca (a regra comum é 0,15). */
+  fertilidadeNaSeca?: number;
+  /** Estoque máximo de itens não comuns na loja (a regra comum é 2). */
+  tetoRaros?: number;
+};
+export type EdificioRegional = {
+  id: string;
+  nome: string;
+  /** Id da cidade viva (camp.vivo.cidades) que tem o edifício. */
+  cidade: string;
+  /** NPC que trabalha nele, se houver. */
+  responsavel?: string;
+  descricao: string;
+  /** Uma frase para a tela: o que o edifício muda. */
+  efeito: string;
+  efeitos: EfeitosRegionais;
+};
 export type LacoFamiliar = { tipo: LacoFamiliarTipo; a: string; b: string };
 export type MembroFamilia = {
   npc: string;
@@ -711,6 +747,10 @@ export type ContentBundle = {
   casas?: import('../content/vaelhorn/casas').CasaNobre[];
   // Famílias entre NPCs do elenco (engine/familiasNpc.ts). Dado de conteúdo.
   familias?: FamiliaNpc[];
+  // Um edifício por região e o teto dos edifícios comuns por cidade
+  // (engine/edificiosRegionais.ts). Ausente = todas iguais, teto 5.
+  edificiosRegionais?: EdificioRegional[];
+  tetoEdificios?: Record<string, number>;
   // Pares de facções com rivalidade de fundo real o bastante pra às vezes
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.

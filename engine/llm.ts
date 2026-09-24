@@ -28,6 +28,7 @@ import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { itemPorId } from './items';
 import { conviccoesDoNpc } from './reflexao';
+import { descreverEdificioRegional } from './edificiosRegionais';
 import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
 import {
   obterOcupantesSubespaco,
@@ -447,7 +448,7 @@ export function montarPacote(
       confirmados: narrativa.confirmados,
       rumores: narrativa.rumores,
       compromissos: camp.vivo?.missoes.filter(q => q.conhecida && q.estado === 'aceita').map(q => ({ titulo: q.titulo, local: q.local, prazo: q.prazo, etapa: q.etapa })),
-      cidade: camp.vivo?.cidades[ctx.local.id] && { edificios: camp.vivo.cidades[ctx.local.id].edificios, obra: camp.vivo.cidades[ctx.local.id].projeto, fome: camp.vivo.cidades[ctx.local.id].fomeDias > 0, epidemia: camp.vivo.cidades[ctx.local.id].doenca > 30 },
+      cidade: camp.vivo?.cidades[ctx.local.id] && { edificios: camp.vivo.cidades[ctx.local.id].edificios, edificioProprio: descreverEdificioRegional(content, camp, ctx.local.id), obra: camp.vivo.cidades[ctx.local.id].projeto, fome: camp.vivo.cidades[ctx.local.id].fomeDias > 0, epidemia: camp.vivo.cidades[ctx.local.id].doenca > 30 },
       regra: 'Rumor é informação não verificada pelo protagonista. Fatos ocultos não foram fornecidos. Não invente conclusão de obra, missão, morte ou parentesco: use somente o estado confirmado.',
     },
     ocorrenciasConfirmadas: camp.continuidade?.eventos.filter(e => e.local === ctx.local.id).slice(-3),

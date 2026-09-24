@@ -9,6 +9,11 @@ import { oferecerMissao, processarMissoesVivas, encerrarMissao } from './missoes
 import { normalizarCampanha } from './migracao';
 import type { MissaoViva } from './vivoTypes';
 import { executarAcaoMundo } from './acoesMundo';
+import { viajar } from './viagem';
+import { ondeForjar, forjar } from './forja';
+import { comprar, precoCompra, itemPorId } from './items';
+import { descontoDeCompra } from './classe';
+import { multiplicadorDePreco } from './mundo';
 
 const assert = Object.assign((v: unknown) => { if (!v) throw new Error('Invariante da jornada falhou'); }, {
   equal: (a: unknown, b: unknown) => { if (a !== b) throw new Error(`Esperado ${b}; obtido ${a}`); },
@@ -117,4 +122,32 @@ for (const tipo of tipos) for (const aceita of [false, true]) {
   encerrarMissao(c, outra, 'concluida', 'Repetição');
   assert.equal(c.personagem.dinheiro, dinheiro + outra.recompensa);
   console.log(`Missão ${tipo}, aceita=${aceita}: prazo, duplicata, save, expiração, contador, recompensa única OK`);
+}
+
+// Jornada da primeira forja (sessão 52, Fase 6): da taverna onde o jogo
+// começa, sem saber de lugar escondido, até a primeira peça. A Feira Coberta
+// é vizinha, tem ferraria e vende carvão e minério; o dinheiro inicial (12)
+// não paga tudo, então a jornada trabalha na comunidade antes de comprar.
+{
+  const c = nova('primeira-forja');
+  if (c.familia) c.familia.prologoConcluido = true;
+  assert.equal(c.localAtual, C.localInicial);
+  const ida = viajar(C, c, 'mercado');
+  assert(ida.ok);
+  c.combate = null;
+  assert(ondeForjar(C, c).pode);
+  const preco = (id: string) => precoCompra(itemPorId(C, id)!, descontoDeCompra(c, false), multiplicadorDePreco(c));
+  const custo = preco('carvao') + 2 * preco('minerio_de_ferro');
+  let turnos = 0;
+  while (c.personagem.dinheiro < custo && turnos < 6) {
+    assert(executarAcaoMundo(C, c, { tipo: 'trabalhar' }).ok);
+    turnos++;
+  }
+  assert(c.personagem.dinheiro >= custo && turnos <= 3);
+  assert(comprar(C, c, 'carvao').ok);
+  assert(comprar(C, c, 'minerio_de_ferro').ok);
+  assert(comprar(C, c, 'minerio_de_ferro').ok);
+  const r = forjar(C, c, 'lamina_curta', 'minerio_de_ferro');
+  assert(r.ok && !!r.item && (c.personagem.inventario[r.item.id] ?? 0) === 1);
+  console.log(`Primeira forja: taverna → Feira Coberta, ${turnos} ${turnos === 1 ? 'turno' : 'turnos'} de trabalho, ${custo} moedas de material, ${r.item!.nome} (dia ${c.calendario.dia})`);
 }
