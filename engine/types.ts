@@ -153,6 +153,22 @@ export type Item = {
   contraOni?: boolean;
   // Equipamento capaz de isolar e suprimir o vazamento de mana colossal entre humanos
   suprimeMana?: boolean;
+  // Bônus temporário de gume/afiação obtido na forja
+  afiacao?: { cargas: number; bonusDano: number };
+  // Bônus temporário de têmpera defensiva obtido na forja
+  tempera?: { cargas: number; bonusDefesa: number };
+  // Id do catalisador infundido durante a forja
+  catalisador?: string;
+  // Propriedades intrínsecas concedidas por catalisadores (ex: 'venenosa', 'suprimeMana', 'contraOni', 'critica', 'espelhada')
+  propriedadesEspeciais?: string[];
+  // Categoria de criatura vulnerável a este óleo de caça alquímico
+  oleoAlvo?: 'fera' | 'morto_vivo' | 'oni' | 'monstro';
+  // Relíquia ancestral hereditária de casa nobre de Vaelhorn
+  ehReliquiaCasa?: string;
+  // Especialização de lâmina / estilo marcial (para Musashi e Niten Ichi-ryu)
+  tipoArma?: 'espada' | 'espada_dupla' | 'machado' | 'lanca' | 'adaga' | 'arco' | 'desarmado' | 'outro';
+  // Concede chance de partir e inutilizar lâminas adversárias (manoplas de Mestre Marcial)
+  quebraArmas?: boolean;
 };
 
 export type Equipado = {
@@ -553,6 +569,14 @@ export type CombatActor = {
   imuneLuz?: boolean;
   defendendo?: boolean;
   membrosPerdidos?: MembroId[];
+  // Arma quebrada em combate (por desarmamento / quebra de lâmina por Mestre Marcial)
+  armaQuebrada?: boolean;
+  // Postura marcial ativa do combatente (Musashi / 5 Elementos / Palma de Ferro)
+  posturaMarcial?: 'terra' | 'agua' | 'fogo' | 'vento' | 'vazio' | 'duas_espadas' | 'palma_ferro';
+  // Óleo alquímico ativo banhado na lâmina para este combate
+  oleoAtivo?: { tipoAlvo: 'fera' | 'morto_vivo' | 'oni' | 'monstro'; bonusDano: number; combatesRestantes: number };
+  // Estado de percepção absoluta (Sukitōru Sekai / Vazio de Musashi) que ignora defesas e maximiza críticos
+  mundoTransparente?: boolean;
 };
 
 export type CombatState = {
@@ -666,6 +690,8 @@ export type Campaign = {
   segredosRevelados: string[];
   // Expansão Tsukimichi: soberania de Asora e contratos de alma
   asora?: AsoraState;
+  // Sistema de Assentamento, Feudo & Reino (Vaelhorn / Mundo Base)
+  feudo?: FeudoState;
   ultimoResultado?: {
     grau: Grau;
     verboNome?: string;
@@ -687,6 +713,8 @@ export type Campaign = {
   // Avanços de poder raros e ganhos, acima da curva normal de nível — ver
   // engine/progresso.ts. Ids dos que já foram concedidos, pra não repetir.
   despertares?: string[];
+  // Contratos de caça a monstros e troféus conquistados (estilo Witcher)
+  contratosMonstro?: ContratosMonstroCampanha;
 };
 
 export type { Periodo, Estacao, CalendarioState, RngState, Grau, PerfilDano };
@@ -808,3 +836,231 @@ export type AsoraState = {
     turnosRestantes?: number;
   };
 };
+
+export type TipoEdificioModular =
+  | 'moradias'
+  | 'castelo'
+  | 'quartel'
+  | 'mercado_feitoria'
+  | 'igreja_santuario'
+  | 'oficina_forja'
+  | 'lavoura_silos'
+  | 'muralha_baluarte'
+  | 'boticario_hospital';
+
+export type ObraAtiva = {
+  id: string;
+  tipo: TipoEdificioModular;
+  nome: string;
+  nivelAlvo: number;
+  periodosRestantes: number;
+  periodosTotais: number;
+  custoOuro: number;
+  custoMateriais: number;
+};
+
+export type CargaCaravana = 'mantimentos' | 'minerio' | 'artesanato' | 'tecidos' | 'armas';
+
+export type RotaComercial = {
+  id: string;
+  destinoId: string;
+  destinoNome: string;
+  diasViagemTotal: number;
+  diasRestantes: number;
+  cargaTipo: CargaCaravana;
+  lucroEstimado: number;
+  riscoEstrada: number;
+  ativa: boolean;
+};
+
+export type RotaPatrulha = {
+  id: string;
+  regiaoAlvo: string;
+  nomeRegiao: string;
+  soldadosAlocados: number;
+  eficaciaPacificacao: number;
+  custoManutencaoDiaria: number;
+  ativa: boolean;
+};
+
+export type BiomaFeudo = 'planicie' | 'deserto' | 'montanha' | 'floresta' | 'costa' | 'asora';
+
+export type CargoConselho = 'regente' | 'chanceler' | 'marechal' | 'tesoureiro' | 'mestre_espioes';
+
+export type ConselheiroReino = {
+  cargo: CargoConselho;
+  npcId: string;
+  nome: string;
+  lealdade: number; // 0 a 100
+  competencia: number; // Baseado no atributo principal do cargo
+  corrupcao: number; // 0 a 100
+  dataNomeacao: number;
+};
+
+export type PatenteMilitar = 'recruta' | 'cabo' | 'sargento' | 'capitao' | 'mestre_espioes';
+export type DesignacaoOficial = 'guarda_castelo' | 'patrulha_ruas' | 'escolta_caravanas' | 'infiltracao_externa';
+
+export type OficialReino = {
+  id: string;
+  npcId: string;
+  nome: string;
+  patente: PatenteMilitar;
+  designacao: DesignacaoOficial;
+  experiencia: number;
+  vitorias: number;
+  lealdade: number;
+  vivo: boolean;
+};
+
+export type CasamentoReino = {
+  conjugeNpcId: string;
+  nomeConjuge: string;
+  dataCasamento: number;
+  afeto: number; // 0 a 100
+  diasUltimoEncontro: number;
+};
+
+export type GestacaoReino = {
+  ativa: boolean;
+  diaInicio: number;
+  diaPrevisaoParto: number; // Ex: diaInicio + 270 (9 meses)
+  progenitorId: string;
+  nomeMae: string;
+  saudeFeto: number; // 0 a 100
+};
+
+export type FilhoHerdeiro = {
+  id: string;
+  nome: string;
+  idadeAnos: number;
+  diaNascimento: number;
+  genero: 'm' | 'f';
+  vivo: boolean;
+  atributos: Atributos;
+  legitimidade: 'legitimo' | 'bastardo';
+};
+
+export type LordeVassalo = {
+  id: string;
+  npcId: string;
+  nomeLorde: string;
+  feudoCedidoId: string;
+  nomeFeudo: string;
+  lealdade: number; // 0 a 100
+  tributoDiario: number;
+  levasMilitares: number;
+  opiniaoSuserano: number; // -100 a +100
+};
+
+export type TramaReino = {
+  id: string;
+  tipo: 'usurpacao_cidade' | 'golpe_interno' | 'sabotagem_muralhas';
+  alvoLocalId: string;
+  alvoNome: string;
+  liderNpcId: string;
+  liderNome: string;
+  progresso: number; // 0 a 100%
+  segredo: boolean;
+  descoberta: boolean;
+};
+
+export type CasaDinastica = {
+  fundada: boolean;
+  nome: string;
+  lema: string;
+  brasaoCorPrimaria: string;
+  brasaoCorSecundaria: string;
+  brasaoFigura: string; // 'lobo' | 'leao' | 'dragao' | 'aguia' | 'torre' | 'espada' | 'serpente'
+  prestigio: number;
+};
+
+export type FeudoState = {
+  fundado: boolean;
+  nome: string;
+  localId: string;
+  bioma: BiomaFeudo;
+  tierReino: number; // 1 a 10+
+  populacao: number;
+  capacidadeHabitacional: number;
+  tesouro: number;
+  materiais: number;
+  comida: number;
+  remedios: number;
+  seguranca: number;
+  estabilidade: number;
+  edificios: Record<TipoEdificioModular, number>;
+  obrasEmAndamento: ObraAtiva[];
+  rotasComerciais: RotaComercial[];
+  rotasPatrulha: RotaPatrulha[];
+  historicoEventos: { dia: number; texto: string }[];
+  decretosAtivos?: string[];
+
+  // Expansão Dinástica, Política & Militar (Estilo Crusader Kings 3)
+  casaDinastica?: CasaDinastica;
+  conselho?: Record<CargoConselho, ConselheiroReino | undefined>;
+  oficiais?: OficialReino[];
+  casamento?: CasamentoReino;
+  gestacao?: GestacaoReino;
+  filhosHerdeiros?: FilhoHerdeiro[];
+  herdeiroAparenteId?: string;
+  vassalos?: LordeVassalo[];
+  tramasAtivas?: TramaReino[];
+  guerraDeclaradaAlvoId?: string;
+};
+
+// ── Contratos de Caça a Monstros (Estilo The Witcher) & Treinos Imersivos
+export type PistaMonstro = {
+  id: string;
+  descricao: string;
+  encontrada: boolean;
+  periciaNecessaria?: string;
+  dificuldade?: number;
+};
+
+export type ContratoMonstro = {
+  id: string;
+  titulo: string;
+  contratante: string;
+  localId: string;
+  monstroNome: string;
+  criaturaId: string;
+  categoriaAlvo: 'fera' | 'morto_vivo' | 'oni' | 'monstro';
+  fraquezaOleo: string; // id do item de óleo recomendado (ex: 'oleo_anti_besta')
+  recompensaMoedas: number;
+  recompensaXp: number;
+  descricao: string;
+  pistas: PistaMonstro[];
+  estado: 'disponivel' | 'investigando' | 'pronto_para_confronto' | 'concluido';
+  trofeuId: string;
+};
+
+export type TrofeuMonstro = {
+  id: string;
+  contratoId: string;
+  nome: string;
+  descricao: string;
+  bonusPermanente: {
+    pericia?: string;
+    valor?: number;
+    respeitoFaccoes?: string[];
+  };
+};
+
+export type ContratosMonstroCampanha = {
+  contratos: Record<string, ContratoMonstro>;
+  trofeus: TrofeuMonstro[];
+  oleoAtivo?: {
+    tipoAlvo: 'fera' | 'morto_vivo' | 'oni' | 'monstro';
+    bonusDano: number;
+    combatesRestantes: number;
+    nomeOleo: string;
+  };
+};
+
+export type TipoTreinoImersivo =
+  | 'katas_cinco_elementos'
+  | 'calejamento_palma_ferro'
+  | 'meditacao_sob_cascata'
+  | 'esgrima_duas_espadas_niten';
+
+

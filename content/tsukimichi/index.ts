@@ -395,6 +395,25 @@ const npcsTsukimichi: NPC[] = [
     corpo:
       'Jovem de traços comuns da Terra, vestindo sobretudo de seda nobre de Asora com o brasão da Companhia Kuzunoha e portando anéis Draupnir para conter o mana infinito.',
   },
+  {
+    id: 'garrick_ferreiro',
+    nome: 'Garrick',
+    idade: 45,
+    ocupacao: 'Ferreiro de Fronteira & Armeiro da Guilda de Tsige',
+    faccaoId: 'guilda_aventureiros',
+    localBase: 'tsige_distrito_comercial',
+    rotina: {
+      manha: 'tsige_distrito_comercial',
+      tarde: 'tsige_distrito_comercial',
+      noite: 'tsige_portao_ermo',
+    },
+    vozNarrativa:
+      'Voz grossa e ressecada de areia da Wasteland, falando com o pragmatismo de quem bate ferro para quem vai morrer amanhã',
+    personalidade:
+      'Cético com aventureiros novatos e respeitoso com veteranos; conserta armaduras estraçalhadas por bestas gigantes e admira aço de verdade.',
+    corpo:
+      'Hyuman corpulento com braços grossos cobertos de cicatrizes de brasas, barba ruiva fuliginosa e avental de couro de monstro endurecido.',
+  },
 ];
 
 // ── Encontros por região do Novo Mundo ──────────────────────────────────────
@@ -459,8 +478,27 @@ function integrarMapaTsukimichi(): Local[] {
 const mapaTsukimichi = integrarMapaTsukimichi();
 
 // ── Itens Específicos de Tsukimichi & Asora ─────────────────────────────────
+const itensBaseTsukimichi: Item[] = itensVaelhorn.map((item) => {
+  if (!item.lojas || item.lojas.length === 0) return item;
+  const lojas = [...item.lojas];
+  // Se vendido em mercados ou feiras, vende no Distrito Comercial de Tsige
+  if (item.lojas.includes('mercado') || item.lojas.includes('taverna')) {
+    if (!lojas.includes('tsige_distrito_comercial')) lojas.push('tsige_distrito_comercial');
+  }
+  // Matérias-primas de forja essenciais disponíveis no Portão do Ermo e na Forja dos Anões de Asora
+  if (['carvao', 'minerio_de_ferro', 'couro_cru', 'fio_de_prata', 'sebo_bruto', 'estilhaco_de_pedra'].includes(item.id)) {
+    if (!lojas.includes('asora_forja_anoes')) lojas.push('asora_forja_anoes');
+    if (!lojas.includes('tsige_portao_ermo')) lojas.push('tsige_portao_ermo');
+  }
+  // Suprimentos e remédios essenciais na Companhia Kuzunoha
+  if (['pocao_cura_menor', 'pocao_cura', 'elixir_de_vigor', 'antidoto', 'racao'].includes(item.id)) {
+    if (!lojas.includes('tsige_companhia_kuzunoha')) lojas.push('tsige_companhia_kuzunoha');
+  }
+  return { ...item, lojas };
+});
+
 const itensTsukimichi: Item[] = [
-  ...itensVaelhorn,
+  ...itensBaseTsukimichi,
   {
     id: 'katana_asora',
     nome: 'Katana de Asora',

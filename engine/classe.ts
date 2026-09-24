@@ -251,6 +251,125 @@ export function efeitoDaClasse(camp: Campaign): string | undefined {
     case CLASSE_ARQUEIRO_AZUSA: return 'Disciplina do Arco: tiros de mana ganham +3 de acerto cirúrgico e ignoram cobertura inimiga.';
     case CLASSE_SEM_BENCAO: return 'Mago: reserva de mana colossal que abala a moral dos inimigos no início do combate.';
     case CLASSE_AVENTUREIRO_TSIGE: return 'Aventureiro: adaptado à fronteira extrema com mobilidade e instinto tático.';
+    case CLASSE_LUTADOR:
+    case CLASSE_MESTRE_MARCIAL:
+      return 'Combate Desarmado: ataques com as mãos nuas ou manoplas causam dano aumentado escalando com Físico e Precisão, com chance de partir lâminas inimigas ao aparar.';
     default: return undefined;
   }
 }
+
+// ── Lutador (Caminho do Punho e Quebra de Lâminas) ─────────────────────────
+
+export const CLASSE_LUTADOR = 'lutador';
+export const CLASSE_MESTRE_MARCIAL = CLASSE_LUTADOR; // alias de compatibilidade
+
+export function ehClasseLutador(camp: Campaign): boolean {
+  const c = classeDe(camp);
+  return c === CLASSE_LUTADOR || c === 'mestre_marcial';
+}
+
+/**
+ * Calcula o dano de combate desarmado para o Lutador.
+ * Em vez do dano fraco desarmado padrão (3), o lutador canaliza sua força
+ * e técnica com os punhos nus ou faixas/manoplas:
+ * Dano Base = 10 + floor(fisico / 2) + floor(precisao / 2).
+ */
+export function danoMarcialDesarmado(
+  camp: Campaign,
+  atacante: CombatActor,
+): { base: number; dispersao: number; tipo: 'contusão' } {
+  const fis = camp.personagem.atributos.fisico ?? 0;
+  const prec = camp.personagem.atributos.precisao ?? 0;
+  const bonusAtributos = Math.floor(fis / 2) + Math.floor(prec / 2);
+  const baseDano = 10 + bonusAtributos;
+
+  return {
+    base: baseDano,
+    dispersao: 0.25,
+    tipo: 'contusão',
+  };
+}
+
+/**
+ * Tentativa de desarmamento violento e quebra de lâmina contra um atacante armado.
+ * Ocorre quando o defensor é um Lutador ou porta manoplas especiais (`quebraArmas`).
+ * Ao partir a espada, a arma do rival é inutilizada no combate atual e ele sofre atordoamento moral.
+ */
+export function tentativaQuebraDeEspada(
+  camp: Campaign,
+  defensor: CombatActor,
+  atacante: CombatActor,
+  rolagemD20: number = 10,
+): { quebrou: boolean; mensagem?: string } {
+  if (atacante.armaQuebrada || atacante.oni || atacante.criaturaId?.startsWith('besta_')) {
+    return { quebrou: false };
+  }
+
+  const ehLutador = defensor.ehJogador && ehClasseLutador(camp);
+  const armaId = camp.personagem.equipado.arma;
+  const ehManoplaQuebra = armaId === 'manoplas_do_quebra_aco' || armaId === 'manoplas_vajra_celestial';
+  const temManoplaQuebra =
+    ehManoplaQuebra ||
+    (camp.personagem.itensForjados?.some((i) => i.id === armaId && i.quebraArmas) ?? false);
+
+  if (!ehLutador && !temManoplaQuebra) {
+    return { quebrou: false };
+  }
+
+  const prec = camp.personagem.atributos.precisao ?? 0;
+  const limiarQuebra = 15 - Math.min(6, Math.floor(prec / 2));
+
+  if (rolagemD20 >= limiarQuebra) {
+    atacante.armaQuebrada = true;
+    atacante.condicoes = [...(atacante.condicoes ?? []), 'atordoado'];
+    const msg = `CRACK! Em uma fração de segundo, ${defensor.nome} aprisiona o gume de ${atacante.nome} entre as palmas de ferro e aplica uma torção devastadora. A espada estilhaça em fragmentos de aço! ${atacante.nome} fica atordoado e desarmado!`;
+    return { quebrou: true, mensagem: msg };
+  }
+
+  return { quebrou: false };
+}
+
+// ── Maestria de Espada Miyamoto Musashi & Visão Transparente ───────────────
+
+/**
+ * Benefícios de esgrima do estilo Niten Ichi-ryu (Musashi) e Sekai:
+ * Quando o combatente empunha espada sem escudo, ganha velocidade, precisão e
+ * percepção penetrante.
+ */
+export function bonificacaoNitenMusashi(
+  camp: Campaign,
+  atacante: CombatActor,
+): { bonusAcerto: number; penetracaoArmadura: number; bonusCritico: number } {
+  const p = camp.personagem;
+  const temEscudo = Boolean(p.equipado.escudo);
+  const armaId = p.equipado.arma ?? '';
+  const ehEspada =
+    armaId.includes('espada') ||
+    armaId.includes('lamina') ||
+    armaId.includes('rapieira') ||
+    armaId.includes('cimitarra') ||
+    armaId.includes('montante');
+
+  if (!atacante.ehJogador || temEscudo || !ehEspada) {
+    return { bonusAcerto: 0, penetracaoArmadura: 0, bonusCritico: 0 };
+  }
+
+  let bonusAcerto = 2;
+  let penetracaoArmadura = 0.25;
+  let bonusCritico = 0.1;
+
+  if (atacante.posturaMarcial === 'vazio') {
+    bonusAcerto += 3;
+    penetracaoArmadura = 0.6;
+    bonusCritico += 0.2;
+  }
+
+  if (atacante.mundoTransparente) {
+    bonusAcerto += 5;
+    penetracaoArmadura = 1.0; // Ignora 100% da armadura
+    bonusCritico += 0.35;
+  }
+
+  return { bonusAcerto, penetracaoArmadura, bonusCritico };
+}
+

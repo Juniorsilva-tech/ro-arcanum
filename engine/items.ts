@@ -38,7 +38,12 @@ export function bonusDefesaEquip(content: ContentBundle, p: Personagem): number 
   let b = 0;
   for (const id of [p.equipado.armadura, p.equipado.escudo]) {
     if (!id) continue;
-    b += itemPorId(content, id, p)?.defesa ?? 0;
+    const it = itemPorId(content, id, p);
+    if (!it) continue;
+    b += it.defesa ?? 0;
+    if (it.tempera && it.tempera.cargas > 0) {
+      b += it.tempera.bonusDefesa;
+    }
   }
   return b;
 }

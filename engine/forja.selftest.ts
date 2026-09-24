@@ -8,16 +8,18 @@
 // - forjar treina o ofício e gasta tempo;
 // - a mesma semente dá a mesma peça.
 import { conteudoVaelhorn as C } from '../content/vaelhorn';
+import { conteudoTsukimichi as CT } from '../content/tsukimichi';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { executarAcaoMundo } from './acoesMundo';
-import { equipar, itemPorId, armaEquipada } from './items';
+import { equipar, itemPorId, armaEquipada, itensDaLoja, bonusDefesaEquip } from './items';
 import { exportar, importar } from './persistencia';
 import { maestriaDe, estadoAptidao, esforcoParaMaestria } from './aptidao';
 import {
-  MOLDES, MATERIAIS, TETO_SOBRE_O_MOLDE, COMBUSTIVEL, calcularPeca,
-  qualidadeDaMao, ondeForjar, receitasDisponiveis, forjar,
+  MOLDES, MATERIAIS, CATALISADORES, TETO_SOBRE_O_MOLDE, COMBUSTIVEL, calcularPeca,
+  qualidadeDaMao, ondeForjar, receitasDisponiveis, forjar, desmanchar, temperar,
 } from './forja';
+import { danoJogador, iniciarCombate, jogadorAtaca } from './combat';
 import type { Campaign } from './types';
 
 const ok = (v: unknown, mensagem: string) => {
@@ -166,6 +168,246 @@ ok(true, 'nenhuma combinação de molde e material passa do teto de 1,45× o mol
   } else {
     ok(true, 'estrutura de aptidões diferente; a comparação em números fica no teste de qualidadeDaMao');
   }
+}
+
+// ── Disponibilidade da forja nas cidades de Vaelhorn ───────────────────
+{
+  const camp = nova('cidades');
+  // Halvet: no mercado, Torana e Duna estão presentes
+  camp.localAtual = 'mercado';
+  const ondeHalvet = ondeForjar(C, camp);
+  ok(ondeHalvet.pode, 'em Halvet (mercado) a forja está disponível');
+  ok(ondeHalvet.ferreira?.ocupacao?.match(/ferreir|armeir/i), 'ferreira de Halvet (Torana ou Duna) identificada');
+
+  // Tessel: Vana do Fole na guarnição
+  camp.localAtual = 'tessel';
+  const ondeTessel = ondeForjar(C, camp);
+  ok(ondeTessel.pode && ondeTessel.ferreira?.id === 'armeira_de_tessel', 'em Tessel a armeira da guarnição (Vana) permite forjar');
+
+  // Mareu: Kelda Cais no porto/cidade
+  camp.localAtual = 'mareu';
+  const ondeMareu = ondeForjar(C, camp);
+  ok(ondeMareu.pode && ondeMareu.ferreira?.id === 'ferreira_de_mareu', 'em Mareu a ferreira naval (Kelda) permite forjar');
+
+  // Aldeia do Ferro: Tança no Ferro Velho
+  camp.localAtual = 'aldeia_ferro';
+  const ondeAldeia = ondeForjar(C, camp);
+  ok(ondeAldeia.pode && ondeAldeia.ferreira?.id === 'ferreira_do_ferro_velho', 'na Aldeia do Ferro a lâmina-ferreira (Tança) permite forjar');
+}
+
+// ── Matérias-primas essenciais nas lojas de Vaelhorn ───────────────────
+{
+  // A taverna inicial e os mercados vendem carvão, minério de ferro e couro cru
+  const itensTaverna = itensDaLoja(C, 'taverna').map(i => i.id);
+  ok(itensTaverna.includes('carvao'), 'taverna inicial vende carvão');
+  ok(itensTaverna.includes('minerio_de_ferro'), 'taverna inicial vende minério de ferro');
+  ok(itensTaverna.includes('couro_cru'), 'taverna inicial vende couro cru');
+
+  const itensTessel = itensDaLoja(C, 'tessel').map(i => i.id);
+  ok(itensTessel.includes('carvao') && itensTessel.includes('minerio_de_ferro'), 'Tessel vende matérias-primas de forja');
+
+  const itensMareu = itensDaLoja(C, 'mareu').map(i => i.id);
+  ok(itensMareu.includes('carvao') && itensMareu.includes('minerio_de_ferro'), 'Mareu vende matérias-primas de forja');
+}
+
+// ── Forja no Novo Mundo (Tsukimichi) ───────────────────────────────────
+{
+  const campTsuki = criarCampanha(CT, {
+    nome: 'MakotoTest',
+    atributos: atributosBase(),
+    classeId: CT.classes[0].id,
+    origemId: CT.origens[0].id,
+    seedString: 'tsuki-forja',
+  });
+  if (campTsuki.familia) campTsuki.familia.prologoConcluido = true;
+
+  // Lojas em Tsige e Asora vendem carvão e minérios
+  const itensTsige = itensDaLoja(CT, 'tsige_distrito_comercial').map(i => i.id);
+  ok(itensTsige.includes('carvao'), 'Tsige vende carvão no distrito comercial');
+  ok(itensTsige.includes('minerio_de_ferro'), 'Tsige vende minério de ferro');
+
+  const itensAsora = itensDaLoja(CT, 'asora_forja_anoes').map(i => i.id);
+  ok(itensAsora.includes('carvao') && itensAsora.includes('minerio_de_ferro'), 'Forja de Asora vende carvão e minério de ferro');
+
+  // Tsige: Garrick permite forjar no distrito comercial
+  campTsuki.localAtual = 'tsige_distrito_comercial';
+  const ondeTsige = ondeForjar(CT, campTsuki);
+  ok(ondeTsige.pode && ondeTsige.ferreira?.id === 'garrick_ferreiro', 'em Tsige o armeiro Garrick permite forjar');
+
+  // Asora: forja dos Elder Dwarves é local de forja e conta com Mestre Beren
+  campTsuki.localAtual = 'asora_forja_anoes';
+  const ondeAsora = ondeForjar(CT, campTsuki);
+  ok(ondeAsora.pode, 'em Asora a Forja dos Anões permite forjar');
+  ok(ondeAsora.ferreira?.id === 'mestre_beren', 'Mestre Beren dos Elder Dwarves orienta a forja em Asora');
+
+  // Forjar de verdade em Asora via executarAcaoMundo
+  campTsuki.personagem.inventario[COMBUSTIVEL] = 5;
+  campTsuki.personagem.inventario['minerio_de_ferro'] = 10;
+  const rForja = executarAcaoMundo(CT, campTsuki, { tipo: 'forjar', molde: 'lamina_longa', material: 'minerio_de_ferro' });
+  ok(rForja.ok, `forjar em Asora funciona: ${rForja.texto}`);
+  ok(campTsuki.personagem.itensForjados?.length === 1, 'item forjado registrado na ficha');
+  const pecaId = campTsuki.personagem.itensForjados![0].id;
+  ok(campTsuki.personagem.inventario[pecaId] === 1, 'peça forjada no inventário do Novo Mundo');
+  const eq = equipar(CT, campTsuki, pecaId);
+  ok(eq.ok, 'peça forjada equipa no Novo Mundo');
+}
+
+// ── Desmanche de Espólios (Salvage) ───────────────────────────────────
+{
+  const camp = nova('desmanche');
+  // Desequipa qualquer arma inicial para poder testar desmanche
+  camp.personagem.equipado.arma = undefined;
+  // Adiciona itens normais no inventário
+  camp.personagem.inventario['espada_curta'] = 1;
+  camp.personagem.inventario['cota_de_malha'] = 1;
+  camp.personagem.inventario['escudo_de_ferro'] = 1;
+  const ferroAntes = camp.personagem.inventario['minerio_de_ferro'] ?? 0;
+
+  // Desmanche de espada curta comum
+  const r1 = executarAcaoMundo(C, camp, { tipo: 'desmanchar', itemId: 'espada_curta' });
+  ok(r1.ok, `desmanchar espada curta funciona: ${r1.texto}`);
+  ok((camp.personagem.inventario['espada_curta'] ?? 0) === 0, 'espada consumida do inventário');
+  ok((camp.personagem.inventario['minerio_de_ferro'] ?? 0) === ferroAntes + 1, '1 minério de ferro recuperado da espada');
+
+  // Desmanche de armadura pesada (peso >= 6 confere 2 minérios)
+  const r2 = executarAcaoMundo(C, camp, { tipo: 'desmanchar', itemId: 'cota_de_malha' });
+  ok(r2.ok, `desmanchar armadura pesada funciona: ${r2.texto}`);
+  ok((camp.personagem.inventario['minerio_de_ferro'] ?? 0) === ferroAntes + 3, '2 minérios de ferro recuperados da cota de malha');
+
+  // Recusa de item equipado
+  equipar(C, camp, 'escudo_de_ferro');
+  const rEquip = desmanchar(C, camp, 'escudo_de_ferro');
+  ok(!rEquip.ok, 'recusa desmanchar peça enquanto ela estiver equipada');
+
+  // Recusa de item único / mítico / nichirin
+  camp.personagem.inventario['lamina_nichirin'] = 1;
+  const rNichirin = desmanchar(C, camp, 'lamina_nichirin');
+  ok(!rNichirin.ok, 'recusa desmanchar lâmina nichirin sagrada');
+
+  // Recusa de consumível / acessório que não seja forjável
+  camp.personagem.inventario['pocao_cura'] = 1;
+  const rPocao = desmanchar(C, camp, 'pocao_cura');
+  ok(!rPocao.ok, 'recusa desmanchar consumível na bigorna');
+}
+
+// ── Afiação & Têmpera ─────────────────────────────────────────────────
+{
+  const camp = nova('tempera');
+  camp.personagem.inventario['espada_curta'] = 1;
+  camp.personagem.inventario['armadura_de_couro'] = 1;
+  camp.personagem.inventario[COMBUSTIVEL] = 5;
+
+  // Afiar arma
+  equipar(C, camp, 'espada_curta');
+  const danoBaseSemAfiacao = danoJogador(C, camp).base;
+  const rAfiar = executarAcaoMundo(C, camp, { tipo: 'temperar', itemId: camp.personagem.equipado.arma! });
+  ok(rAfiar.ok, `afiar arma na forja funciona: ${rAfiar.texto}`);
+  ok(camp.personagem.inventario[COMBUSTIVEL] === 4, 'afiar consumiu 1 carvão');
+  const armaAfiada = armaEquipada(C, camp.personagem);
+  ok(armaAfiada?.afiacao?.cargas === 5, 'arma afiada possui 5 cargas de gume');
+  ok(armaAfiada?.afiacao?.bonusDano === 2, 'arma afiada possui +2 bônus de dano');
+  const danoComAfiacao = danoJogador(C, camp).base;
+  ok(danoComAfiacao > danoBaseSemAfiacao, `dano do jogador elevado pela afiação (${danoComAfiacao} contra ${danoBaseSemAfiacao})`);
+
+  // Temperar armadura
+  equipar(C, camp, 'armadura_de_couro');
+  const defBaseSemTempera = bonusDefesaEquip(C, camp.personagem);
+  const rTempera = executarAcaoMundo(C, camp, { tipo: 'temperar', itemId: camp.personagem.equipado.armadura! });
+  ok(rTempera.ok, `temperar armadura na forja funciona: ${rTempera.texto}`);
+  const armaduraTemperada = itemPorId(C, camp.personagem.equipado.armadura!, camp.personagem);
+  ok(armaduraTemperada?.tempera?.cargas === 5, 'armadura temperada possui 5 cargas de blindagem');
+  ok(armaduraTemperada?.tempera?.bonusDefesa === 2, 'armadura temperada confere +2 de defesa');
+  const defComTempera = bonusDefesaEquip(C, camp.personagem);
+  ok(defComTempera === defBaseSemTempera + 2, 'defesa do jogador elevada em +2 pela têmpera');
+
+  // Integridade do catálogo: o item estático original de C.itens não foi mutado
+  const itemOriginalCatalogo = C.itens.find(i => i.id === 'espada_curta');
+  ok(itemOriginalCatalogo?.afiacao === undefined, 'catálogo estático imutável e seguro contra poluição');
+}
+
+// ── Catalisadores Raros & Místicos ───────────────────────────────────
+{
+  const camp = nova('catalisadores');
+  camp.personagem.inventario['glandula_de_veneno'] = 1;
+  camp.personagem.inventario['anel_draupnir'] = 1;
+  camp.personagem.inventario['unha_de_carnical'] = 1;
+
+  // Forjar lâmina curta com glândula peçonhenta
+  const rVeneno = executarAcaoMundo(C, camp, {
+    tipo: 'forjar',
+    molde: 'lamina_curta',
+    material: 'minerio_de_ferro',
+    catalisador: 'glandula_de_veneno',
+  });
+  ok(rVeneno.ok, `forjar com glândula de veneno funciona: ${rVeneno.texto}`);
+  ok((camp.personagem.inventario['glandula_de_veneno'] ?? 0) === 0, 'glândula consumida na forja');
+  const pecaVeneno = camp.personagem.itensForjados![camp.personagem.itensForjados!.length - 1];
+  ok(pecaVeneno.propriedadesEspeciais?.includes('venenosa'), 'peça infundida possui propriedade venenosa');
+
+  // Forjar com Draupnir
+  const rDraupnir = executarAcaoMundo(C, camp, {
+    tipo: 'forjar',
+    molde: 'cota',
+    material: 'minerio_de_ferro',
+    catalisador: 'anel_draupnir',
+  });
+  ok(rDraupnir.ok, `forjar com anel Draupnir funciona: ${rDraupnir.texto}`);
+  const pecaDraupnir = camp.personagem.itensForjados![camp.personagem.itensForjados!.length - 1];
+  ok(pecaDraupnir.suprimeMana === true, 'peça infundida possui supressão de mana');
+
+  // Forjar com unha de carniçal (bônus dano com teto)
+  const pecaCritica = calcularPeca(
+    MOLDES.find(m => m.id === 'lamina_curta')!,
+    MATERIAIS.find(m => m.item === 'lasca_de_gargula')!,
+    1.3,
+    'crit_test',
+    'Ferreiro',
+    CATALISADORES.find(c => c.item === 'unha_de_carnical'),
+  );
+  const tetoDano = Math.round(MOLDES.find(m => m.id === 'lamina_curta')!.dano!.base * TETO_SOBRE_O_MOLDE);
+  ok(pecaCritica.dano!.base <= tetoDano, `mesmo com catalisador de dano crítico, respeita o teto de 1,45× (${pecaCritica.dano!.base} <= ${tetoDano})`);
+
+  // Recusa se não tiver o catalisador
+  const rSemCat = forjar(C, camp, 'lamina_curta', 'minerio_de_ferro', 'agua_do_espelho');
+  ok(!rSemCat.ok, 'recusa forja se o jogador não tiver o catalisador');
+}
+
+// ── Integração de Combate: Veneno & Consumo de Cargas ─────────────────
+{
+  const camp = nova('combate_forja');
+  // Cria e equipa arma venenosa e afiada
+  const armaVen = calcularPeca(
+    MOLDES.find(m => m.id === 'lamina_curta')!,
+    MATERIAIS.find(m => m.item === 'minerio_de_ferro')!,
+    1.0,
+    'arma_ven_test',
+    'Ferreira',
+    CATALISADORES.find(c => c.item === 'glandula_de_veneno'),
+  );
+  armaVen.afiacao = { cargas: 2, bonusDano: 2 };
+  camp.personagem.itensForjados = [armaVen];
+  camp.personagem.inventario[armaVen.id] = 1;
+  equipar(C, camp, armaVen.id);
+
+  // Inicia combate contra criatura
+  const criatura = C.criaturas[0];
+  iniciarCombate(C, camp, [criatura.id]);
+  ok(camp.combate !== null, 'combate iniciado com equipamento forjado');
+
+  // Jogador desfere ataque
+  const alvo = camp.combate!.atores.find(a => !a.ehJogador)!;
+  jogadorAtaca(C, camp, alvo.id);
+  if (alvo.vida < alvo.vidaMax) {
+    ok(alvo.condicoes.includes('envenenado'), 'arma venenosa inoculou peçonha no inimigo');
+    ok((alvo.tatico?.veneno ?? 0) > 0, 'contador tático de veneno ativado no adversário');
+  }
+
+  // Finalização do combate e decremento de cargas
+  alvo.vida = 1;
+  jogadorAtaca(C, camp, alvo.id);
+  ok(camp.combate?.terminado === true, 'combate finalizado com vitória');
+  const armaPosCombate = armaEquipada(C, camp.personagem);
+  ok(armaPosCombate?.afiacao?.cargas === 1, 'carga de afiação decrementada em 1 após combate');
 }
 
 console.log('\nforja: tudo certo.');

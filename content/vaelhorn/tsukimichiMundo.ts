@@ -333,7 +333,7 @@ const ASORA: Def[] = [
     id: 'asora_forja_anoes',
     nome: 'Asora - Forja dos Anões Anciãos',
     regiao: 'Subespaço de Asora',
-    tipo: 'subespaco',
+    tipo: 'forja',
     perigo: 0,
     descricao:
       'O complexo metalúrgico onde Beren e os Mestres Elder Dwarves martelam metais celestiais. Chamas que nunca se apagam iluminam fornalhas rúnicas.',

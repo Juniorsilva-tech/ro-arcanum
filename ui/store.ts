@@ -70,6 +70,35 @@ import {
   type TriboAcolhida,
   type EstrategiaCompanhia,
   type ModoKai,
+  obterFeudo,
+  fundarFeudo,
+  iniciarObraFeudo,
+  avancarObrasFeudo,
+  despacharCaravanaFeudo,
+  definirRotaPatrulhaFeudo,
+  processarCicloReino,
+  fundarCasaDinastica,
+  nomearConselheiro,
+  removerConselheiro,
+  recrutarOficial,
+  promoverOficial,
+  designarMissaoOficial,
+  treinarOficiais,
+  celebrarCasamento,
+  iniciarGestacao,
+  darLuzHerdeiro,
+  designarHerdeiroAparente,
+  concederFeudoVassalo,
+  convocarLevasVassalos,
+  convocarAssembleiaGuerra,
+  firmarTratadoPaz,
+  iniciarTramaUsurpacao,
+  type TipoEdificioModular,
+  type CargaCaravana,
+  type BiomaFeudo,
+  type CargoConselho,
+  type DesignacaoOficial,
+  type PatenteMilitar,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -113,6 +142,7 @@ export type Tela =
   | 'loja'
   | 'combate'
   | 'missoes'
+  | 'assentamento'
   | 'fimcapitulo';
 
 export type EntradaFeed = {
@@ -243,6 +273,28 @@ interface GameState {
   despacharCaravanaAcao: () => Promise<string>;
   alternarSakaiModoAcao: (modo: ModoKai) => Promise<string>;
   executarTreinoQuaseMorteAcao: () => Promise<string>;
+
+  fundarFeudoAcao: (nome: string, localId: string, bioma?: BiomaFeudo) => Promise<string>;
+  iniciarObraFeudoAcao: (tipo: TipoEdificioModular) => Promise<string>;
+  despacharCaravanaFeudoAcao: (destinoId: string, destinoNome: string, cargaTipo: CargaCaravana) => Promise<string>;
+  definirPatrulhaFeudoAcao: (regiaoAlvo: string, nomeRegiao: string, soldados: number) => Promise<string>;
+  supervisionarObrasAcao: () => Promise<string>;
+  fundarCasaDinasticaAcao: (nome: string, lema: string, corPrimaria?: string, corSecundaria?: string, figura?: string) => Promise<string>;
+  nomearConselheiroAcao: (cargo: CargoConselho, npcId: string, nomeNpc: string) => Promise<string>;
+  removerConselheiroAcao: (cargo: CargoConselho) => Promise<string>;
+  recrutarOficialAcao: (npcId: string, nomeNpc: string) => Promise<string>;
+  promoverOficialAcao: (oficialId: string) => Promise<string>;
+  designarMissaoOficialAcao: (oficialId: string, designacao: DesignacaoOficial) => Promise<string>;
+  treinarOficiaisAcao: (oficialId?: string) => Promise<string>;
+  celebrarCasamentoAcao: (npcId: string, nomeNpc: string) => Promise<string>;
+  iniciarGestacaoAcao: () => Promise<string>;
+  darLuzHerdeiroAcao: (nomeBebe: string, genero: 'm' | 'f') => Promise<string>;
+  designarHerdeiroAparenteAcao: (filhoId: string) => Promise<string>;
+  concederFeudoVassaloAcao: (lordeNpcId: string, nomeLorde: string, feudoCedidoId: string, nomeFeudo: string) => Promise<string>;
+  convocarLevasVassalosAcao: () => Promise<string>;
+  convocarAssembleiaGuerraAcao: (alvoCidadeId: string, casusBelli: string) => Promise<string>;
+  firmarTratadoPazAcao: () => Promise<string>;
+  iniciarTramaUsurpacaoAcao: (alvoCidadeId: string, alvoNome: string, liderNpcId: string, liderNome: string) => Promise<string>;
 
   agirVerbo: (verboId: string, alvoId?: string) => Promise<void>;
   agirOpcao: (op: OpcaoResolvida, alvoId?: string) => Promise<void>;
@@ -637,6 +689,202 @@ export const useGame = create<GameState>((set, get) => ({
     const { camp } = get();
     if (!camp) return '';
     const r = executarTreinoConcentracaoQuaseMorte(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async fundarFeudoAcao(nome, localId, bioma) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = fundarFeudo(camp, nome, localId, bioma);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async iniciarObraFeudoAcao(tipo) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = iniciarObraFeudo(camp, tipo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async despacharCaravanaFeudoAcao(destinoId, destinoNome, cargaTipo) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = despacharCaravanaFeudo(camp, destinoId, destinoNome, cargaTipo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async definirPatrulhaFeudoAcao(regiaoAlvo, nomeRegiao, soldados) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = definirRotaPatrulhaFeudo(camp, regiaoAlvo, nomeRegiao, soldados);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async supervisionarObrasAcao() {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    camp.turno++;
+    camp.capitulo.periodosDecorridos += 4;
+    camp.calendario = avancarPeriodos(camp.calendario, 4);
+    crescerImpulsos(camp, 4);
+    avancarMundo(content, camp);
+    processarCicloReino(camp, 4);
+    const msg = 'Você passou o dia supervisionando as obras, inspecionando os armazéns e organizando o feudo.';
+    set({ camp: { ...camp }, feed: [...get().feed, nf(msg, 'sistema')] });
+    await persistir(camp, set);
+    recomputarCena(get, set);
+    return msg;
+  },
+
+  async fundarCasaDinasticaAcao(nome, lema, corPrimaria, corSecundaria, figura) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = fundarCasaDinastica(camp, nome, lema, corPrimaria, corSecundaria, figura);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async nomearConselheiroAcao(cargo, npcId, nomeNpc) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = nomearConselheiro(camp, cargo, npcId, nomeNpc);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async removerConselheiroAcao(cargo) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = removerConselheiro(camp, cargo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async recrutarOficialAcao(npcId, nomeNpc) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = recrutarOficial(camp, npcId, nomeNpc);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async promoverOficialAcao(oficialId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = promoverOficial(camp, oficialId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async designarMissaoOficialAcao(oficialId, designacao) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = designarMissaoOficial(camp, oficialId, designacao);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async treinarOficiaisAcao(oficialId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = treinarOficiais(camp, oficialId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async celebrarCasamentoAcao(npcId, nomeNpc) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = celebrarCasamento(camp, npcId, nomeNpc);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async iniciarGestacaoAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = iniciarGestacao(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async darLuzHerdeiroAcao(nomeBebe, genero) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = darLuzHerdeiro(camp, nomeBebe, genero);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async designarHerdeiroAparenteAcao(filhoId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = designarHerdeiroAparente(camp, filhoId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async concederFeudoVassaloAcao(lordeNpcId, nomeLorde, feudoCedidoId, nomeFeudo) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = concederFeudoVassalo(camp, lordeNpcId, nomeLorde, feudoCedidoId, nomeFeudo);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async convocarLevasVassalosAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = convocarLevasVassalos(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async convocarAssembleiaGuerraAcao(alvoCidadeId, casusBelli) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = convocarAssembleiaGuerra(camp, alvoCidadeId, casusBelli);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async firmarTratadoPazAcao() {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = firmarTratadoPaz(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async iniciarTramaUsurpacaoAcao(alvoCidadeId, alvoNome, liderNpcId, liderNome) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = iniciarTramaUsurpacao(camp, alvoCidadeId, alvoNome, liderNpcId, liderNome);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;

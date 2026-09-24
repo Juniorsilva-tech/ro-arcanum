@@ -66,6 +66,28 @@ export const elencoDoContinente: NPC[] = [
     },
   },
   {
+    id: 'armeira_de_tessel',
+    nome: 'Vana do Fole',
+    idade: 42,
+    ocupacao: 'armeira da guarnição',
+    faccaoId: 'guarda',
+    localBase: 'tessel',
+    rotina: {
+      madrugada: 'tessel', manha: 'tessel', tarde: 'tessel',
+      entardecer: 'tessel', anoitecer: 'tessel', noite: 'tessel',
+    },
+    vozNarrativa: 'Voz rouca de fole e carvão batido, que fala avaliando lâminas pelo peso antes de olhar para quem as segura.',
+    personalidade: 'Retifica espadas tortas da leva militar com desprezo prático e forja armaduras de placa com honra intransigente.',
+    corpo: 'Braços grossos salpicados de cicatrizes de fagulhas incandescentes, avental de couro ensebado e mãos pesadas como martelos de forja.',
+    relacoes: [
+      { npc: 'sargenta_brila', tipo: 'aliada', nota: 'Conserta armaduras da guarnição sem fazer perguntas sobre a procedência do metal.' },
+    ],
+    segredo: {
+      conteudo: 'Guarda lingotes de ferro de alta pureza desviados das fundições de Corveira escondidos sob a bigorna da guarnição militar.',
+      comoDescobrir: 'Examinar o fundo oco da bigorna à noite, ou trazer-lhe minério raro para forjar.',
+    },
+  },
+  {
     id: 'ancia_pedravel',
     nome: 'Mora Quelha',
     idade: 71,
@@ -263,6 +285,28 @@ export const elencoDoContinente: NPC[] = [
     segredo: {
       conteudo: 'Puxou da rede funda uma caixa lacrada com o selo do porto, e não a abriu nem entregou. Está enterrada sob o barco dela.',
       comoDescobrir: 'Vê-la mexendo na areia sob o casco, ou ganhar confiança suficiente para ela pedir ajuda.',
+    },
+  },
+  {
+    id: 'ferreira_de_mareu',
+    nome: 'Kelda Cais',
+    idade: 37,
+    ocupacao: 'ferreira naval',
+    faccaoId: 'vila',
+    localBase: 'mareu',
+    rotina: {
+      madrugada: 'mareu', manha: 'mareu', tarde: 'mareu',
+      entardecer: 'mareu', anoitecer: 'mareu', noite: 'mareu',
+    },
+    vozNarrativa: 'Voz salgada e direta de quem martela âncoras e aros de quilha enquanto discute preços de navios sob a maresia.',
+    personalidade: 'Pragmática e incorruptível; sabe que ferro ruim no mar custa vidas inteiras e não entrega peça frouxa a ninguém.',
+    corpo: 'Ombros largos como vigas de carvalho, mãos calejadas manchadas de zarcão e fuligem marítima, cabelos castanhos amarrados com tiras de lona.',
+    relacoes: [
+      { npc: 'mestra_do_porto', tipo: 'rival', nota: 'Recusa-se a assinar laudos de segurança para navios que usam ferragens condenadas.' },
+    ],
+    segredo: {
+      conteudo: 'Forjou em segredo ganchos de abordagem e arpões de contrabando usados pela frota clandestina que opera na Baía dos Naufrágios.',
+      comoDescobrir: 'Achar o livro de encomendas sob a bancada do cais, ou confrontá-la com um arpão marcado.',
     },
   },
 

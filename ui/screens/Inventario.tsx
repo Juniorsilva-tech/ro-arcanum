@@ -14,6 +14,7 @@ import {
   ondeForjar,
   receitasDisponiveis,
   COMBUSTIVEL,
+  CATALISADORES,
   type Item,
   type ItemSlot,
 } from '@/engine';
@@ -54,14 +55,15 @@ export function Inventario() {
   const acaoMundo = useGame((s) => s.acaoMundo);
   const p = camp.personagem;
   const [ultimaForja, setUltimaForja] = useState<string | null>(null);
+  const [catalisadorSel, setCatalisadorSel] = useState<string | undefined>(undefined);
 
   // A forja só aparece onde se pode forjar (engine/forja.ts decide o lugar).
   const onde = ondeForjar(content, camp);
   const carvao = p.inventario[COMBUSTIVEL] ?? 0;
   const receitas = onde.pode ? receitasDisponiveis(camp).filter((r) => r.temMaterial) : [];
-  const forjarPeca = async (molde: string, material: string) => {
+  const forjarPeca = async (molde: string, material: string, catalisador?: string) => {
     const antes = p.itensForjados?.length ?? 0;
-    await acaoMundo({ tipo: 'forjar', molde, material });
+    await acaoMundo({ tipo: 'forjar', molde, material, catalisador });
     const depois = useGame.getState().camp?.personagem.itensForjados ?? [];
     setUltimaForja(depois.length > antes ? `Saiu da bigorna: ${depois[depois.length - 1].nome}.` : 'A forja não pegou. Veja o registro.');
   };
@@ -103,12 +105,39 @@ export function Inventario() {
                 </TextoMono>
               )}
               {item?.defesa ? <TextoMono style={{ color: cores.verdigris }}>+{item.defesa} defesa</TextoMono> : null}
+              {item?.afiacao && item.afiacao.cargas > 0 ? (
+                <TextoMono style={{ color: cores.ouro }}>
+                  afiada (+{item.afiacao.bonusDano} dano, {item.afiacao.cargas} combates)
+                </TextoMono>
+              ) : null}
+              {item?.tempera && item.tempera.cargas > 0 ? (
+                <TextoMono style={{ color: cores.ouro }}>
+                  temperada (+{item.tempera.bonusDefesa} def, {item.tempera.cargas} combates)
+                </TextoMono>
+              ) : null}
+              {item?.propriedadesEspeciais && item.propriedadesEspeciais.length > 0 ? (
+                <TextoMono style={{ color: cores.violeta }}>
+                  [{item.propriedadesEspeciais.join(', ')}]
+                </TextoMono>
+              ) : null}
             </View>
-            {item && (
-              <Pressable style={styles.miniBtn} onPress={() => desequiparSlot(s)}>
-                <Text style={styles.miniBtnTxt}>tirar</Text>
-              </Pressable>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {onde.pode && carvao >= 1 && item && (s === 'arma' || s === 'armadura' || s === 'escudo') && (
+                <Pressable
+                  style={[styles.miniBtn, { borderColor: cores.ouro, marginRight: esp.xs }]}
+                  onPress={() => acaoMundo({ tipo: 'temperar', itemId: id! })}
+                >
+                  <Text style={[styles.miniBtnTxt, { color: cores.ouro }]}>
+                    {s === 'arma' ? 'afiar' : 'temperar'}
+                  </Text>
+                </Pressable>
+              )}
+              {item && (
+                <Pressable style={styles.miniBtn} onPress={() => desequiparSlot(s)}>
+                  <Text style={styles.miniBtnTxt}>tirar</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         );
       })}
@@ -121,6 +150,15 @@ export function Inventario() {
             <View style={styles.itemTitulo}>
               <TextoSerif style={{ fontSize: 18, color: cores.vellum }}>{item.nome}</TextoSerif>
               {qtd > 1 && <TextoMono>×{qtd}</TextoMono>}
+              {item.afiacao && item.afiacao.cargas > 0 && (
+                <TextoMono style={{ color: cores.ouro }}>· afiada (+{item.afiacao.bonusDano})</TextoMono>
+              )}
+              {item.tempera && item.tempera.cargas > 0 && (
+                <TextoMono style={{ color: cores.ouro }}>· temperada (+{item.tempera.bonusDefesa})</TextoMono>
+              )}
+              {item.propriedadesEspeciais && item.propriedadesEspeciais.length > 0 && (
+                <TextoMono style={{ color: cores.violeta }}>· [{item.propriedadesEspeciais.join(', ')}]</TextoMono>
+              )}
               {item.raridade !== 'comum' && <Selo texto={item.raridade} cor={corRaridade(item.raridade)} />}
             </View>
             <TextoMono style={{ color: cores.mudo }}>{item.descricao}</TextoMono>
@@ -145,6 +183,11 @@ export function Inventario() {
             <Pressable style={[styles.miniBtn, { borderColor: cores.linha }]} onPress={() => venderItem(id)}>
               <Text style={[styles.miniBtnTxt, { color: cores.mudo }]}>vender</Text>
             </Pressable>
+            {onde.pode && (item.slot === 'arma' || item.slot === 'armadura' || item.slot === 'escudo') && item.raridade !== 'unica' && item.raridade !== 'mitica' && !item.contraOni && !item.id.includes('nichirin') && p.equipado[item.slot as 'arma'] !== id && (
+              <Pressable style={[styles.miniBtn, { borderColor: cores.cinabrio }]} onPress={() => acaoMundo({ tipo: 'desmanchar', itemId: id })}>
+                <Text style={[styles.miniBtnTxt, { color: cores.cinabrio }]}>desmanchar</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       ))}
@@ -158,6 +201,34 @@ export function Inventario() {
           </TextoMono>
           {ultimaForja && <TextoMono style={{ color: cores.verdigris }}>{ultimaForja}</TextoMono>}
           {carvao < 1 && <TextoMono>Sem carvão a forja é só uma pedra vazia.</TextoMono>}
+          {carvao >= 1 && (
+            (() => {
+              const catsDisponiveis = CATALISADORES.filter(c => (p.inventario[c.item] ?? 0) > 0);
+              if (catsDisponiveis.length === 0) return null;
+              return (
+                <View style={{ marginVertical: esp.sm }}>
+                  <TextoMono style={{ color: cores.ouro }}>Catalisador (opcional):</TextoMono>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: esp.xs, marginTop: esp.xs }}>
+                    <Pressable
+                      style={[styles.miniBtn, !catalisadorSel ? { borderColor: cores.verdigris } : { opacity: 0.6 }]}
+                      onPress={() => setCatalisadorSel(undefined)}
+                    >
+                      <Text style={[styles.miniBtnTxt, !catalisadorSel ? { color: cores.verdigris } : undefined]}>nenhum</Text>
+                    </Pressable>
+                    {catsDisponiveis.map(c => (
+                      <Pressable
+                        key={c.item}
+                        style={[styles.miniBtn, catalisadorSel === c.item ? { borderColor: cores.ouro } : { opacity: 0.6 }]}
+                        onPress={() => setCatalisadorSel(c.item === catalisadorSel ? undefined : c.item)}
+                      >
+                        <Text style={[styles.miniBtnTxt, catalisadorSel === c.item ? { color: cores.ouro } : undefined]}>{c.rotulo}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()
+          )}
           {carvao >= 1 && receitas.length === 0 && (
             <TextoMono>Falta material: minério, prata, lascas de gárgula, ossos, dentes, garras, couro ou peles.</TextoMono>
           )}
@@ -174,7 +245,7 @@ export function Inventario() {
                     {molde.defesa !== undefined ? ` · defesa base ${molde.defesa}` : ''}
                   </TextoMono>
                 </View>
-                <Pressable style={styles.miniBtn} onPress={() => forjarPeca(molde.id, material.item)}>
+                <Pressable style={styles.miniBtn} onPress={() => forjarPeca(molde.id, material.item, catalisadorSel)}>
                   <Text style={styles.miniBtnTxt}>forjar</Text>
                 </Pressable>
               </View>

@@ -35,6 +35,7 @@ const ICONES: { tela: Tela; glifo: string; nome: string }[] = [
   { tela: 'livro', glifo: '❧', nome: 'Livro' },
   { tela: 'inventario', glifo: '⚔', nome: 'Inventário' },
   { tela: 'missoes', glifo: '✦', nome: 'Missões' },
+  { tela: 'assentamento', glifo: '♜', nome: 'Feudo / Asora' },
   { tela: 'vinculos', glifo: '⚭', nome: 'Vínculos' },
   { tela: 'ficha', glifo: '✎', nome: 'Ficha' },
   { tela: 'cronica', glifo: '≡', nome: 'Crônica' },

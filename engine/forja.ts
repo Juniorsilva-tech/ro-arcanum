@@ -24,6 +24,7 @@
 //     escarlate e as mãos da vila dos ferreiros; é ponto de história, não de
 //     receita.
 import type { Campaign, ContentBundle, Item, PerfilDano, AttrKey, NPC } from './types';
+import { itemPorId } from './items';
 import { nextFloat } from './rng';
 import { calcularContexto } from './availability';
 import { maestriaDe, treinar, registrarDemonstracao } from './aptidao';
@@ -98,6 +99,27 @@ export const MATERIAIS: Material[] = [
   { item: 'pele_de_urso', rotulo: 'pele de urso', familia: 'couro', fator: 1.25 },
 ];
 
+// ── Catalisadores: infusão mística na têmpera ──────────────────────────────
+
+export type Catalisador = {
+  item: string;
+  rotulo: string;
+  propriedade: string;
+  bonusDano?: number;
+  bonusDefesa?: number;
+  suprimeMana?: boolean;
+  contraOni?: boolean;
+};
+
+/** Catalisadores raros retirados de bestas e relíquias que concedem propriedades especiais. */
+export const CATALISADORES: Catalisador[] = [
+  { item: 'anel_draupnir', rotulo: 'Draupnir', propriedade: 'suprimeMana', suprimeMana: true },
+  { item: 'glandula_de_veneno', rotulo: 'glândula peçonhenta', propriedade: 'venenosa' },
+  { item: 'cinza_de_mir', rotulo: 'cinza de Mir', propriedade: 'contraOni', contraOni: true },
+  { item: 'unha_de_carnical', rotulo: 'unha de carniçal', propriedade: 'critica', bonusDano: 3 },
+  { item: 'agua_do_espelho', rotulo: 'água do espelho', propriedade: 'espelhada', bonusDefesa: 2 },
+];
+
 /** O combustível. Uma medida por peça, sempre. */
 export const COMBUSTIVEL = 'carvao';
 
@@ -145,7 +167,8 @@ const OFICIO_DE_FERREIRA = /ferreir|forj|armeir|bigorna/i;
 export function ondeForjar(content: ContentBundle, camp: Campaign): { pode: boolean; ferreira?: NPC; motivo?: string } {
   const ctx = calcularContexto(content, camp);
   const ferreira = ctx.presentes.find(n => OFICIO_DE_FERREIRA.test(n.ocupacao ?? ''));
-  if (ctx.local.tipo === 'forja' || ferreira) return { pode: true, ferreira };
+  const instalacaoForja = ctx.local.tipo === 'forja' || ctx.local.pontos?.some(p => /ferraria|forja|bigorna/i.test(p));
+  if (instalacaoForja || ferreira) return { pode: true, ferreira };
   return { pode: false, motivo: 'Não há forja aqui, nem ferreira que empreste a bigorna.' };
 }
 
@@ -179,6 +202,7 @@ export function calcularPeca(
   q: number,
   id: string,
   ferreiroNome: string,
+  catalisador?: Catalisador,
 ): Item {
   const fator = material.fator * q;
   const teto = TETO_SOBRE_O_MOLDE;
@@ -193,18 +217,26 @@ export function calcularPeca(
       : qualidade === 'obra-prima' || qualidade === 'fina' ? 'notavel'
         : 'comum';
 
+  const sufixoCat = catalisador ? ` com ${catalisador.rotulo}` : '';
   const item: Item = {
     id,
-    nome: `${molde.nome} de ${material.rotulo}, ${adj}`,
-    descricao: `Forjad${molde.genero === 'f' ? 'a' : 'o'} por ${ferreiroNome}. Peça ${qualidade}.`,
+    nome: `${molde.nome} de ${material.rotulo}${sufixoCat}, ${adj}`,
+    descricao: `Forjad${molde.genero === 'f' ? 'a' : 'o'} por ${ferreiroNome}. Peça ${qualidade}${catalisador ? ` infundida com ${catalisador.rotulo}` : ''}.`,
     slot: molde.slot,
     peso: molde.peso,
-    valor: Math.max(1, Math.round(molde.valorBase * fator * q)),
+    valor: Math.max(1, Math.round(molde.valorBase * fator * q * (catalisador ? 1.3 : 1))),
     raridade,
   };
+  if (catalisador) {
+    item.catalisador = catalisador.item;
+    item.propriedadesEspeciais = [catalisador.propriedade];
+    if (catalisador.suprimeMana) item.suprimeMana = true;
+    if (catalisador.contraOni) item.contraOni = true;
+  }
   if (molde.dano) {
+    const danoBruto = Math.round(molde.dano.base * fator) + (catalisador?.bonusDano ?? 0);
     item.dano = {
-      base: Math.max(1, Math.min(Math.round(molde.dano.base * teto), Math.round(molde.dano.base * fator))),
+      base: Math.max(1, Math.min(Math.round(molde.dano.base * teto), danoBruto)),
       dispersao: molde.dano.dispersao,
       tipo: molde.dano.tipo,
     };
@@ -212,7 +244,8 @@ export function calcularPeca(
     if (molde.atributoAtaque) item.atributoAtaque = molde.atributoAtaque;
   }
   if (molde.defesa !== undefined) {
-    item.defesa = Math.max(1, Math.min(Math.round(molde.defesa * teto), Math.round(molde.defesa * fator)));
+    const defBruta = Math.round(molde.defesa * fator) + (catalisador?.bonusDefesa ?? 0);
+    item.defesa = Math.max(1, Math.min(Math.round(molde.defesa * teto), defBruta));
   }
   return item;
 }
@@ -226,6 +259,7 @@ export function forjar(
   camp: Campaign,
   moldeId: string,
   materialItem: string,
+  catalisadorItem?: string,
 ): ResultadoForja {
   const p = camp.personagem;
   if (camp.combate && !camp.combate.terminado) return { ok: false, texto: 'Termine o combate primeiro.' };
@@ -234,6 +268,15 @@ export function forjar(
   if (!molde || !material) return { ok: false, texto: 'Essa peça não se faz assim.' };
   if (!molde.aceita.includes(material.familia)) {
     return { ok: false, texto: `${molde.nome} não se faz de ${material.rotulo}.` };
+  }
+
+  let catalisador: Catalisador | undefined;
+  if (catalisadorItem) {
+    catalisador = CATALISADORES.find(c => c.item === catalisadorItem);
+    if (!catalisador) return { ok: false, texto: 'Catalisador desconhecido pela forja.' };
+    if ((p.inventario[catalisador.item] ?? 0) < 1) {
+      return { ok: false, texto: `Falta catalisador: você não tem ${catalisador.rotulo}.` };
+    }
   }
 
   const onde = ondeForjar(content, camp);
@@ -248,13 +291,19 @@ export function forjar(
   // O que entra na forja não volta.
   p.inventario[COMBUSTIVEL] -= 1;
   p.inventario[material.item] -= molde.quantidade;
+  if (catalisador) {
+    p.inventario[catalisador.item] -= 1;
+    if (p.inventario[catalisador.item] <= 0) {
+      delete p.inventario[catalisador.item];
+    }
+  }
 
   // A qualidade é da mão, medida ANTES de a peça treinar a mão: a lição desta
   // bigorna vale para a próxima peça, não para esta.
   const q = qualidadeDaMao(maestriaDe(camp, 'oficio'), nextFloat(camp.rng));
   const lista = (p.itensForjados ??= []);
   const id = `forjado_${lista.length + 1}`;
-  const item = calcularPeca(molde, material, q, id, p.nome);
+  const item = calcularPeca(molde, material, q, id, p.nome, catalisador);
   lista.push(item);
   p.inventario[id] = (p.inventario[id] ?? 0) + 1;
 
@@ -301,4 +350,184 @@ export function forjar(
     item,
     texto: `Você forja ${item.nome.toLowerCase()} (${detalhe}).`,
   };
+}
+
+// ── Desmanche de Espólios ─────────────────────────────────────────────────
+
+export type ResultadoDesmanche = { ok: boolean; texto: string; materialDevolvido?: { item: string; qtd: number } };
+
+export function desmanchar(
+  content: ContentBundle,
+  camp: Campaign,
+  itemId: string,
+): ResultadoDesmanche {
+  const p = camp.personagem;
+  if (camp.combate && !camp.combate.terminado) return { ok: false, texto: 'Termine o combate primeiro.' };
+
+  const onde = ondeForjar(content, camp);
+  if (!onde.pode) return { ok: false, texto: onde.motivo! };
+
+  if ((p.inventario[itemId] ?? 0) < 1) {
+    return { ok: false, texto: 'Você não tem essa peça no inventário.' };
+  }
+
+  if (p.equipado.arma === itemId || p.equipado.armadura === itemId || p.equipado.escudo === itemId || p.equipado.acessorio === itemId) {
+    return { ok: false, texto: 'Desequipe a peça antes de desmanchá-la.' };
+  }
+
+  const it = itemPorId(content, itemId, p);
+  if (!it) return { ok: false, texto: 'Peça não encontrada.' };
+
+  if (it.raridade === 'unica' || it.raridade === 'mitica' || it.contraOni || it.id.includes('nichirin')) {
+    return { ok: false, texto: 'Esta peça tem natureza sagrada ou imutável e não pode ser desmanchada.' };
+  }
+
+  if (it.slot !== 'arma' && it.slot !== 'armadura' && it.slot !== 'escudo') {
+    return { ok: false, texto: 'Apenas armas, armaduras e escudos podem ser desmanchados na bigorna.' };
+  }
+
+  // Identificar material devolvido
+  let materialId = 'minerio_de_ferro';
+  let qtd = 1;
+
+  const nomeMinusculo = it.nome.toLowerCase();
+  if (nomeMinusculo.includes('de prata') || it.id.includes('prata')) {
+    materialId = 'fio_de_prata';
+  } else if (nomeMinusculo.includes('de gárgula') || it.id.includes('gargula')) {
+    materialId = 'lasca_de_gargula';
+  } else if (nomeMinusculo.includes('de pedra funda') || it.id.includes('pedra')) {
+    materialId = 'estilhaco_de_pedra';
+  } else if (nomeMinusculo.includes('de osso') || it.id.includes('osso')) {
+    materialId = 'osso_limpo';
+  } else if (nomeMinusculo.includes('de dente de lobo') || it.id.includes('dente')) {
+    materialId = 'dente_lobo';
+  } else if (nomeMinusculo.includes('de garra') || it.id.includes('garra')) {
+    materialId = 'garra_curva';
+  } else if (nomeMinusculo.includes('de pele de urso') || it.id.includes('urso')) {
+    materialId = 'pele_de_urso';
+  } else if (nomeMinusculo.includes('de escama de junco') || it.id.includes('junco')) {
+    materialId = 'escama_de_junco';
+  } else if (nomeMinusculo.includes('couro') || it.id.includes('gibao') || (it.slot === 'armadura' && it.peso <= 5)) {
+    materialId = 'couro_cru';
+  } else {
+    materialId = 'minerio_de_ferro';
+    if (it.peso >= 6) {
+      qtd = 2;
+    }
+  }
+
+  // Consumir peça
+  p.inventario[itemId] = (p.inventario[itemId] ?? 1) - 1;
+  if (p.inventario[itemId] <= 0) {
+    delete p.inventario[itemId];
+  }
+  if (p.itensForjados) {
+    p.itensForjados = p.itensForjados.filter(f => f.id !== itemId);
+  }
+
+  // Entregar sucata/material
+  p.inventario[materialId] = (p.inventario[materialId] ?? 0) + qtd;
+
+  // Treino e tempo
+  treinar(content, camp, 'oficio', {
+    mestre: onde.ferreira ? 0.35 : 0.15,
+    esforco: 0.4,
+    recursos: 0.3,
+    observadorId: onde.ferreira?.id,
+  });
+
+  camp.calendario = avancarPeriodos(camp.calendario, 1);
+  crescerImpulsos(camp, 1);
+  camp.capitulo.periodosDecorridos += 1;
+  avancarMundo(content, camp);
+
+  const matItem = itemPorId(content, materialId, p);
+  const matNome = matItem?.nome ?? materialId;
+  return {
+    ok: true,
+    texto: `Você desmancha ${it.nome} na bigorna e recupera ${qtd}× ${matNome}.`,
+    materialDevolvido: { item: materialId, qtd },
+  };
+}
+
+// ── Afiação & Têmpera ─────────────────────────────────────────────────────
+
+export type ResultadoTempera = { ok: boolean; texto: string; item?: Item };
+
+export function temperar(
+  content: ContentBundle,
+  camp: Campaign,
+  itemId: string,
+): ResultadoTempera {
+  const p = camp.personagem;
+  if (camp.combate && !camp.combate.terminado) return { ok: false, texto: 'Termine o combate primeiro.' };
+
+  const onde = ondeForjar(content, camp);
+  if (!onde.pode) return { ok: false, texto: onde.motivo! };
+
+  if ((p.inventario[COMBUSTIVEL] ?? 0) < 1) {
+    return { ok: false, texto: 'Sem carvão a forja é só uma pedra vazia.' };
+  }
+
+  // O item precisa estar no inventário OU equipado pelo jogador
+  const estaEquipado = p.equipado.arma === itemId || p.equipado.armadura === itemId || p.equipado.escudo === itemId;
+  const temNoInventario = (p.inventario[itemId] ?? 0) >= 1;
+  if (!estaEquipado && !temNoInventario) {
+    return { ok: false, texto: 'Você não tem essa peça à mão.' };
+  }
+
+  const it = itemPorId(content, itemId, p);
+  if (!it) return { ok: false, texto: 'Peça não encontrada.' };
+
+  if (it.slot !== 'arma' && it.slot !== 'armadura' && it.slot !== 'escudo') {
+    return { ok: false, texto: 'Apenas armas (afiação) ou armaduras e escudos (têmpera) podem ser preparados na bigorna.' };
+  }
+
+  // Consome 1 carvão
+  p.inventario[COMBUSTIVEL] -= 1;
+
+  // Se o item já está em itensForjados, muta a instância do jogador
+  let itemAlvo = p.itensForjados?.find(i => i.id === itemId);
+  if (!itemAlvo) {
+    // É um item do catálogo: clona para itensForjados para isolar a instância
+    const lista = (p.itensForjados ??= []);
+    const novoId = `${itemId}_custom_${lista.length + 1}`;
+    itemAlvo = { ...it, id: novoId };
+    lista.push(itemAlvo);
+
+    // Ajusta referências
+    if (temNoInventario) {
+      p.inventario[itemId] = (p.inventario[itemId] ?? 1) - 1;
+      if (p.inventario[itemId] <= 0) delete p.inventario[itemId];
+      p.inventario[novoId] = 1;
+    }
+    for (const slot of ['arma', 'armadura', 'escudo'] as const) {
+      if (p.equipado[slot] === itemId) {
+        p.equipado[slot] = novoId;
+      }
+    }
+  }
+
+  let mensagem = '';
+  if (itemAlvo.slot === 'arma') {
+    itemAlvo.afiacao = { cargas: 5, bonusDano: 2 };
+    mensagem = `Você afia ${itemAlvo.nome} no rebolo (+2 de dano pelos próximos 5 combates).`;
+  } else {
+    itemAlvo.tempera = { cargas: 5, bonusDefesa: 2 };
+    mensagem = `Você tempera ${itemAlvo.nome} no banho de salmoura (+2 de defesa pelos próximos 5 combates).`;
+  }
+
+  treinar(content, camp, 'oficio', {
+    mestre: onde.ferreira ? 0.45 : 0.2,
+    esforco: 0.5,
+    recursos: 0.4,
+    observadorId: onde.ferreira?.id,
+  });
+
+  camp.calendario = avancarPeriodos(camp.calendario, 1);
+  crescerImpulsos(camp, 1);
+  camp.capitulo.periodosDecorridos += 1;
+  avancarMundo(content, camp);
+
+  return { ok: true, texto: mensagem, item: itemAlvo };
 }

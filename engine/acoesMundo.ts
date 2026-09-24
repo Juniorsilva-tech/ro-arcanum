@@ -17,17 +17,51 @@ import { localEfetivo } from './historiaViva';
 import { treinarNpc } from './progressaoNpc';
 import { concederDespertar } from './progresso';
 import { multiplicadorDeDescanso, condicoesTratadasAoDescansar } from './classe';
-import { forjar } from './forja';
+import { forjar, desmanchar, temperar } from './forja';
+import {
+  aceitarContrato,
+  investigarPista,
+  aplicarOleoAlquimico,
+  iniciarConfrontoContrato,
+} from './contratosMonstros';
+import {
+  treinarKatasCincoElementos,
+  treinarCalejamentoPalmaDeFerro,
+  meditarSobCascata,
+  treinarEsgrimaNiten,
+} from './treinamentoImersivo';
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
-  | { tipo: 'forjar'; molde: string; material: string }
+  | { tipo: 'forjar'; molde: string; material: string; catalisador?: string }
+  | { tipo: 'desmanchar'; itemId: string }
+  | { tipo: 'temperar'; itemId: string }
   | { tipo: 'treinar_companheiro'; npcId: string }
   | { tipo: 'consolidar_legado' }
   | { tipo: 'missao'; id: string; escolha: 'aceitar' | 'ajudar' | 'negociar' | 'investigar' | 'confrontar' }
   | { tipo: 'obra'; edificio: TipoEdificio }
   | { tipo: 'trabalhar' | 'descansar' | 'noticias' | 'libertar_se' | 'conter_se' }
-  | { tipo: 'diplomacia'; a: string; b: string; escolha: 'mediar' | 'espionar' };
+  | { tipo: 'diplomacia'; a: string; b: string; escolha: 'mediar' | 'espionar' }
+  | {
+      tipo: 'treino_imersivo';
+      modalidade: 'katas' | 'palma_ferro' | 'cascata' | 'niten';
+      elemento?: 'terra' | 'agua' | 'fogo' | 'vento' | 'vazio';
+    }
+  | {
+      tipo: 'contrato_monstro';
+      contratoId: string;
+      subacao: 'aceitar' | 'investigar' | 'preparar_oleo' | 'confrontar';
+      pistaId?: string;
+      oleoId?: string;
+    }
+  | {
+      tipo: 'trabalho_especializado';
+      trabalhoId:
+        | 'extracao_fenda_corveira'
+        | 'estiva_docas_mareu'
+        | 'patrulha_muralha_tessel'
+        | 'cacada_contrato_witcher';
+    };
 export type ResultadoAcaoMundo = { ok: boolean; texto: string; combate?: boolean };
 
 export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: AcaoMundo): ResultadoAcaoMundo {
@@ -94,7 +128,15 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
   // A forja cuida do próprio tempo (engine/forja.ts): avança os períodos e o
   // mundo ela mesma, porque o tempo gasto depende de a peça ter saído ou não.
   if (acao.tipo === 'forjar') {
-    const r = forjar(content, camp, acao.molde, acao.material);
+    const r = forjar(content, camp, acao.molde, acao.material, acao.catalisador);
+    return { ok: r.ok, texto: r.texto };
+  }
+  if (acao.tipo === 'desmanchar') {
+    const r = desmanchar(content, camp, acao.itemId);
+    return { ok: r.ok, texto: r.texto };
+  }
+  if (acao.tipo === 'temperar') {
+    const r = temperar(content, camp, acao.itemId);
     return { ok: r.ok, texto: r.texto };
   }
   if (acao.tipo === 'descansar') {
@@ -113,6 +155,89 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     if (!c || !local || c.tesouro < 6 || camp.continuidade!.locais[local].populacao === 0) return { ok: false, texto: 'Não há trabalho pago disponível nesta comunidade.' };
     c.tesouro -= 6; p.dinheiro += 6; c.materiais = Math.min(250, c.materiais + 3);
     return terminar('Você trabalhou na comunidade e recebeu 6 moedas.', 2);
+  }
+  if (acao.tipo === 'trabalho_especializado') {
+    let renda = 10;
+    let periodos = 2;
+    let msg = '';
+    switch (acao.trabalhoId) {
+      case 'extracao_fenda_corveira': {
+        renda = 24;
+        periodos = 3;
+        p.pericias.atletismo = (p.pericias.atletismo ?? 0) + 1;
+        p.inventario.minerio_de_ferro = (p.inventario.minerio_de_ferro ?? 0) + 2;
+        msg = 'Você completou o turno pesado na Fenda de Corveira, extraindo blocos de ferro puro (+24 moedas, +2 minérios, +1 Atletismo).';
+        break;
+      }
+      case 'estiva_docas_mareu': {
+        renda = 18;
+        periodos = 2;
+        p.pericias.atletismo = (p.pericias.atletismo ?? 0) + 1;
+        msg = 'Você trabalhou na estiva e amarração de naus nas docas de Mareu (+18 moedas, +1 Atletismo).';
+        break;
+      }
+      case 'patrulha_muralha_tessel': {
+        renda = 22;
+        periodos = 3;
+        p.pericias.perceber = (p.pericias.perceber ?? 0) + 1;
+        msg = 'Você montou guarda nas muralhas de gelo do Sulco de Tessel (+22 moedas, +1 Perceber).';
+        break;
+      }
+      case 'cacada_contrato_witcher': {
+        renda = 45;
+        periodos = 3;
+        p.pericias.rastrear = (p.pericias.rastrear ?? 0) + 1;
+        msg = 'Você cumpriu serviços de rastreamento e eliminação de ameaças pelo quadro da guilda (+45 moedas, +1 Rastrear).';
+        break;
+      }
+    }
+    p.dinheiro += renda;
+    return terminar(msg, periodos);
+  }
+  if (acao.tipo === 'treino_imersivo') {
+    switch (acao.modalidade) {
+      case 'katas': {
+        const res = treinarKatasCincoElementos(camp, acao.elemento ?? 'terra');
+        if (!res.ok) return { ok: false, texto: res.mensagem };
+        return terminar(res.mensagem, 2);
+      }
+      case 'palma_ferro': {
+        const res = treinarCalejamentoPalmaDeFerro(camp);
+        if (!res.ok) return { ok: false, texto: res.mensagem };
+        return terminar(res.mensagem, 2);
+      }
+      case 'cascata': {
+        const res = meditarSobCascata(camp);
+        if (!res.ok) return { ok: false, texto: res.mensagem };
+        return terminar(res.mensagem, 2);
+      }
+      case 'niten': {
+        const res = treinarEsgrimaNiten(camp);
+        if (!res.ok) return { ok: false, texto: res.mensagem };
+        return terminar(res.mensagem, 2);
+      }
+    }
+  }
+  if (acao.tipo === 'contrato_monstro') {
+    switch (acao.subacao) {
+      case 'aceitar': {
+        const res = aceitarContrato(camp, acao.contratoId);
+        return { ok: res.ok, texto: res.mensagem };
+      }
+      case 'investigar': {
+        const res = investigarPista(camp, acao.contratoId, acao.pistaId ?? '');
+        return terminar(res.mensagem, 1);
+      }
+      case 'preparar_oleo': {
+        const res = aplicarOleoAlquimico(camp, acao.oleoId ?? '', content);
+        return { ok: res.ok, texto: res.mensagem };
+      }
+      case 'confrontar': {
+        const res = iniciarConfrontoContrato(camp, acao.contratoId, content);
+        if (!res.ok) return { ok: false, texto: res.mensagem };
+        return { ok: true, texto: res.mensagem, combate: true };
+      }
+    }
   }
   if (acao.tipo === 'obra') {
     if (!local || local !== camp.localAtual || !c) return { ok: false, texto: 'Visite o centro da comunidade para propor uma obra.' };

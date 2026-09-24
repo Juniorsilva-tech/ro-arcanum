@@ -14,7 +14,7 @@ import type {
 import { probabilidade, calcularDano } from './resolution';
 import { nextFloat, nextInt, pick } from './rng';
 import { modificador, clampRecursos } from './character';
-import { bonusDefesaEquip, armaEquipada } from './items';
+import { bonusDefesaEquip, armaEquipada, itemPorId } from './items';
 import { periodoAtual, avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
 import { aplicarFerimentoOni, haAbrigoSolar, obterRival, registrarConfronto, VERSAO_COMBATE } from './kimetsu';
@@ -33,6 +33,12 @@ import {
   multiplicadorDeArte,
   efeitoEspadachimAsora,
   bonusArqueiroAzusa,
+  CLASSE_MESTRE_MARCIAL,
+  CLASSE_LUTADOR,
+  ehClasseLutador,
+  danoMarcialDesarmado,
+  tentativaQuebraDeEspada,
+  bonificacaoNitenMusashi,
 } from './classe';
 import { multiplicadoresDeIdentidade } from './identidade';
 import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
@@ -224,10 +230,40 @@ export function acertoJogador(content: ContentBundle, camp: Campaign): number {
 export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano {
   const p = camp.personagem;
   const arma = armaEquipada(content, p);
-  const perfil: PerfilDano = arma?.dano ?? { base: 3, dispersao: 0.4, tipo: 'desarmado' };
-  const attr: AttrKey = arma?.atributoAtaque ?? 'fisico';
+  const ehDesarmadoOuMarcial =
+    !arma ||
+    arma.tipoArma === 'desarmado' ||
+    arma.id === 'punho_de_ferro' ||
+    arma.id === 'faixas_marciais' ||
+    arma.id.startsWith('manoplas');
+
+  let perfil: PerfilDano;
+  const ehLutador = ehClasseLutador(camp);
+  if (ehLutador && ehDesarmadoOuMarcial) {
+    const marcial = danoMarcialDesarmado(camp, {
+      id: 'jogador',
+      nome: p.nome,
+      ehJogador: true,
+      vida: p.recursos.vida,
+      vidaMax: p.recursosMax.vida,
+      defesa: 10,
+      acerto: 10,
+      condicoes: [],
+    });
+    const armaBase = arma?.dano?.base ?? 0;
+    perfil = {
+      base: marcial.base + (armaBase > 8 ? armaBase - 8 : 0),
+      dispersao: marcial.dispersao,
+      tipo: 'contusão',
+    };
+  } else {
+    perfil = arma?.dano ?? { base: 3, dispersao: 0.4, tipo: 'desarmado' };
+  }
+
+  const attr: AttrKey = arma?.atributoAtaque ?? (ehLutador ? 'precisao' : 'fisico');
+  const bonusAfiacao = (arma?.afiacao && arma.afiacao.cargas > 0) ? arma.afiacao.bonusDano : 0;
   const eficiencia = 1 + maestriaDe(camp, 'espada') / 200;
-  const base = perfil.base * eficiencia
+  const base = (perfil.base + bonusAfiacao) * eficiencia
     + Math.max(0, modificador(p.atributos[attr]))
     + Math.floor(p.nivel / 3);
 
@@ -443,8 +479,35 @@ function resolverAtaque(
   perfil: PerfilDano,
   contraOni = false,
 ): string {
+  if (atacante.armaQuebrada) {
+    perfil = { base: 3, dispersao: 0.4, tipo: 'desarmado' };
+  }
+
+  let notaQuebra = '';
+  const podeQuebrarArma =
+    alvo.ehJogador &&
+    !atacante.ehJogador &&
+    !atacante.armaQuebrada &&
+    !atacante.oni &&
+    !atacante.criaturaId?.startsWith('besta_') &&
+    (ehClasseLutador(camp) ||
+      camp.personagem.equipado.arma?.startsWith('manoplas') ||
+      (camp.personagem.itensForjados?.some((i) => i.id === camp.personagem.equipado.arma && i.quebraArmas) ?? false));
+
+  if (podeQuebrarArma) {
+    const rollQuebra = Math.floor(nextFloat(camp.rng) * 20) + 1;
+    const tentativa = tentativaQuebraDeEspada(camp, alvo, atacante, rollQuebra);
+    if (tentativa.quebrou && tentativa.mensagem) {
+      camp.combate?.log.push(tentativa.mensagem);
+      atacante.dano = { base: 3, dispersao: 0.4, tipo: 'desarmado' };
+      perfil = { base: 3, dispersao: 0.4, tipo: 'desarmado' };
+      notaQuebra = ' [Lâmina Quebrada: a espada do adversário foi partida ao meio!]';
+    }
+  }
+
   const evasao = (alvo.tatico?.esquiva ?? 0) > 0;
   const kyudo = bonusArqueiroAzusa(camp, atacante, alvo);
+  const niten = bonificacaoNitenMusashi(camp, atacante);
   const defCobertura = kyudo.anulaCobertura ? 0 : alvo.posicao === 'cobertura' ? 3 : 0;
   const defEfetiva =
     alvo.defesa +
@@ -462,17 +525,38 @@ function resolverAtaque(
           ? -2
           : 0;
   const foco = bonusDeFoco(camp, atacante, alvo.id);
-  const p = probabilidade(atacante.acerto + posicao + foco + kyudo.bonusAcerto, defEfetiva, 4);
+  const defAposPenetracao = Math.max(0, Math.round(defEfetiva * (1 - niten.penetracaoArmadura)));
+  const p = probabilidade(atacante.acerto + posicao + foco + kyudo.bonusAcerto + niten.bonusAcerto, defAposPenetracao, 4);
   const r = nextFloat(camp.rng);
   if (r >= p) {
     registrarFoco(camp, atacante, alvo.id, false);
-    return `${atacante.nome} ataca ${alvo.nome} e erra.`;
+    return `${atacante.nome} ataca ${alvo.nome} e erra.${notaQuebra}`;
   }
   registrarFoco(camp, atacante, alvo.id, true);
   const efeitoAsora = efeitoEspadachimAsora(camp, atacante, alvo.id);
-  const crit = r < p * (atacante.janelaCritica ?? 0.25) || efeitoAsora.ruptura;
+  const crit = r < p * ((atacante.janelaCritica ?? 0.25) + niten.bonusCritico) || efeitoAsora.ruptura;
   const dano = calcularDano(camp.rng, perfil, crit);
   dano.valor += efeitoAsora.bonusDano;
+
+  let notaOleo = '';
+  const oleo = atacante.oleoAtivo ?? camp.contratosMonstro?.oleoAtivo;
+  if (atacante.ehJogador && oleo && oleo.combatesRestantes > 0) {
+    const ehOni = alvo.oni || alvo.criaturaId?.includes('oni');
+    const ehFera = alvo.criaturaId?.includes('lobo') || alvo.criaturaId?.includes('urso') || alvo.criaturaId?.includes('besta');
+    const ehMortoVivo = alvo.criaturaId?.includes('carnical') || alvo.criaturaId?.includes('esqueleto') || alvo.criaturaId?.includes('zumbi');
+    const ehMonstro = alvo.criaturaId?.includes('gargula') || alvo.criaturaId?.includes('quimera') || alvo.criaturaId?.includes('abissal');
+
+    let combina = false;
+    if (oleo.tipoAlvo === 'oni' && ehOni) combina = true;
+    if (oleo.tipoAlvo === 'fera' && ehFera) combina = true;
+    if (oleo.tipoAlvo === 'morto_vivo' && ehMortoVivo) combina = true;
+    if (oleo.tipoAlvo === 'monstro' && ehMonstro) combina = true;
+
+    if (combina) {
+      dano.valor += oleo.bonusDano;
+      notaOleo = ` [Óleo Especializado: +${oleo.bonusDano} de dano contra ${oleo.tipoAlvo}!]`;
+    }
+  }
   if ((alvo.tatico?.guarda ?? 0) > 0) {
     if (efeitoAsora.ignoraGuarda) {
       alvo.tatico!.guarda = 0;
@@ -535,6 +619,17 @@ function resolverAtaque(
       ? ` ${alvo.nome} cai de joelhos, exausto e subjugado pelo seu oceano imensurável de mana!`
       : ` ${alvo.nome} cai.`
     : '';
+  let notaVeneno = '';
+  const armaId = camp.personagem.equipado.arma;
+  const armaEquip = camp.personagem.itensForjados?.find(i => i.id === armaId);
+  const ehVenenosa = atacante.ehJogador && (armaEquip?.propriedadesEspeciais?.includes('venenosa') || false);
+  if (ehVenenosa && dano.valor > 0) {
+    (alvo.tatico ??= {}).veneno = Math.max(alvo.tatico?.veneno ?? 0, 3);
+    if (!alvo.condicoes.includes('envenenado')) {
+      alvo.condicoes.push('envenenado');
+    }
+    notaVeneno = ' [Peçonha: lâmina inocula veneno!]';
+  }
   const lesao = alvo.vida > 0 ? avaliarAmputacao(camp, alvo, dano.valor) : undefined;
   const notaRuptura = efeitoAsora.ruptura ? ' [Ruptura de Asora: o corte fatiou a guarda!]' : '';
   // Ordinary Nichirin enables finishing; suppression requires a separate effect.
@@ -542,7 +637,7 @@ function resolverAtaque(
   if (alvo.vida > 0 && alvo.oni && contraOni) {
     notaOni = ` Nichirin pode finalizar esse oni quando sua postura ceder.`;
   }
-  return `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''} — ${dano.valor} de dano ${dano.tipo}.${notaRuptura}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
+  return `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''} — ${dano.valor} de dano ${dano.tipo}.${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
 }
 
 // ── Ações do jogador ────────────────────────────────────────────────
@@ -1309,6 +1404,33 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     const nomes = loot.map((id) => content.itens.find((i) => i.id === id)?.nome ?? id);
     const bolso = moedasAchadas > 0 ? ` · ${moedasAchadas} moedas` : '';
     s.log.push(`Vitória. ${xp} de experiência${bolso}${nomes.length ? ` · saque: ${nomes.join(', ')}` : ''}.`);
+
+    // ── Consumo de Óleo Alquímico (Witcher) ──────────────────────────
+    if (camp.contratosMonstro?.oleoAtivo) {
+      camp.contratosMonstro.oleoAtivo.combatesRestantes--;
+      if (camp.contratosMonstro.oleoAtivo.combatesRestantes <= 0) {
+        s.log.push(`O efeito do óleo alquímico (${camp.contratosMonstro.oleoAtivo.nomeOleo}) se esgotou da sua lâmina.`);
+        delete camp.contratosMonstro.oleoAtivo;
+      }
+    }
+
+    // ── Resolução de Contratos de Caça a Monstros ───────────────────
+    if (camp.contratosMonstro?.contratos) {
+      for (const a of s.atores.filter(x => !x.ehJogador && !x.ehAliado)) {
+        if (a.criaturaId) {
+          for (const contrato of Object.values(camp.contratosMonstro.contratos)) {
+            if (contrato.criaturaId === a.criaturaId && contrato.estado === 'pronto_para_confronto') {
+              contrato.estado = 'concluido';
+              p.dinheiro += contrato.recompensaMoedas;
+              p.xp += contrato.recompensaXp;
+              p.inventario[contrato.trofeuId] = (p.inventario[contrato.trofeuId] ?? 0) + 1;
+              s.log.push(`[Contrato Concluído: ${contrato.titulo}] Você abateu ${contrato.monstroNome}! Recompensa: +${contrato.recompensaMoedas} moedas, +${contrato.recompensaXp} XP e o troféu foi recolhido.`);
+              registrarMarco(camp, `completou o contrato de caça de ${contrato.monstroNome}`);
+            }
+          }
+        }
+      }
+    }
   } else if (resultado === 'derrota') {
     // GDD §15: sobrevive com sequela; o inimigo leva algo seu.
     p.recursos.vida = 1;
@@ -1340,6 +1462,28 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     }
   }
   clampRecursos(p);
+
+  // Consumo de cargas de afiação e têmpera após o combate
+  if (content) {
+    const arma = armaEquipada(content, p);
+    if (arma?.afiacao && arma.afiacao.cargas > 0) {
+      arma.afiacao.cargas -= 1;
+      if (arma.afiacao.cargas <= 0) {
+        delete arma.afiacao;
+      }
+    }
+    for (const slot of ['armadura', 'escudo'] as const) {
+      const id = p.equipado[slot];
+      if (!id) continue;
+      const equip = itemPorId(content, id, p);
+      if (equip?.tempera && equip.tempera.cargas > 0) {
+        equip.tempera.cargas -= 1;
+        if (equip.tempera.cargas <= 0) {
+          delete equip.tempera;
+        }
+      }
+    }
+  }
 }
 
 export function fecharCombate(camp: Campaign): void {

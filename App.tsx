@@ -17,6 +17,7 @@ import { Inventario } from './ui/screens/Inventario';
 import { Loja } from './ui/screens/Loja';
 import { Combate } from './ui/screens/Combate';
 import { PrologoInfancia } from './ui/screens/Prologo';
+import { Assentamento } from './ui/screens/Assentamento';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -97,6 +98,8 @@ function roteia(tela: string) {
       return <Combate />;
     case 'missoes':
       return <Missoes />;
+    case 'assentamento':
+      return <Assentamento />;
     case 'fimcapitulo':
       return <FimCapitulo />;
     default:

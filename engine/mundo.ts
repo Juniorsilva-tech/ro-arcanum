@@ -22,6 +22,7 @@ import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
 import { processarCasas } from './casas';
 import { avancarCicloSubespaco } from './tsukimichi';
+import { processarCicloReino } from './reino';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -218,6 +219,9 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarMundoVivo(content, camp);
     if (camp.asora?.desbloqueado) {
       avancarCicloSubespaco(camp);
+    }
+    if (camp.feudo?.fundado) {
+      processarCicloReino(camp, 4);
     }
     m.diaProcessado = dia;
   }

@@ -102,4 +102,17 @@ export const classesVaelhorn: Classe[] = [
     equipInicial: { arma: 'bastao_ferrado', armadura: 'habito_de_la' },
     artesIniciais: ['coragem', 'palavra_de_calma'],
   },
+  {
+    id: 'lutador',
+    nome: 'Lutador',
+    recursoPrincipal: 'vigor',
+    mecanicaUnica: 'Combate Desarmado e Quebra de Lâmina: causa dano contundente com punhos nus e manoplas, e pode quebrar a arma do inimigo ao contra-atacar.',
+    descricao:
+      'Rejeita o aço como muleta. Condicionou os nós dos dedos, as canelas e o fôlego nas brigas de chão e na poeira das estradas. Luta com as próprias mãos — e aprendeu a medir o tempo exato para aparar e quebrar a lâmina de quem vem armado.',
+    bonusAtributos: { fisico: 2, precisao: 2 },
+    periciasIniciais: { atletismo: 2, perceber: 1, intimidar: 1 },
+    itensIniciais: { faixas_marciais: 1, roupa_acolchoada: 1, unguento_de_sebo: 2, racao: 3 },
+    equipInicial: { arma: 'faixas_marciais', armadura: 'roupa_acolchoada' },
+    artesIniciais: ['palma_de_ferro', 'partir_espada'],
+  },
 ];
