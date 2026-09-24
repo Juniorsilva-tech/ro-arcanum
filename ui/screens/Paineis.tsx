@@ -1201,7 +1201,7 @@ export function Mapa() {
       <ComunidadeViva />
 
       <Divisor label="mapa do mundo conhecido" />
-      <MapaVisual content={content} camp={camp} />
+      <MapaVisual content={content} camp={camp} onViajar={viajar} />
 
       <Divisor label="para onde ir" />
       {/* Lugar oculto nao entra na lista ate ser descoberto (engine/viagem.ts). */}
