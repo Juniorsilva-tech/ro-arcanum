@@ -13,12 +13,13 @@ import { iniciarCombate } from './combat';
 import { itemPorId } from './items';
 import { nextFloat } from './rng';
 import { modificador } from './character';
+import { emLocal } from './memoriaMundo';
 
 export const CONTRATOS_INICIAIS_VAELHORN: ContratoMonstro[] = [
   {
     id: 'contrato_lobo_val_cinza',
     titulo: 'O Terror das Caravanas de Val-Cinza',
-    contratante: 'Companhia Mercante de Halvet',
+    contratante: 'As mercadoras da Feira Coberta',
     localId: 'floresta',
     monstroNome: 'Lobo Alpha de Val-Cinza',
     criaturaId: 'lobo_alpha_val_cinza',
@@ -57,7 +58,7 @@ export const CONTRATOS_INICIAIS_VAELHORN: ContratoMonstro[] = [
   {
     id: 'contrato_gargula_mir',
     titulo: 'A Sombra Pétrea das Ruínas de Mir',
-    contratante: 'Capítulo da Fé dos Penitentes',
+    contratante: 'A Capela de São Vandro',
     localId: 'ruinas',
     monstroNome: 'Gárgula Abissal de Mir',
     criaturaId: 'gargula_abissal_mir',
@@ -96,8 +97,8 @@ export const CONTRATOS_INICIAIS_VAELHORN: ContratoMonstro[] = [
   {
     id: 'contrato_oni_pantano',
     titulo: 'O Devorador dos Pântanos da Fronteira',
-    contratante: 'Guarnição da Fronteira de Tessel',
-    localId: 'pantano',
+    contratante: 'As pescadoras de Juncal de Baixo',
+    localId: 'charco_juncal',
     monstroNome: 'Oni Carniceiro da Fronteira',
     criaturaId: 'oni_carniceiro_fronteira',
     categoriaAlvo: 'oni',
@@ -134,9 +135,9 @@ export const CONTRATOS_INICIAIS_VAELHORN: ContratoMonstro[] = [
   },
   {
     id: 'contrato_quimera_sulco',
-    titulo: 'A Asas da Tempestade nas Alturas do Sulco',
-    contratante: 'Baronato da Casa Corveira',
-    localId: 'montanhas',
+    titulo: 'As Asas da Tempestade no Passo do Lobo',
+    contratante: 'Casa Tessel',
+    localId: 'passo_lobo',
     monstroNome: 'Quimera Alada do Sulco',
     criaturaId: 'quimera_do_sulco',
     categoriaAlvo: 'monstro',
@@ -173,10 +174,31 @@ export const CONTRATOS_INICIAIS_VAELHORN: ContratoMonstro[] = [
   },
 ];
 
+/** Onde fica o quadro de contratos. */
+export const LOCAIS_DO_QUADRO = ['taverna', 'mercado'];
+
+/** "na Mata de Corvos", "em Tessel": o lugar pronto para o meio da frase. */
+function nomeDoLugar(content: ContentBundle | undefined, id: string): string {
+  const nome = content?.locais.find(l => l.id === id)?.nome ?? id;
+  const em = emLocal(nome);
+  return em.charAt(0).toLowerCase() + em.slice(1);
+}
+
 /**
  * Garante que a campanha possui a estrutura de contratos inicializada.
  */
 export function inicializarQuadroContratos(camp: Campaign): ContratosMonstroCampanha {
+  // Saves de antes da sessão 54 guardaram cópias com lugares que não existem
+  // ('pantano', 'montanhas') e contratantes antigos: os campos fixos do
+  // contrato voltam a ser os do conteúdo; o estado (aceito, pistas achadas)
+  // continua o do save.
+  if (camp.contratosMonstro) {
+    for (const base of CONTRATOS_INICIAIS_VAELHORN) {
+      const c = camp.contratosMonstro.contratos[base.id];
+      if (!c) continue;
+      c.titulo = base.titulo; c.contratante = base.contratante; c.localId = base.localId; c.descricao = base.descricao;
+    }
+  }
   if (!camp.contratosMonstro) {
     const mapa: Record<string, ContratoMonstro> = {};
     for (const c of CONTRATOS_INICIAIS_VAELHORN) {
@@ -207,6 +229,7 @@ export function listarContratos(camp: Campaign): ContratoMonstro[] {
 export function aceitarContrato(
   camp: Campaign,
   contratoId: string,
+  content?: ContentBundle,
 ): { ok: boolean; mensagem: string } {
   const quadro = inicializarQuadroContratos(camp);
   const contrato = quadro.contratos[contratoId];
@@ -217,8 +240,12 @@ export function aceitarContrato(
     return { ok: false, mensagem: `O contrato já se encontra no estado: ${contrato.estado}.` };
   }
 
+  if (!LOCAIS_DO_QUADRO.includes(camp.localAtual)) {
+    return { ok: false, mensagem: 'O quadro de contratos fica na taverna e na Feira Coberta.' };
+  }
   contrato.estado = 'investigando';
-  const msg = `Você aceitou o contrato "${contrato.titulo}". Contratante: ${contrato.contratante}. Localização: ${contrato.localId}. Investigue as pistas no local e prepare seus óleos antes do confronto.`;
+  const onde = nomeDoLugar(content, contrato.localId);
+  const msg = `Você aceitou o contrato "${contrato.titulo}". Quem paga: ${contrato.contratante}. O rastro começa ${onde}: procure as pistas lá antes de ir atrás do bicho.`;
   camp.cronica.push({ turno: camp.turno, texto: msg, tipo: 'sistema' });
   return { ok: true, mensagem: msg };
 }
@@ -231,6 +258,7 @@ export function investigarPista(
   camp: Campaign,
   contratoId: string,
   pistaId: string,
+  content?: ContentBundle,
 ): { ok: boolean; sucesso: boolean; mensagem: string; todasReveladas: boolean } {
   const quadro = inicializarQuadroContratos(camp);
   const contrato = quadro.contratos[contratoId];
@@ -241,6 +269,9 @@ export function investigarPista(
     return { ok: false, sucesso: false, mensagem: 'O contrato não está na fase de investigação.', todasReveladas: false };
   }
 
+  if (camp.localAtual !== contrato.localId) {
+    return { ok: false, sucesso: false, mensagem: `As pistas deste contrato estão ${nomeDoLugar(content, contrato.localId)}.`, todasReveladas: false };
+  }
   const pista = contrato.pistas.find((p) => p.id === pistaId);
   if (!pista) {
     return { ok: false, sucesso: false, mensagem: 'Pista não encontrada no contrato.', todasReveladas: false };
@@ -263,12 +294,13 @@ export function investigarPista(
       contrato.estado = 'pronto_para_confronto';
     }
 
-    const msg = `[Investigação Sucesso (Rolagem: ${total} vs ${dif})] Você descobriu a pista: "${pista.descricao}". Fraqueza confirmada: banhe sua arma com [${contrato.fraquezaOleo}] para máxima eficácia.${todas ? ' Todas as pistas foram desvendadas! O monstro foi localizado e está pronto para o confronto!' : ''}`;
+    const oleo = (content && itemPorId(content, contrato.fraquezaOleo)?.nome) ?? contrato.fraquezaOleo;
+    const msg = `Você encontra o que procurava: ${pista.descricao.charAt(0).toLowerCase()}${pista.descricao.slice(1)} Isso confirma a fraqueza — ${oleo} na lâmina faz diferença contra ele.${todas ? ' Com todas as pistas juntas, você sabe onde o bicho dorme: dá para ir atrás dele.' : ''}`;
     camp.cronica.push({ turno: camp.turno, texto: msg, tipo: 'sistema' });
     return { ok: true, sucesso: true, mensagem: msg, todasReveladas: todas };
   }
 
-  const falhaMsg = `[Investigação Falha (Rolagem: ${total} vs ${dif})] O terreno e a neblina mascararam os vestígios da besta. Tente novamente ou use ferramentas adequadas.`;
+  const falhaMsg = 'O terreno e a neblina esconderam o rastro. Hoje não deu; dá para tentar de novo.';
   return { ok: true, sucesso: false, mensagem: falhaMsg, todasReveladas: false };
 }
 
@@ -307,7 +339,8 @@ export function aplicarOleoAlquimico(
     nomeOleo: item.nome,
   };
 
-  const msg = `Você preparou e banhou o gume de suas armas com ${item.nome}. O óleo queima com viscosidade alquímica (+${bonusDano} de dano contra ${item.oleoAlvo}s pelos próximos 3 combates).`;
+  const alvo = { fera: 'feras', morto_vivo: 'mortos que andam', oni: 'onis', monstro: 'monstros' }[item.oleoAlvo as string] ?? item.oleoAlvo;
+  const msg = `Você passa ${item.nome.toLowerCase()} no gume, devagar, do talão à ponta. Contra ${alvo}, a lâmina morde mais pelas próximas três lutas.`;
   camp.cronica.push({ turno: camp.turno, texto: msg, tipo: 'sistema' });
   return { ok: true, mensagem: msg };
 }
@@ -335,10 +368,13 @@ export function iniciarConfrontoContrato(
     };
   }
 
+  if (camp.localAtual !== contrato.localId) {
+    return { ok: false, mensagem: `O covil fica ${nomeDoLugar(content, contrato.localId)}.` };
+  }
   // Inicia o combate contra o monstro chefe
   iniciarCombate(content, camp, [contrato.criaturaId]);
 
-  const msg = `Você seguiu as pistas até o covil oculto de ${contrato.monstroNome} em ${contrato.localId}! O combate decisivo começa agora!`;
+  const msg = `Você segue as pistas até o covil de ${contrato.monstroNome}, ${nomeDoLugar(content, contrato.localId)}. Ele já sabe que você veio.`;
   camp.cronica.push({ turno: camp.turno, texto: msg, tipo: 'narracao' });
   return { ok: true, mensagem: msg, combateIniciado: true };
 }

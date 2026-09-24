@@ -293,7 +293,7 @@ export function Jogo() {
                 {aberta &&
                   verbos.map((v) => {
                     const alvoRep = v.alvo === 'pessoa' ? ctx.presentes[0] : undefined;
-                    const disp = disponibilidadeVerbo(v, ctx, camp, alvoRep);
+                    const disp = disponibilidadeVerbo(v, ctx, camp, alvoRep, content);
                     const destaque = impulsoDestacado(camp, v.impulsoQueSacia);
                     return (
                       <LinhaVerbo

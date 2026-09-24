@@ -469,7 +469,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
         const disponiveis = content.verbos.filter(v => {
           const alvo = v.alvo === 'pessoa' ? ctx.presentes[0] : undefined;
           if (v.alvo === 'pessoa' && !alvo) return false;
-          return disponibilidadeVerbo(v, ctx, camp, alvo).disponivel;
+          return disponibilidadeVerbo(v, ctx, camp, alvo, content).disponivel;
         });
         if (disponiveis.length === 0) {
           m.passosSemVerbo++;

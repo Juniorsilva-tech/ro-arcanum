@@ -32,7 +32,9 @@ import {
   treinarCalejamentoPalmaDeFerro,
   meditarSobCascata,
   treinarEsgrimaNiten,
+  PERIODOS_DE_TREINO,
 } from './treinamentoImersivo';
+import { fazerTrabalhoEspecializado, type TrabalhoEspecializadoId } from './trabalhosEspecializados';
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
@@ -62,11 +64,7 @@ export type AcaoMundo =
     }
   | {
       tipo: 'trabalho_especializado';
-      trabalhoId:
-        | 'extracao_fenda_corveira'
-        | 'estiva_docas_mareu'
-        | 'patrulha_muralha_tessel'
-        | 'cacada_contrato_witcher';
+      trabalhoId: TrabalhoEspecializadoId;
     };
 export type ResultadoAcaoMundo = { ok: boolean; texto: string; combate?: boolean };
 
@@ -183,75 +181,44 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     return terminar('Você trabalhou na comunidade e recebeu 6 moedas.', 2);
   }
   if (acao.tipo === 'trabalho_especializado') {
-    let renda = 10;
-    let periodos = 2;
-    let msg = '';
-    switch (acao.trabalhoId) {
-      case 'extracao_fenda_corveira': {
-        renda = 24;
-        periodos = 3;
-        p.pericias.atletismo = (p.pericias.atletismo ?? 0) + 1;
-        p.inventario.minerio_de_ferro = (p.inventario.minerio_de_ferro ?? 0) + 2;
-        msg = 'Você completou o turno pesado na Fenda de Corveira, extraindo blocos de ferro puro (+24 moedas, +2 minérios, +1 Atletismo).';
-        break;
-      }
-      case 'estiva_docas_mareu': {
-        renda = 18;
-        periodos = 2;
-        p.pericias.atletismo = (p.pericias.atletismo ?? 0) + 1;
-        msg = 'Você trabalhou na estiva e amarração de naus nas docas de Mareu (+18 moedas, +1 Atletismo).';
-        break;
-      }
-      case 'patrulha_muralha_tessel': {
-        renda = 22;
-        periodos = 3;
-        p.pericias.perceber = (p.pericias.perceber ?? 0) + 1;
-        msg = 'Você montou guarda nas muralhas de gelo do Sulco de Tessel (+22 moedas, +1 Perceber).';
-        break;
-      }
-      case 'cacada_contrato_witcher': {
-        renda = 45;
-        periodos = 3;
-        p.pericias.rastrear = (p.pericias.rastrear ?? 0) + 1;
-        msg = 'Você cumpriu serviços de rastreamento e eliminação de ameaças pelo quadro da guilda (+45 moedas, +1 Rastrear).';
-        break;
-      }
-    }
-    p.dinheiro += renda;
-    return terminar(msg, periodos);
+    const r = fazerTrabalhoEspecializado(content, camp, acao.trabalhoId);
+    if (!r.ok) return { ok: false, texto: r.texto };
+    return terminar(r.texto, r.periodos);
   }
   if (acao.tipo === 'treino_imersivo') {
     switch (acao.modalidade) {
       case 'katas': {
-        const res = treinarKatasCincoElementos(camp, acao.elemento ?? 'terra');
+        const res = treinarKatasCincoElementos(camp, acao.elemento ?? 'terra', content);
         if (!res.ok) return { ok: false, texto: res.mensagem };
-        return terminar(res.mensagem, 2);
+        return terminar(res.mensagem, PERIODOS_DE_TREINO);
       }
       case 'palma_ferro': {
-        const res = treinarCalejamentoPalmaDeFerro(camp);
+        const res = treinarCalejamentoPalmaDeFerro(camp, content);
         if (!res.ok) return { ok: false, texto: res.mensagem };
-        return terminar(res.mensagem, 2);
+        return terminar(res.mensagem, PERIODOS_DE_TREINO);
       }
       case 'cascata': {
         const res = meditarSobCascata(camp);
         if (!res.ok) return { ok: false, texto: res.mensagem };
-        return terminar(res.mensagem, 2);
+        return terminar(res.mensagem, PERIODOS_DE_TREINO);
       }
       case 'niten': {
-        const res = treinarEsgrimaNiten(camp);
+        const res = treinarEsgrimaNiten(camp, content);
         if (!res.ok) return { ok: false, texto: res.mensagem };
-        return terminar(res.mensagem, 2);
+        return terminar(res.mensagem, PERIODOS_DE_TREINO);
       }
     }
   }
   if (acao.tipo === 'contrato_monstro') {
     switch (acao.subacao) {
       case 'aceitar': {
-        const res = aceitarContrato(camp, acao.contratoId);
+        const res = aceitarContrato(camp, acao.contratoId, content);
         return { ok: res.ok, texto: res.mensagem };
       }
       case 'investigar': {
-        const res = investigarPista(camp, acao.contratoId, acao.pistaId ?? '');
+        const res = investigarPista(camp, acao.contratoId, acao.pistaId ?? '', content);
+        // Recusa (lugar errado, contrato em outra fase) não gasta tempo.
+        if (!res.ok) return { ok: false, texto: res.mensagem };
         return terminar(res.mensagem, 1);
       }
       case 'preparar_oleo': {

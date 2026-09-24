@@ -7,7 +7,7 @@
 //
 // Provider padrão: OpenRouter (compatível com a API da OpenAI), que dá acesso
 // a modelos gratuitos e sem filtro. Anthropic segue disponível como opção.
-import type { Campaign, ContentBundle } from './types';
+import type { Campaign, ContentBundle, Item } from './types';
 import type { ResultadoTurno } from './turn';
 import { disponibilidadeVerbo, type Contexto } from './availability';
 import { dataPorExtenso, NOME_PERIODO } from './time';
@@ -401,6 +401,11 @@ export function montarPacote(
   const equipado = Object.entries(p.equipado)
     .filter(([, v]) => !!v)
     .map(([slot, id]) => `${slot}: ${nomeItem(id as string)}`);
+  // Peça com nome e história: o narrador pode deixar alguém reconhecê-la.
+  const pecasComHistoria = Object.values(p.equipado)
+    .map(id => (id ? itemPorId(content, id as string, p) : undefined))
+    .filter((i): i is Item => !!i && !!i.historia?.length)
+    .map(i => ({ nome: i.nome, historia: i.historia!.join(' ') }));
 
   return {
     // A verdade do mundo vai antes de tudo: é ela que dá voz ao lugar.
@@ -424,6 +429,7 @@ export function montarPacote(
       cicatrizes: p.cicatrizes,
       moedas: p.dinheiro,
       equipado,
+      pecasComHistoria: pecasComHistoria.length ? pecasComHistoria : undefined,
       inventario,
     },
     capitulo: { numero: camp.capitulo.numero, titulo: camp.capitulo.titulo },
@@ -541,13 +547,13 @@ export function montarPacote(
     // O ESPAÇO DE AÇÃO. Sem isto o modelo adivinha o que é possível e, na
     // dúvida, propõe o mais seguro — que é justamente o mais genérico.
     podeFazerAgora: content.verbos
-      .filter((v) => disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]).disponivel)
+      .filter((v) => disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0], content).disponivel)
       .slice(0, 14)
       .map((v) => v.nome),
     // O que está trancado e por quê: dá caminhos que ainda não existem
     // ("arranjar uma gazua", "esperar a praça esvaziar").
     trancadoAgora: content.verbos
-      .map((v) => ({ v, d: disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0]) }))
+      .map((v) => ({ v, d: disponibilidadeVerbo(v, ctx, camp, ctx.presentes[0], content) }))
       .filter((x) => !x.d.disponivel && !!x.d.motivo)
       .slice(0, 5)
       .map((x) => `${x.v.nome}: ${x.d.motivo}`),

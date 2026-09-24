@@ -215,30 +215,42 @@ console.log('✓ Contratos de Caça e Óleos de Lâmina validados.');
 
 // 5. Treinamentos Imersivos (Katas 5 Elementos, Calejamento e Cascata)
 console.log('\n5. Testando Treinamentos Imersivos...');
+// Sessão 54: o treino acontece onde o mestre ensina, uma vez por semana, e
+// não dá atributo solto (antes, katas + cascata eram atributo infinito).
 camp.personagem.recursos.vigor = 20;
 camp.personagem.atributos.fisico = 12;
 camp.personagem.atributos.precisao = 12;
+const localAntes = camp.localAtual;
+assert(treinarKatasCincoElementos(camp, 'terra', content).ok === false, 'Longe do Passo do Lobo não há katas');
+camp.localAtual = 'passo_lobo';
+const rTerra = treinarKatasCincoElementos(camp, 'terra', content);
+assert(rTerra.ok === true, 'Treino da Terra deve ter sucesso no Passo do Lobo');
+assert(camp.personagem.atributos.fisico === 12, 'O treino não mexe em atributo');
+assert(treinarKatasCincoElementos(camp, 'agua', content).ok === false, 'Uma vez por semana');
 
-const rTerra = treinarKatasCincoElementos(camp, 'terra');
-assert(rTerra.ok === true, 'Treino da Terra deve ter sucesso');
-assert(camp.personagem.atributos.fisico === 13, 'Treino da Terra deve aumentar Físico para 13');
-
-const rCalejamento = treinarCalejamentoPalmaDeFerro(camp);
-assert(rCalejamento.ok === true, 'Calejamento deve ter sucesso');
-assert(camp.personagem.artesConhecidas.includes('palma_de_ferro'), 'Calejamento deve desbloquear palma_de_ferro');
+camp.localAtual = 'mosteiro_alto';
+const rCalejamento = treinarCalejamentoPalmaDeFerro(camp, content);
+assert(rCalejamento.ok === true, 'Calejamento deve ter sucesso no Mosteiro Alto');
 
 camp.personagem.pressoes.corrupcao = 30;
 camp.personagem.pressoes.sanidade = 25;
+const resAntes = camp.personagem.atributos.resiliencia;
 const rCascata = meditarSobCascata(camp);
 assert(rCascata.ok === true, 'Meditação sob cascata deve suceder');
-assert(camp.personagem.pressoes.corrupcao === 15, 'Cascata deve reduzir corrupção em 15');
-assert(camp.personagem.pressoes.sanidade === 10, 'Cascata deve reduzir sanidade em 15');
+assert(camp.personagem.pressoes.corrupcao === 20, 'Cascata reduz corrupção em 10');
+assert(camp.personagem.pressoes.sanidade === 15, 'Cascata reduz sanidade em 10');
+assert(camp.personagem.atributos.resiliencia === resAntes, 'Cascata não dá atributo');
+assert(meditarSobCascata(camp).ok === false, 'Cascata também é semanal');
+camp.localAtual = localAntes;
 
 console.log('✓ Treinamentos imersivos validados.');
 
 // 6. Ações de Mundo (Trabalhos Especializados e Contratos)
 console.log('\n6. Testando Ações de Mundo...');
 if (camp.familia) camp.familia.prologoConcluido = true;
+const longe = executarAcaoMundo(content, camp, { tipo: 'trabalho_especializado', trabalhoId: 'extracao_fenda_corveira' });
+assert(longe.ok === false, 'Longe de Corveira não há turno na galeria');
+camp.localAtual = 'corveira';
 const rTrabalho = executarAcaoMundo(content, camp, {
   tipo: 'trabalho_especializado',
   trabalhoId: 'extracao_fenda_corveira',

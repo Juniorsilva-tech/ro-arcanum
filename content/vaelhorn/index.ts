@@ -18,12 +18,13 @@ import { casasVaelhorn } from './casas';
 import { familiasVaelhorn } from './familias';
 import { membrosDasCasas } from './casas-membros';
 import { edificiosRegionaisVaelhorn, tetoEdificiosVaelhorn } from './edificiosRegionais';
+import { LENDAS_ITENS, GUARDIOES_LENDARIOS, RELIQUIAS_DAS_CASAS } from './lendas';
 import { SEGREDOS_NOVOS, SEGREDOS_REESCRITOS, CONSEQUENCIAS } from './segredos';
 import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
 import { HISTORIAS_COSTA } from './historias-costa';
 import { HISTORIAS_KIMETSU } from './historias-kimetsu';
-import type { Item, NPC } from '../../engine/types';
+import type { Criatura, Item, NPC } from '../../engine/types';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -66,6 +67,23 @@ function lojasRegionais(itens: Item[]): Item[] {
   });
 }
 
+// As peças lendárias ganham história e, quando o nome antigo contradizia o
+// mundo, nome novo (content/vaelhorn/lendas.ts).
+function comLendas(itens: Item[]): Item[] {
+  return itens.map(i => {
+    const l = LENDAS_ITENS[i.id];
+    return l ? { ...i, nome: l.nome ?? i.nome, descricao: l.descricao, historia: l.historia } : i;
+  });
+}
+
+// Quem guarda uma peça lendária a deixa cair, sempre, quando é vencido.
+function comGuardioes(criaturas: Criatura[]): Criatura[] {
+  return criaturas.map(c => {
+    const item = GUARDIOES_LENDARIOS[c.id];
+    return item ? { ...c, loot: [...(c.loot ?? []), { item, chance: 1 }] } : c;
+  });
+}
+
 const baseVaelhorn: ContentBundle = integrarKimetsu({
   cenario: vaelhorn,
   classes: classesVaelhorn,
@@ -77,12 +95,12 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,
   reliquias: reliquiasVaelhorn,
-  itens: lojasRegionais(itensVaelhorn),
-  criaturas: [...criaturasVaelhorn, ...criaturasDeDesafio],
+  itens: comLendas(lojasRegionais(itensVaelhorn)),
+  criaturas: comGuardioes([...criaturasVaelhorn, ...criaturasDeDesafio]),
   desafios: desafiosVaelhorn,
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
-  casas: casasVaelhorn,
+  casas: casasVaelhorn.map(h => ({ ...h, reliquias: RELIQUIAS_DAS_CASAS[h.id] })),
   familias: familiasVaelhorn,
   edificiosRegionais: edificiosRegionaisVaelhorn,
   tetoEdificios: tetoEdificiosVaelhorn,

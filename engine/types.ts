@@ -165,6 +165,8 @@ export type Item = {
   oleoAlvo?: 'fera' | 'morto_vivo' | 'oni' | 'monstro';
   // Relíquia ancestral hereditária de casa nobre de Vaelhorn
   ehReliquiaCasa?: string;
+  /** Origem, quem empunhou, como chegou aqui (content/vaelhorn/lendas.ts). */
+  historia?: string[];
   // Especialização de lâmina / estilo marcial (para Musashi e Niten Ichi-ryu)
   tipoArma?: 'espada' | 'espada_dupla' | 'machado' | 'lanca' | 'adaga' | 'arco' | 'desarmado' | 'outro';
   // Concede chance de partir e inutilizar lâminas adversárias (manoplas de Mestre Marcial)

@@ -3,6 +3,7 @@ import type { Campaign, ContentBundle, Verbo, NPC, Local } from './types';
 import { periodoAtual, NOME_PERIODO, type Periodo } from './time';
 import { todosNpcs } from './elenco';
 import { localEfetivo } from './historiaViva';
+import { verbosConcedidos } from './items';
 
 export type Contexto = {
   local: Local;
@@ -46,11 +47,18 @@ export function calcularContexto(content: ContentBundle, camp: Campaign): Contex
 export type Disponibilidade = { disponivel: boolean; motivo?: string };
 
 // Verbo indisponível NUNCA some — permanece apagado, com o motivo (GDD §4.3).
+/**
+ * `content` deixa um item com `concedeVerbo` valer pela perícia que falta: o
+ * giz de ritual "permite realizar_ritual", e o inventário dizia isso sem que
+ * fosse verdade (verbosConcedidos existia e ninguém chamava). Sem `content`,
+ * a regra antiga.
+ */
 export function disponibilidadeVerbo(
   verbo: Verbo,
   ctx: Contexto,
   camp: Campaign,
   alvo?: NPC,
+  content?: ContentBundle,
 ): Disponibilidade {
   const p = camp.personagem;
   if (p.condicoes.includes('cativo')) return { disponivel: false, motivo: 'recupere a liberdade no painel do mundo' };
@@ -83,7 +91,7 @@ export function disponibilidadeVerbo(
     return { disponivel: false, motivo: `precisa de ${req.item}` };
   }
 
-  if (req.pericia && (p.pericias[req.pericia] ?? 0) <= 0) {
+  if (req.pericia && (p.pericias[req.pericia] ?? 0) <= 0 && !(content && verbosConcedidos(content, p).has(verbo.id))) {
     return { disponivel: false, motivo: `você não sabe ${req.pericia}` };
   }
 

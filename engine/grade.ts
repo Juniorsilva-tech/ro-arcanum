@@ -57,7 +57,7 @@ function preencher(
     if (!categorias.includes(v.categoria)) return false;
     if (jaUsados.has(v.id)) return false;
     if (v.alvo === 'pessoa' && !alvo) return false;
-    return disponibilidadeVerbo(v, ctx, camp, alvo).disponivel;
+    return disponibilidadeVerbo(v, ctx, camp, alvo, content).disponivel;
   });
   if (candidatos.length === 0) return undefined;
 

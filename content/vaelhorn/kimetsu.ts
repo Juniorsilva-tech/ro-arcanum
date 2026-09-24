@@ -1,4 +1,5 @@
 import type { Arte, ContentBundle, Criatura, NPC } from '../../engine/types';
+import { DESCRICOES_ONIS } from './descricoes-onis';
 import type { PerfilOni, TecnicaCombate } from '../../engine/kimetsuTypes';
 
 // Overlay preserves published IDs used by saves and quests. Names/identities
@@ -205,8 +206,9 @@ export function integrarKimetsu(base: ContentBundle): ContentBundle {
       parceiro: c.id === 'daki' ? 'lua_superior_seis' : c.id === 'lua_superior_seis' ? 'daki' : undefined,
     };
     return { ...c, nome: perfil?.[0] ?? c.nome, perfilOni, imuneLuz: false,
-      // Old prose gave invented identities/arts to canonical rank slots.
-      descricao: perfil ? `${perfil[0]} — identidade canônica em uma cronologia alternativa de Vaelhorn. Mecânica de combate adaptada: ${perfil[1]}.` : c.descricao,
+      // Old prose gave invented identities/arts to canonical rank slots. A
+      // prosa escrita para cada identidade fica em descricoes-onis.ts.
+      descricao: DESCRICOES_ONIS[c.id] ?? c.descricao,
       fase2: undefined };
   });
   return { ...base, npcs, mestres, criaturas,

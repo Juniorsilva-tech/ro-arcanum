@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useGame } from '../store';
 import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
-import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, caravanasPartindoAqui, invernoRigorosoAtivo, edificioRegionalDe, descreverEdificioRegional, tetoDoEdificio, type TipoEdificio } from '@/engine';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, caravanasPartindoAqui, invernoRigorosoAtivo, edificioRegionalDe, descreverEdificioRegional, tetoDoEdificio, trabalhosAqui, podeTrabalhoEspecializado, TRABALHOS_ESPECIALIZADOS, treinosAqui, podeTreinarImersivo, NOME_TREINO, listarContratos, LOCAIS_DO_QUADRO, itemPorId, type TipoEdificio, type ElementoMusashi } from '@/engine';
 
 export function ComunidadeViva() {
   const camp = useGame(s => s.camp)!;
@@ -20,6 +20,7 @@ export function ComunidadeViva() {
       <TextoMono>{d.aviso}</TextoMono>
       {camp.flags[`desafio.concluido.${d.id}`] ? <TextoMono>Expedição superada. O desfecho permanece nesta campanha.</TextoMono> : <Botao titulo="Aceitar o risco e iniciar expedição" onPress={() => agir({ tipo: 'desafio', id: d.id })} />}
     </Card>)}
+    <OficiosDoLugar />
     {ultima?.tipo === 'sistema' && <TextoMono>{ultima.texto}</TextoMono>}
     <View style={{ gap: 8, marginVertical: 10 }}>
       {camp.personagem.condicoes.includes('cativo') ? <Botao titulo="Buscar liberdade · resgate de 20 moedas ou tentativa de fuga" onPress={() => agir({ tipo: 'libertar_se' })} /> : <>
@@ -134,5 +135,71 @@ export function BiografiaViva({ id }: { id: string }) {
     {!!p.filhos.length && <TextoMono>Crianças sob seus cuidados: {nomes(p.filhos)}.</TextoMono>}
     {!!p.tutores?.length && <TextoMono>Família de acolhimento: {nomes(p.tutores)}.</TextoMono>}
     {biografiaCivil(camp, id).map((texto, i) => <TextoMono key={i}>{texto}</TextoMono>)}
+  </>;
+}
+
+// Trabalhos do lugar, treino com mestre e o quadro de contratos de monstro
+// (sessão 54). Os três sistemas existiam na engine desde a sessão 45 e nenhuma
+// tela os chamava.
+const ELEMENTOS: { id: ElementoMusashi; nome: string }[] = [
+  { id: 'terra', nome: 'Terra' }, { id: 'agua', nome: 'Água' }, { id: 'fogo', nome: 'Fogo' }, { id: 'vento', nome: 'Vento' }, { id: 'vazio', nome: 'Vazio' },
+];
+const NOME_PERICIA: Record<string, string> = { rastrear: 'rastrear', perceber: 'perceber', atletismo: 'atletismo', arcana: 'arcana', oficio: 'ofício' };
+
+function OficiosDoLugar() {
+  const camp = useGame(s => s.camp)!;
+  const content = useGame(s => s.content)!;
+  const agir = useGame(s => s.acaoMundo);
+  if (camp.personagem.condicoes.includes('cativo')) return null;
+  const trabalhos = trabalhosAqui(camp);
+  const treinos = treinosAqui(camp);
+  const contratos = listarContratos(camp);
+  const noQuadro = LOCAIS_DO_QUADRO.includes(camp.localAtual);
+  const disponiveis = noQuadro ? contratos.filter(k => k.estado === 'disponivel') : [];
+  const ativos = contratos.filter(k => k.estado === 'investigando' || k.estado === 'pronto_para_confronto');
+  const lugar = (id: string) => content.locais.find(l => l.id === id)?.nome ?? id;
+  if (!trabalhos.length && !treinos.length && !disponiveis.length && !ativos.length) return null;
+  return <>
+    {trabalhos.length > 0 && <>
+      <Divisor label="trabalho do lugar" />
+      {trabalhos.map(id => {
+        const t = TRABALHOS_ESPECIALIZADOS[id], pode = podeTrabalhoEspecializado(content, camp, id);
+        return <Botao key={id} titulo={`${t.nome} · ${t.renda} moedas`} disabled={!pode.pode} motivo={pode.motivo}
+          onPress={() => agir({ tipo: 'trabalho_especializado', trabalhoId: id })} />;
+      })}
+    </>}
+    {treinos.length > 0 && <>
+      <Divisor label="treino com mestre" />
+      {treinos.map(m => {
+        const pode = podeTreinarImersivo(camp, m);
+        if (m === 'katas') return <Card key={m}>
+          <TextoSerif>{NOME_TREINO[m]}</TextoSerif>
+          <TextoMono>{pode.pode ? 'Um livro por vez. Uma vez por semana.' : pode.motivo}</TextoMono>
+          {pode.pode && ELEMENTOS.map(e => <Botao key={e.id} variante="fantasma" titulo={`Livro da ${e.nome}`} onPress={() => agir({ tipo: 'treino_imersivo', modalidade: 'katas', elemento: e.id })} />)}
+        </Card>;
+        return <Botao key={m} titulo={NOME_TREINO[m]} disabled={!pode.pode} motivo={pode.motivo} onPress={() => agir({ tipo: 'treino_imersivo', modalidade: m })} />;
+      })}
+    </>}
+    {(disponiveis.length > 0 || ativos.length > 0) && <Divisor label="contratos de monstro" />}
+    {disponiveis.map(k => <Card key={k.id}>
+      <TextoSerif>{k.titulo}</TextoSerif>
+      <TextoMono>{k.descricao}</TextoMono>
+      <TextoMono>Quem paga: {k.contratante}. {k.recompensaMoedas} moedas. O rastro começa: {lugar(k.localId)}.</TextoMono>
+      <Botao titulo="Aceitar o contrato" onPress={() => agir({ tipo: 'contrato_monstro', contratoId: k.id, subacao: 'aceitar' })} />
+    </Card>)}
+    {ativos.map(k => {
+      const aqui = k.localId === camp.localAtual;
+      const oleo = itemPorId(content, k.fraquezaOleo);
+      const temOleo = (camp.personagem.inventario[k.fraquezaOleo] ?? 0) > 0;
+      return <Card key={k.id}>
+        <TextoSerif>{k.titulo}</TextoSerif>
+        {k.pistas.filter(pi => pi.encontrada).map(pi => <TextoMono key={pi.id}>• {pi.descricao}</TextoMono>)}
+        {!aqui && <TextoMono>{k.estado === 'pronto_para_confronto' ? 'Você sabe onde ele dorme' : 'Onde está o rastro'}: {lugar(k.localId)}.</TextoMono>}
+        {aqui && k.estado === 'investigando' && k.pistas.filter(pi => !pi.encontrada).map(pi =>
+          <Botao key={pi.id} variante="fantasma" titulo={`Procurar pista · ${NOME_PERICIA[pi.periciaNecessaria ?? 'perceber'] ?? pi.periciaNecessaria}`} onPress={() => agir({ tipo: 'contrato_monstro', contratoId: k.id, subacao: 'investigar', pistaId: pi.id })} />)}
+        {temOleo && !camp.contratosMonstro?.oleoAtivo && <Botao variante="acento" titulo={`Passar ${oleo?.nome.toLowerCase() ?? 'o óleo'} na lâmina`} onPress={() => agir({ tipo: 'contrato_monstro', contratoId: k.id, subacao: 'preparar_oleo', oleoId: k.fraquezaOleo })} />}
+        {aqui && k.estado === 'pronto_para_confronto' && <Botao variante="perigo" titulo={`Ir atrás de ${k.monstroNome}`} onPress={() => agir({ tipo: 'contrato_monstro', contratoId: k.id, subacao: 'confrontar' })} />}
+      </Card>;
+    })}
   </>;
 }

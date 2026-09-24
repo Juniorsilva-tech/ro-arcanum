@@ -167,6 +167,7 @@ export function Inventario() {
               {item.raridade !== 'comum' && <Selo texto={item.raridade} cor={corRaridade(item.raridade)} />}
             </View>
             <TextoMono style={{ color: cores.mudo }}>{item.descricao}</TextoMono>
+            {item.historia?.map((par, i) => <TextoMono key={i} style={{ color: cores.mudo, fontStyle: 'italic', marginTop: 4 }}>{par}</TextoMono>)}
             <TextoMono style={{ color: cores.linha }}>
               {rotuloSlot(item.slot)} · peso {item.peso} · vale {item.valor}
               {item.dano ? ` · dano ${item.dano.base}` : ''}

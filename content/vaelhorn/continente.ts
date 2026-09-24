@@ -72,7 +72,7 @@ const TESSEL: Def[] = [
     historia: [
       'Tessel foi fundada como acampamento de inverno e nunca deixou de ser um: metade das casas ainda tem planta de barraca.',
       'O cerco de dezoito anos atrás durou quarenta dias. A muralha oeste é mais nova que o resto porque a antiga veio abaixo.',
-      'O marechal atual herdou o posto do pai, que herdou do dele. Ninguém em Tessel lembra de eleição para nada.',
+      'A marechala atual herdou o posto da mãe, que caiu na muralha, e a mãe o tinha herdado da dela. A casa elege a marechala pelo livro; em Tessel ninguém lembra de uma eleição que tenha tido dúvida.',
     ],
   },
   {
@@ -205,7 +205,7 @@ const CORVEIRA: Def[] = [
     pontos: ['biblioteca', 'claustro', 'ala leste trancada', 'sino'],
     historia: [
       'O mosteiro guarda os registros das casas de Corveira desde antes de as casas existirem com esse nome.',
-      'Duas vezes na história alguém tentou levar a biblioteca. Nas duas, os irmãos queimaram a ala antes de entregar.',
+      'Duas vezes na história alguém tentou levar a biblioteca. Nas duas, as irmãs queimaram a ala antes de entregar.',
     ],
   },
 ];

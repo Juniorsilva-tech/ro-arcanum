@@ -36,6 +36,8 @@ export type EstadoCasa = {
   lider?: string; legitimidade: number; tesouro: number; influencia: number; sucessoes: number; herdeiro?: string; ultimoDia?: number;
   /** Reputação do jogador com a casa (-50 a 50). */
   reputacao?: number;
+  /** Relíquias que a casa já confiou ao jogador (uma vez cada). */
+  reliquiasDadas?: string[];
   ultimaObra?: number;
   ultimaPatrulha?: number;
   ultimaMissao?: number;
@@ -290,6 +292,30 @@ export function mudarReputacaoCasa(content: ContentBundle, camp: Campaign, casa:
   }
 }
 
+/**
+ * A casa confia a relíquia a quem passou a chamar de sua (content/vaelhorn/
+ * lendas.ts). Uma vez cada; a casa precisa ter chefe viva para entregar, e a
+ * peça chega pelo mensageiro da casa, onde o jogador estiver.
+ */
+export function confiarReliquias(content: ContentBundle, camp: Campaign, casa: CasaNobre, estado: EstadoCasa): void {
+  if (!casa.reliquias?.length || !estado.lider || camp.npcState[estado.lider]?.vivo === false) return;
+  const dadas = (estado.reliquiasDadas ??= []);
+  for (const r of casa.reliquias) {
+    if (dadas.includes(r.item) || (estado.reputacao ?? 0) < r.reputacao) continue;
+    if (!content.itens.some(i => i.id === r.item)) continue;
+    dadas.push(r.item);
+    const p = camp.personagem;
+    p.inventario[r.item] = (p.inventario[r.item] ?? 0) + 1;
+    const nome = content.itens.find(i => i.id === r.item)!.nome;
+    camp.cronica.push({ turno: camp.turno, texto: `${r.texto} (${nome})`, tipo: 'sistema' });
+    if (camp.vivo) registrarFato(camp, {
+      tipo: 'reliquia_confiada', local: casa.sede, publico: true, atores: ['jogador', estado.lider],
+      texto: `A ${casa.nome} confiou ${nome} a você.`,
+    });
+    return; // uma por dia: a segunda espera o próximo passe
+  }
+}
+
 function lerMissoesCumpridas(content: ContentBundle, camp: Campaign, casa: CasaNobre, estado: EstadoCasa): void {
   const v = camp.vivo;
   if (!v) return;
@@ -368,6 +394,7 @@ export function processarCasas(content: ContentBundle, camp: Campaign): void {
     // (campanha nova ou save antigo) não gasta o tesouro no primeiro dia.
     estado.ultimaObra ??= camp.calendario.dia;
     lerMissoesCumpridas(content, camp, casa, estado);
+    confiarReliquias(content, camp, casa, estado);
     abrirCeleiro(content, camp, casa, estado);
     patrocinarMissao(content, camp, casa, estado);
     financiarObra(content, camp, casa, estado);

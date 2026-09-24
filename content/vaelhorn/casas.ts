@@ -15,6 +15,8 @@ export type CasaNobre = {
   membros?: MembroCasa[];
   /** Família do elenco (content/vaelhorn/familias.ts) que é o sangue da casa. */
   familia?: string;
+  /** O que a casa confia a quem ela passou a chamar de sua (engine/casas.ts). */
+  reliquias?: { item: string; reputacao: number; texto: string }[];
 };
 
 export const casasVaelhorn: CasaNobre[] = [

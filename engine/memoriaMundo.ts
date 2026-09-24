@@ -70,6 +70,7 @@ const MEMORAVEIS: Record<string, string> = {
   missao_falhada: 'há quem se lembre da promessa que você não cumpriu.',
   caravana_entregue: 'reconhecem quem veio escoltando a caravana.',
   mediacao: 'a trégua que você costurou ainda é assunto.',
+  reliquia_confiada: 'todo mundo sabe a quem a casa confiou a relíquia.',
 };
 
 /** "Em Tessel", "Na Feira Coberta", "No Moinho Parado": o artigo do nome vira contração. */
