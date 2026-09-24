@@ -18,6 +18,7 @@ import { penalidadeEstado } from './risco';
 import { calcularContexto } from './availability';
 import type { Natureza } from './risco';
 import { aplicarEfeito, substituirAlvo } from './effects';
+import { propagarParaFamilia } from './familiasNpc';
 import { manaDeEstudo } from './classe';
 import { lembrarDoTurno } from './memoria';
 import { todosNpcs, npcPorId } from './elenco';
@@ -213,6 +214,12 @@ export function resolverIntencao(
       aplicarEfeito(camp, ef);
       aplicados.push(ef);
     }
+  }
+
+  // O que o jogador fez a uma pessoa chega à família dela, mais fraco
+  // (engine/familiasNpc.ts).
+  for (const ef of aplicados) {
+    if (ef.tipo === 'relacao') propagarParaFamilia(content, camp, ef.npc, ef.eixo, ef.delta);
   }
 
   // Saciar impulso em caso de sucesso (ou verbo sem teste).

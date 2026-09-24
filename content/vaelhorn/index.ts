@@ -15,6 +15,7 @@ import { questsVaelhorn } from './quests';
 import { integrarKimetsu } from './kimetsu';
 import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
 import { casasVaelhorn } from './casas';
+import { familiasVaelhorn } from './familias';
 import {
   mestresVaelhorn,
   trabalhosVaelhorn,
@@ -46,6 +47,7 @@ export const conteudoVaelhorn: ContentBundle = integrarKimetsu({
   quests: questsVaelhorn,
   faccoes: faccoesVaelhorn,
   casas: casasVaelhorn,
+  familias: familiasVaelhorn,
   rivalidadesFaccoes: rivalidadesVaelhorn,
   encontrosPorTipo,
   encontrosPorRegiao,

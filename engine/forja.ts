@@ -23,6 +23,7 @@
 //  3. **Nichirin não se forja.** A lâmina dos caçadores exige o minério
 //     escarlate e as mãos da vila dos ferreiros; é ponto de história, não de
 //     receita.
+import { ocupacaoEfetiva } from './familiasNpc';
 import type { Campaign, ContentBundle, Item, PerfilDano, AttrKey, NPC } from './types';
 import { itemPorId } from './items';
 import { nextFloat } from './rng';
@@ -166,7 +167,7 @@ const OFICIO_DE_FERREIRA = /ferreir|forj|armeir|bigorna/i;
  */
 export function ondeForjar(content: ContentBundle, camp: Campaign): { pode: boolean; ferreira?: NPC; motivo?: string } {
   const ctx = calcularContexto(content, camp);
-  const ferreira = ctx.presentes.find(n => OFICIO_DE_FERREIRA.test(n.ocupacao ?? ''));
+  const ferreira = ctx.presentes.find(n => OFICIO_DE_FERREIRA.test(ocupacaoEfetiva(camp, n) ?? ''));
   const instalacaoForja = ctx.local.tipo === 'forja' || ctx.local.pontos?.some(p => /ferraria|forja|bigorna/i.test(p));
   if (instalacaoForja || ferreira) return { pode: true, ferreira };
   return { pode: false, motivo: 'Não há forja aqui, nem ferreira que empreste a bigorna.' };

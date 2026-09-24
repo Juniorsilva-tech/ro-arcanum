@@ -39,6 +39,9 @@ import {
   type TriboAcolhida,
   type EstrategiaCompanhia,
   type ModoKai,
+  ocupacaoEfetiva,
+  parentesConhecidos,
+  familiasDe,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -411,6 +414,27 @@ function filtroVinculo(
   return tipos.has('rival') || tipos.has('desconfia') || medo >= 20 || (din?.tensao ?? 0) >= 60;
 }
 
+// Família do elenco (engine/familiasNpc.ts): o nome da família e os
+// parentes que o jogador já conhece. Quem ele nunca encontrou não aparece —
+// a ficha mostra o que ele sabe, não a árvore inteira.
+function FamiliaDoNpc({ id }: { id: string }) {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+  const familia = familiasDe(content, id)[0];
+  if (!familia) return null;
+  const conhecidos = parentesConhecidos(content, camp, id);
+  const luto = camp.familiasNpc?.lutos[id]?.at(-1);
+  return (
+    <View style={{ marginBottom: esp.sm }}>
+      <Rotulo cor={cores.ouro}>Família · {familia.nome}</Rotulo>
+      {conhecidos.length > 0
+        ? conhecidos.map((p) => <TextoMono key={p.nome}>{p.nome}, {p.laco}{p.vivo ? '' : ' (não vive mais)'}</TextoMono>)
+        : <TextoMono>Você ainda não conhece ninguém da família dela.</TextoMono>}
+      {luto && camp.calendario.dia - luto.dia <= 60 && <TextoMono style={{ color: cores.cinabrio }}>De luto há {camp.calendario.dia - luto.dia} dia(s).</TextoMono>}
+    </View>
+  );
+}
+
 // ─────────────────────────────────────────────── VÍNCULOS
 export function Vinculos() {
   const camp = useGame((s) => s.camp)!;
@@ -481,7 +505,8 @@ export function Vinculos() {
               <TextoSerif style={{ fontSize: 22, color: cores.vellum }}>{n.nome}</TextoSerif>
               {din.tensao >= 60 && <Selo texto="afastando-se" cor={cores.cinabrio} />}
             </View>
-            <TextoMono style={{ marginBottom: esp.sm }}>{n.ocupacao}</TextoMono>
+            <TextoMono style={{ marginBottom: esp.sm }}>{ocupacaoEfetiva(camp, n)}</TextoMono>
+            <FamiliaDoNpc id={n.id} />
             {n.combatente && <TextoMono>Prática adquirida: {retratoProgressaoNpc(camp, n)?.maestria} · vida máxima {retratoProgressaoNpc(camp, n)?.vidaMax} · dano {retratoProgressaoNpc(camp, n)?.dano}</TextoMono>}
             {noGrupo && din.vivo && <Botao titulo="Treinar juntos · 5 moedas" onPress={() => agirMundo({ tipo: 'treinar_companheiro', npcId: n.id })} />}
             {n.parentesco && <Selo texto={n.parentesco.toUpperCase()} cor={cores.ouro} />}

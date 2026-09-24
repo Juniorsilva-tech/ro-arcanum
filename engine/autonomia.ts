@@ -1,3 +1,4 @@
+import { saoParentes } from './familiasNpc';
 import type { Campaign, ContentBundle, NPC } from './types';
 import { cidadeIdDoLocal, localEfetivo, proximoPasso, registrarFato } from './historiaViva';
 import { nextFloat, pick } from './rng';
@@ -132,7 +133,7 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
       if (conhecida) {
         p.parceiros[conhecida.id] = Math.min(100, (p.parceiros[conhecida.id] ?? 0) + 3);
         const outra = v.pessoas[conhecida.id];
-        if (outra && p.parceiros[conhecida.id] >= 30 && !p.conjuge && !outra.conjuge && npc.relacoes?.some(r => r.npc === conhecida.id && r.tipo === 'amante')) {
+        if (outra && p.parceiros[conhecida.id] >= 30 && !p.conjuge && !outra.conjuge && !saoParentes(content, npc.id, conhecida.id) && npc.relacoes?.some(r => r.npc === conhecida.id && r.tipo === 'amante')) {
           p.conjuge = conhecida.id; outra.conjuge = npc.id;
           registrarFato(camp, { tipo: 'uniao', local, texto: `${npc.nome} e ${conhecida.nome} formaram uma casa em comum.`, atores: [npc.id, conhecida.id], publico: true });
         }

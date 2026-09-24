@@ -3538,3 +3538,265 @@ Implementar a expansão canônica de *Tsukimichi (Moonlit Fantasy)* integrando:
 - `npm run test:jornadas` & `npm run test:casas`: 100% aprovados.
 - `npx expo export --platform web`: 351 módulos empacotados com sucesso.
 
+
+## Sessão 39 — Gemini — Combate com Bestas Lendárias, Subjugação Canônica (Contrato de Alma 2:8) e Sistema de Romance em Asora
+
+### Objetivo
+1. **Combate de Arena com Bestas Primordiais**:
+   - As opções na Wasteland (`pacto_shen` no Desfiladeiro, `pacto_aranha` no Pântano, `pacto_suzaku` no Ninho da Fênix) agora iniciam o combate tático de arena contra as feras colossais ao invés de selar o contrato passivamente.
+2. **Submissão por Deslumbramento & Contrato de Alma 2:8**:
+   - As criaturas de `ENTIDADES_CONTRATAVEIS` não morrem como monstros genéricos com carcaça e loot comum ao chegarem a 0 HP:
+     - Elas caem de joelhos subjugadas perante o oceano infinito de mana do Mestre.
+     - As ilusões espaciais e reforços invocados por Shen dissolvem-se de imediato.
+     - O combate encerra em vitória especial e dispara automaticamente o **Contrato de Alma (2:8)** (`realizarContratoAlma`), transmutando a besta em forma humana feminina elegante (Tomoe, Mio, Suzaku), concedendo os bônus espirituais permanentes aos atributos e abrindo o subespaço de Asora no 1º contrato.
+     - Marcado `subjugou` e `contrato` sem marcar `matou`.
+3. **Sistema de Romance, Intimidade & Ciúmes Dinâmicos em Asora**:
+   - Implementada a função `executarMomentoRomanceServa(camp, servaId, tipoAtividade)` em `engine/tsukimichi.ts`:
+     - *Termas & Banquete com Mio* (`termas_mio`): Afeto +15%, ciúme de Mio -15%, ciúme das demais servas +15%.
+     - *Sake & Noite de Bushido com Tomoe* (`sake_tomoe`): Afeto +15%, ciúme de Tomoe -15%, ciúme das demais servas +15%.
+     - *Voo Celestial com Suzaku* (`chamas_suzaku`): Afeto +15%, ciúme de Suzaku -15%, ciúme das demais servas +15%.
+     - *Passeio Romântico na Vila de Asora* (`passeio_vila`): afeto e confraternização com o harém.
+     - Recupera 50 Vida, 40 Vigor e 40 Mana pelo descanso e intimidade.
+   - Opções integradas em `engine/narration.ts` e resolvidas nativamente em `engine/turn.ts`.
+
+### Arquivos Modificados
+- `engine/combat.ts`:
+  - `resolverAtaque`: texto de subjugação e dissolução de ilusões/reforços ao derrotar besta primordial.
+  - `jogadorAtaca`: suporte a buscar alvo tanto por id de combatente quanto por `criaturaId`.
+  - `encerrar`: chamada automática de `realizarContratoAlma(camp, c.id, '2:8')` e log canônico de transmutação e abertura de Asora para entidades contratáveis.
+- `engine/tsukimichi.ts`:
+  - Implementada `executarMomentoRomanceServa`.
+- `engine/narration.ts`:
+  - Opções de combate de arena com as feras primordiais no Desfiladeiro, Pântano e Ninho.
+  - Opções dedicadas de romance e intimidade quando o jogador estiver em locais de Asora (`asora_`).
+- `engine/turn.ts`:
+  - Resolução nativa de `pacto_shen`, `pacto_aranha`, `pacto_suzaku` acionando `iniciarCombate`.
+  - Resolução nativa das atividades de romance via `executarMomentoRomanceServa`.
+- `engine/tsukimichi.selftest.ts`:
+  - Atualizado teste de combate e subjugação de Shen e Mio na Wasteland.
+  - Novos testes automatizados para evolução de afeto, ciúmes cruzados, recuperação de recursos e opções de cena em Asora (70/70 testes aprovados).
+
+### Verificações e Testes Executados
+- `npm run typecheck`: 0 erros (TypeScript estrito).
+- `npm run test:tsukimichi`: 70/70 testes aprovados com sucesso.
+- `npm run test:engine`: 20 suítes unitárias + 6 campanhas de 10 anos sem quebras de invariantes (210s).
+- `npm run test:jornadas` & `npm run test:casas`: 100% aprovados.
+- `npx expo export --platform web`: 351 módulos empacotados com sucesso em `dist`.
+
+
+
+---
+
+## Sessão 40 — Claude — DLC na interface, e a forja — plano antes das alterações
+
+(Aberta como "29" por engano: o Gemini já tinha registrado as sessões 29 a 39
+acima. Renumerada para 40 na mesma sessão.)
+
+### Estado encontrado
+40 arquivos das sessões 24–28 (Gemini) sem commit desde 20/09, com 11 erros de
+typecheck em `engine/tsukimichi.selftest.ts` (acesso a `camp.asora` opcional).
+Corrigido com `camp.asora!` e commitado à parte (`0f8aaef`) depois de tsc,
+test:engine, tsukimichi, jornadas e casas verdes.
+
+A DLC Tsukimichi estava registrada mas era inalcançável: `novoJogo()` fixava
+`cenarioId: 'vaelhorn'` e pulava a tela de mundo. Corrigido em `67e845e`,
+verificado no navegador.
+
+Corrigindo registro meu: na resposta à auditoria externa eu apontei
+`meditar_cratera_wasteland` (`vida += 20`) como bug de teto. Não é —
+`clampRecursos(p)` roda no fim de `resolverIntencao`. Testado: 220/220.
+
+### Objetivo: forja composicional
+A auditoria externa (e a medição) confirmam: item é catálogo fechado e o jogador
+não cria nada além de artes por fusão. Havia base parada: ~20 materiais sem
+uso, carvão descrito como combustível de forja, artes de ofício, ferreiras no
+elenco.
+
+Regra: **molde + material + carvão → item com atributos calculados pela
+engine**, nunca pela IA. A qualidade sai da maestria de `oficio` e de uma
+variação do RNG da campanha, com teto por molde. Item forjado fica em
+`personagem.itensForjados` (mesmo padrão de `artesCriadas`) e `itemPorId`
+ganha o personagem como terceiro parâmetro opcional. Forjar treina `oficio`;
+obra-prima vira marco e fato público. Nichirin não é forjável.
+
+### Resultado da forja
+Feito e verificado. A regra é a do plano: **molde + material + carvão → peça
+com números calculados pela engine**.
+
+- `engine/forja.ts` (novo): 9 moldes (lâmina curta e longa, estoque, machado,
+  lança, martelo, gibão, cota, escudo) × 10 materiais já existentes no
+  catálogo e sem uso (minério de ferro, fio de prata, estilhaço de pedra,
+  lasca de gárgula, osso, dente de lobo, garra, couro, escama, pele de urso).
+  Qualidade da mão = `0,7 + maestria/200 + variação do RNG da campanha`, entre
+  0,6 e 1,3, medida *antes* do treino (a lição vale para a próxima peça).
+  Teto: nenhuma peça passa de 1,45× o molde. Rótulos: tosca, honesta, boa,
+  fina, obra-prima; raridade `notavel` para fina/obra-prima e `rara` só para
+  obra-prima de material forte.
+- Onde: local do tipo `forja` (Vila dos Ferreiros, Forja Afundada) ou onde
+  houver NPC presente com ocupação de ferreira/armeira. Com ferreira do lado, o
+  treino de `oficio` rende mais (mestre 0,75 contra 0,3) e ela vira observadora.
+- Custo: 1 carvão + a quantidade do molde; 4 períodos do dia; avança o mundo.
+  Quem estiver presente vê a demonstração de ofício; obra-prima vira marco e
+  fato público.
+- Peça forjada vive em `personagem.itensForjados` (mesmo padrão de
+  `artesCriadas`) e entra no inventário como `forjado_N`. `itemPorId` ganhou o
+  personagem como 3º parâmetro opcional; equipar, arma equipada, defesa,
+  carga, verbos, usar, vender, narrador (`nomeItem` em llm.ts) e as telas
+  Combate, Inventário, Loja e Painéis passam o personagem. Comprar e o estoque
+  de loja continuam só no catálogo, de propósito.
+- `AcaoMundo` ganhou `{ tipo: 'forjar', molde, material }`; herda o bloqueio
+  de "conclua a infância" das outras ações de mundo.
+- UI: seção **Forja** no Inventário, visível só onde `ondeForjar` permite.
+  Lista só as receitas que a mochila já cobre, mostra o carvão e o resultado
+  da última peça.
+- Não mexi na forja dos anões de Asora (`encomendarForjaAnoes`, sessão 34 do
+  Gemini): aquela é encomenda de item de catálogo em Tsukimichi; esta é o
+  jogador fazendo a peça. Convivem.
+
+### Arquivos
+Novos: `engine/forja.ts`, `engine/forja.selftest.ts`.
+Alterados: `engine/acoesMundo.ts`, `engine/index.ts`, `engine/items.ts`,
+`engine/llm.ts`, `engine/types.ts`, `package.json` (forja no `test:engine`),
+`ui/screens/Inventario.tsx`, `Combate.tsx`, `Loja.tsx`, `Paineis.tsx`.
+
+### Handoff reorganizado
+`HANDOFF.md` tinha 2.378 linhas. Sessões 13 a 23 e o bloco de estado do Codex
+(16/09) foram movidos para `HANDOFF-ARQUIVO.md` sem edição; o mapa rápido e o
+AGENTS.md foram atualizados para "sessões 1 a 23".
+
+### Verificações
+- `tsc --noEmit`: limpo.
+- `engine/forja.selftest.ts`: 26 checagens verdes — teto em todas as
+  combinações, mão treinada melhor (média 1,10 contra 0,70; na prática 122
+  contra 85 de dano somado em 12 lâminas), recusa sem consumir nada (lugar,
+  carvão, material, molde incompatível), peça equipa e resolve via
+  `itemPorId`, não vaza para o catálogo, sobrevive a export/import equipada,
+  treina ofício, gasta tempo, determinística pela semente.
+- `test:engine` completo (inclui simLongo): exit 0, nenhuma violação de
+  invariante, 223 s.
+- `test:jornadas` e `test:casas`: exit 0.
+- `expo export --platform web`: ok.
+- Não cliquei a seção Forja no navegador: chegar à Vila dos Ferreiros numa
+  campanha nova exige viagem longa. A lógica que a tela chama é a mesma do
+  teste.
+
+### Próximo passo sugerido
+- Vender carvão e minério em mais lojas e pôr ferreiras com ocupação clara nas
+  cidades, para a forja aparecer cedo no jogo, não só na vila escondida.
+- Forja no Tsukimichi: hoje funciona se houver lugar `forja` ou ferreira
+  presente; o bundle da DLC não tem nenhum dos dois além dos anões de Asora.
+- Backlog maior continua: consequências visíveis, Diretor de Arcos, rotina
+  urbana, Nemesis que perde, Marca + linhagem, ação livre 2.0, risco de
+  combate, quebrar UI + E2E.
+
+---
+
+## Sessão 41 — Gemini — Forja Inicial em Vaelhorn & Forja Composicional no Novo Mundo (Tsukimichi)
+
+### Objetivo
+Atender e concluir as duas recomendações pendentes da Sessão 40:
+1. **Disponibilidade da Forja Inicial (Vaelhorn)**:
+   - Expandir a venda de matérias-primas essenciais (`carvao`, `minerio_de_ferro`, `couro_cru`, `fio_de_prata`) para lojas de Halvet (incluindo a taverna inicial) e principais entrepostos/cidades do continente (`tessel`, `corveira`, `porto_sal`, `mareu`, `aldeia_ferro`, `aldeia_carvoeira`, `caravancerai`).
+   - Adicionar ferreiras/armeiras autorais com ocupação explícita (`OFICIO_DE_FERREIRA`) nas principais cidades que não possuíam ferreiras (`tessel` com Vana do Fole e `mareu` com Kelda Cais).
+2. **Integração Plena da Forja com a DLC Tsukimichi**:
+   - Ajustar o complexo metalúrgico dos Elder Dwarves (`asora_forja_anoes`) para ter `tipo: 'forja'`, permitindo forjar com a bigorna primordial mesmo em horários noturnos e aproveitando a presença de Mestre Beren para treino com mestre.
+   - Adicionar o NPC Garrick (`garrick_ferreiro`), armeiro e ferreiro de fronteira da Guilda de Aventureiros de Tsige, presente no Distrito Comercial e Portão do Ermo.
+   - Mapear o catálogo de itens de Tsukimichi (`itensTsukimichi`) para garantir que matérias-primas de forja e suprimentos básicos sejam vendidos no Distrito Comercial de Tsige, Portão do Ermo, Companhia Kuzunoha e Forja de Asora, preservando o isolamento estrito entre os ContentBundles.
+   - Em `engine/forja.ts`: atualizar `ondeForjar` para detectar locais que possuem pontos de interesse dedicados à ferraria (`pontos` contendo ferraria/forja/bigorna).
+
+### O que foi alterado e implementado
+- `content/vaelhorn/items.ts`:
+  - Criadas constantes `MAT_FORJA` e `MAT_METAIS_NOBRES` englobando as cidades e entrepostos comerciais de Vaelhorn.
+  - Atualizadas as lojas de `carvao`, `minerio_de_ferro`, `couro_cru` e `fio_de_prata`. A taverna inicial (`taverna`) agora vende os suprimentos básicos para que o jogador possa forjar sem travas no início do jogo.
+- `content/vaelhorn/elenco-continente.ts`:
+  - Adicionadas 2 NPCs autorais com histórias, corpos, vozes, laços e segredos completos:
+    - `armeira_de_tessel` ("Vana do Fole", armeira da guarnição militar de Tessel).
+    - `ferreira_de_mareu` ("Kelda Cais", ferreira naval e calafate de Mareu).
+- `content/vaelhorn/tsukimichiMundo.ts`:
+  - `asora_forja_anoes` atualizada com `tipo: 'forja'`.
+- `content/tsukimichi/index.ts`:
+  - Adicionado o NPC autoral `garrick_ferreiro` ("Garrick", ferreiro de fronteira e armeiro de Tsige).
+  - Mapeado `itensBaseTsukimichi` para distribuir itens e matérias-primas de forja em `tsige_distrito_comercial`, `tsige_portao_ermo`, `tsige_companhia_kuzunoha` e `asora_forja_anoes`.
+- `engine/forja.ts`:
+  - Atualizado `ondeForjar` para checar `instalacaoForja = ctx.local.tipo === 'forja' || ctx.local.pontos?.some(p => /ferraria|forja|bigorna/i.test(p))`.
+- `engine/forja.selftest.ts`:
+  - Expandido de 26 para 41 verificações automatizadas:
+    - Forja disponível nas cidades de Vaelhorn (Halvet no mercado, Tessel, Mareu e Aldeia do Ferro).
+    - Venda de carvão e minérios na taverna inicial e nas cidades de Halvet e Continente.
+    - Venda de matérias-primas em Tsige e Asora.
+    - Reconhecimento de Garrick em Tsige e Mestre Beren em Asora.
+    - Execução real de forja composicional em Asora via `executarAcaoMundo` com registro na ficha, inventário e equipamento no Novo Mundo.
+
+### Verificações e Testes Executados
+- `npm run typecheck`: 0 erros (TypeScript strict mode 100% limpo).
+- `npx tsx engine/forja.selftest.ts`: 41/41 asserções aprovadas com sucesso.
+- `npx tsx engine/elenco.selftest.ts`: 100% aprovado (todas as exigências de voz, corpo, segredo e laços atendidas).
+- `npx tsx engine/selftest.ts`: 100% aprovado (53 locais, 246 NPCs, 143 itens, 82 criaturas, 76 artes, 15 quests — 0 referências quebradas).
+- `npm run test:tsukimichi`: 70/70 testes aprovados.
+- `npm run test:jornadas` & `npm run test:casas`: 100% aprovados.
+- `npm run test:engine`: 20 suítes unitárias + 6 campanhas de 10 anos (107.250 ações) com **0 violações de invariante** em 192.9s.
+- `npx expo export --platform web`: 352 módulos empacotados com sucesso em `dist`.
+
+### Próximo passo sugerido
+- **Ação Livre 2.0**: expansão da interpretação de texto livre na tela de Ação Livre com reconhecimento de intenções para forja, treino e diálogos com NPCs presentes.
+- **Diretor de Arcos & Consequências Visíveis**: alimentar o feed com reações sociais públicas quando itens notáveis ou obras-primas forem desfilados nas cidades.
+
+---
+
+## Sessão 42 — Gemini — Desmanche de Espólios, Afiação & Têmpera e Catalisadores Raros na Forja Avançada
+
+### Objetivo
+Atender ao pedido do usuário ("integrar e testar as coisas") implementando e validando as 3 mecânicas de forja avançada consolidadas no plano aprovado:
+1. **Desmanche de Espólios (*Salvage / Smelting*)**:
+   - Reciclagem de armas, armaduras e escudos obsoletos ou capturados na bigorna para restituição de matérias-primas essenciais (`minerio_de_ferro`, `couro_cru`, `fio_de_prata`, etc.).
+   - Proteção inviolável: peças únicas, míticas, relíquias e lâminas Nichirin não podem ser desmanchadas. Peças equipadas exigem desequipar antes da reciclagem.
+2. **Afiação & Têmpera (*Sharpening & Tempering*)**:
+   - Manutenção de combate na forja gastando 1 carvão e 1 período do dia.
+   - Armas: **Afiação** (+2 de dano pelos próximos 5 combates).
+   - Armaduras e Escudos: **Têmpera** (+2 de defesa pelos próximos 5 combates).
+   - Consumo decrescente de cargas a cada combate travado (via `encerrar`).
+   - Imutabilidade do catálogo: peças de catálogo são clonadas como instâncias customizadas na ficha (`itensForjados`), blindando a definição estática do `ContentBundle`.
+3. **Catalisadores Raros & Místicos (*Infusion*)**:
+   - Infusão de despojos de criaturas e relíquias do catálogo durante a forja (`anel_draupnir`, `glandula_de_veneno`, `cinza_de_mir`, `unha_de_carnical`, `agua_do_espelho`).
+   - Concessão de propriedades intrínsecas (`suprimeMana`, `venenosa`, `contraOni`, `critica`, `espelhada`).
+   - Obediência incondicional ao teto de 1,45× do molde: nem o catalisador mais potente quebra a curva de poder.
+   - Propriedade `venenosa`: ataques desferidos com a lâmina inoculam peçonha (`condicoes: ['envenenado']`) e ativam contador tático de veneno (`tatico.veneno`).
+
+### O que foi alterado e implementado
+- `engine/types.ts`:
+  - Adicionados campos opcionais em `Item`: `afiacao`, `tempera`, `catalisador`, `propriedadesEspeciais`.
+- `engine/forja.ts`:
+  - Criado tipo `Catalisador` e array `CATALISADORES`.
+  - Atualizada `calcularPeca` com parâmetro `catalisador?: Catalisador`, aplicando bônus e propriedades dentro do teto estrito de 1,45×.
+  - Atualizada `forjar` aceitando `catalisadorItem?: string`, consumindo combustível, matéria-prima e catalisador.
+  - Implementada `desmanchar(content, camp, itemId)`: recusa itens equipados, únicos, míticos ou sagrados; decompõe a peça e restitui matérias-primas na mochila, avançando 1 período e treinando ofício.
+  - Implementada `temperar(content, camp, itemId)`: prepara armas (afiação) ou armaduras/escudos (têmpera) por 5 combates ao custo de 1 carvão, clonando com segurança peças de catálogo.
+- `engine/items.ts`:
+  - `bonusDefesaEquip`: contabiliza `it.tempera.bonusDefesa` enquanto houver cargas ativas.
+- `engine/combat.ts`:
+  - `danoJogador`: adiciona `bonusAfiacao` ao cálculo de dano base.
+  - `resolverAtaque`: se o atacante for o jogador e a arma equipada possuir propriedade `'venenosa'`, aplica a condição `envenenado` e ativa o contador `tatico.veneno`.
+  - `encerrar`: ao final do combate, consome 1 carga de afiação da arma e 1 carga de têmpera de armadura e escudo equipados, limpando o bônus ao zerar.
+- `engine/acoesMundo.ts`:
+  - Expandido tipo `AcaoMundo` com variantes `{ tipo: 'forjar'; catalisador?: string }`, `{ tipo: 'desmanchar'; itemId: string }` e `{ tipo: 'temperar'; itemId: string }`.
+  - Handlers integrados em `executarAcaoMundo` despachando para as funções da engine.
+- `ui/screens/Inventario.tsx`:
+  - Exibição de afiação, têmpera e propriedades intrínsecas nos itens equipados e na mochila.
+  - Botão contextual de "afiar" / "temperar" para equipamento equipado na presença de forja e carvão.
+  - Botão de "desmanchar" na mochila para equipamentos recicladores sobressalentes.
+  - Seletor de catalisadores opcionais na seção de Forja quando disponíveis na mochila.
+- `engine/forja.selftest.ts`:
+  - Baterias de testes unitários automatizados para desmanchar, temperar, catalisadores e combate com veneno e consumo de cargas.
+
+### Verificações e Testes Executados
+- `npm run typecheck`: 0 erros (TypeScript Strict Mode 100% limpo).
+- `npx tsx engine/forja.selftest.ts`: 100% verde (todas as 55 verificações da forja aprovadas).
+- `npm run test:tsukimichi`: 70/70 testes aprovados.
+- `npm run test:engine`: 20 suítes unitárias + 6 campanhas de 10 anos (107.250 ações) com **0 violações de invariante** em 135.0s.
+- `npx expo export --platform web`: 352 módulos empacotados com sucesso em `dist`.
+
+### Próximo passo sugerido
+- **Ação Livre 2.0**: expandir a interpretação de intenções em linguagem natural na tela de Ação Livre para suportar ordens de forja ("desmanchar espada", "afiar lâmina", "forjar lança com peçonha").
+- **Diretor de Arcos**: alimentar o feed narrativo com fofocas e reconhecimento público quando o jogador forjar uma obra-prima ou empunhar armas lendárias nas capitais.
+
+---

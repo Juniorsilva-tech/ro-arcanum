@@ -22,6 +22,7 @@ import { todosNpcs } from './elenco';
 import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
 import { processarCasas } from './casas';
+import { processarFamiliasNpc } from './familiasNpc';
 import { avancarCicloSubespaco } from './tsukimichi';
 import { processarCicloReino } from './reino';
 
@@ -219,6 +220,8 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarBandos(content, camp);
     processarContinuidade(content, camp);
     processarMundoVivo(content, camp);
+    // Luto, herança de ofício e gratidão das famílias do elenco (familiasNpc.ts).
+    processarFamiliasNpc(content, camp);
     if (camp.asora?.desbloqueado) {
       avancarCicloSubespaco(camp);
     }

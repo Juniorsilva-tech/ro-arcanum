@@ -22,6 +22,7 @@ import { contextoDeAptidao, leituraDoObservador } from './aptidao';
 import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
 import { avisoMarca } from './marca';
+import { familiaParaNarrador, ocupacaoEfetiva } from './familiasNpc';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { itemPorId } from './items';
@@ -462,11 +463,14 @@ export function montarPacote(
     presentes: ctx.presentes.map((n) => ({
       nome: n.nome,
       idade: camp.npcState[n.id]?.idade ?? n.idade,
-      ocupacao: n.ocupacao,
+      ocupacao: ocupacaoEfetiva(camp, n),
       voz: n.vozNarrativa,
       indole: n.personalidade,
       corpo: n.corpo,
       parentesco: n.parentesco,
+      // Família no elenco (engine/familiasNpc.ts): até três parentes, o nó da
+      // família como a vizinhança conta, e o luto recente. Segredo não entra.
+      familia: familiaParaNarrador(content, camp, n.id, ctx.presentes.map(x => x.id)),
       situacaoCivil: camp.vivo?.pessoas[n.id] && { atividade: camp.vivo.pessoas[n.id].objetivo, prestigio: camp.vivo.pessoas[n.id].prestigio },
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.

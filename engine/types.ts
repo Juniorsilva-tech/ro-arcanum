@@ -581,6 +581,51 @@ export type CombatActor = {
   mundoTransparente?: boolean;
 };
 
+// ── Famílias entre NPCs (engine/familiasNpc.ts) ─────────────────────────
+// Parentesco escrito no conteúdo. `parentesco` no NPC continua sendo só da
+// família do JOGADOR (engine/familia.ts); isto aqui é gente do elenco com
+// gente do elenco.
+//
+// Laços dirigidos ('mae', 'pai', 'avo', 'tia'): `a` é <tipo> de `b`.
+// Laços simétricos ('irmas', 'conjuges', 'primas'): a ordem não importa.
+// Irmã, avó, tia e prima também são deduzidas dos laços de mãe e pai.
+export type LacoFamiliarTipo = 'mae' | 'pai' | 'avo' | 'tia' | 'irmas' | 'conjuges' | 'primas';
+export type LacoFamiliar = { tipo: LacoFamiliarTipo; a: string; b: string };
+export type MembroFamilia = {
+  npc: string;
+  /** O lugar dela dentro da família, em uma ou duas frases concretas. */
+  papel: string;
+  /** O vale é das mulheres: sem marca, conta como feminino. */
+  genero?: 'm';
+};
+export type FamiliaNpc = {
+  id: string;
+  /** Como o lugar chama a família: "as Meia-Orelha". */
+  nome: string;
+  sede: string;
+  /** O nó da família, do jeito que a vizinhança conta. Nada de segredo aqui. */
+  tensao: string;
+  membros: MembroFamilia[];
+  lacos: LacoFamiliar[];
+  /** Quem é da família e não está no elenco: o filho que foi à ponte, a mãe afogada. */
+  ausentes?: { nome: string; laco: string; destino: string }[];
+  /** Membro que não é humano precisa de justificativa escrita (oni, espírito). */
+  naoHumanos?: Record<string, string>;
+};
+
+export type EstadoFamiliasNpc = {
+  /** Mortes já pranteadas — cada uma gera luto uma vez só. */
+  pranteados: string[];
+  /** Quem herdou ofício de quem (ocupação efetiva sobrepõe a do conteúdo). */
+  herancas: Record<string, { ocupacao: string; de: string; dia: number }>;
+  /** Quem passou o ofício em vida, por idade. */
+  aposentadas: Record<string, number>;
+  /** O luto de cada pessoa viva: quem perdeu, qual laço, quando. */
+  lutos: Record<string, { morto: string; laco: string; dia: number }[]>;
+  /** Último fato já lido (sequência de camp.vivo) para gratidão por resgate. */
+  fatoVisto: number;
+};
+
 export type EstadoMarca = {
   dia: number;
   idadeDespertar: number;
@@ -627,6 +672,8 @@ export type ContentBundle = {
   quests: Quest[];
   faccoes: { id: string; nome: string }[];
   casas?: import('../content/vaelhorn/casas').CasaNobre[];
+  // Famílias entre NPCs do elenco (engine/familiasNpc.ts). Dado de conteúdo.
+  familias?: FamiliaNpc[];
   // Pares de facções com rivalidade de fundo real o bastante pra às vezes
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.
@@ -703,6 +750,8 @@ export type Campaign = {
   // A Marca do Caçador: quando despertou, a idade em que o corpo começa a
   // cobrar, a vida máxima já perdida e se a chama foi contida (engine/marca.ts).
   marca?: EstadoMarca;
+  // Luto, heranças e aposentadorias das famílias do elenco (engine/familiasNpc.ts).
+  familiasNpc?: EstadoFamiliasNpc;
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
   locaisVisitados: string[];
   segredosRevelados: string[];

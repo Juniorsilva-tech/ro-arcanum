@@ -56,3 +56,4 @@ export * from './contratosMonstros';
 export * from './treinamentoImersivo';
 export * from './bandos';
 export * from './marca';
+export * from './familiasNpc';
