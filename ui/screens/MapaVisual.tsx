@@ -6,6 +6,7 @@ import {
   Image,
   Pressable,
   PanResponder,
+  Platform,
   type LayoutChangeEvent,
 } from 'react-native';
 import type { Campaign, ContentBundle } from '@/engine/types';
@@ -57,9 +58,27 @@ export function MapaVisual({
 
   // Posição do feudo fundado pelo jogador
   const feudoLocalId = camp.feudo?.fundado ? camp.feudo.localId : undefined;
-  const feudoPos = feudoLocalId ? posicaoMapa(feudoLocalId) : undefined;
 
-  // Centraliza o canvas em um ponto (percentual X, Y)
+  // Prende o mapa dentro da janela. O canvas escala em volta do próprio
+  // centro, então a borda esquerda visível da imagem fica em
+  // pan.x + W/2 - W*zoom/2. Se a imagem é maior que a janela, a borda fica
+  // entre (janela - imagem) e 0; se é menor, fica centralizada. Sem isto, o
+  // mapa podia ser arrastado para fora e a janela ficava vazia.
+  const limitarPan = useCallback(
+    (x: number, y: number, zoomLevel: number, vw = viewportSize.w, vh = viewportSize.h) => {
+      if (vw <= 0 || vh <= 0) return { x, y };
+      const eixo = (valor: number, tamanho: number, janela: number) => {
+        const escalado = tamanho * zoomLevel;
+        const ajuste = tamanho / 2 - escalado / 2; // borda visível = pan + ajuste
+        if (escalado <= janela) return Math.round((janela - escalado) / 2 - ajuste);
+        return Math.round(Math.min(-ajuste, Math.max(janela - escalado - ajuste, valor)));
+      };
+      return { x: eixo(x, CANVAS_WIDTH, vw), y: eixo(y, CANVAS_HEIGHT, vh) };
+    },
+    [viewportSize.w, viewportSize.h]
+  );
+
+  // Centraliza o canvas em um ponto (percentual X, Y), dentro dos limites.
   const centralizarNoPonto = useCallback(
     (xPercent: number, yPercent: number, zoomLevel: number, vw = viewportSize.w, vh = viewportSize.h) => {
       if (vw <= 0 || vh <= 0) return;
@@ -67,11 +86,22 @@ export function MapaVisual({
       const targetPy = (yPercent / 100) * CANVAS_HEIGHT;
       const cx = CANVAS_WIDTH / 2;
       const cy = CANVAS_HEIGHT / 2;
-      const newPanX = Math.round(vw / 2 - cx - (targetPx - cx) * zoomLevel);
-      const newPanY = Math.round(vh / 2 - cy - (targetPy - cy) * zoomLevel);
-      setPan({ x: newPanX, y: newPanY });
-      panRef.current = { x: newPanX, y: newPanY };
+      const alvo = limitarPan(
+        vw / 2 - cx - (targetPx - cx) * zoomLevel,
+        vh / 2 - cy - (targetPy - cy) * zoomLevel,
+        zoomLevel, vw, vh,
+      );
+      setPan(alvo);
+      panRef.current = alvo;
     },
+    [viewportSize.w, viewportSize.h, limitarPan]
+  );
+
+  // Menor zoom: a imagem cobrindo a janela inteira, sem faixa vazia em volta
+  // (o maior dos dois encaixes). "Ver o continente" usa este zoom.
+  const zoomMinimo = useCallback(
+    (vw = viewportSize.w, vh = viewportSize.h) =>
+      vw > 0 && vh > 0 ? Math.max(0.3, vw / CANVAS_WIDTH, vh / CANVAS_HEIGHT) : 0.45,
     [viewportSize.w, viewportSize.h]
   );
 
@@ -83,52 +113,79 @@ export function MapaVisual({
 
   const verTodoContinente = useCallback(() => {
     if (viewportSize.w <= 0 || viewportSize.h <= 0) return;
-    const fitScale = Math.min(
-      (viewportSize.w - 16) / CANVAS_WIDTH,
-      (viewportSize.h - 16) / CANVAS_HEIGHT
-    );
-    const targetZoom = Math.max(0.4, Number(fitScale.toFixed(2)));
-    setZoom(targetZoom);
-    centralizarNoPonto(50, 50, targetZoom);
-  }, [viewportSize.w, viewportSize.h, centralizarNoPonto]);
+    const alvo = zoomMinimo();
+    setZoom(alvo);
+    zoomRef.current = alvo;
+    centralizarNoPonto(50, 50, alvo);
+  }, [viewportSize.w, viewportSize.h, centralizarNoPonto, zoomMinimo]);
 
-  const onLayoutViewport = useCallback(
-    (e: LayoutChangeEvent) => {
-      const { width, height } = e.nativeEvent.layout;
-      setViewportSize({ w: width, h: height });
+  const aplicarTamanho = useCallback(
+    (width: number, height: number) => {
+      setViewportSize((v) => (v.w === width && v.h === height ? v : { w: width, h: height }));
       if (!inicializado.current && width > 0 && height > 0) {
         inicializado.current = true;
         const local = content.locais.find((l) => l.id === camp.localAtual);
         const pos = posicaoMapa(camp.localAtual, local?.regiao);
-        const initialZoom = 0.85;
+        const initialZoom = Math.max(1, zoomMinimo(width, height));
         setZoom(initialZoom);
+        zoomRef.current = initialZoom;
         centralizarNoPonto(pos.x, pos.y, initialZoom, width, height);
       }
     },
-    [camp.localAtual, content.locais, centralizarNoPonto]
+    [camp.localAtual, content.locais, centralizarNoPonto, zoomMinimo]
   );
+  const onLayoutViewport = useCallback(
+    (e: LayoutChangeEvent) => aplicarTamanho(e.nativeEvent.layout.width, e.nativeEvent.layout.height),
+    [aplicarTamanho]
+  );
+  // No navegador o onLayout desta janela não dispara (medido: o mapa ficava
+  // parado no zoom e na posição de partida, e por isso sem limite nenhum).
+  // Mede direto no elemento e acompanha o redimensionamento.
+  const viewportRef = useRef<View>(null);
+  const aplicarRef = useRef(aplicarTamanho);
+  useEffect(() => { aplicarRef.current = aplicarTamanho; }, [aplicarTamanho]);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = viewportRef.current as unknown as HTMLElement | null;
+    if (!el?.getBoundingClientRect) return;
+    const medir = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) aplicarRef.current(Math.round(r.width), Math.round(r.height));
+    };
+    medir();
+    const Observador = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    if (!Observador) return;
+    const ro = new Observador(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const aumentarZoom = useCallback(() => {
-    setZoom((z) => {
-      const proximo = Math.min(2.0, Number((z + 0.15).toFixed(2)));
-      const local = content.locais.find((l) => l.id === camp.localAtual);
-      const pos = posicaoMapa(camp.localAtual, local?.regiao);
-      centralizarNoPonto(pos.x, pos.y, proximo);
-      return proximo;
-    });
-  }, [camp.localAtual, content.locais, centralizarNoPonto]);
+  // Zoom em volta do centro da janela: o que está no meio continua no meio.
+  const mudarZoom = useCallback(
+    (delta: number) => {
+      const atual = zoomRef.current;
+      const proximo = Math.min(2.0, Math.max(zoomMinimo(), Number((atual + delta).toFixed(2))));
+      if (proximo === atual || viewportSize.w <= 0) return;
+      const cx = CANVAS_WIDTH / 2, cy = CANVAS_HEIGHT / 2;
+      // Ponto do canvas que está no centro da janela agora.
+      const px = cx + (viewportSize.w / 2 - panRef.current.x - cx) / atual;
+      const py = cy + (viewportSize.h / 2 - panRef.current.y - cy) / atual;
+      setZoom(proximo);
+      zoomRef.current = proximo;
+      centralizarNoPonto((px / CANVAS_WIDTH) * 100, (py / CANVAS_HEIGHT) * 100, proximo);
+    },
+    [viewportSize.w, viewportSize.h, centralizarNoPonto, zoomMinimo]
+  );
+  const aumentarZoom = useCallback(() => mudarZoom(0.15), [mudarZoom]);
+  const diminuirZoom = useCallback(() => mudarZoom(-0.15), [mudarZoom]);
 
-  const diminuirZoom = useCallback(() => {
-    setZoom((z) => {
-      const proximo = Math.max(0.45, Number((z - 0.15).toFixed(2)));
-      const local = content.locais.find((l) => l.id === camp.localAtual);
-      const pos = posicaoMapa(camp.localAtual, local?.regiao);
-      centralizarNoPonto(pos.x, pos.y, proximo);
-      return proximo;
-    });
-  }, [camp.localAtual, content.locais, centralizarNoPonto]);
-
-  // Gestor de arrasto do mapa com o mouse / toque
+  // Arrasto do mapa com o mouse / toque. O deslocamento do gesto (dx, dy) é
+  // somado à posição de QUANDO O ARRASTO COMEÇOU. Antes somava à posição
+  // atual, que já tinha o gesto: cada movimento contava o arrasto de novo, e
+  // um puxão pequeno jogava o mapa para fora da janela.
+  const inicioArrasto = useRef({ x: 0, y: 0 });
+  const limitarRef = useRef(limitarPan);
+  useEffect(() => { limitarRef.current = limitarPan; }, [limitarPan]);
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -138,24 +195,23 @@ export function MapaVisual({
         },
         onPanResponderGrant: () => {
           arrastou.current = false;
+          inicioArrasto.current = { ...panRef.current };
           setArrastando(true);
         },
         onPanResponderMove: (_evt, gestureState) => {
           if (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3) {
             arrastou.current = true;
           }
-          setPan({
-            x: panRef.current.x + gestureState.dx,
-            y: panRef.current.y + gestureState.dy,
-          });
+          const alvo = limitarRef.current(
+            inicioArrasto.current.x + gestureState.dx,
+            inicioArrasto.current.y + gestureState.dy,
+            zoomRef.current,
+          );
+          panRef.current = alvo;
+          setPan(alvo);
         },
-        onPanResponderRelease: (_evt, gestureState) => {
+        onPanResponderRelease: () => {
           setArrastando(false);
-          panRef.current = {
-            x: panRef.current.x + gestureState.dx,
-            y: panRef.current.y + gestureState.dy,
-          };
-          setPan(panRef.current);
           setTimeout(() => {
             arrastou.current = false;
           }, 80);
@@ -169,6 +225,50 @@ export function MapaVisual({
       }),
     []
   );
+
+  const ehWeb = Platform.OS === 'web';
+  const [foco, setFoco] = useState<string | null>(null);
+
+  // Tudo o que o mapa marca, numa lista só: cidades pintadas, lugares que
+  // você conhece ou tem rota, e a sua colônia. Uma cidade pintada que também
+  // é destino de rota vira um marcador só.
+  type Marcador = {
+    id: string; nome: string; sub?: string; x: number; y: number; pintado: boolean;
+    atual: boolean; conhecido: boolean; podeViajar: boolean; periodos?: number; feudo?: boolean;
+  };
+  const marcadores: Marcador[] = (() => {
+    const lista = new Map<string, Marcador>();
+    const montar = (id: string, extra: Partial<Marcador> = {}): Marcador | undefined => {
+      const local = content.locais.find((l) => l.id === id);
+      if (!local) return undefined;
+      const rota = rotas.find((r) => r.destino === id);
+      const pos = posicaoMapa(id, local.regiao);
+      return {
+        id, nome: local.nome, x: pos.x, y: pos.y, pintado: false,
+        atual: id === camp.localAtual, conhecido: visitados.has(id),
+        podeViajar: Boolean(rota && onViajar), periodos: rota?.periodos, ...extra,
+      };
+    };
+    if (!ehTsukimichi && modoVisao === 'geral') {
+      for (const cap of CAPITAIS_CONTINENTE) {
+        const m = montar(cap.id, { pintado: true, sub: cap.tipo, x: cap.x, y: cap.y });
+        if (m) lista.set(cap.id, m);
+      }
+    }
+    for (const id of pontosConectados) {
+      if (lista.has(id)) continue;
+      const m = montar(id);
+      if (!m) continue;
+      if (modoVisao === 'local' && !m.atual && !m.podeViajar) continue;
+      lista.set(id, m);
+    }
+    if (feudoLocalId) {
+      const f = lista.get(feudoLocalId) ?? montar(feudoLocalId);
+      if (f) lista.set(feudoLocalId, { ...f, feudo: true, sub: camp.feudo?.nome ? `sua colônia: ${camp.feudo.nome}` : 'sua colônia' });
+    }
+    // O lugar atual por último: fica por cima dos vizinhos.
+    return [...lista.values()].sort((a, b) => Number(a.atual) - Number(b.atual));
+  })();
 
   return (
     <View style={styles.container}>
@@ -213,6 +313,7 @@ export function MapaVisual({
 
       {/* Janela de visualização do mapa com navegação por arrasto */}
       <View
+        ref={viewportRef}
         style={[styles.viewport, arrastando && styles.viewportArrastando]}
         onLayout={onLayoutViewport}
         {...panResponder.panHandlers}
@@ -237,155 +338,60 @@ export function MapaVisual({
           {/* Linhas de grade cartográfica sutis */}
           <View style={styles.gradeCartografica} />
 
-          {/* Capitais e Marcos Territoriais do Continente (Visão Geral em Vaelhorn) */}
-          {!ehTsukimichi && modoVisao === 'geral' && (
-            <>
-              {CAPITAIS_CONTINENTE.map((cap) => {
-                const ehLocalAtual = cap.id === camp.localAtual || (cap.id === 'taverna' && camp.localAtual === 'taverna');
-                if (ehLocalAtual) return null;
-
-                const rotaCap = rotas.find((r) => r.destino === cap.id);
-                const podeViajarCap = Boolean(rotaCap && onViajar);
-
-                return (
-                  <Pressable
-                    key={`capital_${cap.id}`}
-                    onPress={() => {
-                      if (arrastou.current) return;
-                      if (podeViajarCap) {
-                        onViajar?.(cap.id);
-                      } else {
-                        setFeedbackViagem(`${cap.nome} (${cap.tipo}): destino distante. Siga pelas rotas de estrada.`);
-                      }
-                    }}
-                    style={({ pressed }) => [
-                      styles.capitalBadge,
-                      { left: `${cap.x}%`, top: `${cap.y}%` },
-                      podeViajarCap && styles.capitalClicavel,
-                      pressed && styles.capitalPressionada,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      podeViajarCap ? `Viajar para ${cap.nome}` : `${cap.nome} - ${cap.tipo}`
-                    }
-                  >
-                    <View style={[styles.capitalIconeFundo, podeViajarCap && styles.capitalIconeFundoRota]}>
-                      <Text style={styles.capitalIcone}>🏰</Text>
-                    </View>
-                    <Text style={[styles.capitalNome, podeViajarCap && styles.capitalNomeRota]}>{cap.nome}</Text>
-                    <Text style={styles.capitalTipo}>{cap.tipo}</Text>
-                    {podeViajarCap && (
-                      <View style={styles.tagViajarCapital}>
-                        <Text style={styles.tagViajarCapitalTexto}>✦ Viajar</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </>
-          )}
-
-          {/* Marcador do Feudo Soberano do Jogador (se fundado) */}
-          {feudoPos && (
-            <View style={[styles.feudoBadge, { left: `${feudoPos.x}%`, top: `${feudoPos.y - 8}%` }]}>
-              <View style={styles.feudoPino}>
-                <Text style={styles.feudoIcone}>👑</Text>
-              </View>
-              <Text style={styles.feudoNome}>
-                {camp.feudo?.casaDinastica?.nome ? `Casa ${camp.feudo.casaDinastica.nome}` : camp.feudo?.nome || 'Seu Feudo'}
-              </Text>
-            </View>
-          )}
-
-          {/* Pinos de locais visitados e rotas disponíveis */}
-          {[...pontosConectados].map((id) => {
-            const local = content.locais.find((l) => l.id === id);
-            if (!local) return null;
-            const conhecido = visitados.has(id);
-            const atual = id === camp.localAtual;
-            const rotaDisponivel = rotas.find((r) => r.destino === id);
-            const podeViajar = Boolean(rotaDisponivel && onViajar);
-            const pos = posicaoMapa(id, local.regiao);
-
-            if (modoVisao === 'local' && !atual && !rotaDisponivel) {
-              return null;
-            }
-
+          {/* Lugares do mapa. As cidades pintadas no desenho (capitais) não
+              ganham ícone: são uma área clicável invisível sobre o próprio
+              desenho. Os outros lugares são um ponto pequeno. O nome aparece
+              ao passar o mouse (web) ou no primeiro toque (celular); clicar
+              num lugar com rota viaja. */}
+          {marcadores.map((m) => {
+            const focado = foco === m.id;
+            const rotulo = focado || (m.atual && modoVisao === 'local');
             return (
               <Pressable
-                key={id}
-                disabled={atual}
+                key={m.id}
+                onHoverIn={() => setFoco(m.id)}
+                onHoverOut={() => setFoco((f) => (f === m.id ? null : f))}
                 onPress={() => {
                   if (arrastou.current) return;
-                  if (podeViajar) {
-                    onViajar?.(id);
-                  } else if (!atual) {
-                    setFeedbackViagem(`Para alcançar ${local.nome}, siga pelas rotas intermediárias.`);
-                  }
+                  // Sem mouse, o primeiro toque só mostra o nome.
+                  if (!ehWeb && foco !== m.id) { setFoco(m.id); return; }
+                  if (m.podeViajar) onViajar?.(m.id);
+                  else if (!m.atual) setFeedbackViagem(`${m.nome}: não há rota direta daqui. Siga pelas estradas.`);
                 }}
-                style={({ pressed }) => [
-                  styles.ponto,
-                  { left: `${pos.x}%`, top: `${pos.y}%` },
-                  atual && styles.pontoAtual,
-                  !conhecido && styles.pontoOculto,
-                  podeViajar && styles.pontoClicavel,
-                  pressed && styles.pontoPressionado,
+                style={[
+                  m.pintado ? styles.areaPintada : styles.areaPonto,
+                  { left: `${m.x}%`, top: `${m.y}%` },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  atual
-                    ? `${local.nome} - Você está aqui`
-                    : podeViajar
-                    ? `Viajar para ${local.nome}`
-                    : local.nome
-                }
+                accessibilityLabel={m.atual ? `${m.nome} - você está aqui` : m.podeViajar ? `Viajar para ${m.nome}` : m.nome}
               >
-                {/* Anel de pulso no local atual */}
-                {atual && <View style={styles.pulsoAtual} />}
-
-                <View
-                  style={[
-                    styles.pino,
-                    atual && styles.pontoAtualPino,
-                    podeViajar && styles.pinoRotaAberta,
-                    !conhecido && styles.pinoNaoVisitado,
-                  ]}
-                >
-                  {atual ? (
-                    <View style={styles.centroPinoAtual} />
-                  ) : !conhecido ? (
-                    <Text style={styles.interrogacaoNoPino}>?</Text>
-                  ) : podeViajar ? (
-                    <Text style={styles.setaNoPino}>✦</Text>
-                  ) : null}
-                </View>
-
-                <View
-                  style={[
-                    styles.nomeContainer,
-                    atual && styles.nomeContainerAtual,
-                    podeViajar && styles.nomeContainerRota,
-                  ]}
-                >
-                  <Text
-                    numberOfLines={1}
+                {/* Contorno só quando o mouse está em cima de uma cidade pintada. */}
+                {m.pintado && focado && <View style={styles.contornoPintado} />}
+                {!m.pintado && (
+                  <View
                     style={[
-                      styles.nome,
-                      atual && styles.nomeAtual,
-                      podeViajar && styles.nomeRota,
-                      !conhecido && styles.nomeNaoVisitado,
+                      styles.pontinho,
+                      m.podeViajar && styles.pontinhoRota,
+                      !m.conhecido && styles.pontinhoDesconhecido,
+                      m.feudo && styles.pontinhoFeudo,
+                      focado && styles.pontinhoFocado,
                     ]}
-                  >
-                    {local.nome}
-                  </Text>
-                  {atual ? (
-                    <Text style={styles.etiquetaVoce}>● Você está aqui</Text>
-                  ) : rotaDisponivel ? (
-                    <Text style={styles.etiquetaViajar}>
-                      ✦ Viajar {rotaDisponivel.periodos === 0 ? '(ao lado)' : `(${rotaDisponivel.periodos}p)`}
-                    </Text>
-                  ) : null}
-                </View>
+                  />
+                )}
+                {m.atual && <View style={styles.anelAtual} />}
+                {rotulo && (
+                  <View style={styles.rotulo} pointerEvents="box-none">
+                    <Text numberOfLines={1} style={styles.rotuloNome}>{m.nome}</Text>
+                    {m.sub ? <Text numberOfLines={1} style={styles.rotuloSub}>{m.sub}</Text> : null}
+                    {m.atual ? (
+                      <Text style={styles.rotuloAtual}>você está aqui</Text>
+                    ) : m.podeViajar ? (
+                      <Text style={styles.rotuloViajar}>
+                        {ehWeb ? 'clique para viajar' : 'toque de novo para viajar'} · {m.periodos === 0 ? 'ao lado' : `${m.periodos} ${m.periodos === 1 ? 'período' : 'períodos'}`}
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -416,41 +422,69 @@ export function MapaVisual({
         {/* Dica de arrasto discreta no rodapé interno do mapa */}
         <View style={styles.dicaArrasto}>
           <Text style={styles.dicaArrastoTexto}>
-            ✋ Arraste com o mouse para navegar · ✦ Clique no pino para viajar
+            Arraste para mover · passe o mouse nos lugares
           </Text>
         </View>
       </View>
 
-      {/* Barra de legenda no rodapé, fora do mapa para não cobrir a arte */}
+      {/* Legenda curta, fora do mapa para não cobrir a arte. */}
       <View style={styles.legendaAbaixo}>
         <View style={styles.itemLegenda}>
-          <View style={[styles.legendaBolinha, { backgroundColor: cores.ouro }]} />
+          <View style={[styles.legendaBolinha, { borderWidth: 2, borderColor: cores.ouro, backgroundColor: 'transparent' }]} />
           <Text style={[styles.legendaTxt, { color: cores.ouro }]}>Você está aqui</Text>
         </View>
         <View style={styles.itemLegenda}>
+          <View style={[styles.legendaBolinha, { backgroundColor: cores.ouro }]} />
+          <Text style={styles.legendaTxt}>Dá para ir daqui</Text>
+        </View>
+        <View style={styles.itemLegenda}>
           <View style={[styles.legendaBolinha, { backgroundColor: cores.verdigris }]} />
-          <Text style={styles.legendaTxt}>Explorado</Text>
+          <Text style={styles.legendaTxt}>Já esteve</Text>
         </View>
         <View style={styles.itemLegenda}>
-          <Text style={styles.legendaIconeDuvida}>✦</Text>
-          <Text style={[styles.legendaTxt, { color: '#f3e3ba' }]}>Clique para viajar</Text>
+          <Text style={styles.legendaTxt}>{ehWeb ? 'Passe o mouse para ver o nome · as cidades desenhadas também se clicam' : 'Toque para ver o nome · toque de novo para viajar'}</Text>
         </View>
-        <View style={styles.itemLegenda}>
-          <Text style={styles.legendaIconeDuvida}>?</Text>
-          <Text style={styles.legendaTxt}>Rota a explorar</Text>
-        </View>
-        {!ehTsukimichi && (
-          <View style={styles.itemLegenda}>
-            <Text style={styles.legendaCastelo}>🏰</Text>
-            <Text style={styles.legendaTxt}>Grandes Cidades</Text>
-          </View>
-        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Área clicável sobre uma cidade pintada: invisível, do tamanho do desenho.
+  areaPintada: {
+    position: 'absolute', width: 64, height: 56, marginLeft: -32, marginTop: -30,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  contornoPintado: {
+    position: 'absolute', left: 4, top: 4, right: 4, bottom: 4, borderRadius: 30,
+    borderWidth: 2, borderColor: 'rgba(212, 175, 55, 0.85)', backgroundColor: 'rgba(212, 175, 55, 0.12)',
+  },
+  // Área clicável de um lugar sem desenho: maior que o ponto, para acertar.
+  areaPonto: {
+    position: 'absolute', width: 26, height: 26, marginLeft: -13, marginTop: -13,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pontinho: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: cores.verdigris,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.6)',
+  },
+  pontinhoRota: { backgroundColor: cores.ouro, width: 10, height: 10, borderRadius: 5 },
+  pontinhoDesconhecido: { opacity: 0.75 },
+  pontinhoFeudo: { backgroundColor: '#b04a2f', width: 10, height: 10, borderRadius: 2, transform: [{ rotate: '45deg' }] },
+  pontinhoFocado: { transform: [{ scale: 1.5 }] },
+  anelAtual: {
+    position: 'absolute', width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: cores.ouro,
+  },
+  rotulo: {
+    position: 'absolute', top: 30, minWidth: 90, maxWidth: 200, alignItems: 'center',
+    backgroundColor: 'rgba(20, 16, 10, 0.92)', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.5)',
+  },
+  rotuloNome: { fontFamily: fontes.monoMedium, fontSize: 11, color: '#f3e3ba' },
+  rotuloSub: { fontFamily: fontes.mono, fontSize: 9, color: cores.mudo },
+  rotuloAtual: { fontFamily: fontes.mono, fontSize: 9, color: cores.ouro, marginTop: 2 },
+  rotuloViajar: { fontFamily: fontes.mono, fontSize: 9, color: cores.ouro, marginTop: 2 },
   container: {
     marginVertical: esp.md,
   },
@@ -613,238 +647,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: cores.verdigris,
   },
-  capitalBadge: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -40 }, { translateY: -12 }],
-    width: 80,
-    zIndex: 2,
-  },
-  capitalClicavel: {
-    zIndex: 5,
-  },
-  capitalPressionada: {
-    opacity: 0.7,
-  },
-  capitalIconeFundo: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(20, 26, 24, 0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(197, 160, 89, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  capitalIconeFundoRota: {
-    borderColor: cores.ouro,
-    backgroundColor: 'rgba(32, 26, 16, 0.95)',
-    borderWidth: 1.5,
-  },
-  capitalIcone: {
-    fontSize: 11,
-  },
-  capitalNome: {
-    fontFamily: fontes.monoMedium,
-    fontSize: 9,
-    color: '#e4d3b2',
-    textAlign: 'center',
-    marginTop: 2,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  capitalNomeRota: {
-    color: cores.ouro,
-    fontFamily: fontes.monoMedium,
-  },
-  capitalTipo: {
-    fontFamily: fontes.mono,
-    fontSize: 7.5,
-    color: 'rgba(215, 200, 170, 0.65)',
-    textAlign: 'center',
-  },
-  tagViajarCapital: {
-    backgroundColor: 'rgba(212, 175, 55, 0.2)',
-    borderColor: cores.ouro,
-    borderWidth: 1,
-    borderRadius: 3,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    marginTop: 2,
-  },
-  tagViajarCapitalTexto: {
-    fontFamily: fontes.monoMedium,
-    fontSize: 7.5,
-    color: cores.ouro,
-  },
-  feudoBadge: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -45 }, { translateY: -15 }],
-    width: 90,
-    zIndex: 4,
-  },
-  feudoPino: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: cores.bistre,
-    borderWidth: 2,
-    borderColor: cores.ouro,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  feudoIcone: {
-    fontSize: 12,
-  },
-  feudoNome: {
-    fontFamily: fontes.monoMedium,
-    fontSize: 9,
-    color: cores.ouro,
-    backgroundColor: 'rgba(15, 12, 8, 0.85)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
-  },
-  ponto: {
-    position: 'absolute',
-    width: 120,
-    alignItems: 'center',
-    transform: [{ translateX: -60 }, { translateY: -10 }],
-    zIndex: 3,
-  },
-  pontoClicavel: {
-    zIndex: 8,
-  },
-  pontoPressionado: {
-    opacity: 0.7,
-    transform: [{ translateX: -60 }, { translateY: -10 }, { scale: 0.95 }],
-  },
-  pontoAtual: {
-    zIndex: 10,
-  },
-  pontoOculto: {
-    opacity: 0.88,
-  },
-  pulsoAtual: {
-    position: 'absolute',
-    top: -4,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1.5,
-    borderColor: cores.ouro,
-    opacity: 0.65,
-  },
-  pino: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: cores.verdigris,
-    borderWidth: 2,
-    borderColor: '#0a0d0c',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.6,
-    shadowRadius: 3,
-  },
-  pontoAtualPino: {
-    backgroundColor: cores.ouro,
-    borderColor: '#fff',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-  },
-  pinoRotaAberta: {
-    backgroundColor: 'rgba(24, 32, 28, 0.95)',
-    borderColor: cores.ouro,
-    borderWidth: 2,
-    shadowColor: cores.ouro,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 4,
-  },
-  setaNoPino: {
-    color: cores.ouro,
-    fontFamily: fontes.monoMedium,
-    fontSize: 9,
-    lineHeight: 11,
-  },
-  centroPinoAtual: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#111',
-  },
-  pinoNaoVisitado: {
-    backgroundColor: 'rgba(20, 28, 25, 0.9)',
-    borderColor: cores.ouro,
-    borderStyle: 'dashed',
-  },
-  interrogacaoNoPino: {
-    color: cores.ouro,
-    fontFamily: fontes.monoMedium,
-    fontSize: 10,
-    lineHeight: 12,
-  },
-  nomeContainer: {
-    backgroundColor: 'rgba(12, 16, 15, 0.82)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 3,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  nomeContainerAtual: {
-    backgroundColor: 'rgba(24, 20, 10, 0.92)',
-    borderColor: 'rgba(212, 175, 55, 0.45)',
-  },
-  nomeContainerRota: {
-    backgroundColor: 'rgba(20, 26, 22, 0.94)',
-    borderColor: 'rgba(212, 175, 55, 0.55)',
-    borderWidth: 1.2,
-  },
-  nome: {
-    maxWidth: 110,
-    color: '#d6dedb',
-    fontFamily: fontes.mono,
-    fontSize: 9.5,
-    textAlign: 'center',
-  },
-  nomeAtual: {
-    color: cores.ouro,
-    fontFamily: fontes.monoMedium,
-    fontSize: 10,
-  },
-  nomeRota: {
-    color: '#f0e6cf',
-    fontFamily: fontes.monoMedium,
-  },
-  etiquetaVoce: {
-    fontFamily: fontes.mono,
-    fontSize: 8,
-    color: '#f3e3ba',
-    marginTop: 1,
-  },
-  etiquetaViajar: {
-    fontFamily: fontes.monoMedium,
-    fontSize: 8,
-    color: cores.ouro,
-    marginTop: 1,
-    letterSpacing: 0.5,
-  },
-  nomeNaoVisitado: {
-    color: '#a3b0ac',
-    fontSize: 9,
-  },
   rosaDosVentos: {
     position: 'absolute',
     top: 10,
@@ -893,14 +695,6 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-  },
-  legendaIconeDuvida: {
-    fontFamily: fontes.monoMedium,
-    fontSize: 9,
-    color: cores.ouro,
-  },
-  legendaCastelo: {
-    fontSize: 9,
   },
   legendaTxt: {
     color: cores.mudo,

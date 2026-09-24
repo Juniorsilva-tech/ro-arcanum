@@ -751,3 +751,24 @@ ficar separado. Conferido desenhando os pontos do jogo sobre
 - O marcador do feudo mostra o nome da colônia (era "Seu Feudo").
 Resultado: 53 locais com coordenada, nenhuma capital inválida, nenhum par a
 menos de 3% um do outro.
+
+### Mapa — arrasto e marcadores (pedido do dono, com print)
+- **"Arrasto um pouquinho e ele quase some"**: o arrasto somava o gesto à
+  posição que ele mesmo atualizava a cada movimento, então o deslocamento era
+  contado de novo a cada quadro. Agora soma à posição de quando o arrasto
+  começou. E o mapa fica preso: nunca sai da janela nem mostra faixa vazia
+  (`limitarPan`, zoom mínimo = a imagem cobrindo a janela). O zoom mantém o
+  centro da janela.
+- **O `onLayout` da janela do mapa não dispara no navegador**: o mapa ficava
+  no zoom 0,85 e posição 0 de partida, e nenhum botão (＋, －, centralizar,
+  ver tudo) fazia nada. No web a janela é medida direto no elemento com
+  `ResizeObserver`; no celular continua o `onLayout`.
+- **Ícones em cima da pintura**: as cidades desenhadas (Tessel, Corveira,
+  Mareu, Vintra, Solgar, Casa de Pedra, Rês Enforcada) viraram áreas
+  clicáveis invisíveis sobre o desenho, com contorno dourado só ao passar o
+  mouse. Os outros lugares são um ponto pequeno (dourado = dá para ir,
+  verde = já esteve, losango = sua colônia); o seu lugar é um anel. O nome
+  aparece só no hover (web) ou no primeiro toque (celular, e o segundo toque
+  viaja). Sem caixas de nome fixas por cima do mapa.
+- Testado no navegador: arrastos fortes nas quatro direções param na borda
+  com a imagem cobrindo a janela; hover mostra e esconde o nome; clique viaja.
