@@ -174,7 +174,7 @@ export function processarBandos(content: ContentBundle, camp: Campaign): void {
   }
 }
 
-function encerrarBando(camp: Campaign, b: Bando, texto: string): void {
+export function encerrarBando(camp: Campaign, b: Bando, texto: string): void {
   b.estado = 'destruido';
   b.membros = 0;
   b.pedagio = false;

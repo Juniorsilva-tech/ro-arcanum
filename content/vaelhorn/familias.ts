@@ -29,8 +29,14 @@ export const familiasVaelhorn: FamiliaNpc[] = [
     membros: [
       { npc: 'dama_valda', papel: 'A mãe. Ainda põe o lugar do filho à mesa no dia em que ele faria anos, e não deixa Ysolde sentar ali.' },
       { npc: 'ysolde', papel: 'A filha que virou herdeira por falta de outra. Aprendeu a esperar porque a mãe nunca lhe deu o que fazer.' },
+      { npc: 'maelis', papel: 'Prima de Valda pelo lado das mães, viúva, mora na Casa de Pedra de favor há vinte anos e senta no fim da mesa.' },
+      { npc: 'ilse', papel: 'Filha de Maelis, segunda na linha da casa, criada ao lado de Ysolde como irmã mais nova que ninguém pediu.' },
     ],
-    lacos: [{ tipo: 'mae', a: 'dama_valda', b: 'ysolde' }],
+    lacos: [
+      { tipo: 'mae', a: 'dama_valda', b: 'ysolde' },
+      { tipo: 'primas', a: 'dama_valda', b: 'maelis' },
+      { tipo: 'mae', a: 'maelis', b: 'ilse' },
+    ],
     ausentes: [{ nome: 'Aldren de Halvet', laco: 'filho de Valda, irmão de Ysolde', destino: 'foi à ponte no inverno em que fez dezoito anos' }],
   },
   {
@@ -483,9 +489,11 @@ export const familiasVaelhorn: FamiliaNpc[] = [
       { npc: 'morador_mercado_peixe_0', papel: 'A irmã mais velha, senhora do mercado. Generosa até o limite do prato — e o prato é dela.' },
       { npc: 'morador_mercado_peixe_2', papel: 'A irmã mais nova, mestra da guilda. Medrosa por experiência; o medo tem o nome da escrivã que guarda o registro antigo.' },
       { npc: 'morador_mareu_14', papel: 'A prima de fora da muralha. Seca na conta e correta nela, e a conta que ela nunca fecha é a da família.' },
+      { npc: 'mirel', papel: 'Filha de Ansel, educada em Corveira. Voltou para herdar a casa e acha a guilda da tia uma dívida que Mareu paga por costume.' },
     ],
     lacos: [
       { tipo: 'irmas', a: 'morador_mercado_peixe_0', b: 'morador_mercado_peixe_2' },
+      { tipo: 'mae', a: 'morador_mercado_peixe_0', b: 'mirel' },
       { tipo: 'primas', a: 'morador_mareu_14', b: 'morador_mercado_peixe_0' },
       { tipo: 'primas', a: 'morador_mareu_14', b: 'morador_mercado_peixe_2' },
     ],

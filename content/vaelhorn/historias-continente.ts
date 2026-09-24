@@ -291,6 +291,12 @@ export const HISTORIAS_CONTINENTE: Record<string, HistoriaNpc> = {
     desejo: 'Morrer ao lado da bigorna, não numa cela das casas.',
     medo: 'Wyn subir sozinha à cidade.',
   },
+  morador_corveira_16: {
+    origem: 'Cocheira de aluguel de Corveira há quarenta anos, filha de cocheira. Conhece cada rampa entre os terraços e cada porta das sete casas.',
+    ferida: 'Levou para o enterro, no mesmo dia, doze famílias do desabamento do quarto terraço, uma viagem atrás da outra, sem cobrar nenhuma.',
+    desejo: 'Morrer na boleia, com a carroça paga e a língua inteira.',
+    medo: 'Que alguma das casas decida que ela viu coisa demais.',
+  },
   ferreira_do_ferro_velho: {
     origem: 'Nasceu em Ferro Velho, filha de catadora de metal. Aprendeu a forjar com restos de Corveira e virou a melhor lâmina-ferreira do planalto.',
     ferida: 'Viu a casa Verrão comprar de volta, a preço de nada, o metal que a aldeia recuperou do quarto terraço.',

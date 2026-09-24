@@ -57,4 +57,5 @@ export * from './treinamentoImersivo';
 export * from './bandos';
 export * from './marca';
 export * from './familiasNpc';
+export * from './casas';
 export * from './segredos';

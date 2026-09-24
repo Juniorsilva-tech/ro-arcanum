@@ -23,6 +23,7 @@ import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
 import { avisoMarca } from './marca';
 import { familiaParaNarrador, ocupacaoEfetiva } from './familiasNpc';
+import { descreverCasa } from './casas';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { itemPorId } from './items';
@@ -441,7 +442,7 @@ export function montarPacote(
     comunidadeLocal: camp.continuidade?.locais[ctx.local.id],
     retornoAoLocal: narrativa.retorno,
     mundoPersistente: {
-      casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id)).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao })),
+      casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id) || h.sede === ctx.local.id).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao, hoje: descreverCasa(content, camp, h) })),
       fatos: narrativa.fatos,
       confirmados: narrativa.confirmados,
       rumores: narrativa.rumores,

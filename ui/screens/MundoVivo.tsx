@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useGame } from '../store';
 import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
-import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, type TipoEdificio } from '@/engine';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, type TipoEdificio } from '@/engine';
 
 export function ComunidadeViva() {
   const camp = useGame(s => s.camp)!;
@@ -33,6 +33,12 @@ export function ComunidadeViva() {
       {bandosConhecidos(camp).map(b => <Card key={b.id}>
         <TextoMono>{descreverBando(content, b)}</TextoMono>
         {b.esconderijoConhecido && b.esconderijo === camp.localAtual && b.estado !== 'destruido' && <Botao titulo="Atacar o esconderijo · risco de combate" onPress={() => agir({ tipo: 'atacar_esconderijo' })} />}
+      </Card>)}
+    </>}
+    {(content.casas ?? []).filter(h => h.sede === camp.localAtual || h.territorio.includes(camp.localAtual)).length > 0 && <>
+      <Divisor label="casas nobres" />
+      {(content.casas ?? []).filter(h => h.sede === camp.localAtual || h.territorio.includes(camp.localAtual)).map(h => <Card key={h.id}>
+        <TextoMono>{descreverCasa(content, camp, h)}</TextoMono>
       </Card>)}
     </>}
     {c && <Card>

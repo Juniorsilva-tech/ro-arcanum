@@ -16,6 +16,7 @@ import { integrarKimetsu } from './kimetsu';
 import { criaturasDeDesafio, desafiosVaelhorn } from './desafios';
 import { casasVaelhorn } from './casas';
 import { familiasVaelhorn } from './familias';
+import { membrosDasCasas } from './casas-membros';
 import { SEGREDOS_NOVOS, SEGREDOS_REESCRITOS, CONSEQUENCIAS } from './segredos';
 import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
@@ -60,7 +61,7 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   origens: origensVaelhorn,
   verbos: verbosVaelhorn,
   locais: mapaVaelhorn,
-  npcs: [...npcsVaelhorn, ...elencoDoContinente, ...moradores],
+  npcs: [...npcsVaelhorn, ...elencoDoContinente, ...membrosDasCasas, ...moradores],
   mestres: mestresVaelhorn,
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,

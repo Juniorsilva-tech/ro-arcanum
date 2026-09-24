@@ -35,6 +35,18 @@ export const HISTORIAS_COSTA: Record<string, HistoriaNpc> = {
     desejo: 'Que Nolan suba no registro de Corveira até ninguém lembrar de Mareu.',
     medo: 'Que a filha precise voltar ao Mercado do Peixe.',
   },
+  morador_mareu_0: {
+    origem: 'Senhora da cidade de Mareu há vinte anos, filha de uma das três vilas que viraram cidade. Chegou ao posto porque a guilda precisava de alguém que assinasse.',
+    ferida: 'Governava o cais no ano da peste e viu um terço da cidade morrer sob uma quarentena que ela decretou tarde.',
+    desejo: 'Uma sessão do conselho, uma só, em que o voto seja decidido na sala e não na véspera.',
+    medo: 'Que alguém pergunte o que ela fez na semana em que a peste chegou.',
+  },
+  morador_mareu_2: {
+    origem: 'Mestra da guilda do sal em Mareu aos trinta e cinco, aprendiz da mestra anterior desde os catorze. Desconfia de forasteiro por ofício.',
+    ferida: 'A mestra que a criou morreu à mesa do conselho, no meio de uma votação, e ninguém interrompeu a votação.',
+    desejo: 'Que a guilda sobreviva à briga das Olho-Vivo pela casa.',
+    medo: 'A herdeira que voltou de Corveira falando de imposto.',
+  },
   morador_mareu_1: {
     origem: 'Filha de Loris Boca-Seca, criada na taverna do Porto do Sal. Capitã da guarda de Mareu aos trinta e cinco.',
     ferida: 'Saiu do Porto do Sal para Mareu aos dezoito sem que a mãe dissesse adeus, e só voltou a ver a mãe no enterro da avó.',

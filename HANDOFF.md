@@ -768,3 +768,119 @@ simulação não revela segredos; histórias só vão ao narrador).
 
 ### Próximo passo
 Fase 4: casas nobres com gente dentro.
+
+---
+
+## Sessão 50 — Claude — Fase 4: casas nobres com gente dentro
+
+### Estado encontrado
+`content/vaelhorn/casas.ts`: 4 casas com lema, sede, sucessão e rivalidade,
+nenhum membro. `engine/casas.ts` (23 linhas) escolhia como "líder" o primeiro
+NPC listado na sede — em Mareu, a ferreira naval; em Tessel, a herdeira seria
+a sargenta do portão. A sucessão declarada (primogenitura, eleição, duelo)
+não era usada.
+
+Simulação longa antes: a tabela da sessão 49.
+
+### O que foi feito
+- **Membros escritos** (`CasaNobre.membros`: chefe, herdeiras em ordem,
+  colaterais, servidoras, campeã; `CasaNobre.familia` aponta para a família da
+  Fase 2):
+  - Halvet (primogenitura): Dama Valda, Ysolde, Ilse, Maelis, Teoda.
+  - Tessel (eleição): as Varn — Odile, Dorn, Ketta; a capitã Roan e a campeã
+    Bela.
+  - Corveira (duelo): as Verrão — Halda, Pell, Wyn, Irmã Velun; a campeã Veski
+    e a cocheira Eda o Torto.
+  - Mareu (eleição): as Olho-Vivo — Ansel, Mirel, Vidar, Davet; Maud (guilda) e
+    Calder (a senhora da cidade que assina). Decisão: a casa de Mareu é a guilda
+    do sal, e a guilda nasceu no galpão das Olho-Vivo (história do Mercado do
+    Peixe), então a família da casa são elas, e não a senhora da cidade.
+- **3 NPCs novos** em `content/vaelhorn/casas-membros.ts`, com todos os campos,
+  história, segredo e consequência: Maelis de Halvet (prima que vive de favor e
+  guarda uma carta que muda a linha), Ilse de Halvet (a filha dela, segunda na
+  linha, que quer sair dela), Mirel Olho-Vivo (a herdeira que quer quebrar a
+  guilda perdoando as dívidas de Rede Rota). Entraram nas famílias.
+- **Sucessão pela regra** (`escolherSucessora`): primogenitura segue a linha;
+  eleição escolhe pela linha e pela tensão (quem está em guerra com o mundo
+  perde); duelo põe as duas primeiras para lutar com RNG derivado (não mexe no
+  RNG principal) e a campeã lutando pela primeira da linha. Fato público.
+- **Casas agem** (`processarCasas`), sobre a comunidade da sede
+  (`cidadeDaCasa`: a Casa de Pedra de Halvet cuida da Praça):
+  - obra: reconstrução se a integridade está abaixo de 60; se há obra no
+    canteiro, paga braços (+30% de progresso); senão ergue o que a própria
+    cidade ergueria (lavoura primeiro);
+  - celeiro: com fome na cidade, compra grão com o tesouro (+70 de comida);
+  - patrulha: bando ativo na região perde 2 homens (fato com o nome do bando;
+    `encerrarBando` agora exportado de `bandos.ts`);
+  - missão: patrocina a missão de crise da cidade (a mesma, nunca uma segunda),
+    paga +25 e põe a chefe como quem pede;
+  - casamento político entre rivais fracas (+12 de legitimidade cada) e trama
+    da colateral quando a legitimidade cai abaixo de 30.
+- **Jogador**: cumprir missão em que um membro é o ator sobe a reputação com a
+  casa, e a reputação chega à disposição de todos os membros (servidoras com
+  peso menor). `descreverCasa` vai para a tela (seção "casas nobres" em
+  Comunidade) e para o narrador (`casasPresentes[].hoje`).
+- Simulador ganhou `obrasDeCasa` e `patrulhasDeCasa`.
+
+### Problema encontrado e corrigido no caminho (medido)
+A primeira versão piorou a simulação: pico de fome de 6 para 43 dias,
+população −7%, derrotas 16 → 30. Desliguei as ações das casas por variável
+temporária e comparei 8 sementes: sem as ações, fome e população voltavam ao
+patamar anterior. Três causas, todas corrigidas:
+1. A obra escolhia mercado antes de lavoura e ocupava o único canteiro da
+   cidade, que priorizaria comida.
+2. A missão patrocinada duplicava a missão de crise da cidade; cada missão
+   que expira sobe a insegurança em 8.
+3. A casa de Halvet nunca agia: a sede não é cidade. A Praça terminou uma
+   campanha com integridade 0 e 261 dias de fome.
+A instrumentação foi removida. Uma armadilha que **já existia** ficou visível:
+comunidade com integridade muito baixa e todos os edifícios no nível 5 não tem
+obra para fazer e produz 15% do normal. A reconstrução paga pela casa é o que
+tira as sedes dela; fora das sedes, continua.
+
+Comparação final, 8 sementes (`longa-0` a `longa-7`), com e sem as ações das
+casas (mesmo conteúdo): derrotas 19,0 contra 22,0; fome no fim da campanha
+4,2 contra 8,9; dias-cidade em fome 2.724 contra 2.510 (+8,6%); população
+3.830 contra 3.973 (−3,6%); obras de casa 13,1 e patrulhas 9,6 por campanha.
+A dispersão entre sementes é maior que as diferenças (dias de fome vão de
+1.713 a 3.893 na mesma configuração), então não atribuo a diferença média às
+casas; registro para a próxima sessão acompanhar.
+
+### Arquivos
+Novos: `content/vaelhorn/casas-membros.ts`.
+Alterados: `content/vaelhorn/casas.ts` (membros, família), `engine/casas.ts`,
+`engine/casas.selftest.ts`, `engine/bandos.ts` (`encerrarBando` exportada),
+`engine/llm.ts`, `engine/campanhaLonga.ts`, `engine/index.ts`,
+`content/vaelhorn/index.ts`, `content/vaelhorn/familias.ts`,
+`content/vaelhorn/historias-continente.ts` e `historias-costa.ts` (Eda o Torto,
+Calder e Maud, que viraram membros de casa), `ui/screens/MundoVivo.tsx`.
+
+### Verificações
+- `casas.selftest.ts` (`test:casas`): membros existem, 5+ por casa, chefe e
+  herdeira, família certa; chefe escrita no lugar do "primeiro da sede";
+  primogenitura (Valda → Ysolde → Ilse, não Maelis); eleição (filha em
+  conflito perde para a gêmea; calma, vence); duelo (determinístico, a primeira
+  com a campeã vence 28 de 40); obra (não no primeiro dia, não sem tesouro,
+  sim com tesouro; canteiro ocupado acelera em vez de trocar; fome leva a
+  lavoura); Halvet reconstrói a Praça e abre o celeiro; patrulha (−2 do bando,
+  fato com nome, não sem tesouro); missão patrocinada sem duplicar, celeiro,
+  reputação que chega à herdeira e à servidora; casamento político; trama
+  (8 de 30); save.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `vaelhorn_expansao`,
+  `tsukimichi`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 31  pop 3818  fome   21d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 33  pop 4167  fome    0d  travas     0  violações 0  marca aos 23
+longa-2    10a  fim_do_prazo nível 32  pop 3615  fome    0d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 29  pop 3934  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 29  pop 3451  fome    0d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 34  pop 4210  fome   13d  travas     0  violações 0  marca aos 18
+```
+Médias: nível 31,3; população 3.866; fome no fim 6; dias-cidade em fome
+2.621; derrotas 19,8; obras de casa 13,2 e patrulhas 10,8 por campanha.
+
+### Próximo passo
+Fase 5 (estações, feras em bando, caravanas). O dono pediu nesta sessão para
+focar só em Vaelhorn: a Fase 7 (NPCs de Tsukimichi) fica de fora por enquanto.
