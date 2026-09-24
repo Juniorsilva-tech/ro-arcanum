@@ -831,6 +831,9 @@ export type Campaign = {
   caravanas?: EstadoCaravanas;
   // Luto, heranças e aposentadorias das famílias do elenco (engine/familiasNpc.ts).
   familiasNpc?: EstadoFamiliasNpc;
+  // O que a cidade lembra do jogador e os ganchos do Diretor de Arcos
+  // (engine/memoriaMundo.ts, engine/diretor.ts).
+  memoriaMundo?: import('./memoriaMundo').MemoriaMundo;
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
   locaisVisitados: string[];
   segredosRevelados: string[];

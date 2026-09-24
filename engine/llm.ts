@@ -28,6 +28,7 @@ import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { itemPorId } from './items';
 import { conviccoesDoNpc } from './reflexao';
+import { avisosDoDia } from './memoriaMundo';
 import { descreverEdificioRegional } from './edificiosRegionais';
 import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
 import {
@@ -442,6 +443,8 @@ export function montarPacote(
     oValeHoje: comoEstaOVale(camp, content),
     comunidadeLocal: camp.continuidade?.locais[ctx.local.id],
     retornoAoLocal: narrativa.retorno,
+    // Linhas que a engine já mostrou hoje: o que a cidade lembra, ganchos.
+    mundoLembra: avisosDoDia(camp).length ? avisosDoDia(camp) : undefined,
     mundoPersistente: {
       casasPresentes: (content.casas ?? []).filter(h => h.territorio.includes(ctx.local.id) || h.sede === ctx.local.id).map(h => ({ nome: h.nome, reino: h.reino, lema: h.lema, reputacao: h.reputacao, hoje: descreverCasa(content, camp, h) })),
       fatos: narrativa.fatos,
@@ -710,6 +713,8 @@ export const INSTRUCAO_SISTEMA =
   '2b) Um presente pode trazer "historia" (origem, ferida, desejo, medo) e "familia". Use para dar peso ao que ela diz e ' +
   'cala: aluda, nunca recite, e não faça a pessoa contar a própria vida sem motivo. O jogador só sabe o segredo que está ' +
   'em "segredoQueVoceSabe"; o que a história apenas insinua continua não dito.\n' +
+  '2c) "mundoLembra" são linhas que o jogo já mostrou hoje ao jogador (o que a cidade lembra dele, um boato, um mensageiro). ' +
+  'Deixe aparecer num gesto ou numa fala, sem repetir a frase e sem inventar consequência além dela.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +

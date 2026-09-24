@@ -65,6 +65,9 @@ export function oferecerMissao(camp: Campaign, tipo: MissaoViva['tipo'], fato: F
 export function encerrarMissao(camp: Campaign, q: MissaoViva, estado: MissaoViva['estado'], texto: string): void {
   if (!['oferecida', 'aceita'].includes(q.estado)) return;
   const participou = q.estado === 'aceita' && estado === 'concluida';
+  // Compromisso aceito e não cumprido também é do jogador: a cidade lembra
+  // (engine/memoriaMundo.ts). Oferta que expirou sem aceite, não.
+  const doJogador = participou || (q.estado === 'aceita' && estado === 'falhada');
   if (estado === 'falhada') {
     const chave = q.estado === 'aceita' ? 'compromissosFalhados' : 'oportunidadesExpiradas';
     camp.vivo!.contadores[chave] = (camp.vivo!.contadores[chave] ?? 0) + 1;
@@ -75,7 +78,8 @@ export function encerrarMissao(camp: Campaign, q: MissaoViva, estado: MissaoViva
     camp.personagem.xp += 15;
     camp.reputacao.vila = (camp.reputacao.vila ?? 0) + 2;
   }
-  registrarFato(camp, { tipo: `missao_${estado}`, local: q.local, texto, atores: q.ator ? [q.ator] : [], causa: q.causa, publico: true });
+  const atores = [...(q.ator ? [q.ator] : []), ...(doJogador ? ['jogador'] : [])];
+  registrarFato(camp, { tipo: `missao_${estado}`, local: q.local, texto, atores, causa: q.causa, publico: true });
 }
 
 export function processarMissoesVivas(content: ContentBundle, camp: Campaign): void {

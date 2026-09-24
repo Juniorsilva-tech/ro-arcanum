@@ -90,6 +90,9 @@ export type Metricas = {
   /** Edifícios regionais (engine/edificiosRegionais.ts): peixe e rondas. */
   comidaRegional: number;
   rondasRegionais: number;
+  /** Ganchos do Diretor de Arcos e lembranças ao voltar (diretor.ts, memoriaMundo.ts). */
+  ganchosDoDiretor: number;
+  lembrancas: number;
   /**
    * Ganchos do mapa que viraram missao (ver engine/ganchos.ts). A flag so e'
    * gravada quando a missao nasceu de fato, entao este numero e' a contagem
@@ -383,7 +386,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, expedicoes: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
-    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, marcaIdade: -1, mortePelaMarca: false, obrasDeCasa: 0, patrulhasDeCasa: 0, encontrosPorEstacao: {}, caravanasEntregues: 0, caravanasPerdidas: 0, comidaRegional: 0, rondasRegionais: 0, ganchosUsados: 0, idadeFinal: 20,
+    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, marcaIdade: -1, mortePelaMarca: false, obrasDeCasa: 0, patrulhasDeCasa: 0, encontrosPorEstacao: {}, caravanasEntregues: 0, caravanasPerdidas: 0, comidaRegional: 0, rondasRegionais: 0, ganchosDoDiretor: 0, lembrancas: 0, ganchosUsados: 0, idadeFinal: 20,
     tiposDeFato: 0, assinatura: '', porFaixa: {},
   };
 
@@ -539,6 +542,8 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   m.caravanasPerdidas = camp.caravanas?.perdidas ?? 0;
   m.comidaRegional = camp.vivo?.contadores.comidaRegional ?? 0;
   m.rondasRegionais = camp.vivo?.contadores.rondasRegionais ?? 0;
+  m.ganchosDoDiretor = camp.memoriaMundo?.diretor.ganchos ?? 0;
+  m.lembrancas = camp.memoriaMundo?.lembrados.length ?? 0;
   m.ganchosUsados = Object.keys(camp.flags).filter(k => k.startsWith('gancho.usado.')).length;
   m.idadeFinal = camp.personagem.idade ?? 20;
   if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'limite_acoes';
@@ -650,6 +655,8 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     caravanasPerdidas: +med(m => m.caravanasPerdidas).toFixed(1),
     comidaRegional: +med(m => m.comidaRegional).toFixed(0),
     rondasRegionais: +med(m => m.rondasRegionais).toFixed(1),
+    ganchosDoDiretor: +med(m => m.ganchosDoDiretor).toFixed(1),
+    lembrancas: +med(m => m.lembrancas).toFixed(1),
     ganchosUsados: +med(m => m.ganchosUsados).toFixed(1),
     tiposDeFato: +med(m => m.tiposDeFato).toFixed(1),
     passosSemVerbo: Math.round(med(m => m.passosSemVerbo)),

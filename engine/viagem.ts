@@ -3,6 +3,7 @@
 // do período do dia — sem grafo de waypoints novo, sem hora de relógio de
 // parede, sem Math.random(). Tudo em cima do RNG determinístico da
 // campanha, então é reproduzível como qualquer outro sorteio do jogo.
+import { lembrarAoChegar } from './memoriaMundo';
 import { encontroDeBandoNaViagem, prepararCombateDeBando } from './bandos';
 import type { Campaign, ContentBundle, Local } from './types';
 import { nextFloat, pick } from './rng';
@@ -227,6 +228,8 @@ export type ResultadoViagem = {
   // Ids das criaturas do encontro. Quando presente, o combate JÁ FOI aberto —
   // quem chama só precisa levar o jogador para a tela de combate.
   encontro?: string[];
+  /** Linha da engine quando se volta a um lugar onde se fez algo (memoriaMundo.ts). */
+  lembranca?: string;
 };
 
 export function viajar(content: ContentBundle, camp: Campaign, destino: string): ResultadoViagem {
@@ -277,5 +280,7 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
     iniciarCombate(content, camp, encontro);
     if (bando) prepararCombateDeBando(content, camp, bando);
   }
-  return { ok: true, destino: alvo, primeiraVez, encontro: encontro ?? undefined };
+  // O mundo lembra: só na chegada sem luta — com emboscada, a cena é outra.
+  const lembranca = encontro ? undefined : lembrarAoChegar(content, camp, destino);
+  return { ok: true, destino: alvo, primeiraVez, encontro: encontro ?? undefined, lembranca };
 }

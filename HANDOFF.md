@@ -918,3 +918,119 @@ da Marca; as obras de casa subiram porque as capitais agora têm onde crescer.
 ### Próximo passo
 Fase 8 (o mundo lembra e Diretor de Arcos). A Fase 7 (NPCs de Tsukimichi)
 ficou fora a pedido do dono.
+
+---
+
+## Sessão 53 — Claude — Fase 8: o mundo lembra e o Diretor de Arcos
+
+### Estado encontrado
+Mais do que o plano supunha já existia. O pacote do narrador dá peso 100 a
+fato com vínculo pessoal e 40 a fato do local, e tem `retornoAoLocal`
+(`engine/contextoNarrativo.ts`). A tela Crônica junta o feed da sessão e
+`camp.cronica`. Faltavam três coisas:
+1. uma linha escrita pela **engine** (não pela IA) quando o jogador volta a um
+   lugar onde fez algo;
+2. missão cumprida pelo jogador não tinha o jogador como ator
+   (`encerrarMissao` punha só `q.ator`), então não contava como feito dele;
+3. nada empurrava para perto do jogador o que já estava acontecendo longe
+   dele — o `processarDiretor` de `cidades.ts` só sorteia incidentes das
+   cidades.
+
+### O que foi feito
+- **O mundo lembra** (`engine/memoriaMundo.ts`):
+  - ao chegar a um lugar sem emboscada, se houver feito público do jogador ali
+    (ou na comunidade daquele lugar), de dia anterior e ainda não lembrado, a
+    engine escreve a linha. Um feito por chegada, cada feito uma vez;
+  - feitos que contam: capitão morto, capitão preso, esconderijo tomado,
+    derrota para capitão, obra-prima, missão cumprida, compromisso falhado,
+    caravana escoltada, trégua mediada. A linha abre com a reação da cidade e
+    segue com o texto do próprio fato ("Na Feira Coberta, gente que você não
+    conhece te cumprimenta pelo nome. Ainda contam: ...");
+  - o que não foi público (espionagem) a cidade não comenta.
+- `encerrarMissao`: missão aceita e cumprida, ou aceita e falhada, põe
+  `jogador` entre os atores. Oferta que expirou sem aceite e missão resolvida
+  por outros, não.
+- **Diretor de Arcos** (`engine/diretor.ts`, passe diário em `avancarMundo`).
+  Ordem fixa de prioridade:
+  1. compromisso a 2 dias ou menos do prazo (mensageiro);
+  2. capitão de bando vivo que caça o jogador ou guarda rancor;
+  3. pedido de ajuda na comunidade onde ele está (vira conhecido);
+  4. casa nobre com legitimidade abaixo de 30;
+  5. gente com quem ele tem relação, de luto há até 20 dias.
+
+  Regras do diretor:
+  - no máximo um gancho a cada 3 dias;
+  - o mesmo alvo não volta antes de 20 dias;
+  - não cria estado, não consome RNG, não age com o jogador cativo.
+- **Fila de avisos**: lembrança e gancho vão para `camp.memoriaMundo.avisos`
+  (no máximo 3) e para a crônica persistente como eco. O store consome a fila
+  antes de narrar e põe as linhas no feed. O narrador recebe as do dia em
+  `mundoLembra`, com a regra 2c: deixar aparecer num gesto ou fala, sem
+  repetir a frase nem inventar consequência.
+- **Crônica**: card "O que o mundo lembra de você", com os últimos 15 fatos em
+  que o jogador foi ator, em ordem, com dia e lugar.
+- Nomes de lugar com artigo viram contração ("Na Feira Coberta", "No Moinho
+  Parado"); região idem ("na Marca de Tessel", "no Vale de Halvet").
+- Simulador: ganchos do diretor e lembranças por campanha.
+
+### Arquivos
+Novos: `engine/memoriaMundo.ts`, `engine/diretor.ts`,
+`engine/diretor.selftest.ts`.
+Alterados: `engine/types.ts` (`Campaign.memoriaMundo`, opcional),
+`engine/missoesVivas.ts`, `engine/viagem.ts` (`ResultadoViagem.lembranca`),
+`engine/mundo.ts`, `engine/llm.ts`, `engine/index.ts`,
+`engine/campanhaLonga.ts`, `ui/store.ts`, `ui/screens/Paineis.tsx`,
+`package.json`.
+
+### Verificações
+- `diretor.selftest.ts`:
+  - memória:
+    - no mesmo dia do feito, nada; em outra cidade, nada;
+    - ao voltar, a linha com o texto do fato, uma vez só;
+    - a linha está no pacote do narrador e na crônica; a tela a consome uma vez;
+    - fato não público não é comentado;
+    - pelo caminho real (`viajar` ida e volta), a obra-prima é lembrada.
+  - missões:
+    - cumprida e compromisso falhado têm o jogador como ator; resolvida por
+      outros, não;
+    - a crônica do jogador sai em ordem.
+  - diretor:
+    - mensageiro a um dia do prazo; nenhum segundo gancho no mesmo dia nem
+      dentro do intervalo;
+    - não consome o RNG da campanha;
+    - capitão caçador e casa por um fio aparecem em 30 dias; cada gancho aponta
+      para estado que existe; nunca dois no intervalo; alvo sem repetir antes
+      de 20 dias; fila limitada;
+    - save idêntico; cativo sem mensageiro; pedido de ajuda vira conhecido.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 31  pop 3846  fome    0d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 29  pop 4123  fome    0d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 31  pop 4283  fome    0d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 28  pop 4171  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 29  pop 3656  fome    0d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 34  pop 4134  fome    0d  travas     0  violações 0
+```
+Médias: nível 30,3; população 4.036; derrotas 18,3; dias-cidade em fome 517;
+0 mortes. Diretor: 246,7 ganchos por campanha de 10 anos (um a cada ~15
+dias); 146 lembranças por campanha. Esta fase não mexe em combate nem em
+economia; a variação de nível, população e derrotas contra a sessão 52 está
+dentro da dispersão entre sementes (nas sessões 50 a 52 as derrotas foram
+19,8, 18,7 e 15,5).
+
+### Problemas e decisões em aberto
+- A lembrança só sai na chegada sem emboscada, e um feito por chegada: quem
+  fez muito num lugar recebe as lembranças aos poucos, uma por volta.
+- Os ganchos de casa e de capitão reaparecem a cada 20 dias enquanto o
+  estado durar. Se no celular parecer repetitivo, suba
+  `DIAS_PARA_REPETIR_ALVO` em `engine/diretor.ts`.
+- O texto da lembrança reaproveita o texto do fato. Os fatos antigos do jogo
+  foram escritos para o log e alguns soam secos depois do prefixo.
+
+### Próximo passo
+O dono pediu nesta sessão: procurar erros e coisas não ligadas no jogo, e
+depois aprofundar história (casas, cidades, armas lendárias, bestiário,
+personagens). Fase 9 (quebrar arquivos gigantes) fica para depois disso.

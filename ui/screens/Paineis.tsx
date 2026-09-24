@@ -42,6 +42,7 @@ import {
   ocupacaoEfetiva,
   parentesConhecidos,
   familiasDe,
+  feitosDoJogador,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -1050,6 +1051,7 @@ export function Vinculos() {
 // ─────────────────────────────────────────────── CRÔNICA
 export function Cronica() {
   const camp = useGame((s) => s.camp);
+  const content = useGame((s) => s.content);
   const feed = useGame((s) => s.feed);
   const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'narracao' | 'eco' | 'sistema'>('todos');
@@ -1085,6 +1087,15 @@ export function Cronica() {
     <Pagina>
       <BarraVoltar titulo="Crônica" />
       {camp && <HistoriaViva />}
+
+      {camp && content && feitosDoJogador(content, camp).length > 0 && (
+        <Card>
+          <TextoSerif>O que o mundo lembra de você</TextoSerif>
+          {feitosDoJogador(content, camp).map((f, i) => (
+            <TextoMono key={`${f.dia}-${i}`}>Dia {f.dia} · {f.local}: {f.texto}</TextoMono>
+          ))}
+        </Card>
+      )}
 
       {/* Rivais kimetsu */}
       {Object.values(camp?.kimetsu?.rivais ?? {}).filter(r => r.reencontros > 0).map(r => (

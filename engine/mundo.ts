@@ -25,6 +25,7 @@ import { processarCasas } from './casas';
 import { processarFamiliasNpc } from './familiasNpc';
 import { processarEstacoes } from './estacoes';
 import { processarCaravanas } from './caravanas';
+import { processarDiretorDeArcos } from './diretor';
 import { avancarCicloSubespaco } from './tsukimichi';
 import { processarCicloReino } from './reino';
 
@@ -229,6 +230,8 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarFamiliasNpc(content, camp);
     // Grão de quem tem sobra para quem tem fome (engine/caravanas.ts).
     processarCaravanas(content, camp);
+    // No máximo um gancho por dia apontando para o que já existe (diretor.ts).
+    processarDiretorDeArcos(content, camp);
     if (camp.asora?.desbloqueado) {
       avancarCicloSubespaco(camp);
     }

@@ -5,6 +5,7 @@ import type { ModeloOR } from '@/engine';
 import {
   criarCampanha,
   montarCena,
+  consumirAvisos,
   resolverIntencao,
   avancarPeriodos,
   crescerImpulsos,
@@ -1550,6 +1551,10 @@ async function narrar(
 ) {
   const { content, camp, config } = get();
   if (!content || !camp) return;
+
+  // Linhas da engine (o mundo lembra, ganchos do diretor) entram antes da cena.
+  const avisos = consumirAvisos(camp);
+  if (avisos.length) set({ feed: [...get().feed, ...avisos.map(a => nf(a.texto, 'eco'))] });
 
   const cena = montarCena(content, { ...camp });
   set({ cena, pendente: { fato } });
