@@ -18,6 +18,7 @@ import { migrarProgressaoNpcs } from './progressaoNpc';
 import { recalcularRecursosMaximos } from './progresso';
 import { iniciarMundoVivo } from './historiaViva';
 import { migrarAptidao } from './aptidao';
+import { estadoMarca } from './marca';
 
 function novoNpcDinamico(content: ContentBundle): NpcDinamico {
   const eixos: Record<string, number> = {};
@@ -130,6 +131,8 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   iniciarContinuidade(content, camp);
   iniciarMundoVivo(content, camp);
   migrarProgressaoNpcs(content, camp);
+  // Marca despertada antes da sessão 47: o prazo passa a contar do carregamento.
+  estadoMarca(camp);
   // One-time migration, deferred during a saved combat so actors stay coherent.
   if (!camp.flags['versao.legados'] && (!camp.combate || camp.combate.terminado)) {
     recalcularRecursosMaximos(camp);

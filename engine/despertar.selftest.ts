@@ -19,6 +19,7 @@ import { registrarMorteFamiliar } from './familia';
 import { iniciarCombate, jogadorAtaca } from './combat';
 import { aprenderArte } from './magic';
 import { processarEnvelhecimentoJogador } from './ascensao';
+import { despertarMarca } from './marca';
 import type { Campaign } from './types';
 
 const ok = (v: unknown, mensagem: string) => {
@@ -235,16 +236,22 @@ function derrubar(camp: Campaign, criaturaId: string): void {
 
 // ── 8. A Marca do Caçador cobra o tributo vital após os 25 anos ───────────
 {
+  // Sessão 47: o limite é 25 ou três anos depois do despertar, o que vier
+  // mais tarde (engine/marca.ts). Despertada aos 22, o limite é 25; o
+  // teste que antes despertava aos 24 passaria a esperar até os 27.
   const c = nova('marca-cacador');
-  c.personagem.idade = 24;
+  c.personagem.idade = 22;
   c.personagem.artesConhecidas = ['respiracao_agua_primeira_forma'];
-  concederDespertar(c, 'marca_do_cacador', 'chamas na pele');
+  despertarMarca(c, 'chamas na pele');
   ok(c.despertares?.includes('marca_do_cacador'), 'Marca do Caçador concedida como Despertar');
   const m = multiplicadoresDeIdentidade(c);
   ok(m.dano >= 1.4, 'Marca confere multiplicador ofensivo avassalador');
 
   const vidaAntes = c.personagem.recursosMax.vida;
-  // Aos 24 anos, envelhece para 25
+  // Dos 22 aos 25 anos
+  processarEnvelhecimentoJogador(c);
+  processarEnvelhecimentoJogador(c);
+  ok(c.personagem.recursosMax.vida === vidaAntes, 'Antes do limite a Marca não drena nada');
   processarEnvelhecimentoJogador(c);
   ok(c.personagem.idade === 25, 'Completou 25 anos');
   ok(c.personagem.recursosMax.vida < vidaAntes, 'A partir dos 25 anos a Marca drena a vitalidade máxima');

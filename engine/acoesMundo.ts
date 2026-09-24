@@ -19,6 +19,7 @@ import { concederDespertar } from './progresso';
 import { multiplicadorDeDescanso, condicoesTratadasAoDescansar } from './classe';
 import { encontroNoEsconderijo, prepararCombateDeBando } from './bandos';
 import { forjar, desmanchar, temperar } from './forja';
+import { conterMarca, DIAS_RECLUSAO_MARCA } from './marca';
 import {
   aceitarContrato,
   investigarPista,
@@ -40,6 +41,7 @@ export type AcaoMundo =
   | { tipo: 'temperar'; itemId: string }
   | { tipo: 'treinar_companheiro'; npcId: string }
   | { tipo: 'consolidar_legado' }
+  | { tipo: 'conter_marca' }
   | { tipo: 'missao'; id: string; escolha: 'aceitar' | 'ajudar' | 'negociar' | 'investigar' | 'confrontar' }
   | { tipo: 'obra'; edificio: TipoEdificio }
   | { tipo: 'trabalhar' | 'descansar' | 'noticias' | 'libertar_se' | 'conter_se' }
@@ -108,6 +110,11 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     if (!camp.flags['desafio.concluido.expedicao_cavaleira_do_eclipse'] || maestriaDe(camp, 'espada') < 80) return { ok: false, texto: 'Supere a prova do eclipse e alcance maestria 80 na lâmina.' };
     if (!concederDespertar(camp, 'dominou_prova_eclipse', 'você consolidou o legado da prova do eclipse')) return { ok: false, texto: 'Esse legado já faz parte de você.' };
     return terminar('O legado do eclipse se consolidou no seu corpo e na sua técnica.', 2);
+  }
+  if (acao.tipo === 'conter_marca') {
+    const r = conterMarca(content, camp);
+    if (!r.ok) return r;
+    return terminar(r.texto, DIAS_RECLUSAO_MARCA * 6);
   }
   if (acao.tipo === 'libertar_se') {
     if (!p.condicoes.includes('cativo')) return { ok: false, texto: 'Você já está livre.' };

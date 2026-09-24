@@ -44,6 +44,7 @@ import {
 import { multiplicadoresDeIdentidade } from './identidade';
 import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
 import { selarAlma, chimAlcancado } from './ascensao';
+import { aplicarPressaoPosCombateMarca, bonusCombateMarca, despertarMarca, NIVEL_MINIMO_ONI_MARCA } from './marca';
 import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
 import { calcularContexto } from './availability';
@@ -324,9 +325,9 @@ export function iniciarCombate(
     ehJogador: true,
     vida: p.recursos.vida,
     vidaMax: p.recursosMax.vida,
-    defesa: defesaJogador(content, camp) + penMembros.defesa + (camp.despertares?.includes('marca_do_cacador') ? 2 : 0),
+    defesa: defesaJogador(content, camp) + penMembros.defesa + bonusCombateMarca(camp).defesa,
     janelaCritica: janelaCriticaJogador(camp),
-    acerto: acertoJogador(content, camp) + penMembros.acerto + (camp.despertares?.includes('marca_do_cacador') ? 3 : 0),
+    acerto: acertoJogador(content, camp) + penMembros.acerto + bonusCombateMarca(camp).acerto,
     dano: danoJogador(content, camp),
     condicoes: [],
     membrosPerdidos: [...(p.membrosPerdidos ?? [])],
@@ -1353,13 +1354,22 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
           s.log.push('Você enfrentou um dos doze e está de pé. Quase ninguém no mundo pode dizer isso.');
         }
       }
-      // A Marca do Caçador: combustão da força vital em caçadores que superam uma Lua ou chefe oni.
+      // A Marca do Caçador (engine/marca.ts). No cânone ela aparece em luta
+      // de vida ou morte contra os mais fortes; até a sessão 46 bastava
+      // derrubar qualquer chefe oni (o Oni das Mãos, nível 5, contava) e a
+      // Marca despertava em 12 de 12 campanhas longas antes dos 25 anos.
+      // Agora pede oni de nível 8+ (das Luas Inferiores mais altas em diante)
+      // e o jogador com no máximo 35% da vida no fim da luta. Nível 10+ foi
+      // medido e descartado: o simulador nunca venceu um em dez anos, e a
+      // Marca sumiria do jogo.
       const usaRespiracao = p.artesConhecidas.some(a => a.startsWith('respiracao_') || a.startsWith('hinokami_'));
-      if (c.oni && (c.id.startsWith('lua_') || c.chefe) && usaRespiracao) {
-        if (concederDespertar(camp, 'marca_do_cacador', 'veias ardentes e chamas gravadas na carne — a Marca do Caçador despertou')) {
+      const eu = s.atores.find(x => x.ehJogador);
+      const beiraDaMorte = !!eu && eu.vida > 0 && eu.vida <= eu.vidaMax * 0.35;
+      if (c.oni && c.nivel >= NIVEL_MINIMO_ONI_MARCA && (c.id.startsWith('lua_') || c.chefe) && usaRespiracao && beiraDaMorte) {
+        if (despertarMarca(camp, 'veias ardentes e chamas gravadas na carne — a Marca do Caçador despertou')) {
           p.cicatrizes ??= [];
           if (!p.cicatrizes.includes('marca_do_cacador')) p.cicatrizes.push('marca_do_cacador');
-          s.log.push('Uma queimação insuportável rompe sob sua pele: a Marca do Caçador se manifesta.');
+          s.log.push('Uma queimação insuportável rompe sob sua pele: a Marca do Caçador se manifesta. Quem a conhece sabe o preço: o corpo marcado começa a falhar aos ' + camp.marca!.idadeLimite + ' anos.');
         }
       }
       // Pilar de almas da Ascensão (ver engine/ascensao.ts): só chefes oni de
@@ -1458,11 +1468,7 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       if (npc) treinarNpc(camp, npc, a.retirado ? .25 : 1, resultado === 'vitoria' ? nivelMaior * 2 : nivelMaior * .5);
     }
   }
-  if (camp.despertares?.includes('marca_do_cacador')) {
-    for (const pressao of Object.keys(p.pressoes)) {
-      p.pressoes[pressao] = Math.min(100, (p.pressoes[pressao] ?? 0) + 2);
-    }
-  }
+  aplicarPressaoPosCombateMarca(camp);
   clampRecursos(p);
 
   // Consumo de cargas de afiação e têmpera após o combate

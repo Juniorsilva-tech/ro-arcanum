@@ -24,6 +24,7 @@ import type { Campaign } from './types';
 import { nextFloat } from './rng';
 import { registrarMarco } from './memoria';
 import { sincronizarIdadeFamilia } from './familia';
+import { cobrarTributoAnual, estadoMarca } from './marca';
 
 export const DIAS_POR_ANO_JOGADOR = 365;
 export const IDADE_MORTE_MIN_JOGADOR = 65;
@@ -49,22 +50,15 @@ export function chimAlcancado(camp: Campaign): boolean {
 // qualquer NPC corre (ver vidanpc.ts): a idade sobe até pesar de verdade.
 export function processarEnvelhecimentoJogador(camp: Campaign): void {
   const p = camp.personagem;
+  estadoMarca(camp); // prazo de save antigo conta da idade de antes do aniversário
   p.idade = idadeJogador(camp) + 1;
   sincronizarIdadeFamilia(camp);
   if (chimAlcancado(camp)) return; // imortalidade biológica de verdade — o corpo parou de contar
 
-  // Consequência biológica da Marca do Caçador: o corpo arde acelerado e não ultrapassa 25 anos impune.
-  if (camp.despertares?.includes('marca_do_cacador') && p.idade >= 25) {
-    p.recursosMax.vida = Math.max(25, (p.recursosMax.vida ?? 100) - 8);
-    p.recursos.vida = Math.min(p.recursos.vida, p.recursosMax.vida);
-    const anosAlem = p.idade - 25;
-    const chanceTributo = Math.min(0.40, 0.10 + anosAlem * 0.05);
-    if (nextFloat(camp.rng) < chanceTributo) {
-      p.recursos.vida = 0;
-      registrarMarco(camp, `dia ${camp.calendario.dia}: aos ${p.idade} anos, o tributo vital da Marca do Caçador cobrou a dívida final do sangue.`);
-      return;
-    }
-  }
+  // Consequência biológica da Marca do Caçador (engine/marca.ts): a partir
+  // da idade-limite avisada no despertar, o corpo perde vida máxima a cada
+  // ano e pode parar de vez. Contida, ela não cobra mais.
+  if (cobrarTributoAnual(camp)) return;
 
   if (p.idade < IDADE_MORTE_MIN_JOGADOR) return;
   const chance = Math.min(IDADE_MORTE_CHANCE_MAX_JOGADOR, (p.idade - IDADE_MORTE_MIN_JOGADOR) * 0.02);

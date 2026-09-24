@@ -39,7 +39,8 @@ for (const r of resultados) {
   console.log(
     `  ${m.seed.padEnd(10)} ${String(m.anos).padStart(2)}a  ${m.causaFim.padEnd(12)}` +
       ` nível ${String(m.nivelFinal).padStart(2)}  pop ${String(m.populacaoFinal).padStart(4)}` +
-      `  fome ${String(m.picoDeFome).padStart(4)}d  travas ${String(m.passosSemEfeito).padStart(5)}  violações ${r.violacoes.length}`,
+      `  fome ${String(m.picoDeFome).padStart(4)}d  travas ${String(m.passosSemEfeito).padStart(5)}  violações ${r.violacoes.length}` +
+      (m.marcaIdade >= 0 ? `  marca aos ${m.marcaIdade}${m.mortePelaMarca ? ' (morreu dela)' : ''}` : ''),
   );
 }
 

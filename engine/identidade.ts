@@ -19,8 +19,13 @@ export const LEGADOS = {
   marca_do_cacador: { nome: 'Marca do Caçador', vida: 1.25, dano: 1.4, descricao: 'A queimação vital gravada na pele. Cortes fulminantes e percepção transparente, cobrados na expectativa do corpo.' },
 } as const;
 
+// Contida na Casa Sem Nome (engine/marca.ts), a Marca troca a chama pelo
+// tempo: o corpo para de pagar o tributo, e ela deixa de ser o maior legado.
+export const MARCA_CONTIDA = { nome: 'Marca contida', vida: 1.1, dano: 1.15, descricao: 'A Marca desbotou até virar uma cicatriz morna. O corpo parou de pagar o tributo; a chama que cortava não volta mais do mesmo jeito.' } as const;
+
 export function legadosConquistados(camp: Campaign) {
-  return Object.entries(LEGADOS).filter(([id]) => camp.despertares?.includes(id)).map(([id, regra]) => ({ id, ...regra }));
+  return Object.entries(LEGADOS).filter(([id]) => camp.despertares?.includes(id)).map(([id, regra]) =>
+    id === 'marca_do_cacador' && camp.marca?.contida ? { id, ...MARCA_CONTIDA } : { id, ...regra });
 }
 
 export function multiplicadoresDeIdentidade(camp: Campaign): { vida: number; dano: number } {

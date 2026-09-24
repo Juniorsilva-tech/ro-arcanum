@@ -76,6 +76,10 @@ export type Metricas = {
   nivelFinal: number;
   /** Despertares concedidos pela historia (ver engine/progresso.ts). */
   despertares: number;
+  /** Idade em que a Marca do Caçador despertou (-1 se nunca). */
+  marcaIdade: number;
+  /** A campanha terminou pelo tributo da Marca (ver engine/ascensao.ts). */
+  mortePelaMarca: boolean;
   /**
    * Ganchos do mapa que viraram missao (ver engine/ganchos.ts). A flag so e'
    * gravada quando a missao nasceu de fato, entao este numero e' a contagem
@@ -369,7 +373,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, expedicoes: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
-    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, ganchosUsados: 0, idadeFinal: 20,
+    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, marcaIdade: -1, mortePelaMarca: false, ganchosUsados: 0, idadeFinal: 20,
     tiposDeFato: 0, assinatura: '', porFaixa: {},
   };
 
@@ -490,6 +494,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
 
     if (p.recursos.vida <= 0 && !camp.combate) {
       m.causaFim = 'morte';
+      m.mortePelaMarca = (camp.marcos ?? []).some(x => x.texto.includes('tributo vital da Marca'));
       break;
     }
 
@@ -517,6 +522,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   m.anos = Math.floor(m.dias / DIAS_POR_ANO);
   m.nivelFinal = camp.personagem.nivel;
   m.despertares = camp.despertares?.length ?? 0;
+  m.marcaIdade = camp.marca?.idadeDespertar ?? -1;
   m.ganchosUsados = Object.keys(camp.flags).filter(k => k.startsWith('gancho.usado.')).length;
   m.idadeFinal = camp.personagem.idade ?? 20;
   if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'limite_acoes';

@@ -96,8 +96,13 @@ export function vidaMaxima(camp: Campaign): number {
     return Math.round((vidaBaseTsukimichi + modificador(p.atributos.resiliencia) * 10
       + (p.nivel - 1) * ganhoNivel) * multiplicadoresDeIdentidade(camp).vida);
   }
-  return Math.round((VIDA_BASE + modificador(p.atributos.resiliencia) * 4
+  const base = Math.round((VIDA_BASE + modificador(p.atributos.resiliencia) * 4
     + (p.nivel - 1) * ganhoDeVidaPorNivel(camp)) * multiplicadoresDeIdentidade(camp).vida);
+  // O que a Marca do Caçador tirou não volta com nível (engine/marca.ts). Até
+  // a sessão 46 o dreno anual era escrito direto em recursosMax e o primeiro
+  // recálculo apagava — o custo existia só até o próximo nível.
+  const perdida = camp.marca?.vidaPerdida ?? 0;
+  return perdida > 0 ? Math.max(25, base - perdida) : base;
 }
 
 export function processarSubidaDeNivel(camp: Campaign): void {

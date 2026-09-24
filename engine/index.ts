@@ -55,3 +55,4 @@ export * from './classe';
 export * from './contratosMonstros';
 export * from './treinamentoImersivo';
 export * from './bandos';
+export * from './marca';

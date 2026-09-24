@@ -581,6 +581,15 @@ export type CombatActor = {
   mundoTransparente?: boolean;
 };
 
+export type EstadoMarca = {
+  dia: number;
+  idadeDespertar: number;
+  idadeLimite: number;
+  /** Vida máxima tirada de vez (dreno anual e custo da contenção). */
+  vidaPerdida: number;
+  contida?: { dia: number; idade: number };
+};
+
 export type CombatState = {
   /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
   bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
@@ -691,6 +700,9 @@ export type Campaign = {
   // O CHIM foi alcançado — imortalidade biológica real e anulação real da
   // penalidade de membro amputado (ver engine/ascensao.ts).
   ascensao?: { chim: true; dia: number };
+  // A Marca do Caçador: quando despertou, a idade em que o corpo começa a
+  // cobrar, a vida máxima já perdida e se a chama foi contida (engine/marca.ts).
+  marca?: EstadoMarca;
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
   locaisVisitados: string[];
   segredosRevelados: string[];

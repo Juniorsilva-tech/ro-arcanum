@@ -633,3 +633,158 @@ com 6 NPCs e 0 missões; consequências visíveis e Diretor de Arcos; manutenç�
 de arquivos gigantes e teste de interface), com protocolo de validação,
 critério de pronto e testes de cada fase. O próximo agente deve seguir esse
 documento.
+
+---
+
+## Sessão 47 — Fable 5.1 — Fase 1: a Marca do Caçador
+
+Primeira fase do `docs/PLANO-FABLE-5.1.md`. Trabalho sozinho, na nuvem, na
+branch `claude/build-app-apk-nzg5ap`. `npm ci` no começo. Sem
+`EXPO_PUBLIC_NOUS_API_KEY` no ambiente: **nada desta fase foi verificado com
+narração real**.
+
+Observação de leitura: o plano manda ler `AGENTS.md`; no repositório o arquivo
+se chama `agents.md` (minúsculo). É o mesmo documento.
+
+### Estado encontrado (simulação longa antes, `simLongo 10 6`)
+```
+longa-0    10a  fim_do_prazo nível 33  pop 3892  fome   17d  travas     0  violações 0
+longa-1    10a  morte        nível 29  pop 4076  fome   18d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 29  pop 4542  fome   54d  travas     0  violações 0
+longa-3    10a  fim_do_prazo nível 30  pop 4235  fome   17d  travas     0  violações 0
+longa-4     7a  morte        nível 34  pop 2794  fome   20d  travas     0  violações 0
+longa-5     9a  morte        nível 34  pop 3820  fome    0d  travas     0  violações 0
+```
+Médias: nível final 31,5; população 3.893; pico de fome 21 dias; despertares
+4,17; vitórias 632,8; derrotas 19,5.
+
+### Medição (12 sementes, `longa-0` a `longa-11`, 10 anos)
+Script temporário no scratchpad chamando `simularCampanhaLonga`; para isso o
+simulador ganhou duas métricas permanentes (`marcaIdade`, `mortePelaMarca`).
+
+- **12 de 12 campanhas despertavam a Marca**, entre 18 e 24 anos (seis delas
+  aos 18–19).
+- **4 de 12 morriam do tributo**, aos 25, 25, 27 e 28 anos. Nenhuma morte por
+  outra causa.
+- Na morte: sanidade 88–100, corrupção 100 em todas.
+
+Causas, lidas no código:
+1. **Despertar fácil demais.** Bastava vencer qualquer chefe oni com
+   respiração — o Oni das Mãos (nível 5, a Seleção Final) contava.
+2. **Nenhum aviso.** O despertar dizia só "a Marca se manifesta". O custo não
+   aparecia em lugar nenhum da tela nem do pacote do narrador.
+3. **Pressão sem teto e no lugar errado.** Cada luta com a Marca somava +2 em
+   *todas* as pressões, inclusive corrupção (que no cenário é a mancha do
+   pacto e do sangue). Com ~690 combates por campanha, tudo saturava em 100.
+   A pressão não matava — mas era o "sanidade e corrupção em 100" que a
+   sessão 46 viu.
+4. **O dreno de vida era apagado.** `ascensao.ts` escrevia −8 direto em
+   `recursosMax.vida`; o primeiro `recalcularRecursosMaximos` (qualquer
+   subida de nível) recalculava do zero e o custo sumia.
+5. **Nenhuma saída.** A única imunidade era o CHIM, que exige 60 anos.
+
+### O que foi feito
+Novo `engine/marca.ts` concentra a regra; os outros arquivos só chamam.
+
+- **Despertar** (`combat.ts`): oni de nível 8+ (`NIVEL_MINIMO_ONI_MARCA`),
+  Lua ou chefe, com respiração, e **o jogador com no máximo 35% da vida no
+  fim da luta**. Nível 10+ foi testado primeiro e descartado com números: 0
+  de 12 campanhas despertavam, porque o simulador nunca vence Lua Superior em
+  dez anos (vence ~3 chefes por campanha, todos de nível ≤9). A Marca teria
+  sumido do jogo.
+- **Aviso** (`despertarMarca`): marco com a idade-limite, fato
+  `marca_despertou`, linha `sistema` na crônica e no log do combate dizendo o
+  custo, a idade e que a Casa Sem Nome na Névoa sabe conter a chama. O painel
+  Progressão mostra o card "O preço da Marca" enquanto valer; o pacote do
+  narrador ganhou `marca` com o mesmo texto (o narrador sente, não decide).
+- **Prazo**: limite = 25, ou três anos depois do despertar, o que vier mais
+  tarde. Quem desperta aos 24 tem até os 27. Saves de antes desta sessão
+  (Marca sem estado) ganham o prazo contado do carregamento — a migração
+  (`normalizarCampanha`) e o aniversário materializam o estado.
+- **Tributo** (`cobrarTributoAnual`, chamado por `ascensao.ts`): a partir do
+  limite, −8 de vida máxima por ano, **guardado em `camp.marca.vidaPerdida` e
+  descontado em `vidaMaxima`** (subir de nível não apaga mais), e a chance de
+  morte de antes (10% no primeiro ano, +5% ao ano, teto 40%). A chance não
+  mudou de propósito: o preço canônico continua alto.
+- **Pressão**: só sanidade, +2 por luta, e a Marca sozinha não passa de 60.
+  Corrupção não é mais tocada.
+- **Saída cara** (`conter_marca`, ação de mundo; botão em Progressão quando se
+  está na Casa): exige estar na Casa Sem Nome na Névoa (lugar oculto, pede
+  reputação 8 com os caçadores para ser descoberto), alguém vivo entre os 17
+  moradores escritos da Casa, sanidade ≤40 e vida cheia. Custa 14 dias de
+  reclusão, 12 de vida máxima para sempre, os bônus táticos (+3 acerto, +2
+  defesa) e o legado cai de vida ×1,25 / dano ×1,4 para ×1,1 / ×1,15
+  (`MARCA_CONTIDA` em `identidade.ts`). Em troca, o tributo para. É a porta
+  "Yoriichi" que o dono decidiu na sessão 23.
+
+### Decisões e motivos
+- *Nível 8+ e não 10+*: medido (acima). Conservador em relação ao cânone e ao
+  código: mantém a Marca rara e alcançável.
+- *Beira da morte em 35%*: o simulador cura abaixo de 40% e foge abaixo de 25%;
+  35% cai na janela de "luta que quase deu errado" sem precisar mudar o bot.
+- *Chance de morte mantida*: o plano pede aviso e saída, não Marca barata. O
+  que muda o número é o despertar ser raro e o prazo mínimo.
+- *Prazo de três anos*: menor que isso o aviso não dá tempo de chegar à Casa
+  (lugar oculto); maior esvazia o cânone dos 25.
+- *Corrupção fora da Marca*: a descrição da pressão no cenário é "a mancha que
+  o pacto e o sangue deixam". A Marca não é pacto.
+- *Teste antigo*: `despertar.selftest.ts` §8 despertava aos 24 e esperava
+  dreno aos 25; pela regra nova o limite seria 27. O teste agora desperta aos
+  22 (limite 25) e prova também que antes do limite nada é drenado. Nada foi
+  apagado.
+
+### Arquivos
+Novos: `engine/marca.ts`, `engine/marca.selftest.ts`.
+Alterados: `engine/types.ts` (`EstadoMarca`, `camp.marca`), `engine/combat.ts`,
+`engine/ascensao.ts`, `engine/identidade.ts`, `engine/progresso.ts`,
+`engine/acoesMundo.ts`, `engine/migracao.ts`, `engine/llm.ts`,
+`engine/index.ts`, `engine/campanhaLonga.ts` e `engine/simLongo.ts` (métricas
+da Marca; a linha da tabela mostra "marca aos N" quando despertou),
+`engine/despertar.selftest.ts`, `ui/screens/Progressao.tsx`, `package.json`.
+
+### Verificações
+- `marca.selftest.ts` (no `test:engine`): 47 checagens — aviso no marco, fato e
+  feed; prazo mínimo; despertar exige nível 8+, respiração e beira da morte
+  (Kaigaku com vida cheia não desperta; Oni das Mãos e Lua Inferior Cinco nunca;
+  sem respiração nunca); 500 lutas deixam sanidade em 60 e corrupção em 0,
+  também numa luta real; antes do limite nada é cobrado nem aos 25; o dreno
+  sobrevive a subir de nível; primeiro ano além do limite mata 33 de 300
+  (~10%); morte só depois do aviso; 60 de 60 personagens sem Marca chegam
+  vivos aos 45; conter recusa fora da Casa, com sanidade alta e com a Casa sem
+  vivos, custa 14 dias e 12 de vida, derruba o dano de ×1,4 para ×1,15, tira o
+  bônus tático, não repete, e a contida chega aos 60 sem tributo; save antigo
+  ganha o prazo; export/import devolve o estado idêntico.
+- Medição depois, 12 sementes: **2 de 12 despertam (aos 18 e aos 24), 0 de 12
+  morrem da Marca**, 0 violações. A que despertou aos 18 pagou o dreno dos 25
+  aos 28 e chegou viva ao fim.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`, dentro do `test:engine`):
+```
+longa-0    10a  fim_do_prazo nível 32  pop 3642  fome    0d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 29  pop 4432  fome    0d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 29  pop 4498  fome    0d  travas     0  violações 0  marca aos 18
+longa-3    10a  fim_do_prazo nível 29  pop 3609  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 29  pop 3410  fome   29d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 30  pop 4311  fome    6d  travas     0  violações 0
+```
+Comparação com o antes: mortes 3 → 0; anos médios 9,3 → 10; nível final
+31,5 → 29,7 (esperado: cada Despertar vale +3 níveis e a Marca agora desperta
+em 1 de 6, não em 6 de 6; despertares 4,17 → 3); população 3.893 → 3.984;
+pico de fome 21 → 6 dias; dias-cidade em fome 2.070 → 2.501 (≈ +12% por ano
+vivido, e as campanhas agora vivem os 10 anos inteiros); derrotas 19,5 →
+16,2; vitórias 632,8 → 672,3 (mais tempo vivo). Nenhuma mudança fora do que
+a Marca explica; não investiguei mais a fome porque o pico caiu e o total
+acompanha a duração.
+
+### Problemas encontrados e não resolvidos
+- A pressão (sanidade/corrupção) ainda não tem nenhum decaimento natural no
+  jogo; só `meditarSobCascata` baixa (−15 em todas). Fora do escopo desta
+  fase; a Marca deixou de ser a fonte da saturação.
+- `meditarSobCascata` dá +1 de resiliência por uso, sem teto nem custo além
+  do tempo. Parece farmável; não mexi (não é desta fase).
+- Não verificado com IA real (sem chave no ambiente).
+
+### Próximo passo
+Fase 2 do plano: famílias entre NPCs.

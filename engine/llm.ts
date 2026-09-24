@@ -21,6 +21,7 @@ import { artesConhecidasResolvidas } from './fusao';
 import { contextoDeAptidao, leituraDoObservador } from './aptidao';
 import { rotasVisiveis } from './viagem';
 import { legadosConquistados } from './identidade';
+import { avisoMarca } from './marca';
 import { DOMINIOS } from './aptidaoTypes';
 import { contextoNarrativo, CONTRATO_NARRATIVO } from './contextoNarrativo';
 import { itemPorId } from './items';
@@ -518,6 +519,9 @@ export function montarPacote(
     // tenha registrado a crenca (ver engine/aptidao.ts).
     talento: contextoDeAptidao(camp),
     legados: legadosConquistados(camp).map(l => ({ nome: l.nome, descricao: l.descricao })),
+    // O preço da Marca, calculado pela engine. O narrador pode fazer o corpo
+    // sentir, mas não decide quando nem se ele cobra.
+    marca: avisoMarca(camp) ?? undefined,
     // O diretor da campanha, calculado pela engine (ver ritmo.ts).
     ritmo: calcularRitmo(content, camp),
     // Vocabulário permitido: se citar objeto, tem que ser um destes nomes.
