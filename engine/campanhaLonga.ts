@@ -83,6 +83,10 @@ export type Metricas = {
   /** Obras pagas pelas casas nobres e patrulhas delas contra bandos (engine/casas.ts). */
   obrasDeCasa: number;
   patrulhasDeCasa: number;
+  /** Encontros de viagem por estação (engine/estacoes.ts). */
+  encontrosPorEstacao: Record<string, number>;
+  caravanasEntregues: number;
+  caravanasPerdidas: number;
   /**
    * Ganchos do mapa que viraram missao (ver engine/ganchos.ts). A flag so e'
    * gravada quando a missao nasceu de fato, entao este numero e' a contagem
@@ -376,7 +380,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
     passosSemVerbo: 0, passosSemEfeito: 0, conjuracoes: 0, rodadaMaisLonga: 0, artesAprendidas: 0, expedicoes: 0, etapasDeInfancia: 0, missoesGeradas: 0, missoesConcluidas: 0, missoesFalhadas: 0, compromissosFalhados: 0, oportunidadesExpiradas: 0,
     missoesResolvidasPorOutros: 0, npcsMortos: 0, npcsNascidos: 0,
     rivaisCriados: 0, rivaisMortos: 0, guerras: 0, emboscadas: 0, cidadesArruinadas: 0,
-    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, marcaIdade: -1, mortePelaMarca: false, obrasDeCasa: 0, patrulhasDeCasa: 0, ganchosUsados: 0, idadeFinal: 20,
+    picoDeFome: 0, diasCidadeEmFome: 0, diasComRival: 0, populacaoFinal: 0, nivelFinal: 1, despertares: 0, marcaIdade: -1, mortePelaMarca: false, obrasDeCasa: 0, patrulhasDeCasa: 0, encontrosPorEstacao: {}, caravanasEntregues: 0, caravanasPerdidas: 0, ganchosUsados: 0, idadeFinal: 20,
     tiposDeFato: 0, assinatura: '', porFaixa: {},
   };
 
@@ -443,7 +447,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
       m.acoes++;
     } else if ((origemAcao = acaoDeMundo(content, camp, m, opts.politica === 'objetivos'))) {
       if (camp.combate && !camp.combate.terminado) {
-        if (origemAcao === 'viagem') m.combatesPorViagem++; else m.combatesPorPainel++;
+        if (origemAcao === 'viagem') { m.combatesPorViagem++; m.encontrosPorEstacao[camp.calendario.estacao] = (m.encontrosPorEstacao[camp.calendario.estacao] ?? 0) + 1; } else m.combatesPorPainel++;
       }
       m.acoes++;
     } else {
@@ -453,7 +457,7 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
       if (rotas.length && nextFloat(camp.rng) < 0.18) {
         const r = viajar(content, camp, pick(camp.rng, rotas).destino);
         if (r.ok) m.viagens++;
-        if (r.encontro) m.combatesPorViagem++;
+        if (r.encontro) { m.combatesPorViagem++; m.encontrosPorEstacao[camp.calendario.estacao] = (m.encontrosPorEstacao[camp.calendario.estacao] ?? 0) + 1; }
         m.acoes++;
       } else {
         const disponiveis = content.verbos.filter(v => {
@@ -528,6 +532,8 @@ export function simularCampanhaLonga(content: ContentBundle, opts: OpcoesSimulac
   m.marcaIdade = camp.marca?.idadeDespertar ?? -1;
   m.obrasDeCasa = camp.vivo?.contadores.obra_casa ?? 0;
   m.patrulhasDeCasa = camp.vivo?.contadores.patrulha_casa ?? 0;
+  m.caravanasEntregues = camp.caravanas?.entregues ?? 0;
+  m.caravanasPerdidas = camp.caravanas?.perdidas ?? 0;
   m.ganchosUsados = Object.keys(camp.flags).filter(k => k.startsWith('gancho.usado.')).length;
   m.idadeFinal = camp.personagem.idade ?? 20;
   if (m.causaFim !== 'morte' && m.acoes >= maxAcoes) m.causaFim = 'limite_acoes';
@@ -631,6 +637,12 @@ export function resumir(resultados: ResultadoSimulacao[]): Record<string, number
     despertares: +med(m => m.despertares).toFixed(2),
     obrasDeCasa: +med(m => m.obrasDeCasa).toFixed(1),
     patrulhasDeCasa: +med(m => m.patrulhasDeCasa).toFixed(1),
+    encontrosPrimavera: +med(m => m.encontrosPorEstacao.primavera ?? 0).toFixed(1),
+    encontrosVerao: +med(m => m.encontrosPorEstacao.verao ?? 0).toFixed(1),
+    encontrosOutono: +med(m => m.encontrosPorEstacao.outono ?? 0).toFixed(1),
+    encontrosInverno: +med(m => m.encontrosPorEstacao.inverno ?? 0).toFixed(1),
+    caravanasEntregues: +med(m => m.caravanasEntregues).toFixed(1),
+    caravanasPerdidas: +med(m => m.caravanasPerdidas).toFixed(1),
     ganchosUsados: +med(m => m.ganchosUsados).toFixed(1),
     tiposDeFato: +med(m => m.tiposDeFato).toFixed(1),
     passosSemVerbo: Math.round(med(m => m.passosSemVerbo)),

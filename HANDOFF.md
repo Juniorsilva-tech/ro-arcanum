@@ -22,11 +22,11 @@ Antes de alterar qualquer coisa:
 O registro cresceu além do que um agente novo consegue ler antes de começar.
 Na sessão 16 ele foi dividido:
 
-- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (43 em
+- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (46 em
   diante), problemas abertos e próximo passo. É o que se lê antes de trabalhar.
-- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 42, na íntegra e sem edição. Consultar
+- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 45, na íntegra e sem edição. Consultar
   quando for preciso saber *por que* alguma decisão antiga foi tomada. As
-  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, e 39 a 42 na sessão 48.
+  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, e 43 a 45 na sessão 51.
 
 Nada foi apagado. Ao encerrar uma sessão, escreva aqui; quando este arquivo
 passar de ~800 linhas, mova as sessões mais antigas para o arquivo do mesmo
@@ -54,226 +54,7 @@ jeito, mantendo o texto original.
 | 28–31 | Gemini — Bestiário, Contratos, Infância Isekai, Guilda de Tsige |
 | 32–38 | Gemini — Classes Tsukimichi, Sakai, Heróis, Musashi, Povoamento, Quase-Morte, Overpower |
 | 39–42 | Gemini e Claude — bestas lendárias e romance em Asora, DLC na interface e forja, desmanche/afiação/têmpera |
-
----
-
-## Sessão 43 — Gemini — Gestão de Assentamento, Feudo & Reino com UI Própria (♜), Construções Modulares, Cooldown Real, Rotas e Mapa Continental
-
-### Objetivo
-1. **Atender aos pedidos do usuário**:
-   - Gestão de clã e assentamento para o mundo base (Feudo/Castelo de Vaelhorn) e DLC (Asora/Metrópole Dimensional).
-   - Aba/tela própria dedicada na barra de navegação com glifo `♜`.
-   - Superação do limite fixo de 5 níveis: sistema modular de city-builder, permitindo erguer múltiplos blocos de casas (`moradias`), granjas e fortalezas até Tier 10+ (Acampamento -> Posto -> Aldeia -> Burgo -> Castelo -> Cidade-Fortaleza -> Cidadela Imperial).
-   - Cooldown real de construção: obras com contagem regressiva em períodos/dias (`obrasEmAndamento`), com barras de progresso e supervisão diária.
-   - Integração com o continente vivo: rotas comerciais ativas despachando caravanas com tempo de viagem e lucro em ouro; rotas de patrulha militar reduzindo perigo e insegurança em estradas; fluxo de refugiados e migrantes acolhidos de cidades em crise (fome, guerra, doença).
-   - O lugar de fundação depende de onde o jogador escolhe se assentar (incluindo deserto/areia, montanha, floresta, costa e planície) com imagens artísticas específicas para cada bioma e um mapa cartográfico completo de Halvern e Vaelhorn.
-
-### O que foi alterado e implementado
-- `engine/types.ts`:
-  - Adicionado campo `feudo?: FeudoState` em `Campaign`.
-  - Definidos tipos `FeudoState`, `BiomaFeudo`, `TipoEdificioModular`, `ObraAtiva`, `RotaComercial`, `RotaPatrulha` e `CargaCaravana`.
-- `engine/reino.ts` (Novo Módulo):
-  - `PONTOS_DE_ASSENTAMENTO`: 6 posições estratégicas documentadas pelo continente (Colinas de Halvet, Oásis de Solgar, Penedos de Tessel, Bosque de Vintra, Enseada de Mareu, Planalto de Corveira).
-  - `CATALOGO_EDIFICIOS`: 9 tipos de edifícios modulares (`moradias`, `castelo`, `quartel`, `mercado_feitoria`, `igreja_santuario`, `oficina_forja`, `lavoura_silos`, `muralha_baluarte`, `boticario_hospital`) com fórmulas de custo escalonadas e efeitos.
-  - `obterFeudo(camp)`: inicialização transparente e segura.
-  - `fundarFeudo(camp, nome, localId, bioma)`: fundação canônica com registro em crônica e memória.
-  - `iniciarObraFeudo(camp, tipo)`: validação estrita de tesouro e materiais, enfileiramento de obra com cooldown em períodos.
-  - `avancarObrasFeudo(camp, periodos)`: avança contadores, conclui obras e expande capacidade habitacional, segurança e estabilidade.
-  - `despacharCaravanaFeudo(camp, destinoId, destinoNome, cargaTipo)`: despacho de caravanas continentais com tempo de viagem ida/volta e retorno de ouro.
-  - `definirRotaPatrulhaFeudo(camp, regiaoAlvo, nomeRegiao, soldados)`: alocação militar de patrulhas para pacificar rotas.
-  - `processarCicloReino(camp, periodos)`: economia diária, consumo de comida, produção de materiais, retorno de caravanas e acolhimento de refugiados.
-- `engine/reino.selftest.ts` (Nova Suíte de Testes):
-  - 8 testes cobrindo todas as 23 asserções do ciclo de reino, obras além do nível 5, cooldowns, caravanas, patrulhas e imigração.
-- `engine/index.ts`: Exportação pública de `engine/reino`.
-- `engine/mundo.ts`: Conexão de `processarCicloReino(camp, 4)` em `avancarMundo`.
-- `ui/store.ts`:
-  - Inclusão da tela `'assentamento'` em `Tela`.
-  - Implementação de `fundarFeudoAcao`, `iniciarObraFeudoAcao`, `despacharCaravanaFeudoAcao`, `definirPatrulhaFeudoAcao` e `supervisionarObrasAcao`.
-- `ui/screens/_layout.tsx`:
-  - Adicionado ícone de navegação `♜` (Feudo / Asora) na barra superior.
-- `App.tsx`:
-  - Roteamento da tela `'assentamento'` para `<Assentamento />`.
-- `ui/screens/Assentamento.tsx` (Nova Tela de UI):
-  - Banner visual responsivo com renderização das ilustrações em alta definição.
-  - Painel geral de soberania (População atual vs capacidade de casas, Tesouro, Materiais, Provisões, Remédios, Segurança e Estabilidade).
-  - Canteiro de Obras com cooldown visível e barra de progresso.
-  - Catálogo de Distritos para expansões modulares sem limite fixo de nível.
-  - Painel de Rotas Comerciais e Patrulhas Militares.
-  - Painel integrado de Asora para a expansão Tsukimichi.
-  - Mapa Continental ilustrado de Halvern e Vaelhorn.
-- `assets/feudo/`:
-  - 10 imagens geradas: `acampamento.jpg`, `aldeia.jpg`, `castelo.jpg`, `cidadela.jpg`, `deserto.jpg`, `floresta.jpg`, `costa.jpg`, `montanha.jpg`, `asora.jpg`, `mapa_continente.jpg`.
-- `package.json`: Inclusão de `test:reino` em `scripts` e no pipeline `test:engine`.
-
-### Verificações e Testes Executados
-- `npm run test:reino`: 100% verde (todas as 23 asserções passaram).
-- `npm run test:tsukimichi`: 100% verde (70/70 testes aprovados).
-- `npm run test:engine`: 21 suítes unitárias + 6 campanhas de 10 anos (107.250 ações) com **0 violações de invariante**.
-- `npm run typecheck`: 0 erros (TypeScript Strict Mode 100% limpo).
-- `npx expo export --platform web`: 366 módulos empacotados com sucesso em `dist` (Exit 0).
-
----
-
-## Sessão 44 — Gemini — Soberania Feudal Completa (Estilo Crusader Kings 3 / Mount & Blade), Quartel de Oficiais, Conselho de Regência, Linhagem Real (270 Dias), Vassalagem e Tramas de Usurpação
-
-### Objetivo
-1. **Atender aos pedidos detalhados do usuário**:
-   - "essa evolução aruitetural 4 apenas? acho muito pouco na evolução do castelo... como tem brasões e casas em outros lugares cidades familias, herois etc no meu castelo tbm deve ter isso... pegar um npc treinar ele no quartel, esse tipo de coisa ele vira um cabo seila algo assim e ele vai ficando forte e melhorando tanto para proteger o castelo, virar um espião e sabotar, enfrentar inimigos, proteger nossas ruas e rotas comerciais... se eu ficar fora conselheiros devem ficar no meu lugar para tomar conta do reino, e cada um tem capacidade ou não depende de quem eu for escolher... romance etc e filhos... faça um plano de implementação e revise sempre que possivel não quero meia implementação quero tudo completo sem placeholder e sem voce achar que fez. quero algo com qualidade".
-2. **Escala Arquitetural de 10 Tiers**:
-   - Substituição do modelo antigo de 4-5 patamares por 10 tiers granulares e progressivos adaptados aos 6 biomas (Planície, Deserto, Montanha, Floresta, Costa e Subespaço de Asora):
-     1. Acampamento Pioneiro
-     2. Posto Fortificado
-     3. Aldeia Feudal
-     4. Burgo Fortificado
-     5. Fortaleza Senhorial
-     6. Castelo Soberano
-     7. Cidadela Murada
-     8. Grande Bastião Ducal
-     9. Capital Real
-     10. Trono Imperial Monumental
-3. **Casa Dinástica & Heráldica Feudal**:
-   - Fundação da Casa Dinástica do soberano: Nome da dinastia, Lema senhorial, Figura do Brasão heráldico (Dragão, Leão, Falcão, Serpente, Lobo, Torre, Rosa, Espada) e tinturas/cores primárias e secundárias.
-   - Pontuação acumulativa de Prestígio Dinástico influenciando a lealdade de vassalos e estabilidade da corte.
-4. **Quartel de Oficiais & Progressão Militar**:
-   - Sistema de patentes militares: `recruta` -> `cabo` -> `sargento` -> `capitao` -> `comandante` (ou `mestre_espioes`).
-   - Recrutamento nominal com custos de soldo e materiais de armaria.
-   - Treinamento militar ativo no pátio de armas (`treinarOficiais`) concedendo XP e perícia marcial.
-   - Promoção formal de patentes com custos balanceados.
-   - 4 designações táticas com impactos sistêmicos reais:
-     - `guarda_muralha`: bônus direto na defesa do castelo e fortificação;
-     - `patrulha_ruas`: repressão ao crime urbano e aumento contínuo de estabilidade;
-     - `escolta_caravana`: mitigação de riscos de emboscada em rotas comerciais ativas;
-     - `infiltracao_espionagem`: aceleração de redes de espionagem e tramas secretas em cidades rivais.
-5. **Conselho de Regência & Governo na Ausência do Rei**:
-   - 5 cargos senhoriais de alta corte:
-     - `regente`: governa na ausência do monarca; estabiliza o reino com base no atributo `resiliencia`;
-     - `chanceler`: relações exteriores, vassalagem e prestígio com base em `social`;
-     - `marechal`: comando de tropas, guarnições e ordem militar com base em `fisico`;
-     - `tesoureiro`: arrecadação fiscal e gestão do tesouro com base em `raciocinio` (tesoureiro desleal com baixa confiança desvia recursos);
-     - `mestre_espioes`: contraespionagem, vigilância e tramas territoriais com base em `percepcao`.
-   - Regência Ativa durante Viagens: quando `camp.localAtual !== feudo.localId`, o Conselho governa deterministicamente pelo ciclo diário, mantendo estabilidade, arrecadando impostos ou sofrendo desfalques se ministros forem corruptos.
-6. **Cortejo, Casamento Real e Linhagem Biológica (Calendário de 270 Dias)**:
-   - Celebração formal de matrimônio real com damas nobres de cidades do continente (+30 Prestígio, +15 Estabilidade).
-   - Início de concepção e gestação real com contagem rigorosa de exatamente **270 dias** (9 meses de calendário civil).
-   - Parto canônico gerando `FilhoHerdeiro` com nome, sexo e herança biológica determinística dos 6 atributos canônicos (`fisico`, `precisao`, `resiliencia`, `raciocinio`, `percepcao`, `social`).
-   - Envelhecimento anual dinâmico (a cada 360 dias) com amadurecimento e florescimento de atributos.
-   - Proclamação formal do `herdeiroAparente` garantindo a sucessão legítima do trono.
-7. **Vassalagem Feudal (Estilo CK3)**:
-   - Concessão de senhorios a nobres leais (`concederFeudoVassalo`), gerando barões/condes juramentados.
-   - Recolhimento diário automático de tributos em ouro para os cofres do feudo.
-   - Convocação de levas militares feudais (`convocarLevasVassalos`) reforçando guarnições e segurança.
-   - Opinião suserana e lealdade dinâmica (decadência por negligência e necessidade de presentes/honrarias).
-8. **Assembleia da Coroa & Guerra Formal**:
-   - Convocação da assembleia militar para declaração de guerra formal contra cidades e fortalezas rivais, com registro do alvo e *Casus Belli*.
-   - Celebração de tratados de paz restabelecendo o comércio e a estabilidade.
-9. **Tramas Secretas de Usurpação & Espionagem**:
-   - Orquestração de conspirações clandestinas além das fronteiras conduzidas pelo Mestre dos Espiões e oficiais infiltrados.
-   - Progresso diário de infiltração (0 a 100%).
-   - Ao atingir 100%, execução automática do golpe de estado, destronando o regente rival e anexando a cidade alvo como um feudo vassalo subordinado à dinastia.
-10. **Interface Dedicada Completa (10 Abas)**:
-    - `Assentamento.tsx` estruturado em 10 abas: `geral`, `trono`, `quartel`, `linhagem`, `vassalos`, `intrigas`, `distritos`, `rotas`, `asora`, `mapa`.
-
-### Arquivos Modificados
-- `engine/types.ts`:
-  - Definidos tipos `CargoConselho`, `ConselheiroReino`, `PatenteMilitar`, `DesignacaoOficial`, `OficialReino`, `CasamentoReino`, `GestacaoReino`, `FilhoHerdeiro`, `LordeVassalo`, `TramaReino`, `CasaDinastica`.
-  - Estendido `FeudoState` com todos os campos de dinastia, oficiais, conselho, família, vassalagem e conspirações.
-- `engine/reino.ts`:
-  - Implementada tabela de 10 Tiers arquiteturais para os 6 biomas (`obterTierReinoInfo`).
-  - Implementadas funções: `fundarCasaDinastica`, `CARGOS_CONSELHO_INFO`, `nomearConselheiro`, `removerConselheiro`, `recrutarOficial`, `promoverOficial`, `designarMissaoOficial`, `treinarOficiais`, `celebrarCasamento`, `iniciarGestacao`, `darLuzHerdeiro`, `designarHerdeiroAparente`, `concederFeudoVassalo`, `convocarLevasVassalos`, `convocarAssembleiaGuerra`, `firmarTratadoPaz`, `iniciarTramaUsurpacao`.
-  - `processarCicloReino`: integrado com regência na ausência do monarca, avanço de gestação de 270 dias, envelhecimento de herdeiros, recolhimento de impostos vassalos, XP de oficiais e avanço de tramas de usurpação.
-- `engine/index.ts`:
-  - Re-exportação de todos os novos símbolos, tipos e constantes de `engine/reino`.
-- `engine/reino.selftest.ts`:
-  - Expandido de 23 para 88 asserções organizadas em 15 suítes cobrindo exaustivamente todos os novos sistemas.
-- `ui/store.ts`:
-  - Adicionadas 16 assinaturas na interface `GameState` e implementadas todas as 16 ações chamando a engine e persistindo o estado.
-- `ui/screens/Assentamento.tsx`:
-  - Roteamento completo das 10 abas com controles interativos para o trono, quartel, linhagem, vassalos e intrigas.
-  - Adicionadas definições de estilo `brasaoBox` e `inputTexto`.
-
-### Verificações e Testes Executados
-- `npm run test:reino`: **88/88 asserções aprovadas com 100% de sucesso**.
-- `npm run typecheck`: **0 erros (TypeScript Strict Mode 100% limpo)**.
-- `npm run test:engine`: **21 suítes unitárias + 6 campanhas de 10 anos (107.250 ações) com 0 violações de invariante em 136.7s**.
-- `npx expo export --platform web`: **366 módulos empacotados com sucesso em `dist` sem nenhum erro ou aviso**.
-
-### Próximo passo sugerido
-- **Ação Livre 2.0**: expandir o reconhecedor de intenções narrativas em linguagem natural para ordens reais ("nomear fulano chanceler", "promover sargento", "pedir a mão de fulana em casamento", "convocar vassalos às armas").
-- **Diretor de Arcos**: alimentar rumores nas tavernas do continente sobre golpes de estado da dinastia, casamentos reais e o nascimento de novos herdeiros ao trono.
-
----
-
-## Sessão 45 — Gemini — Expansão de Vaelhorn: Relíquias Nobres, Caça a Monstros Witcher, Classe Lutador & Miyamoto Musashi
-
-### Objetivo
-Atender ao pedido de expansão massiva focado estritamente no continente e regras de **Vaelhorn**:
-1. **Catálogo de Relíquias Hereditárias das Casas Nobres & Armas Divinas/Perdidas**:
-   - Relíquias de família passadas de geração em geração pelas casas de Vaelhorn (Halvet, Mareu, Corveira, Tessel, Solgar, Valtorius).
-   - Armas divinas/perdidas obtidas de formas lendárias (Lâmina da Origem Solar forjada do primeiro raio de sol estilo Nichirin demon slayer contra onis, Arco do Caçador de Astros, Lança de São Vandro, Adaga do Rei Ladrão).
-2. **Classe Lutador (`lutador`)**:
-   - Ajuste estrito conforme instrução direta do usuário ("o nome da classe não pode ser mestre marcial nem nada disso, vou começar a classe ela tem que ser um nome mais tranquilo eu ainda não me tornei um mestre para isso").
-   - Nome canônico definido como **`Lutador`** (`lutador`), com alias de compatibilidade `CLASSE_MESTRE_MARCIAL`.
-   - Combate desarmado com escalonamento de dano marcial baseado em Físico e Precisão (`danoMarcialDesarmado`).
-   - Equipamentos marciais: faixas marciais e manoplas quebra-aço.
-   - Mecânica de contra-ataque e quebra de lâmina inimiga (`tentativaQuebraDeEspada`): ao ser atacado por espada ou lâmina de ferro, aprisiona o gume com as palmas e estilhaça a arma do oponente, reduzindo o dano adversário para 3 e atordoando-o.
-3. **Miyamoto Musashi & Esgrima dos Cinco Anéis (*Gorin no Sho*)**:
-   - Mestre Miyamoto Musashi presente no *Passo do Lobo*.
-   - Artes da lâmina: `corte_cruzado_niten` (Niten Ichi-ryu com duas lâminas), `postura_do_vazio` (anulação de hesitação) e `mundo_transparente` (*Sukitōru Sekai* / Visão Transparente absoluta estilo Demon Slayer e Musashi, ignorando 100% da armadura do inimigo).
-   - Treinamentos: `treinarKatasCincoElementos` e `treinarEsgrimaNiten`.
-4. **Quadro de Caça a Monstros (Estilo The Witcher) & Óleos Alquímicos**:
-   - Quadro regional de contratos com bestas perigosas (Lobo Alpha de Val-Cinza, Gárgula Abissal de Mir, Oni Carniceiro da Fronteira, Quimera do Sulco).
-   - Investigação de pistas preparatórias (rastros, tocas, carcaças).
-   - Aplicação de óleos alquímicos nas lâminas (`oleo_anti_besta`, `oleo_anti_necromorfos`, `oleo_de_glicinia_solar`, `oleo_draconico_de_enxofre`).
-   - Troféus de caça colhidos das carcaças abatidas que concedem recompensas, prestígio e moedas.
-5. **Trabalhos Regionais Especializados & Treinos Imersivos**:
-   - Mineração profunda na Fenda de Corveira, estiva portuária nas docas de Mareu, patrulha sentinela na muralha de Tessel e caçada de contratos.
-   - Treinos de calejamento da palma de ferro e meditação sob a cascata gélida.
-
-### Arquivos Modificados
-- `engine/types.ts`:
-  - Tipos `PistaMonstro`, `ContratoMonstro`, `TrofeuMonstro`, `ContratosMonstroCampanha`, `TipoTreinoImersivo`.
-  - Campos estendidos em `Item`, `CombatActor` e `Campanha`.
-- `content/vaelhorn/items.ts`:
-  - 11 relíquias das casas nobres (`espada_ancestral_halvet`, `escudo_halvet`, `tridente_mareu`, `manto_mareu`, `machado_corveira`, `peitoral_corveira`, `espada_tessel`, `elmo_tessel`, `cimitarra_solgar`, `espada_imperial_vaelhorn`, `coroa_espinhos_valtorius`).
-  - 4 armas divinas/perdidas (`lamina_da_origem_solar`, `arco_do_cacador_de_astros`, `lanca_de_sao_vandro`, `adaga_do_rei_ladrao`).
-  - 3 itens de lutador / combate desarmado (`faixas_marciais`, `manoplas_do_quebra_aco`, `manoplas_vajra_celestial`).
-  - 4 óleos alquímicos e 4 troféus de monstros.
-- `content/vaelhorn/classes.ts`:
-  - Classe `lutador` ("Lutador") registrada com foco inicial humilde e combate corpo a corpo.
-- `content/vaelhorn/book.ts`:
-  - Mestres `mestre_musashi` e `mestre_bai_long`.
-  - Trabalhos `extracao_fenda_corveira`, `estiva_docas_mareu`, `patrulha_muralha_tessel`, `cacada_contrato_witcher`.
-  - Artes `palma_de_ferro`, `partir_espada`, `corte_cruzado_niten`, `postura_do_vazio`, `mundo_transparente`.
-- `content/vaelhorn/bestiary.ts`:
-  - Feras e monstros de contrato: `lobo_alpha_val_cinza`, `gargula_abissal_mir`, `oni_carniceiro_fronteira`, `quimera_do_sulco`.
-- `engine/classe.ts`:
-  - `CLASSE_LUTADOR = 'lutador'` e alias `CLASSE_MESTRE_MARCIAL`.
-  - `ehClasseLutador`, `danoMarcialDesarmado`, `tentativaQuebraDeEspada`, `bonificacaoNitenMusashi`.
-- `engine/combat.ts`:
-  - Escalonamento desarmado em `danoJogador`.
-  - Guard de RNG para `tentativaQuebraDeEspada` (não consome rolagem aleatória se o defensor não puder quebrar armas, preservando o RNG determinístico de testes anteriores).
-  - Bônus Niten Musashi e Visão Transparente (100% penetração de armadura).
-  - Bônus de óleos alquímicos em combate e resolução de contratos na vitória.
-- `engine/contratosMonstros.ts` (NOVO):
-  - Sistema de contratos, pistas, óleos alquímicos e inicialização do quadro.
-- `engine/treinamentoImersivo.ts` (NOVO):
-  - Katas dos 5 elementos, calejamento de palma de ferro, meditação sob cascata e esgrima Niten.
-- `engine/acoesMundo.ts`:
-  - Ações de mundo para treinos imersivos, contratos de monstros e trabalhos especializados.
-- `engine/index.ts`:
-  - Exportação dos novos módulos e funções.
-- `package.json`:
-  - Adicionado script `test:vaelhorn`.
-- `engine/vaelhorn_expansao.selftest.ts` (NOVO):
-  - Suíte completa de testes da expansão validando relíquias, classe Lutador, quebra de lâmina, Musashi, Niten, contratos Witcher, óleos e treinos.
-
-### Verificações e Testes Executados
-- `npm run test:vaelhorn`: **Aprovado com 100% de sucesso**.
-- `npm run test:tsukimichi`: **70/70 testes aprovados com 100% de sucesso**.
-- `npm run test:reino`: **88/88 testes aprovados com 100% de sucesso**.
-- `npm run typecheck`: **0 erros (TypeScript Strict Mode 100% limpo)**.
-
-
+| 43–45 | Gemini — assentamento e feudo, soberania feudal, relíquias nobres e classe Lutador |
 
 ---
 
@@ -884,3 +665,119 @@ Médias: nível 31,3; população 3.866; fome no fim 6; dias-cidade em fome
 ### Próximo passo
 Fase 5 (estações, feras em bando, caravanas). O dono pediu nesta sessão para
 focar só em Vaelhorn: a Fase 7 (NPCs de Tsukimichi) fica de fora por enquanto.
+
+---
+
+## Sessão 51 — Claude — Fase 5: estações, feras em bando, caravanas
+
+### Estado encontrado
+A estação mudava o clima e a lavoura (`cidades.ts`: fertilidade 0,8 no
+inverno) e mais nada. O encontro de viagem sorteava uma criatura do lugar e,
+em 20% das vezes, uma segunda — inclusive contra personagem de nível 1. Cidade
+com celeiro cheio e cidade com fome não se tocavam: cada uma resolvia sozinha.
+
+Simulação longa antes: a tabela da sessão 50.
+
+### O que foi feito
+- **Peso por estação no bestiário** (`Criatura.estacoes`, opcional): 13 feras
+  marcadas (lobo e lobo branco com fome no inverno, urso hibernando e voltando
+  com fome na primavera, serpente, aranha, morcegos e sanguessuga de verão,
+  corvo migrando e javali no outono, cão selvagem e gárgula no inverno). O peso escolhe **quem** aparece (sorteio ponderado) e mexe
+  na **chance** de haver encontro (média dos pesos do pool, limitada a
+  0,6–1,5): estrada de bicho de verão fica mais calma no inverno. Criatura sem
+  declaração pesa 1 — onis, fantasmas e o resto do bestiário não mudam.
+- **Feras em bando** (`Criatura.bando: {min, max}`): lobo, lobo branco, cão
+  selvagem, corvo e rato gigante vêm em grupo, com o mesmo teto por nível
+  dos bandos (`tetoDeGrupo` = 1 + nível/3, de 1 a 4). **Nível 1 e 2 nunca
+  enfrentam mais de um inimigo em encontro aleatório**: a segunda criatura
+  "de 20%" também passou a respeitar o teto.
+- **Inverno rigoroso** (`engine/estacoes.ts`): no inverno, chance de 1/40 por
+  dia de nevasca de 4 a 8 dias, com fato público no começo e no fim (degelo).
+  Durante ela, rota que toca `passo` ou `colina` fica +3 mais perigosa em
+  `perigoEfetivoDaRota`. Decisão: **perigo maior em vez de rota fechada** —
+  fechar podia prender o jogador do lado errado do Passo do Lobo por uma
+  semana sem aviso; o perigo maior deixa a escolha com ele. RNG derivado
+  (semente + dia): não consome o RNG da campanha. Estado em
+  `camp.mundo.invernoRigoroso` (opcional).
+- **Caravanas** (`engine/caravanas.ts`, `camp.caravanas` opcional): a cada 5
+  dias, a cidade com mais comida (≥ 280) manda até 90 medidas para a cidade
+  com fome mais perto (até 18 períodos de estrada), no máximo 3 na estrada.
+  Na chegada, bando ativo com 3+ homens na região da origem ou do destino
+  ataca com chance 35% + 3% por homem (teto 70%). Perdida: o grão vira tesouro
+  do bando, o destino fica 10 mais inseguro, fato público. Entregue: fato
+  público. **Escolta** (ação `escoltar_caravana`, botão "caravanas partindo"
+  em Comunidade): com bando na rota vira luta contra salteadores do bando (com
+  o teto por nível); vencida ou sem bando, a caravana chega de certeza e a
+  cidade paga 12 moedas e +1 de reputação na vila. Sem bandos no conteúdo
+  (Tsukimichi), não há caravanas.
+- Tela: aviso de nevasca e caravanas partindo em `MundoVivo.tsx`. Simulador:
+  encontros por estação, caravanas entregues e perdidas.
+
+### Arquivos
+Novos: `engine/estacoes.ts`, `engine/caravanas.ts`,
+`engine/estacoes.selftest.ts`, `engine/caravanas.selftest.ts`.
+Alterados: `engine/types.ts` (`Criatura.estacoes`, `Criatura.bando`,
+`Caravana`, `EstadoCaravanas`, `CombatState.caravana`),
+`content/vaelhorn/bestiary.ts`, `engine/viagem.ts`, `engine/mundo.ts`,
+`engine/bandos.ts` (`encontroContraCaravana`), `engine/combat.ts` (desfecho da
+escolta), `engine/acoesMundo.ts`, `engine/index.ts`, `engine/campanhaLonga.ts`,
+`ui/screens/MundoVivo.tsx`, `package.json` (os dois testes em `test:engine`).
+`HANDOFF.md`: sessões 43 a 45 movidas para `HANDOFF-ARQUIVO.md` (o arquivo
+passava de 880 linhas), texto intacto.
+
+### Verificações
+- `estacoes.selftest.ts`: pesos declarados; mais lobo no inverno que no verão
+  (544 contra 258 em 3.000 sorteios), quase nenhum urso nem serpente no
+  inverno; pool de bicho de verão com menos encontro no inverno; teto por
+  nível (nível 1: 0 grupos de 2+ em mais de 2.000 encontros e em 200 viagens
+  reais; nível 9 encontra matilha dentro do teto); nevasca chega, vira fato,
+  +3 no passo e 0 na planície, sobrevive ao save, degelo com fato; fora do
+  inverno não neva; o inverno não consome o RNG principal.
+- `caravanas.selftest.ts`: caravana sai da sobra para a fome, a carga sai do
+  celeiro, entrega soma no destino; sem fome, ninguém manda; com bando de 8
+  na rota, 19 de 30 atacadas, com tesouro do bando e insegurança do destino
+  subindo; escolta sem bando (entrega certa, 12 moedas), escolta com bando
+  (nível 1 luta contra 1 salteador; vencida, a caravana chega mesmo com bando
+  de 20); save idêntico; Tsukimichi sem caravanas.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export --platform web`: verdes.
+
+Simulação longa depois (`simLongo 10 6`):
+```
+longa-0    10a  fim_do_prazo nível 32  pop 4054  fome    0d  travas     0  violações 0
+longa-1    10a  fim_do_prazo nível 29  pop 3635  fome    0d  travas     0  violações 0
+longa-2    10a  fim_do_prazo nível 35  pop 4158  fome    0d  travas     0  violações 0  marca aos 24
+longa-3    10a  fim_do_prazo nível 28  pop 3679  fome    0d  travas     0  violações 0
+longa-4    10a  fim_do_prazo nível 31  pop 3859  fome    0d  travas     0  violações 0
+longa-5    10a  fim_do_prazo nível 31  pop 4278  fome    0d  travas     0  violações 0
+```
+| | Sessão 50 | Sessão 51 |
+| --- | --- | --- |
+| nível final | 31,3 | 31,0 |
+| população | 3.866 | 3.944 |
+| derrotas | 19,8 | 18,7 |
+| fome no fim | 6 | 0 |
+| dias-cidade em fome | 2.621 | 617 |
+| mortes | 0 | 0 |
+
+Encontros por estação (média por campanha): primavera 164, verão 184,5,
+outono 177,7, inverno 171,2. Caravanas: 270,7 entregues e 20,8 perdidas por
+campanha (7%). Nível 1–5: 49,1% de vitória em 57 combates.
+
+### Problemas e decisões em aberto
+- **As caravanas quase acabaram com a fome** (dias-cidade em fome −76%). É o
+  efeito esperado de ligar sobra a falta, mas tira pressão das missões de
+  abastecer. Se o dono quiser mais fome no mundo, os botões são
+  `COMIDA_PARA_MANDAR` (280) e `CARGA_MAXIMA` (90) em `engine/caravanas.ts`.
+  Não mexi: nenhuma métrica de risco piorou.
+- A diferença entre estações existe mas é pequena na média (verão +12% sobre
+  a primavera), porque a maioria dos pools mistura feras de várias estações e
+  onis (peso 1). Aparece forte por fera (lobo, urso, serpente), que é o que o
+  jogador percebe.
+- `combat.ts` importa `caravanas.ts`, que importa `combat.ts`: import circular
+  só de funções, resolvido em tempo de chamada. Funciona; se um dia der
+  problema de ordem de carga, mova `registrarDesfechoCaravana` para um módulo
+  sem dependência de combate.
+
+### Próximo passo
+Fase 6 (cidades com identidade e a forja ao alcance).

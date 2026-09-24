@@ -23,6 +23,8 @@ import { fichaCombatente } from './progressaoNpc';
 import { processarMundoVivo } from './mundoVivo';
 import { processarCasas } from './casas';
 import { processarFamiliasNpc } from './familiasNpc';
+import { processarEstacoes } from './estacoes';
+import { processarCaravanas } from './caravanas';
 import { avancarCicloSubespaco } from './tsukimichi';
 import { processarCicloReino } from './reino';
 
@@ -65,6 +67,8 @@ export type MundoState = {
   };
   proximaGuerra?: number;
   casas?: Record<string, import('./casas').EstadoCasa>;
+  // Nevasca que endurece passos e colinas por alguns dias (engine/estacoes.ts).
+  invernoRigoroso?: { desde: number; ate: number; anunciouFim?: boolean };
 };
 
 const CLIMA_POR_ESTACAO: Record<Estacao, Clima[]> = {
@@ -218,10 +222,13 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarGuerrasDeFundo(content, camp);
     processarCasas(content, camp);
     processarBandos(content, camp);
+    processarEstacoes(content, camp);
     processarContinuidade(content, camp);
     processarMundoVivo(content, camp);
     // Luto, herança de ofício e gratidão das famílias do elenco (familiasNpc.ts).
     processarFamiliasNpc(content, camp);
+    // Grão de quem tem sobra para quem tem fome (engine/caravanas.ts).
+    processarCaravanas(content, camp);
     if (camp.asora?.desbloqueado) {
       avancarCicloSubespaco(camp);
     }

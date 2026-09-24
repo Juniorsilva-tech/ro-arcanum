@@ -250,6 +250,17 @@ export function encontroDeBandoNaViagem(
   return null;
 }
 
+/**
+ * O bando cai sobre uma caravana escoltada pelo jogador (engine/caravanas.ts):
+ * comparsas no tamanho que o nível permite, sem capitão nem pedágio.
+ */
+export function encontroContraCaravana(content: ContentBundle, camp: Campaign, bandoId: string): EncontroDeBando | null {
+  const b = camp.bandos?.bandos[bandoId];
+  if (!b || b.estado !== 'ativo') return null;
+  const n = tamanhoDoGrupo(b.membros, camp.personagem.nivel);
+  return { bandoId: b.id, criaturas: comparsas(content, camp, n, camp.rng) };
+}
+
 export function valorDoPedagio(b: Bando, nivelJogador: number): number {
   return 8 + b.membros * 2 + nivelJogador * 2;
 }

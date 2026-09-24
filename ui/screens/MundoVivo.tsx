@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useGame } from '../store';
 import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
-import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, type TipoEdificio } from '@/engine';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, descreverCasa, caravanasPartindoAqui, invernoRigorosoAtivo, type TipoEdificio } from '@/engine';
 
 export function ComunidadeViva() {
   const camp = useGame(s => s.camp)!;
@@ -33,6 +33,14 @@ export function ComunidadeViva() {
       {bandosConhecidos(camp).map(b => <Card key={b.id}>
         <TextoMono>{descreverBando(content, b)}</TextoMono>
         {b.esconderijoConhecido && b.esconderijo === camp.localAtual && b.estado !== 'destruido' && <Botao titulo="Atacar o esconderijo · risco de combate" onPress={() => agir({ tipo: 'atacar_esconderijo' })} />}
+      </Card>)}
+    </>}
+    {invernoRigorosoAtivo(camp) && <TextoMono>Nevasca nos passos e colinas: as rotas de montanha estão traiçoeiras até o degelo.</TextoMono>}
+    {caravanasPartindoAqui(content, camp).length > 0 && <>
+      <Divisor label="caravanas partindo" />
+      {caravanasPartindoAqui(content, camp).map(cv => <Card key={cv.id}>
+        <TextoMono>{cv.carga} medidas de grão para {content.locais.find(l => l.id === cv.destino)?.nome ?? cv.destino}, que passa fome. Sai amanhã.</TextoMono>
+        <Botao titulo="Escoltar a caravana · se houver bando na rota, a luta é sua" onPress={() => agir({ tipo: 'escoltar_caravana', id: cv.id })} />
       </Card>)}
     </>}
     {(content.casas ?? []).filter(h => h.sede === camp.localAtual || h.territorio.includes(camp.localAtual)).length > 0 && <>

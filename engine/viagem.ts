@@ -16,6 +16,7 @@ import { encontrosElegiveis } from './kimetsu';
 import { emboscadaNemesis } from './nemesis';
 import { iniciarCombate } from './combat';
 import { registrarSaidaNarrativa } from './contextoNarrativo';
+import { fatorDaEstacao, perigoDoInverno, sortearNaEstacao, tamanhoDaMatilha, tetoDeGrupo } from './estacoes';
 
 const PERIODOS_DE_RISCO = new Set<Periodo>(['anoitecer', 'noite', 'madrugada']);
 
@@ -36,7 +37,7 @@ export function rolarEncontroContextual(content: ContentBundle, camp: Campaign, 
   const temOni = comuns.length !== elegiveis.length;
   const chance = temOni ? presencaOniCasual(camp) : 0;
   const permitir = temOni && chance > 0 && nextFloat(camp.rng) < chance;
-  const encontro = rolarEncontroDeViagem(camp, periodo, perigo, permitir ? elegiveis : comuns);
+  const encontro = rolarEncontroDeViagem(camp, periodo, perigo, permitir ? elegiveis : comuns, content);
   if (encontro?.some(id => content.criaturas.find(c => c.id === id)?.oni)) {
     camp.flags['narrativa.ultimoOniCasual'] = camp.calendario.dia;
   }
@@ -89,6 +90,8 @@ export function perigoEfetivoDaRota(
       break;
     }
   }
+  // Nevasca: passos e colinas ficam traiçoeiros (engine/estacoes.ts).
+  perigo += perigoDoInverno(content, camp, origem, destino);
   // Quem sabe a hora do Passo do Lobo (segredo da caçadora de Vintra, ver
   // content/vaelhorn/segredos.ts) atravessa quando o que come lá não está.
   if (camp.flags['sabe.hora_do_passo'] && (origem === 'passo_lobo' || destino === 'passo_lobo')) perigo -= 2;
@@ -180,17 +183,31 @@ export function rolarEncontroDeViagem(
   periodo: Periodo,
   perigoRota: number,
   pool: string[],
+  content?: ContentBundle,
 ): string[] | null {
   if (pool.length === 0) return null;
   const noturno = PERIODOS_DE_RISCO.has(periodo);
-  const chance = Math.min(0.5, 0.05 + perigoRota * 0.04 + (noturno ? 0.12 : 0));
+  const estacao = camp.calendario.estacao;
+  // A estação mexe na chance (engine/estacoes.ts): pool de bicho de verão
+  // fica mais calmo no inverno, e o contrário.
+  const fator = content ? fatorDaEstacao(content, pool, estacao) : 1;
+  const chance = Math.min(0.5, (0.05 + perigoRota * 0.04 + (noturno ? 0.12 : 0)) * fator);
   if (nextFloat(camp.rng) >= chance) return null;
 
-  const ids = [pick(camp.rng, pool)];
-  // Emboscada rara em dupla — chance pequena, independente da chance de
-  // encontro em si.
-  if (nextFloat(camp.rng) < 0.2) ids.push(pick(camp.rng, pool));
-  return ids;
+  const primeiro = content ? sortearNaEstacao(camp.rng, content, pool, estacao) : pick(camp.rng, pool);
+  if (!primeiro) return null;
+  const ids = [primeiro];
+  const teto = tetoDeGrupo(camp.personagem.nivel);
+  const criatura = content?.criaturas.find(c => c.id === primeiro);
+  if (criatura?.bando) {
+    // Fera de matilha vem em matilha, com o teto do nível.
+    const n = tamanhoDaMatilha(camp.rng, criatura, camp.personagem.nivel);
+    for (let i = 1; i < n; i++) ids.push(primeiro);
+  } else if (teto > 1 && nextFloat(camp.rng) < 0.2) {
+    // Emboscada rara em dupla — nunca contra quem ainda não passou do nível 2.
+    ids.push(content ? sortearNaEstacao(camp.rng, content, pool, estacao) ?? primeiro : pick(camp.rng, pool));
+  }
+  return ids.slice(0, teto);
 }
 
 // ── A viagem em si ────────────────────────────────────────────────────────

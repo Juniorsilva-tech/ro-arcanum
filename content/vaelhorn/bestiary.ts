@@ -4,6 +4,7 @@ import type { Criatura } from '../../engine/types';
 export const criaturasVaelhorn: Criatura[] = [
   {
     id: 'rato_gigante',
+    estacoes: { verao: 1.3, inverno: 0.7 }, bando: { min: 1, max: 3 },
     nome: 'Rato gigante',
     descricao: 'Do tamanho de um cão, e com o dobro da fome.',
     nivel: 1, vida: 8, defesa: 9, acerto: 9, ataqueNome: 'mordida',
@@ -13,6 +14,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'cao_selvagem',
+    estacoes: { inverno: 1.3 }, bando: { min: 1, max: 3 },
     nome: 'Cão selvagem',
     descricao: 'Faminto, sarnento, rápido.',
     nivel: 1, vida: 11, defesa: 11, acerto: 11, ataqueNome: 'dentada',
@@ -22,6 +24,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'lobo',
+    estacoes: { inverno: 1.8, outono: 1.2, verao: 0.8 }, bando: { min: 2, max: 4 },
     nome: 'Lobo da Mata',
     descricao: 'Olhos amarelos entre os troncos. Nunca vem só.',
     nivel: 2, vida: 15, defesa: 12, acerto: 12, ataqueNome: 'bote',
@@ -31,6 +34,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'javali',
+    estacoes: { outono: 1.5, inverno: 0.8 },
     nome: 'Javali',
     descricao: 'Uma tonelada de fúria com presas.',
     nivel: 2, vida: 20, defesa: 10, acerto: 11, ataqueNome: 'investida',
@@ -58,6 +62,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'corvo_gigante',
+    estacoes: { outono: 1.6, primavera: 0.8 }, bando: { min: 1, max: 3 },
     nome: 'Corvo gigante',
     descricao: 'Preto como piche, bico como punhal.',
     nivel: 2, vida: 12, defesa: 14, acerto: 13, ataqueNome: 'bicada',
@@ -85,6 +90,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'aranha_das_arvores',
+    estacoes: { verao: 1.5, inverno: 0.3 },
     nome: 'Aranha das árvores',
     descricao: 'Do tamanho de um escudo, e paciente.',
     nivel: 3, vida: 18, defesa: 14, acerto: 13, ataqueNome: 'picada',
@@ -96,6 +102,7 @@ export const criaturasVaelhorn: Criatura[] = [
   // ── FAUNA DO VALE ────────────────────────────────────────────────────────
   {
     id: 'raposa_raivosa',
+    estacoes: { primavera: 1.4 },
     nome: 'Raposa raivosa',
     descricao: 'Espuma no focinho e nenhum medo restante.',
     nivel: 1, vida: 7, defesa: 12, acerto: 11, ataqueNome: 'dentada suja',
@@ -105,6 +112,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'enxame_de_morcegos',
+    estacoes: { verao: 1.4, inverno: 0.2 },
     nome: 'Enxame de morcegos',
     descricao: 'O teto se solta e vem na sua direção.',
     nivel: 2, vida: 12, defesa: 15, acerto: 12, ataqueNome: 'redemoinho de asas',
@@ -114,6 +122,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'serpente_do_junco',
+    estacoes: { verao: 1.6, inverno: 0.2 },
     nome: 'Serpente do junco',
     descricao: 'A margem se move um palmo antes de você entender por quê.',
     nivel: 2, vida: 13, defesa: 14, acerto: 13, ataqueNome: 'bote',
@@ -123,6 +132,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'lobo_branco',
+    estacoes: { inverno: 2.0, outono: 1.2, verao: 0.3 }, bando: { min: 2, max: 3 },
     nome: 'Lobo branco',
     descricao: 'Maior que os outros, e os outros o seguem.',
     nivel: 4, vida: 30, defesa: 14, acerto: 14, ataqueNome: 'dilaceração',
@@ -132,6 +142,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'urso_pardo',
+    estacoes: { inverno: 0.1, primavera: 1.6, outono: 1.3 },
     nome: 'Urso pardo',
     descricao: 'Levanta, e o mundo fica menor.',
     nivel: 5, vida: 44, defesa: 12, acerto: 14, ataqueNome: 'patada',
@@ -141,6 +152,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'sanguessuga_do_lodo',
+    estacoes: { verao: 1.4, inverno: 0.4 },
     nome: 'Sanguessuga do lodo',
     descricao: 'Você só percebe quando começa a esfriar.',
     nivel: 3, vida: 16, defesa: 11, acerto: 14, ataqueNome: 'sucção',
@@ -255,6 +267,7 @@ export const criaturasVaelhorn: Criatura[] = [
   },
   {
     id: 'gargula_partida',
+    estacoes: { inverno: 1.3 },
     nome: 'Gárgula partida',
     descricao: 'Faltam-lhe as asas. Não lhe falta vontade.',
     nivel: 4, vida: 34, defesa: 16, acerto: 13, ataqueNome: 'braçada de pedra',

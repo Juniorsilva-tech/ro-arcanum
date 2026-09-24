@@ -518,6 +518,13 @@ export type LivroState = {
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.
 export type Criatura = {
+  /**
+   * Peso do encontro por estação (engine/estacoes.ts). 1 é o normal; 0 some
+   * na estação (urso hibernando); 2 é o dobro (lobo com fome no inverno).
+   */
+  estacoes?: Partial<Record<import('./time').Estacao, number>>;
+  /** Sai em grupo: quantos, antes do teto por nível do jogador. */
+  bando?: { min: number; max: number };
   /** Regiao fora da qual esta criatura nunca e sorteada. */
   regiaoExclusiva?: string;
   humano?: boolean;
@@ -641,6 +648,19 @@ export type EstadoFamiliasNpc = {
   fatoVisto: number;
 };
 
+// Caravanas de comida entre cidades (engine/caravanas.ts).
+export type Caravana = {
+  id: string;
+  origem: string;
+  destino: string;
+  carga: number;
+  parte: number;
+  chega: number;
+  estado: 'partindo' | 'viajando' | 'entregue' | 'perdida';
+  escoltada?: boolean;
+};
+export type EstadoCaravanas = { seq: number; lista: Caravana[]; entregues: number; perdidas: number };
+
 export type EstadoMarca = {
   dia: number;
   idadeDespertar: number;
@@ -653,6 +673,8 @@ export type EstadoMarca = {
 export type CombatState = {
   /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
   bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
+  /** Emboscada contra caravana que o jogador escolta (engine/caravanas.ts). */
+  caravana?: string;
   ordemGrupo?: 'livre' | 'proteger' | 'focar';
   versaoRegras?: number;
   ambiente?: { abrigoSolar: boolean };
@@ -765,6 +787,8 @@ export type Campaign = {
   // A Marca do Caçador: quando despertou, a idade em que o corpo começa a
   // cobrar, a vida máxima já perdida e se a chama foi contida (engine/marca.ts).
   marca?: EstadoMarca;
+  // Caravanas de comida entre cidades (engine/caravanas.ts).
+  caravanas?: EstadoCaravanas;
   // Luto, heranças e aposentadorias das famílias do elenco (engine/familiasNpc.ts).
   familiasNpc?: EstadoFamiliasNpc;
   cronica: { turno: number; texto: string; tipo: 'narracao' | 'eco' | 'resumo' | 'sistema' }[];
