@@ -916,3 +916,25 @@ no commit. Se não deviam estar no repositório, é só remover.
 - **Não feito da etapa C**: "cultivos por sítio" (plantas diferentes por
   região). A lavoura continua pelo `solo` do terreno. Fica para quando houver
   motivo de jogo além do nome da planta.
+
+### Etapa D da colônia (audiências) — feita
+- `engine/audiencias.ts`: um pedido por vez, no mínimo a cada 3 dias, nascido
+  do estado — fome (celeiro abaixo de 4 dias de comida), briga (duas colonas
+  briguentas ou de humor abaixo de 35), furto (segurança abaixo de 45; a
+  comida sumida já sai do celeiro quando alguém vem contar), casamento (duas
+  pessoas de humor 70+, sem união anterior), ferramentas (quem cuida de obras
+  ou oficina, com material em estoque) e mercador (chance pela passagem do
+  sítio).
+- Cada opção diz o efeito antes da escolha, e a regra cumpre exatamente isso:
+  comprar grão, racionar (60% do consumo por 10 dias, ligado em
+  `processarDiaColonia`), abater (pela carne da ficha de `rebanhos.ts`), dar
+  razão, mediar, castigar, expulsar, perdoar, pôr vigia, abençoar com ou sem
+  festa (a união fica em `Colono.conjuge`), negar. Falta de recurso recusa a
+  opção sem gastar o pedido.
+- Sem resposta até o prazo: a ordem cai 3, o renome cai 1 e os envolvidos
+  ficam de pior humor.
+- Tela: bloco "pedem audiência" no topo da aba Gente.
+- Teste: `engine/audiencias.selftest.ts` (16 checagens), no `test:engine`.
+
+Verificações: typecheck, `test:engine` completo (simulação longa 6/6 até o
+fim, 0 mortes, 0 violações), jornadas, casas, vaelhorn_expansao, expo export.

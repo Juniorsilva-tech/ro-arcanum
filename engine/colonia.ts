@@ -27,6 +27,7 @@ import { SITIO_POR_PONTO_ANTIGO } from '../content/vaelhorn/sitios';
 import { createRng, nextFloat, nextInt, seedFromString } from './rng';
 import { registrarMarco } from './memoria';
 import { obterFeudo } from './reino';
+import { talvezAudiencia } from './audiencias';
 import { processarRebanhos, segurancaDosCavalos, type RelatorioRebanho } from './rebanhos';
 import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
 
@@ -222,7 +223,8 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
     if (tessel) tessel.comida = Math.min(600, tessel.comida + r.tributo);
   }
   r.selvagem = m.comidaSelvagemDia * ef('caca');
-  r.consumo = f.populacao * 0.12 * (inverno ? m.consumoInverno : 1);
+  const racionando = (f.racionamentoAte ?? 0) > camp.calendario.dia;
+  r.consumo = f.populacao * 0.12 * (inverno ? m.consumoInverno : 1) * (racionando ? 0.6 : 1);
   f.comida = Math.max(0, f.comida + r.lavoura - r.tributo + r.selvagem - r.consumo);
   // O rebanho come depois da gente (o celeiro alimenta pessoas primeiro) e
   // devolve ovo, leite, lã e tração (engine/rebanhos.ts).
@@ -283,6 +285,9 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   }
 
   r.gente = processarGente(content, camp, s.regiao, s.terreno.passagem);
+  // Alguém pede para ser ouvido (engine/audiencias.ts).
+  const audiencia = talvezAudiencia(content, camp);
+  if (audiencia) r.eventos.push(`Pedem audiência: ${audiencia.texto}`);
   for (const texto of r.eventos) f.historicoEventos.push({ dia: camp.calendario.dia, texto });
   f.ultimoRelatorio = { dia: camp.calendario.dia, ...r };
   return r;

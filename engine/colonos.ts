@@ -42,6 +42,8 @@ export type Colono = {
   chegouEm: number;
   /** Dias seguidos com humor abaixo de 15. */
   diasInfeliz?: number;
+  /** Com quem se uniu na colônia (engine/audiencias.ts). */
+  conjuge?: string;
 };
 
 export type ChegadaPendente = {

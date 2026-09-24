@@ -84,6 +84,7 @@ import {
   recusarChegada,
   comprarAnimais,
   abaterAnimais,
+  resolverAudiencia,
   designarFuncao,
   fundarCasaDinastica,
   nomearConselheiro,
@@ -288,6 +289,7 @@ interface GameState {
   fundarColoniaAcao: (nome: string) => Promise<string>;
   reacenderFarolAcao: () => Promise<string>;
   aceitarChegadaAcao: (id: string) => Promise<string>;
+  resolverAudienciaAcao: (opcaoId: string) => Promise<string>;
   comprarAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   abaterAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   recusarChegadaAcao: (id: string) => Promise<string>;
@@ -716,6 +718,15 @@ export const useGame = create<GameState>((set, get) => ({
     const { camp, content } = get();
     if (!camp || !content) return '';
     const r = fundarColonia(content, camp, nome);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async resolverAudienciaAcao(opcaoId) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = resolverAudiencia(camp, opcaoId);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;

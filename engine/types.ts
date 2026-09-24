@@ -1185,6 +1185,12 @@ export type FeudoState = {
   criasAcumuladas?: Record<string, number>;
   /** Animais comprados na estação corrente: a região só vende tantos por estação. */
   comprasAnimais?: { estacao: string; qtd: Record<string, number> };
+  /** Pedido de audiência esperando resposta (engine/audiencias.ts). */
+  audiencia?: import('./audiencias').Audiencia;
+  ultimaAudiencia?: number;
+  seqAudiencias?: number;
+  /** Até que dia a colônia está em meia ração (60% do consumo). */
+  racionamentoAte?: number;
   ultimoRelatorio?: { dia: number } & import('./colonia').RelatorioDia;
 };
 

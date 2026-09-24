@@ -67,4 +67,5 @@ export * from './trabalhosEspecializados';
 export * from './colonia';
 export * from './colonos';
 export * from './rebanhos';
+export * from './audiencias';
 export * from './segredos';

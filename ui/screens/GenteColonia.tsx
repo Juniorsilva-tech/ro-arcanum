@@ -15,6 +15,7 @@ export function GenteDaColonia() {
   const aceitar = useGame(s => s.aceitarChegadaAcao);
   const recusar = useGame(s => s.recusarChegadaAcao);
   const designar = useGame(s => s.designarFuncaoAcao);
+  const responder = useGame(s => s.resolverAudienciaAcao);
   const [aberto, setAberto] = useState<string | undefined>();
   const f = camp.feudo;
   if (!f?.fundado) return null;
@@ -32,6 +33,22 @@ export function GenteDaColonia() {
           {colonos.length} com nome · {comuns} gente comum · lugar para {capacidadeReal(content, f)}
         </TextoMono>
       </Card>
+
+      {f.audiencia && (
+        <>
+          <Divisor label="pedem audiência" />
+          <Card acento={cores.cinabrio}>
+            <TextoMono>{f.audiencia.texto}</TextoMono>
+            <TextoMono style={{ fontSize: 12, color: cores.mudo }}>Espera resposta até o dia {f.audiencia.ate}. Sem resposta, a colônia nota.</TextoMono>
+            {f.audiencia.opcoes.map(o => (
+              <View key={o.id} style={{ marginTop: 6 }}>
+                <Botao titulo={o.rotulo} variante="fantasma" onPress={() => responder(o.id)} />
+                <TextoMono style={{ fontSize: 12, color: cores.mudo }}>{o.efeito}</TextoMono>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
 
       {(f.chegadas ?? []).length > 0 && <Divisor label="à porta" />}
       {(f.chegadas ?? []).map(ch => (
