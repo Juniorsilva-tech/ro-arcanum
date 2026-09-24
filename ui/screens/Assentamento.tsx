@@ -9,6 +9,7 @@ import { useGame } from '../store';
 import { FundacaoColonia, SitioDaColonia } from './Colonia';
 import { GenteDaColonia } from './GenteColonia';
 import { RebanhoDaColonia } from './RebanhoColonia';
+import { AmeacaDaColonia } from './AmeacaColonia';
 import {
   obterFeudo,
   CATALOGO_EDIFICIOS,
@@ -219,6 +220,7 @@ export function Assentamento() {
           {abaAtiva === 'geral' && (
             <View style={{ gap: esp.md }}>
               <SitioDaColonia />
+              <AmeacaDaColonia />
               <Card>
                 <View style={styles.linhaEntre}>
                   <TextoSerif style={{ fontSize: 20 }}>Recursos & Estoques do Feudo</TextoSerif>

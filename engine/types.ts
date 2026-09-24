@@ -1191,6 +1191,12 @@ export type FeudoState = {
   seqAudiencias?: number;
   /** Até que dia a colônia está em meia ração (60% do consumo). */
   racionamentoAte?: number;
+  /** Ameaça anunciada e o que a assembleia decidiu (engine/ameacas.ts). */
+  ameaca?: import('./ameacas').AmeacaColonia;
+  ultimaAmeaca?: number;
+  seqAmeacas?: number;
+  /** Relatório da última batalha, para a tela. */
+  ultimaBatalha?: { dia: number; nome: string } & import('./ameacas').ResultadoBatalha;
   ultimoRelatorio?: { dia: number } & import('./colonia').RelatorioDia;
 };
 

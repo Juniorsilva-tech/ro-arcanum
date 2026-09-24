@@ -96,6 +96,12 @@ export function estadoBandos(content: ContentBundle, camp: Campaign): EstadoBand
   return estado;
 }
 
+/** "de" + nome de bando, com a contração certa: "dos Corvos", "da Mão Cinzenta". */
+export function deBando(nome: string): string {
+  const m = /^(os|as|o|a) (.*)$/.exec(nome);
+  return m ? `d${m[1]} ${m[2]}` : `de ${nome}`;
+}
+
 export function nomeDoCapitao(c: CapitaoBando): string {
   return c.alcunha ? `${c.nome}, ${c.alcunha}` : c.nome;
 }
@@ -308,7 +314,7 @@ export function prepararCombateDeBando(content: ContentBundle, camp: Campaign, e
   if (e.pedagio) {
     s.log.push(`${b.nome} barra a estrada: ${e.pedagio} moedas e ninguém se machuca.`);
   }
-  if (e.esconderijo) s.log.push(`Você entra no esconderijo de ${b.nome}.`);
+  if (e.esconderijo) s.log.push(`Você entra no esconderijo ${deBando(b.nome)}.`);
 }
 
 /**
@@ -361,9 +367,9 @@ export function registrarDesfechoBando(camp: Campaign, resultado: 'vitoria' | 'd
       b.esconderijoConhecido = true;
       if (camp.vivo) registrarFato(camp, {
         tipo: 'esconderijo_descoberto', local: b.esconderijo, publico: false, atores: ['jogador'], conhecimento: 'testemunhado',
-        texto: `Você descobriu onde ${b.nome} se esconde.`,
+        texto: `Você descobriu on${deBando(b.nome)} se esconde.`,
       });
-      s.log.push(`Pelo que carregavam, você descobre onde ${b.nome} se esconde.`);
+      s.log.push(`Pelo que carregavam, você descobre on${deBando(b.nome)} se esconde.`);
     }
   }
 
@@ -374,7 +380,7 @@ export function registrarDesfechoBando(camp: Campaign, resultado: 'vitoria' | 'd
         cap.preso = true;
         cap.caca = false;
         registrarMarco(camp, `você entregou ${nomeDoCapitao(cap)} à justiça`);
-        if (camp.vivo) registrarFato(camp, { tipo: 'capitao_preso', local: camp.localAtual, publico: true, atores: ['jogador'], texto: `${nomeDoCapitao(cap)}, de ${b.nome}, foi entregue preso.` });
+        if (camp.vivo) registrarFato(camp, { tipo: 'capitao_preso', local: camp.localAtual, publico: true, atores: ['jogador'], texto: `${nomeDoCapitao(cap)}, ${deBando(b.nome)}, foi entregue preso.` });
       } else {
         // Cada queda torna a próxima fuga menos provável; encurralado no
         // próprio esconderijo, quase não há por onde fugir.
@@ -390,11 +396,11 @@ export function registrarDesfechoBando(camp: Campaign, resultado: 'vitoria' | 'd
           cap.caca = false;
           b.membros = Math.max(0, b.membros - 1);
           s.log.push(`${cap.nome} rola barranco abaixo, sangrando, e some. Ele vai lembrar do seu rosto.`);
-          if (camp.vivo) registrarFato(camp, { tipo: 'capitao_fugiu', local: camp.localAtual, publico: true, atores: ['jogador'], texto: `${cap.nome}, de ${b.nome}, escapou ferido de você e agora atende por ${c.alcunha}.` });
+          if (camp.vivo) registrarFato(camp, { tipo: 'capitao_fugiu', local: camp.localAtual, publico: true, atores: ['jogador'], texto: `${cap.nome}, ${deBando(b.nome)}, escapou ferido de você e agora atende por ${c.alcunha}.` });
         } else {
           cap.vivo = false;
           cap.caca = false;
-          registrarMarco(camp, `você derrubou ${nomeDoCapitao(cap)}, capitão de ${b.nome}`);
+          registrarMarco(camp, `você derrubou ${nomeDoCapitao(cap)}, capitão ${deBando(b.nome)}`);
           if (camp.vivo) registrarFato(camp, { tipo: 'capitao_morto', local: camp.localAtual, publico: true, atores: ['jogador'], texto: `${nomeDoCapitao(cap)} caiu. ${b.nome} ficou sem cabeça.` });
           s.log.push(`${nomeDoCapitao(cap)} não levanta mais.`);
         }
@@ -427,13 +433,13 @@ export function registrarDesfechoBando(camp: Campaign, resultado: 'vitoria' | 'd
     b.tesouro = 0;
     b.membros = 0;
     s.log.push(`No fundo do esconderijo, o que ${b.nome} pilhou: ${saque} moedas.`);
-    registrarMarco(camp, `você tomou o esconderijo de ${b.nome}`);
+    registrarMarco(camp, `você tomou o esconderijo ${deBando(b.nome)}`);
     if (!cap.vivo || cap.preso) {
-      encerrarBando(camp, b, `O esconderijo de ${b.nome} foi tomado, e o bando acabou ali.`);
+      encerrarBando(camp, b, `O esconderijo ${deBando(b.nome)} foi tomado, e o bando acabou ali.`);
     } else {
       b.estado = 'disperso';
       b.pedagio = false;
-      if (camp.vivo) registrarFato(camp, { tipo: 'esconderijo_tomado', local: b.esconderijo, publico: true, atores: ['jogador'], texto: `O esconderijo de ${b.nome} foi tomado; ${nomeDoCapitao(cap)} sobreviveu e sumiu.` });
+      if (camp.vivo) registrarFato(camp, { tipo: 'esconderijo_tomado', local: b.esconderijo, publico: true, atores: ['jogador'], texto: `O esconderijo ${deBando(b.nome)} foi tomado; ${nomeDoCapitao(cap)} sobreviveu e sumiu.` });
     }
   } else if (b.membros <= 0 && b.estado !== 'destruido' && (!cap.vivo || cap.preso)) {
     encerrarBando(camp, b, `${b.nome} deixou de existir.`);

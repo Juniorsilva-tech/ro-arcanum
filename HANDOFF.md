@@ -938,3 +938,41 @@ no commit. Se não deviam estar no repositório, é só remover.
 
 Verificações: typecheck, `test:engine` completo (simulação longa 6/6 até o
 fim, 0 mortes, 0 violações), jornadas, casas, vaelhorn_expansao, expo export.
+
+### Etapa E da colônia (ameaça e assembleia) — feita
+- `engine/ameacas.ts`. A ameaça vem do mundo, nunca de tabela solta:
+  - o bando ativo da região do sítio (4+ homens), com chance maior quanto
+    mais rica a colônia e quanto mais gente passa por ela;
+  - feras, pelo perigo do sítio, com chance e força maiores no inverno;
+  - a casa que reivindica a terra, sem acordo e com 15+ pessoas;
+  - oni, se houver rival oni vivo — nunca na Clareira das Pedras (o círculo).
+- Aviso de 3 dias; 5 na Colina dos Forcados (o traço "vista do planalto" da
+  etapa A agora vale). No máximo uma ameaça a cada 20 dias.
+- Assembleia: texto livre traduzido para um catálogo fechado de nove
+  preparações (armadilhas, paliçada, fosso, vigias, evacuar, estocar, milícia,
+  pedir ajuda, pagar tributo), cada uma com custo, gente mínima e dias. O que
+  não se traduz volta como "não entendi" com a lista. Também dá para escolher
+  nos botões. O conselho (as três colonas mais leais) opina pelo temperamento.
+- Batalha no dia marcado: defesa = segurança, muralha, quartel, cavalos, guarda
+  + preparações PRONTAS A TEMPO (a atrasada aparece no relatório como não
+  pronta). Desfecho: repelida, resistida ou saqueada; evacuar zera mortes e
+  deixa levar mais; estocar guarda metade; saque mata no máximo um quarto;
+  pedir ajuda só funciona com acordo ou casa com reputação 10+ (e ninguém
+  ajuda contra a própria casa que reivindica). Tributo evita a batalha: vai
+  para o tesouro do bando; pago a uma casa, vira acordo (o que também tira o
+  quinto do trigo de Tessel nos Campos da Ceifa).
+- De volta ao mundo: bando repelido perde 3 homens e deixa pista; bando que
+  saqueia soma ao tesouro; fato público com o desfecho; marco.
+- Força ajustada pelo teste: bando 8 + 4 por homem; matilha 10 + 6 por
+  perigo (+8 no inverno). Com a força antiga, preparar tudo não salvava.
+- `deBando()` em `bandos.ts`: "dos Corvos do Passo", "da Mão Cinzenta" (antes
+  saía "de os Corvos").
+- Tela: `ui/screens/AmeacaColonia.tsx`, na aba Soberania, abaixo do sítio.
+- Teste: `engine/ameacas.selftest.ts` (26 checagens), no `test:engine`.
+
+Verificações: typecheck, `test:engine` (simulação longa 6/6, 0 mortes, 0
+violações), jornadas, casas, vaelhorn_expansao, expo export.
+
+Outro agente está editando `content/vaelhorn/mapa.ts` e
+`ui/screens/MapaVisual.tsx` ao mesmo tempo (desde 11:14 de 24/09). Não toquei
+nesses dois arquivos e eles ficaram fora dos meus commits.

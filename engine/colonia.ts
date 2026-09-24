@@ -28,6 +28,7 @@ import { createRng, nextFloat, nextInt, seedFromString } from './rng';
 import { registrarMarco } from './memoria';
 import { obterFeudo } from './reino';
 import { talvezAudiencia } from './audiencias';
+import { processarAmeacas } from './ameacas';
 import { processarRebanhos, segurancaDosCavalos, type RelatorioRebanho } from './rebanhos';
 import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
 
@@ -285,6 +286,8 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   }
 
   r.gente = processarGente(content, camp, s.regiao, s.terreno.passagem);
+  // Ameaça: chega a anunciada, ou talvez se anuncia uma (engine/ameacas.ts).
+  r.eventos.push(...processarAmeacas(content, camp, s));
   // Alguém pede para ser ouvido (engine/audiencias.ts).
   const audiencia = talvezAudiencia(content, camp);
   if (audiencia) r.eventos.push(`Pedem audiência: ${audiencia.texto}`);
