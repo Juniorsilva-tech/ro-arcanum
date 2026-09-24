@@ -7,6 +7,7 @@ import { TextoMono, TextoSerif, Card, Botao, Divisor, Medidor, Selo } from '../c
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
 import { FundacaoColonia, SitioDaColonia } from './Colonia';
+import { GenteDaColonia } from './GenteColonia';
 import {
   obterFeudo,
   CATALOGO_EDIFICIOS,
@@ -37,7 +38,7 @@ const IMAGENS_FEUDO: Record<string, any> = {
   mapa_continente: require('../../assets/feudo/mapa_continente.jpg'),
 };
 
-export type AbaAssentamento = 'geral' | 'trono' | 'quartel' | 'linhagem' | 'vassalos' | 'intrigas' | 'distritos' | 'rotas' | 'asora' | 'mapa';
+export type AbaAssentamento = 'geral' | 'gente' | 'trono' | 'quartel' | 'linhagem' | 'vassalos' | 'intrigas' | 'distritos' | 'rotas' | 'asora' | 'mapa';
 
 export function Assentamento() {
   const camp = useGame((s) => s.camp);
@@ -141,6 +142,12 @@ export function Assentamento() {
               <Text style={[styles.abaTxt, abaAtiva === 'geral' && styles.abaTxtAtiva]}>Soberania</Text>
             </Pressable>
             <Pressable
+              onPress={() => setAbaAtiva('gente')}
+              style={[styles.abaItem, abaAtiva === 'gente' && styles.abaItemAtiva]}
+            >
+              <Text style={[styles.abaTxt, abaAtiva === 'gente' && styles.abaTxtAtiva]}>Gente</Text>
+            </Pressable>
+            <Pressable
               onPress={() => setAbaAtiva('trono')}
               style={[styles.abaItem, abaAtiva === 'trono' && styles.abaItemAtiva]}
             >
@@ -199,6 +206,8 @@ export function Assentamento() {
           </View>
 
           {/* ABA GERAL: Visão Geral de Recursos, Soberania e Canteiro Ativo */}
+          {abaAtiva === 'gente' && <GenteDaColonia />}
+
           {abaAtiva === 'geral' && (
             <View style={{ gap: esp.md }}>
               <SitioDaColonia />

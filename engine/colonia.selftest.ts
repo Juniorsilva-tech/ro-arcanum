@@ -12,6 +12,7 @@ import { avancarMundo } from './mundo';
 import { exportar, importar } from './persistencia';
 import type { Campaign } from './types';
 import type { Estacao } from './time';
+import { eficiencia } from './colonos';
 
 const ok = (v: unknown, mensagem: string) => {
   if (!v) throw new Error(mensagem);
@@ -69,7 +70,10 @@ const dias = (c: Campaign, n: number, estacao?: Estacao) => {
   const cl = fundada('clareira_pedras', 'madeira'), ar = fundada('ruina_areia', 'sem-madeira');
   for (const c of [cl, ar]) { c.feudo!.comida = 500; c.feudo!.materiais = 0; }
   dias(cl, 1, 'verao'); dias(ar, 1, 'verao');
-  ok(cl.feudo!.materiais === clareiraM && clareiraM > areiaM, `Madeira da mata: ${clareiraM} de material por dia na clareira, ${areiaM} na areia`);
+  // Desde a etapa B, o material do dia passa pela mão de quem cuida das obras
+  // (engine/colonos.ts): sem responsável, 60%.
+  const efObras = eficiencia(cl.feudo!, 'obras');
+  ok(Math.abs(cl.feudo!.materiais - clareiraM * efObras) < 1e-9 && clareiraM > areiaM, `Madeira da mata: ${clareiraM} de material por dia na clareira (${(clareiraM * efObras).toFixed(1)} sem responsável pelas obras), ${areiaM} na areia`);
   ok(modificadoresDoSitio(sitioDe(C, 'colina_forcados')!).segurancaBase > modificadoresDoSitio(sitioDe(C, 'campo_ceifa')!).segurancaBase, 'A colina começa mais segura que o campo aberto');
   const vau = fundada('vau_pedra'), clareira = fundada('clareira_pedras');
   const o0 = vau.feudo!.tesouro, o1 = clareira.feudo!.tesouro;

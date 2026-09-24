@@ -36,6 +36,8 @@ function syncHermes() {
 
     if (!token) {
       console.log('Nenhum access_token da Nous encontrado em auth.json.');
+      console.log('Dica: execute "hermes auth add nous" no terminal para reconectar sua conta da Nous.');
+      process.exitCode = 1;
       return;
     }
 

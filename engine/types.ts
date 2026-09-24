@@ -758,6 +758,10 @@ export type ContentBundle = {
   tetoEdificios?: Record<string, number>;
   /** Lugares sem dona onde se pode fundar colônia (engine/colonia.ts). */
   sitiosColonia?: import('../content/vaelhorn/sitios').SitioColonia[];
+  arquetiposColono?: import('../content/vaelhorn/colonos').ArquetipoColono[];
+  gruposChegada?: import('../content/vaelhorn/colonos').GrupoChegada[];
+  nomesColonas?: string[];
+  nomesColonos?: string[];
   // Pares de facções com rivalidade de fundo real o bastante pra às vezes
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.
@@ -1170,6 +1174,13 @@ export type FeudoState = {
   /** Casas com quem há acordo (ex.: 'tessel' deixa de levar o quinto do trigo). */
   acordos?: string[];
   farolAceso?: boolean;
+  // Gente com nome, quem espera à porta e o renome (engine/colonos.ts).
+  colonos?: import('./colonos').Colono[];
+  chegadas?: import('./colonos').ChegadaPendente[];
+  renome?: number;
+  seqColonos?: number;
+  /** Animais da colônia por espécie (etapa C). */
+  rebanhos?: Record<string, number>;
   ultimoRelatorio?: { dia: number } & import('./colonia').RelatorioDia;
 };
 

@@ -80,6 +80,9 @@ import {
   processarCicloReino,
   fundarColonia,
   reacenderFarol,
+  aceitarChegada,
+  recusarChegada,
+  designarFuncao,
   fundarCasaDinastica,
   nomearConselheiro,
   removerConselheiro,
@@ -282,6 +285,9 @@ interface GameState {
   fundarFeudoAcao: (nome: string, localId: string, bioma?: BiomaFeudo) => Promise<string>;
   fundarColoniaAcao: (nome: string) => Promise<string>;
   reacenderFarolAcao: () => Promise<string>;
+  aceitarChegadaAcao: (id: string) => Promise<string>;
+  recusarChegadaAcao: (id: string) => Promise<string>;
+  designarFuncaoAcao: (colonoId: string, oficio?: import('@/engine').OficioColonia) => Promise<string>;
   iniciarObraFeudoAcao: (tipo: TipoEdificioModular) => Promise<string>;
   despacharCaravanaFeudoAcao: (destinoId: string, destinoNome: string, cargaTipo: CargaCaravana) => Promise<string>;
   definirPatrulhaFeudoAcao: (regiaoAlvo: string, nomeRegiao: string, soldados: number) => Promise<string>;
@@ -706,6 +712,33 @@ export const useGame = create<GameState>((set, get) => ({
     const { camp, content } = get();
     if (!camp || !content) return '';
     const r = fundarColonia(content, camp, nome);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async aceitarChegadaAcao(id) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const r = aceitarChegada(content, camp, id);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async recusarChegadaAcao(id) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = recusarChegada(camp, id);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async designarFuncaoAcao(colonoId, oficio) {
+    const { camp } = get();
+    if (!camp) return '';
+    const r = designarFuncao(camp, colonoId, oficio);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;

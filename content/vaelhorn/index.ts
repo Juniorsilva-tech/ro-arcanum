@@ -23,6 +23,7 @@ import { HISTORIAS_CRIATURAS } from './bestiario-historias';
 import { HISTORIAS_LOCAIS, DESCRICOES_CORRIGIDAS } from './historias-locais';
 import { HISTORIAS_CASAS } from './historias-casas';
 import { SITIOS_COLONIA } from './sitios';
+import { ARQUETIPOS_COLONO, GRUPOS_CHEGADA, NOMES_COLONAS, NOMES_COLONOS } from './colonos';
 import { SEGREDOS_NOVOS, SEGREDOS_REESCRITOS, CONSEQUENCIAS } from './segredos';
 import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
@@ -112,6 +113,10 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   edificiosRegionais: edificiosRegionaisVaelhorn,
   tetoEdificios: tetoEdificiosVaelhorn,
   sitiosColonia: SITIOS_COLONIA,
+  arquetiposColono: ARQUETIPOS_COLONO,
+  gruposChegada: GRUPOS_CHEGADA,
+  nomesColonas: NOMES_COLONAS,
+  nomesColonos: NOMES_COLONOS,
   rivalidadesFaccoes: rivalidadesVaelhorn,
   encontrosPorTipo,
   encontrosPorRegiao,

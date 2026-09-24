@@ -841,3 +841,49 @@ terminar só a etapa A nesta sessão e fazer o resto em outra.
   - bandos miram colônia rica.
 
 Verificações: `typecheck`, `test:engine` completo (com `colonia.selftest.ts`), `test:jornadas`, `test:casas`, `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica às sessões 54-56 (o simulador não funda colônia).
+
+---
+
+## Sessão 58 — Claude (PC) — testes quebrados no PC e etapa B da colônia
+
+### Estado encontrado
+Puxados os 12 commits da nuvem (sessões 47 a 57, até `9dfee20`). Rodando a
+suíte no PC depois de `npm ci`: typecheck, jornadas, vaelhorn e expo export
+verdes, mas `test:engine` falhava em `edificiosRegionais.selftest.ts` ("Cinco
+edifícios, um por cidade") e `test:casas` em "todo membro existe no elenco".
+
+Causa: 105 arquivos `.js` compilados em 16/09 ao lado dos `.ts` em
+`engine/`, `content/` e `ui/` (ignorados pelo git, por isso ausentes na
+nuvem). O `tsx` resolvia `./npcs` para o `.js` velho e carregava o elenco de
+antes das sessões 47-57. Apagados só os `.js` que têm `.ts`/`.tsx` irmão; os
+dois testes passaram na hora. Nada de código mudou para isso.
+
+Pendente da sessão 57: etapa B da colônia (rascunho em
+`docs/colonia-etapa-B/`, com `aplicar_B.py` nunca executado), e etapas C a F.
+
+### Etapa B da colônia (gente) — aplicada
+- Rodado `aplicar_B.py` numa cópia ajustada para o PC (caminhos da nuvem
+  trocados, leitura em UTF-8 com quebra de linha normalizada — no Windows os
+  arquivos estão em CRLF e as trocas exatas do script procuram `\n`). Todas as
+  trocas bateram. O rascunho em `docs/colonia-etapa-B/` foi removido: o código
+  agora vive em `engine/colonos.ts`, `content/vaelhorn/colonos.ts`,
+  `ui/screens/GenteColonia.tsx` e `engine/colonos.selftest.ts`.
+- Corrigido o que o rascunho trazia quebrado:
+  - `OficioColonia`/`Temperamento` não eram exportados pela engine (três erros
+    de tipo na UI e no store): reexportados em `engine/colonos.ts`.
+  - Duas histórias abaixo do mínimo de 80 caracteres que o próprio teste
+    exige (`mae_da_leva`, `cozinheira`): reescritas, mesmo tom.
+  - Regra da fome no humor: `comida > 0` contava como alimentada a colônia com
+    5,6 de comida para seis bocas (a caça do dia entra antes do humor).
+    Agora fome é não ter o do dia para todos (`comida >= populacao`).
+  - `colonia.selftest.ts` (etapa A) esperava o material cru do sítio; desde a
+    etapa B ele passa pela eficiência de quem cuida das obras (60% sem
+    responsável). O teste agora confere com `eficiencia`.
+- `colonos.selftest.ts` entrou no `test:engine`.
+- Não abri a aba "Gente" no navegador: exige fundar uma colônia num sítio, o
+  que pede viagem. Typecheck e `expo export` cobrem a compilação da tela.
+
+### Verificações
+typecheck, `test:engine` completo, jornadas, casas, vaelhorn_expansao, expo
+export: verdes. Simulação longa: 6/6 campanhas até o fim do prazo, 0 mortes,
+0 violações.

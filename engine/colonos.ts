@@ -23,6 +23,7 @@
 // Tudo com RNG derivado (semente + dia): nada consome o RNG da campanha.
 import type { Campaign, ContentBundle, FeudoState } from './types';
 import type { ArquetipoColono, OficioColonia, Temperamento } from '../content/vaelhorn/colonos';
+export type { OficioColonia, Temperamento } from '../content/vaelhorn/colonos';
 import { createRng, nextFloat, nextInt, pick, seedFromString, type RngState } from './rng';
 import { capacidadeReal } from './colonia';
 
@@ -241,7 +242,10 @@ export function processarGente(content: ContentBundle, camp: Campaign, regiao: s
   }
 
   // Humor e quem vai embora.
-  const comidaOk = f.comida > 0;
+  // Fome é não ter o do dia para todos: o punhado que a caça trouxe hoje não
+  // alimenta seis bocas, e contar isso como "tem comida" deixava a colônia
+  // faminta com humor de colônia farta.
+  const comidaOk = f.comida >= f.populacao;
   for (const c of [...colonos]) {
     let alvo = 50 + (comidaOk ? 10 : -25) + (f.estabilidade - 50) / 2;
     if (c.funcao) alvo += (c.aptidoes[c.funcao] ?? 0) >= 3 ? 10 : (c.aptidoes[c.funcao] ?? 0) === 0 ? -10 : 0;

@@ -27,6 +27,7 @@ import { SITIO_POR_PONTO_ANTIGO } from '../content/vaelhorn/sitios';
 import { createRng, nextFloat, nextInt, seedFromString } from './rng';
 import { registrarMarco } from './memoria';
 import { obterFeudo } from './reino';
+import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
 
 // ── O terreno em números ──────────────────────────────────────────────────
 
@@ -148,7 +149,9 @@ export function fundarColonia(content: ContentBundle, camp: Campaign, nome: stri
   f.obrasEmAndamento = [];
   f.rotasComerciais = [];
   f.rotasPatrulha = [];
-  const texto = `Você fincou o estandarte em ${s.nome}. "${f.nome}" são seis pessoas, três abrigos de lona e uma roça cavada à mão.`;
+  colonosFundadores(content, camp, s.regiao);
+  const nomes = (f.colonos ?? []).map(c => c.nome).join(' e ');
+  const texto = `Você fincou o estandarte em ${s.nome}. "${f.nome}" são seis pessoas, três abrigos de lona e uma roça cavada à mão.${nomes ? ` Vieram com você ${nomes}, e mais quatro que ainda não disseram o nome.` : ''}`;
   f.historicoEventos.push({ dia: camp.calendario.dia, texto });
   camp.cronica.push({ turno: camp.turno, tipo: 'sistema', texto });
   registrarMarco(camp, texto);
@@ -175,6 +178,7 @@ export function migrarColonia(content: ContentBundle, camp: Campaign): void {
 export type RelatorioDia = {
   lavoura: number; selvagem: number; consumo: number; materiais: number; renda: number;
   tributo: number; eventos: string[];
+  gente?: RelatorioGente;
 };
 
 function rngDoDia(camp: Campaign, chave: string) {
@@ -205,14 +209,17 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   const r: RelatorioDia = { lavoura: 0, selvagem: 0, consumo: 0, materiais: 0, renda: 0, tributo: 0, eventos: [] };
 
   // Comida: roça (lavoura) + caça e pesca − consumo.
-  const roca = (f.edificios.lavoura_silos ?? 0) * 8 * m.fatorLavoura * (inverno ? m.lavouraInverno : 1);
+  // Cada ofício anda conforme quem cuida dele (engine/colonos.ts): sem
+  // responsável, 60%.
+  const ef = (o: Parameters<typeof eficiencia>[1]) => eficiencia(f, o);
+  const roca = (f.edificios.lavoura_silos ?? 0) * 8 * m.fatorLavoura * (inverno ? m.lavouraInverno : 1) * ef('lavoura');
   r.lavoura = roca;
   if (s.traco === 'trigo_do_marechal' && !f.acordos?.includes('tessel')) {
     r.tributo = roca * 0.2;
     const tessel = camp.vivo?.cidades.tessel;
     if (tessel) tessel.comida = Math.min(600, tessel.comida + r.tributo);
   }
-  r.selvagem = m.comidaSelvagemDia;
+  r.selvagem = m.comidaSelvagemDia * ef('caca');
   r.consumo = f.populacao * 0.12 * (inverno ? m.consumoInverno : 1);
   f.comida = Math.max(0, f.comida + r.lavoura - r.tributo + r.selvagem - r.consumo);
   if (f.comida === 0) {
@@ -221,15 +228,17 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   }
 
   // Materiais e ouro.
-  r.materiais = m.materiaisDia + (f.edificios.oficina_forja ?? 0) * 4;
+  r.materiais = m.materiaisDia * ef('obras') + (f.edificios.oficina_forja ?? 0) * 4 * ef('oficina');
+  // Obras andam conforme quem constrói: o ciclo antigo já descontou 4 períodos.
+  for (const o of f.obrasEmAndamento) o.periodosRestantes -= 4 * (ef('obras') - 1);
   f.materiais = Math.min(9999, f.materiais + r.materiais);
-  r.renda = m.rendaPassagemDia + (f.edificios.moradias ?? 0) * 2 + (f.edificios.mercado_feitoria ?? 0) * 5;
+  r.renda = (m.rendaPassagemDia + (f.edificios.moradias ?? 0) * 2 + (f.edificios.mercado_feitoria ?? 0) * 5) * ef('comercio');
   if (s.traco === 'a_travessia') r.renda += 3 + (f.edificios.mercado_feitoria ?? 0) * 2;
   f.tesouro += r.renda;
-  f.remedios = Math.min(500, f.remedios + (f.edificios.boticario_hospital ?? 0) * 3);
+  f.remedios = Math.min(500, f.remedios + (f.edificios.boticario_hospital ?? 0) * 3 * ef('cura'));
 
   // Segurança tende à base do terreno + o que se construiu.
-  const alvoSeg = Math.min(100, m.segurancaBase + (f.edificios.muralha_baluarte ?? 0) * 15 + (f.edificios.quartel ?? 0) * 10
+  const alvoSeg = Math.min(100, m.segurancaBase + (f.edificios.muralha_baluarte ?? 0) * 15 + (f.edificios.quartel ?? 0) * 10 + (ef('guarda') - 0.6) * 25
     + (s.traco === 'trigo_do_marechal' && !f.acordos?.includes('tessel') ? 10 : 0));
   f.seguranca += Math.sign(alvoSeg - f.seguranca) * Math.min(2, Math.abs(alvoSeg - f.seguranca));
 
@@ -266,6 +275,7 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
     } else r.eventos.push('O rio subiu, e a muralha segurou a água como dique.');
   }
 
+  r.gente = processarGente(content, camp, s.regiao, s.terreno.passagem);
   for (const texto of r.eventos) f.historicoEventos.push({ dia: camp.calendario.dia, texto });
   f.ultimoRelatorio = { dia: camp.calendario.dia, ...r };
   return r;
