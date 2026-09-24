@@ -32,9 +32,9 @@ const PROPRIOS = [
   'Sabra', 'Torv', 'Ulla', 'Vidar', 'Wyn', 'Yara', 'Zeno', 'Ansel', 'Brida', 'Calder',
 ];
 const ALCUNHAS = [
-  'da Ponte', 'de Baixo', 'o Torto', 'a Ruiva', 'Mão-Curta', 'Boca-Seca', 'o Manco',
-  'da Estrada', 'Meia-Orelha', 'a Velha', 'o Novo', 'Pé-de-Ferro', 'a Calada',
-  'Sete-Dedos', 'do Norte', 'o Gordo', 'a Magra', 'Olho-Vivo', 'Bico-Fino', 'o Surdo',
+  'da Ponte', 'de Baixo', 'a Torta', 'a Ruiva', 'Mão-Curta', 'Boca-Seca', 'a Manca',
+  'da Estrada', 'Meia-Orelha', 'a Velha', 'a Nova', 'Pé-de-Ferro', 'a Calada',
+  'Sete-Dedos', 'do Norte', 'a Gorda', 'a Magra', 'Olho-Vivo', 'Bico-Fino', 'a Surda',
 ];
 
 const INDOLES = [
@@ -152,7 +152,7 @@ const PAPEIS_ALDEIA: Papel[] = [
   { ocupacao: 'anciã da aldeia', faccao: 'vila', segredo: 0.5, ritmo: RITMO_DIURNO },
   { ocupacao: 'lavradora de mão pesada', faccao: 'vila', ritmo: RITMO_LAVOURA },
   { ocupacao: 'benzedeira', faccao: 'vila', segredo: 0.4, ritmo: RITMO_RONDA },
-  { ocupacao: 'moça que some por dias', faccao: 'foragidos', segredo: 0.6, ritmo: RITMO_NOTURNO },
+  { ocupacao: 'mulher que some por dias', faccao: 'foragidos', segredo: 0.6, ritmo: RITMO_NOTURNO },
   { ocupacao: 'pastora que dorme fora', faccao: 'vila', ritmo: RITMO_LAVOURA },
 ];
 

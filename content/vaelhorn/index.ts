@@ -27,6 +27,7 @@ import { HISTORIAS_VALE } from './historias-vale';
 import { HISTORIAS_CONTINENTE } from './historias-continente';
 import { HISTORIAS_COSTA } from './historias-costa';
 import { HISTORIAS_KIMETSU } from './historias-kimetsu';
+import { HISTORIAS_MORADORES, SEGREDOS_MORADORES } from './historias-moradores';
 import type { Criatura, Item, NPC } from '../../engine/types';
 import {
   mestresVaelhorn,
@@ -42,7 +43,7 @@ import {
 const mapaVaelhorn = integrarContinente(locaisVaelhorn);
 const moradores = povoarContinente(mapaVaelhorn, faccoesVaelhorn);
 
-const HISTORIAS = { ...HISTORIAS_VALE, ...HISTORIAS_CONTINENTE, ...HISTORIAS_COSTA, ...HISTORIAS_KIMETSU };
+const HISTORIAS = { ...HISTORIAS_VALE, ...HISTORIAS_CONTINENTE, ...HISTORIAS_COSTA, ...HISTORIAS_KIMETSU, ...HISTORIAS_MORADORES };
 
 // História e segredo escritos à parte (sessão 47) entram por cima do elenco
 // depois de o povoamento e o Kimetsu terem montado a lista. Segredo que já
@@ -50,7 +51,9 @@ const HISTORIAS = { ...HISTORIAS_VALE, ...HISTORIAS_CONTINENTE, ...HISTORIAS_COS
 // segredos-modelo repetidos do povoamento, reescritos um a um.
 function enriquecerElenco(npcs: NPC[]): NPC[] {
   return npcs.map(n => {
-    const segredo = SEGREDOS_REESCRITOS[n.id] ?? n.segredo ?? SEGREDOS_NOVOS[n.id];
+    // SEGREDOS_MORADORES (sessão 55) substitui os segredos-modelo, que eram a
+    // história pública do lugar com uma frase na frente.
+    const segredo = SEGREDOS_REESCRITOS[n.id] ?? SEGREDOS_MORADORES[n.id] ?? n.segredo ?? SEGREDOS_NOVOS[n.id];
     const consequencia = CONSEQUENCIAS[n.id];
     return {
       ...n,

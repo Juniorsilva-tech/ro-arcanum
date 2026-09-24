@@ -412,10 +412,10 @@ export const familiasVaelhorn: FamiliaNpc[] = [
   },
   {
     id: 'as_do_gordo',
-    nome: 'as do Gordo',
+    nome: 'as da Gorda',
     sede: 'corveira',
     tensao:
-      'Jarek o Gordo empresta dinheiro a metade do Sexto e cobrou das próprias filhas o dote que não deu. ' +
+      'Jarek a Gorda empresta dinheiro a metade do Sexto e cobrou das próprias filhas o dote que não deu. ' +
       'Ilsa e Hedra se juntaram contra a mãe: a estalajadeira e a carregadora dividem a mesma conta, a mesma raiva e o mesmo apelido.',
     membros: [
       { npc: 'morador_corveira_11', papel: 'A mãe, agiota. Ressente quem subiu na vida, e as filhas subiram sem pedir licença.' },
@@ -602,7 +602,7 @@ export const familiasVaelhorn: FamiliaNpc[] = [
   },
   {
     id: 'as_do_torto',
-    nome: 'as do Torto',
+    nome: 'as da Torta',
     sede: 'vintra',
     tensao:
       'Torv chefia a vila e a filha é a ladra que a vila inteira conhece. A guarda quer prender Veski há dois anos e a mãe impede com uma palavra. ' +

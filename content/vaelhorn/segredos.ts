@@ -186,13 +186,13 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     },
   },
   morador_vila_pedravel_8: {
-    conteudo: 'Perin o Manco não é manca de nascença: caiu de um muro do forte carregando pedra na terceira noite do roubo. A vila paga as peles dela mais caro desde então, e ela sabe por quê.',
+    conteudo: 'Perin a Manca não é manca de nascença: caiu de um muro do forte carregando pedra na terceira noite do roubo. A vila paga as peles dela mais caro desde então, e ela sabe por quê.',
     comoDescobrir: 'perguntar pela perna a quem é de fora da vila',
   },
 
   // ───────────────────────────── PLANALTO DE CORVEIRA
   morador_corveira_1: {
-    conteudo: 'Halvo o Novo, capitã da guarda de Corveira, sobreviveu ao desabamento do quarto terraço porque tinha saído da galeria para beber. Os onze da turma dela morreram, e ela ganhou o posto no enterro.',
+    conteudo: 'Halvo a Nova, capitã da guarda de Corveira, sobreviveu ao desabamento do quarto terraço porque tinha saído da galeria para beber. Os onze da turma dela morreram, e ela ganhou o posto no enterro.',
     comoDescobrir: 'beber com ela no aniversário do desabamento',
   },
   morador_corveira_3: {
@@ -216,19 +216,19 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'apostar na rival e perguntar a ela, depois, se doeu',
   },
   morador_corveira_10: {
-    conteudo: 'Elna o Manco bate carteira só dos escrivães das casas. Não quer as moedas: quer os papéis, e vende à mendiga Quilda Boca-Seca os que falam do desabamento.',
+    conteudo: 'Elna a Manca bate carteira só dos escrivães das casas. Não quer as moedas: quer os papéis, e vende à mendiga Quilda Boca-Seca os que falam do desabamento.',
     comoDescobrir: 'deixar um documento das casas à vista e ver quem some com ele',
   },
   morador_corveira_12: {
-    conteudo: 'Hedra o Gordo carrega no cais do Sexto os sacos de minério da indenização que a mãe agiota tomou das famílias. Anota cada saco num pano escondido, para um dia devolver.',
+    conteudo: 'Hedra a Gorda carrega no cais do Sexto os sacos de minério da indenização que a mãe agiota tomou das famílias. Anota cada saco num pano escondido, para um dia devolver.',
     comoDescobrir: 'ajudar a carregar e reparar no pano com riscos',
   },
   morador_corveira_15: {
-    conteudo: 'Lira o Surdo vende na botica de fundos o pó que a ervanária do vale leva à capela. Não sabe para que serve; sabe que o pagamento chega em prata cunhada pela Igreja.',
+    conteudo: 'Lira a Surda vende na botica de fundos o pó que a ervanária do vale leva à capela. Não sabe para que serve; sabe que o pagamento chega em prata cunhada pela Igreja.',
     comoDescobrir: 'comprar o mesmo pó e dizer o nome de Mira',
   },
   morador_corveira_16: {
-    conteudo: 'Eda o Torto, a cocheira, levou a perita e o relatório do desabamento até a casa Verrão na noite em que o papel foi queimado na lareira. Viu a perita sair de mãos vazias e com o casaco fechado demais, e continua levando a família Verrão aonde ela quiser.',
+    conteudo: 'Eda a Torta, a cocheira, levou a perita e o relatório do desabamento até a casa Verrão na noite em que o papel foi queimado na lareira. Viu a perita sair de mãos vazias e com o casaco fechado demais, e continua levando a família Verrão aonde ela quiser.',
     comoDescobrir: 'alugar a carroça dela até o Poço Fundo e perguntar pela noite do laudo',
   },
   morador_corveira_17: {
@@ -240,7 +240,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'ajudar a lavrar o canto do campo onde ela não deixa ninguém cavar',
   },
   morador_aldeia_ferro_4: {
-    conteudo: 'Pell o Manco dorme fora com as cabras porque em casa ouve a aldeia inteira contar o metal recuperado. Sabe que metade do metal que volta para Corveira é das covas do desabamento.',
+    conteudo: 'Pell a Manca dorme fora com as cabras porque em casa ouve a aldeia inteira contar o metal recuperado. Sabe que metade do metal que volta para Corveira é das covas do desabamento.',
     comoDescobrir: 'dormir no pasto com ela e perguntar de onde vem o metal',
   },
   morador_vila_terraco_1: {
@@ -264,7 +264,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar por que a moleira não vende para a casa Verrão',
   },
   morador_vila_terraco_8: {
-    conteudo: 'Pell o Gordo caça no Planalto uma coisa que não é bicho: segue o rastro do que sai da galeria funda do Poço Fundo em noite sem lua. Já viu duas vezes e nunca contou à mãe.',
+    conteudo: 'Pell a Gorda caça no Planalto uma coisa que não é bicho: segue o rastro do que sai da galeria funda do Poço Fundo em noite sem lua. Já viu duas vezes e nunca contou à mãe.',
     comoDescobrir: 'acompanhá-la numa caçada de noite sem lua',
   },
   morador_forja_afundada_1: {
@@ -286,7 +286,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'mostrar um arpão da baía e perguntar quem fez a ponta',
   },
   morador_mareu_5: {
-    conteudo: 'Davet o Manco tratou em segredo, no ano passado, três marinheiros com a febre que veio pelo porto. Não denunciou o navio porque o navio era da guilda, e a quarentena teria parado o sal por um mês.',
+    conteudo: 'Davet a Manca tratou em segredo, no ano passado, três marinheiros com a febre que veio pelo porto. Não denunciou o navio porque o navio era da guilda, e a quarentena teria parado o sal por um mês.',
     comoDescobrir: 'perguntar pela febre do cais a quem ela curou',
     consequencia: {
       texto: 'Davet contou da febre escondida no cais. Os marinheiros tratados voltaram ao mar, mas a febre ficou nos cortiços do porto.',
@@ -298,7 +298,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'pedir a bebida mais cara da casa e perguntar por que é tão barata',
   },
   morador_mareu_8: {
-    conteudo: 'Bran o Manco, campeã de arena, deve dinheiro à mendiga Halvo da Ponte, que a sustentou quando ela perdeu a perna boa numa luta arranjada. A mendiga sabe quem arranjou.',
+    conteudo: 'Bran a Manca, campeã de arena, deve dinheiro à mendiga Halvo da Ponte, que a sustentou quando ela perdeu a perna boa numa luta arranjada. A mendiga sabe quem arranjou.',
     comoDescobrir: 'pagar a dívida dela à mendiga e perguntar pela luta',
   },
   morador_mareu_10: {
@@ -338,7 +338,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'comparar o sal da loja com o sal da salina',
   },
   morador_porto_sal_4: {
-    conteudo: 'Roan a Velha empresta dinheiro à própria mãe, senhora do porto, com o que ganha vendendo lâminas a Aldric o Gordo. A cidade foi salva no inverno ruim com dinheiro do crime, e só as duas sabem.',
+    conteudo: 'Roan a Velha empresta dinheiro à própria mãe, senhora do porto, com o que ganha vendendo lâminas a Aldric a Gorda. A cidade foi salva no inverno ruim com dinheiro do crime, e só as duas sabem.',
     comoDescobrir: 'ver a armeira entrar na casa da senhora pela porta de serviço',
   },
   morador_porto_sal_7: {
@@ -362,7 +362,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'pedir que ela benza o barco de Quim na sua frente',
   },
   morador_aldeia_rede_4: {
-    conteudo: 'Yara o Surdo junta, nas noites que dorme fora, moedas da pesca escondida que vende em Mareu. Metade vai para a dívida da mãe com a guilda; a outra metade é para ir embora num navio.',
+    conteudo: 'Yara a Surda junta, nas noites que dorme fora, moedas da pesca escondida que vende em Mareu. Metade vai para a dívida da mãe com a guilda; a outra metade é para ir embora num navio.',
     comoDescobrir: 'seguir a pastora na noite em que ela não volta com as cabras',
   },
   morador_mercado_peixe_0: {
@@ -386,13 +386,13 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'mostrar um peso viciado e perguntar quem funde peso no galpão',
   },
   morador_mercado_peixe_8: {
-    conteudo: 'Ondra o Torto perde de propósito uma luta em cada três. A senhora do mercado aposta contra ela e desconta da dívida; a mãe paga o resto sem saber que a filha já está quitando.',
+    conteudo: 'Ondra a Torta perde de propósito uma luta em cada três. A senhora do mercado aposta contra ela e desconta da dívida; a mãe paga o resto sem saber que a filha já está quitando.',
     comoDescobrir: 'perguntar a ela qual luta vai perder na semana',
   },
 
   // ───────────────────────────── BOSQUE DE VINTRA
   morador_vintra_0: {
-    conteudo: 'Torv o Torto sabe por que Vintra foi reconstruída duas vezes no mesmo lugar: debaixo da praça há uma entrada para a Clareira das Pedras, e a assembleia jurou nunca deixar ninguém construir por cima.',
+    conteudo: 'Torv a Torta sabe por que Vintra foi reconstruída duas vezes no mesmo lugar: debaixo da praça há uma entrada para a Clareira das Pedras, e a assembleia jurou nunca deixar ninguém construir por cima.',
     comoDescobrir: 'ir à assembleia e perguntar por que não mudaram a vila de lugar',
   },
   morador_vintra_1: {
@@ -404,11 +404,11 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'pedir para ver o registro de mordidas da curandeira',
   },
   morador_vintra_4: {
-    conteudo: 'Elna da Ponte quer prender Veski o Torto porque Veski viu o que a mordeu no bosque e ameaçou contar. A ladra não quer dinheiro: quer que a guarda pare de rondar a casa da chefe.',
+    conteudo: 'Elna da Ponte quer prender Veski a Torta porque Veski viu o que a mordeu no bosque e ameaçou contar. A ladra não quer dinheiro: quer que a guarda pare de rondar a casa da chefe.',
     comoDescobrir: 'ver a guarda recuar na frente da ladra e perguntar por quê',
   },
   morador_vintra_5: {
-    conteudo: 'Veski o Torto rouba de quem pode pagar e devolve o troco — e devolve de verdade, numa caixa na porta da assembleia, com o nome de quem foi roubado. A mãe sabe e guarda a caixa.',
+    conteudo: 'Veski a Torta rouba de quem pode pagar e devolve o troco — e devolve de verdade, numa caixa na porta da assembleia, com o nome de quem foi roubado. A mãe sabe e guarda a caixa.',
     comoDescobrir: 'ser roubado por ela e procurar a caixa na manhã seguinte',
     consequencia: {
       texto: 'Veski lhe devolveu o que tirou, e mais uma moeda antiga "pelo incômodo". Na assembleia de Vintra, a chefe passa a olhar você como alguém de casa.',
@@ -416,7 +416,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     },
   },
   morador_vintra_6: {
-    conteudo: 'Sela o Gordo, a tropeira, levou para Corveira o carvão que a Carvoeira diz ter queimado no incêndio do ano passado. O incêndio não queimou carvão nenhum: queimou o livro da dívida com a fundição.',
+    conteudo: 'Sela a Gorda, a tropeira, levou para Corveira o carvão que a Carvoeira diz ter queimado no incêndio do ano passado. O incêndio não queimou carvão nenhum: queimou o livro da dívida com a fundição.',
     comoDescobrir: 'conferir as marcas de carvão que chegam à fundição',
   },
   morador_vintra_7: {
@@ -424,7 +424,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'vigiar o moinho numa noite sem vento',
   },
   morador_vintra_8: {
-    conteudo: 'Sela o Surdo, a caçadora de peles, sabe que o que come no Passo do Lobo tem hora: só atravessa quem passa antes da terceira hora da noite. Vende a informação a caravaneiros pelo preço de uma pele.',
+    conteudo: 'Sela a Surda, a caçadora de peles, sabe que o que come no Passo do Lobo tem hora: só atravessa quem passa antes da terceira hora da noite. Vende a informação a caravaneiros pelo preço de uma pele.',
     comoDescobrir: 'comprar peles dela e perguntar pelo passo',
     consequencia: {
       texto: 'Sela lhe ensinou a hora do Passo do Lobo. As rotas do passo ficam menos perigosas para você; a guardiã do bosque também sabe que você sabe.',
@@ -452,7 +452,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar pela terceira noite a quem mora na casa mais baixa',
   },
   morador_aldeia_lenha_3: {
-    conteudo: 'Tavro o Gordo some por dias porque leva até Carvoeira a lenha que a benzedeira Veski Boca-Seca risca com carvão. Nunca perguntou o que o risco significa, e a lenha riscada nunca queima.',
+    conteudo: 'Tavro a Gorda some por dias porque leva até Carvoeira a lenha que a benzedeira Veski Boca-Seca risca com carvão. Nunca perguntou o que o risco significa, e a lenha riscada nunca queima.',
     comoDescobrir: 'seguir o fardo de lenha com o risco de carvão',
   },
   morador_aldeia_lenha_4: {
@@ -470,7 +470,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     },
   },
   morador_solgar_2: {
-    conteudo: 'Zeno o Torto, taverneira de Solgar, serve água da cisterna diluída no vinho e cobra como vinho. A chefe da vila sabe e recebe a diferença, porque o imposto da água não fecha a conta.',
+    conteudo: 'Zeno a Torta, taverneira de Solgar, serve água da cisterna diluída no vinho e cobra como vinho. A chefe da vila sabe e recebe a diferença, porque o imposto da água não fecha a conta.',
     comoDescobrir: 'pedir água na taverna e depois pedir vinho',
   },
   morador_solgar_3: {
@@ -498,7 +498,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     },
   },
   morador_poco_seco_0: {
-    conteudo: 'Ferran o Gordo, a anciã do Poço Seco, sabe que os poços da aldeia não secaram sozinhos: viu Ura Seca descer em cada um com um saco de sal, na mesma semana. O único que ficou foi o que Ura guarda, e foi Ura quem guiou a aldeia até Solgar.',
+    conteudo: 'Ferran a Gorda, a anciã do Poço Seco, sabe que os poços da aldeia não secaram sozinhos: viu Ura Seca descer em cada um com um saco de sal, na mesma semana. O único que ficou foi o que Ura guarda, e foi Ura quem guiou a aldeia até Solgar.',
     comoDescobrir: 'perguntar pela véspera da seca a quem ficou por último',
   },
   morador_poco_seco_1: {
@@ -522,7 +522,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar pela vingança do portão a quem escolta com ela',
   },
   morador_caravancerai_3: {
-    conteudo: 'Greta o Surdo não diz de onde vem porque vem de Idrin: é neta do homem que construiu a parada e morreu antes da primeira caravana. Voltou para ver se o nome ainda estava na porta.',
+    conteudo: 'Greta a Surda não diz de onde vem porque vem de Idrin: é neta do homem que construiu a parada e morreu antes da primeira caravana. Voltou para ver se o nome ainda estava na porta.',
     comoDescobrir: 'perguntar a ela quem foi Idrin',
   },
 
@@ -544,7 +544,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'contar os juncos trançados na viga da benzedeira',
   },
   morador_vila_juncal_3: {
-    conteudo: 'Cera o Surdo some por dias porque leva comida à Toca do Juncal. Um dos que se escondem lá é filho dela, que a vila deu por levado pela Leva sete anos atrás.',
+    conteudo: 'Cera a Surda some por dias porque leva comida à Toca do Juncal. Um dos que se escondem lá é filho dela, que a vila deu por levado pela Leva sete anos atrás.',
     comoDescobrir: 'seguir o cesto de comida que sai de madrugada',
   },
   morador_vila_juncal_4: {
@@ -640,7 +640,7 @@ export const SEGREDOS_REESCRITOS: Record<string, Segredo> = {
     comoDescobrir: 'comprar o tônico da marechala e comparar a dose com a da curandeira',
   },
   morador_corveira_11: {
-    conteudo: 'Jarek o Gordo empresta às famílias do Sexto o dinheiro que as casas deveriam ter pago de indenização, com juros, e recebe das casas por fora para manter o Sexto quieto.',
+    conteudo: 'Jarek a Gorda empresta às famílias do Sexto o dinheiro que as casas deveriam ter pago de indenização, com juros, e recebe das casas por fora para manter o Sexto quieto.',
     comoDescobrir: 'perguntar a uma família do Sexto de quem é o dinheiro que ela deve',
   },
   morador_corveira_9: {
@@ -707,7 +707,7 @@ export const CONSEQUENCIAS: Record<string, ConsequenciaSegredo> = {
     efeitos: [rel('neve', 'confianca', 3), rel('morador_acampamento_2', 'medo', 3)],
   },
   morador_corveira_16: {
-    texto: 'Eda o Torto viu quem queimou o laudo verdadeiro. A copista do mosteiro, que decorou o registro, quer ouvir de você cada palavra.',
+    texto: 'Eda a Torta viu quem queimou o laudo verdadeiro. A copista do mosteiro, que decorou o registro, quer ouvir de você cada palavra.',
     efeitos: [rel('irma_copista', 'confianca', 4), rel('senhora_corveira', 'medo', 2)],
   },
   // Segredos que já existiam e passam a ter consequência.

@@ -1232,3 +1232,128 @@ Alterados: `engine/types.ts`, `content/vaelhorn/casas.ts`,
 - `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
   `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica à
   anterior.
+
+---
+
+## Sessão 56 — Claude — as moradoras: história, segredo e nome
+
+### Estado encontrado
+- 71 das 249 pessoas do elenco não tinham história.
+- 49 moradoras procedurais tinham um "segredo" que era só a história pública
+  do lugar com uma frase na frente. O povoamento sorteava uma linha de
+  `Local.historia` e escrevia "Mentiu no depoimento da época. O cerco de
+  dezoito anos atrás durou quarenta dias.". Qualquer pessoa na praça sabe
+  isso.
+- Nomes: a lista de alcunhas tinha formas masculinas, e saíam "Elna o Manco",
+  "Lira o Surdo", "Sela o Gordo", "Eda o Torto" — num vale onde toda
+  moradora é mulher.
+- A ocupação "moça que some por dias" saía para mulheres de 41 a 59 anos.
+
+### O que foi feito
+- **71 histórias** (origem, ferida, desejo, medo) e **49 segredos** no lugar
+  dos segredos-modelo, em `content/vaelhorn/historias-moradores.ts`. Cada um
+  foi casado com o que o elenco já tinha:
+  - **Tessel:** o cerco; a gêmea do registro.
+  - **Corveira:** o desabamento; os trinta e quatro nomes que Wyn apaga e
+    guarda no forro do casaco.
+  - **Mareu:** a peste; o galpão da quarentena.
+  - **Porto do Sal:** as salinas.
+  - **Juncal:** a Toca.
+  - **Lenha Alta:** o inverno em que algo entrou na aldeia.
+  - **Ferro Velho:** o metal recuperado.
+
+  Cada segredo diz em `comoDescobrir` o caminho em jogo.
+- **Alcunhas no feminino**: 'o Torto' → 'a Torta', 'o Manco' → 'a Manca',
+  'o Novo' → 'a Nova', 'o Gordo' → 'a Gorda', 'o Surdo' → 'a Surda'.
+  - Mesma posição na lista, então o sorteio não muda e ninguém troca de
+    nome-próprio, ofício ou idade.
+  - 28 menções em textos já escritos foram trocadas junto (segredos,
+    famílias, histórias), e as famílias "as do Gordo" e "as do Torto" viraram
+    "as da Gorda" e "as da Torta".
+  - "moça que some por dias" virou "mulher que some por dias".
+- Seis histórias recitavam o próprio segredo. O teste da sessão 49 pegou, e
+  elas foram reescritas para aludir.
+
+### Arquivos
+Novo: `content/vaelhorn/historias-moradores.ts`.
+Alterados:
+- `content/vaelhorn/index.ts` (prioridade: segredo reescrito > segredo da
+  moradora > segredo do conteúdo);
+- `content/vaelhorn/povoamento.ts` (alcunhas, ocupação);
+- `content/vaelhorn/segredos.ts`, `familias.ts`, `historias-continente.ts`
+  (nomes);
+- `engine/lore.selftest.ts`.
+
+### Verificações
+- `historiasNpc.selftest.ts`: 249 histórias e 249 segredos; campos com 40+
+  caracteres, sem genérico e sem repetição; nenhuma história copia trecho de
+  segredo.
+- `lore.selftest.ts`:
+  - nenhum segredo-modelo;
+  - as 249 pessoas com história e segredo;
+  - nenhuma moradora com alcunha no masculino;
+  - as 172 moradoras com o mesmo nome-próprio, ofício, idade e lugar.
+    Compara o povoamento com o pacote, os dois já com as alcunhas novas.
+- `familiasNpc`, `elenco`, `povoamento`, `continente`, `typecheck`,
+  `test:engine` completo, `test:jornadas`, `test:casas`, `vaelhorn_expansao`,
+  `expo export`: verdes.
+
+---
+
+## Resumo do trabalho das sessões 47 a 56 (plano docs/PLANO-FABLE-5.1.md)
+
+### Fases concluídas
+| Fase | Sessão | O que mudou para quem joga |
+| --- | --- | --- |
+| 1. Marca do Caçador | 47 | A Marca desperta só em luta de verdade (oni de nível 8+, à beira da morte), avisa o preço e pode ser contida na Casa Sem Nome na Névoa. |
+| 2. Famílias entre NPCs | 48 | 43 famílias; luto, herança de ofício e gratidão se espalham pela família. |
+| 3. NPCs com história | 49 | Histórias e segredos com consequência. |
+| 4. Casas nobres | 50 | As quatro casas têm gente, sucessão pela regra, e agem no mundo (obra, celeiro, patrulha, missão, casamento, trama). |
+| 5. Estações, feras, caravanas | 51 | Feras por estação, matilha com teto por nível (nível 1 nunca enfrenta dois), nevasca nos passos, caravanas de grão que podem ser atacadas e escoltadas. |
+| 6. Cidades e forja | 52 | Um edifício por região (Fundição Alta, Cais Grande, Praça de Armas, Cisterna e Bazar, Pátio da Madeira); capitais até nível 7; a primeira forja no dia 1. |
+| 8. O mundo lembra, Diretor de Arcos | 53 | Voltar a um lugar onde você fez algo marcante gera uma linha; no máximo um gancho a cada 3 dias apontando para o que existe; "O que o mundo lembra de você" na Crônica. |
+| (pedido do dono) Ligar o que estava solto | 54 | Trabalhos do lugar, treino com Musashi e Bai Long, contratos de monstro com tela; 16 armas lendárias com história e dono; 23 onis com prosa. |
+| (pedido do dono) História | 55–56 | Bestiário de 71 criaturas; os 53 lugares e as 4 casas com história; as 249 pessoas com história e segredo próprios. |
+
+### Fases não feitas
+- **Fase 7 (NPCs de Tsukimichi)**: fora, a pedido do dono ("foca só em
+  vaelhorn").
+- **Fase 9 (quebrar `store.ts`/`Paineis.tsx`, teste de interface)**: não
+  feita. O plano a põe por último e "só se sobrar tempo"; o dono pediu
+  história antes.
+
+### O que testar no celular (lista curta)
+1. **Primeira forja**: crie personagem, vá da taverna à Feira Coberta,
+   trabalhe um turno, compre carvão e dois minérios, forje uma lâmina curta
+   no Inventário.
+2. **Corveira**: na tela Comunidade, veja a Fundição Alta; forje lá sem
+   carvão; faça um turno na galeria funda.
+3. **Contrato de monstro**: na taverna, aceite "O Terror das Caravanas de
+   Val-Cinza"; na Mata de Corvos, procure as pistas; passe óleo contra feras
+   (se tiver) e enfrente o lobo.
+4. **Treino**: vá ao Passo do Lobo e faça um livro dos katas; tente de novo
+   no mesmo dia (tem de recusar).
+5. **Crônica**: depois de vencer umas criaturas, abra a Crônica e veja o
+   Bestiário e "O que o mundo lembra de você".
+6. **Casa**: cumpra missões para gente de uma casa (Tessel é a mais fácil) e
+   veja a casa confiar o elmo e depois a espada.
+7. **Inverno**: jogue até o inverno e veja se aparece a nevasca e mais lobo
+   na estrada.
+
+### Riscos conhecidos
+- **Narração real não foi testada**: não havia `EXPO_PUBLIC_NOUS_API_KEY`
+  neste ambiente. O narrador local (sem chave) foi o único exercitado.
+- **Fome rara**: com caravanas e o peixe do Cais Grande, dias-cidade em fome
+  caíram de 2.621 para ~550 por campanha. Botões: `COMIDA_PARA_MANDAR` e
+  `CARGA_MAXIMA` em `engine/caravanas.ts`, `comidaPorDia` do cais.
+- **Morte pela Marca na simulação**: o simulador nunca vai conter a Marca;
+  em uma das rodadas (sessão 52) uma campanha morreu dela. É a regra
+  funcionando; se incomodar, a política da simulação precisa aprender a
+  conter.
+- **Linha do tempo de Mir** (decisão do dono): o cenário diz "três gerações"
+  de Leva; As Ruínas de Mir e Vell dizem "vinte anos". Os textos novos não
+  datam o incêndio.
+- **Ganchos repetidos**: o diretor pode voltar ao mesmo capitão ou casa a
+  cada 20 dias; se cansar no celular, suba `DIAS_PARA_REPETIR_ALVO`.
+- **Import circular** `combat.ts` ↔ `caravanas.ts` (só funções). Funciona.
+Simulação longa: idêntica às sessões 54 e 55, linha por linha.

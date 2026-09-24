@@ -202,13 +202,13 @@ export const HISTORIAS_CONTINENTE: Record<string, HistoriaNpc> = {
     medo: 'As próprias filhas, juntas.',
   },
   morador_corveira_14: {
-    origem: 'Filha mais velha de Jarek o Gordo, estalajadeira do bairro de fora desde os vinte e cinco.',
+    origem: 'Filha mais velha de Jarek a Gorda, estalajadeira do bairro de fora desde os vinte e cinco.',
     ferida: 'A mãe cobrou dela, com juros, o dinheiro que ela usou para abrir a estalagem. Pagou tudo e parou de chamar a mãe de mãe.',
     desejo: 'Uma estalagem onde a mãe não possa entrar.',
     medo: 'Precisar de dinheiro emprestado outra vez.',
   },
   morador_corveira_12: {
-    origem: 'Caçula de Jarek o Gordo, carregadora no cais do Sexto desde os dezesseis.',
+    origem: 'Caçula de Jarek a Gorda, carregadora no cais do Sexto desde os dezesseis.',
     ferida: 'Carrega no cais o que a mãe manda carregar, desde os dezesseis, e aprendeu a não perguntar o que é.',
     desejo: 'Que a irmã a leve para morar na estalagem.',
     medo: 'A mãe, e a voz da mãe quando conta dinheiro.',

@@ -60,4 +60,16 @@ const deTsukimichi = new Set(Object.entries(C.encontrosPorRegiao ?? {}).filter((
   ok(pacote.includes('Idrun Varn segurou a brecha'), 'Em Tessel, o narrador recebe a história da casa');
 }
 
-console.log('\nBestiário, lugares e casas: OK.');
+// ── 4. Moradoras ──────────────────────────────────────────────────────────
+{
+  const MODELO = /^(Sabe a parte que não se conta sobre isto:|Esteve envolvida no que ficou registrado assim:|Guarda prova do que aconteceu —|Mentiu no depoimento da época\.)/;
+  const modelo = C.npcs.filter(n => n.segredo && MODELO.test(n.segredo.conteudo));
+  ok(modelo.length === 0, `Nenhum segredo-modelo (história pública vestida de segredo) sobrou (${modelo.map(n => n.id).join(', ') || 'nenhum'})`);
+  ok(C.npcs.every(n => n.historia && n.segredo), `As ${C.npcs.length} pessoas do elenco têm história e segredo`);
+  const alcunha = C.npcs.filter(n => n.id.startsWith('morador_') && / o (Torto|Manco|Novo|Gordo|Surdo)\b/.test(n.nome));
+  ok(alcunha.length === 0, `O vale é das mulheres: nenhuma moradora com alcunha no masculino (${alcunha.map(n => n.nome).join(', ') || 'nenhuma'})`);
+  const moca = C.npcs.filter(n => n.ocupacao === 'moça que some por dias');
+  ok(moca.length === 0, 'Ninguém de cinquenta anos é "moça que some por dias"');
+}
+
+console.log('\nBestiário, lugares, casas e moradoras: OK.');
