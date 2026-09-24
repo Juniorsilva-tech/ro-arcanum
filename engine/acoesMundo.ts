@@ -17,6 +17,7 @@ import { localEfetivo } from './historiaViva';
 import { treinarNpc } from './progressaoNpc';
 import { concederDespertar } from './progresso';
 import { multiplicadorDeDescanso, condicoesTratadasAoDescansar } from './classe';
+import { encontroNoEsconderijo, prepararCombateDeBando } from './bandos';
 import { forjar, desmanchar, temperar } from './forja';
 import {
   aceitarContrato,
@@ -33,6 +34,7 @@ import {
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
+  | { tipo: 'atacar_esconderijo' }
   | { tipo: 'forjar'; molde: string; material: string; catalisador?: string }
   | { tipo: 'desmanchar'; itemId: string }
   | { tipo: 'temperar'; itemId: string }
@@ -78,6 +80,14 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     processarSubidaDeNivel(camp);
     return { ok: true, texto };
   };
+  if (acao.tipo === 'atacar_esconderijo') {
+    const e = encontroNoEsconderijo(content, camp);
+    if ('erro' in e) return { ok: false, texto: e.erro };
+    const r = terminar('Você avança sobre o esconderijo.', 1);
+    iniciarCombate(content, camp, e.criaturas);
+    prepararCombateDeBando(content, camp, e);
+    return { ...r, combate: true };
+  }
   if (acao.tipo === 'desafio') {
     const desafio = content.desafios?.find(d => d.id === acao.id && d.local === camp.localAtual);
     if (!desafio || camp.flags[`desafio.concluido.${desafio.id}`]) return { ok: false, texto: 'Esta expedição não está disponível aqui.' };

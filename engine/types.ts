@@ -532,6 +532,8 @@ export type Criatura = {
 };
 
 export type CombatActor = {
+  /** Capitão de bando em pessoa (engine/bandos.ts): o desfecho da luta muda o bando. */
+  capitaoBandoId?: string;
   /** Guardiao: o primeiro golpe do combate ja foi absorvido? (engine/classe.ts) */
   primeiroGolpeAbsorvido?: boolean;
   /** Espadachim: alvo em que ele esta focado, e quantos acertos seguidos. */
@@ -580,6 +582,8 @@ export type CombatActor = {
 };
 
 export type CombatState = {
+  /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
+  bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
   ordemGrupo?: 'livre' | 'proteger' | 'focar';
   versaoRegras?: number;
   ambiente?: { abrigoSolar: boolean };
@@ -645,6 +649,8 @@ export type QuestEstado = 'desconhecida' | 'ativa' | 'concluida' | 'falhada';
 
 // ── Estado serializável de uma campanha (GDD §34).
 export type Campaign = {
+  /** Bandos de salteadores com território, capitão e memória (engine/bandos.ts). */
+  bandos?: EstadoBandos;
   observacoesLocais?: Record<string, import('./contextoNarrativo').ObservacaoLocal>;
   vivo?: import('./vivoTypes').MundoVivo;
   familia?: import('./familia').FamiliaState;
@@ -1063,4 +1069,40 @@ export type TipoTreinoImersivo =
   | 'meditacao_sob_cascata'
   | 'esgrima_duas_espadas_niten';
 
+// ── Bandos de salteadores (engine/bandos.ts) ──────────────────────────────
+export type CapitaoBando = {
+  nome: string;
+  /** Alcunha que o vale dá depois do que aconteceu com ele. */
+  alcunha?: string;
+  nivel: number;
+  vivo: boolean;
+  preso?: boolean;
+  /** Marcas de combates com o jogador. Cada uma o deixa mais fraco. */
+  cicatrizes: string[];
+  /** Tipo de dano que o derrubou: da próxima vez ele vem preparado contra ele. */
+  adaptacao?: string;
+  rancor: number;
+  derrotas: number;
+  vitorias: number;
+  /** Dia até o qual está se recuperando; depois disso, volta. */
+  recuperarAte?: number;
+  /** Quer o jogador em pessoa: a próxima emboscada é dele. */
+  caca?: boolean;
+};
 
+export type Bando = {
+  id: string;
+  nome: string;
+  regiao: string;
+  esconderijo: string;
+  esconderijoConhecido: boolean;
+  pistas: number;
+  membros: number;
+  tesouro: number;
+  pedagio: boolean;
+  estado: 'ativo' | 'disperso' | 'destruido';
+  capitao: CapitaoBando;
+  ultimoRecrutamento: number;
+};
+
+export type EstadoBandos = { bandos: Record<string, Bando> };

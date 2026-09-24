@@ -54,4 +54,4 @@ export * from './reino';
 export * from './classe';
 export * from './contratosMonstros';
 export * from './treinamentoImersivo';
-
+export * from './bandos';

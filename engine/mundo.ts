@@ -7,6 +7,7 @@
 // Este módulo faz o tempo cobrar de todo mundo. Não é simulação econômica: é
 // um punhado de estados que mudam sozinhos, chegam ao narrador e mexem no
 // preço da loja. Barato de rodar, e o bastante para o vale parecer vivo.
+import { processarBandos } from './bandos';
 import type { Campaign, ContentBundle, Estacao } from './types';
 import { nextFloat, nextInt, pick } from './rng';
 import { registrarMarco } from './memoria';
@@ -215,6 +216,7 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     // aberta longe do jogador (ver guerra.ts).
     processarGuerrasDeFundo(content, camp);
     processarCasas(content, camp);
+    processarBandos(content, camp);
     processarContinuidade(content, camp);
     processarMundoVivo(content, camp);
     if (camp.asora?.desbloqueado) {

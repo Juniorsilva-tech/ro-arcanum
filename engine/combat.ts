@@ -1,4 +1,5 @@
 // ARCANUM · Combate por turnos, resolvido 100% pela engine (GDD §16, §17).
+import { registrarDesfechoBando } from './bandos';
 import { registrarSaidaNarrativa } from './contextoNarrativo';
 import type {
   Campaign,
@@ -1265,6 +1266,7 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
   s.terminado = true;
   s.resultado = resultado;
   registrarConfronto(camp, resultado);
+  registrarDesfechoBando(camp, resultado);
   // O relogio do combate avanca o calendario a cada doze rodadas (ver
   // avancaTurno), mas o mundo nao tiquetaqueava junto: uma luta longa fazia
   // dias passarem sem cidade produzir, sem NPC decidir nada e sem missao

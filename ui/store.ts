@@ -99,6 +99,7 @@ import {
   type CargoConselho,
   type DesignacaoOficial,
   type PatenteMilitar,
+  pagarPedagio,
 } from '@/engine';
 import { bundlePorId, encontrosPorTipo } from '@/content';
 import {
@@ -314,6 +315,7 @@ interface GameState {
   combConjurar: (arteId: string, alvoId?: string) => Promise<void>;
   combUsar: (itemId: string) => Promise<void>;
   combFugir: () => Promise<void>;
+  combPagarPedagio: () => Promise<void>;
   fecharLuta: () => Promise<void>;
   aprenderArteAcao: (arteId: string) => Promise<void>;
   conjurarArteLivre: (arteId: string) => Promise<void>;
@@ -1048,6 +1050,13 @@ export const useGame = create<GameState>((set, get) => ({
     const r = jogadorUsaItemCombate(content, camp, itemId);
     if (!r.ok && r.motivo) camp.combate.log.push(`Não deu: ${r.motivo}.`);
     set({ camp: { ...camp } });
+    await persistir(camp, set);
+  },
+  async combPagarPedagio() {
+    const { camp } = get();
+    if (!camp?.combate) return;
+    const r = pagarPedagio(camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')] });
     await persistir(camp, set);
   },
   async combFugir() {

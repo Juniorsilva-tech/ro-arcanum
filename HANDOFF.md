@@ -535,3 +535,90 @@ Atender ao pedido de expansão massiva focado estritamente no continente e regra
 - `npm run typecheck`: **0 erros (TypeScript Strict Mode 100% limpo)**.
 
 
+
+---
+
+## Sessão 46 — Claude — fechar o trabalho do Gemini, e bandos com capitão Nemesis
+
+### Estado encontrado
+Trinta arquivos das sessões 41 a 45 (Gemini) sem commit: forja em Vaelhorn e
+Tsukimichi, desmanche/afiação/têmpera, assentamento/feudo/reino com tela e
+imagens, soberania feudal, contratos de caça, Lutador e Musashi. Conferido sem
+mudar nada: tsc limpo, `test:engine` completo (simLongo sem violação),
+`vaelhorn_expansao`, jornadas, casas e `expo export`. Commitado como `7a7e77b`.
+
+Antes disso, o dono pediu opinião sobre uma auditoria externa (NPCs, mundo,
+cidades, monstros, ladrões). O diagnóstico batia com o código (5 criaturas de
+`ladroes`, segundo monstro em 20% das viagens, teto 5 nas cidades, `casas.ts`
+com 23 linhas, Nemesis só de oni; o dia tem 6 períodos, não 4). A ordem
+proposta e aceita: 1) bandos + Nemesis humano; 2) estação nos encontros com
+bando escalado por nível; 3) especialização de cidades ligada à forja;
+4) ecologia só se faltar. Esta sessão fez o item 1.
+
+### O que foi feito — `engine/bandos.ts`
+- **Estado** em `camp.bandos` (tipos `Bando`, `CapitaoBando`, `EstadoBandos`
+  em `types.ts`), criado sob demanda. Três bandos em regiões diferentes, fora
+  do Vale de Halvet, com esconderijo num lugar ermo da região. O sorteio usa
+  um RNG próprio derivado da semente: não mexe no RNG principal (testado).
+  Só existe em bundle que traga `capitao_bandoleiro` — Tsukimichi não ganha.
+- **Dia do bando** (`processarBandos`, chamado em `avancarMundo` depois de
+  `processarCasas`): recruta a cada 5 dias (3 se a cidade vizinha passa de 50
+  de insegurança), pilha tesouro, com 6+ homens fecha a estrada com pedágio
+  (fato público) e sobe a insegurança da cidade. Sem capitão, não recruta e se
+  desfaz.
+- **Na estrada** (`viajar`): depois da emboscada de rival oni e antes da tabela
+  genérica. O tamanho do grupo tem teto pelo nível (`tamanhoDoGrupo`: nível 1
+  enfrenta 1; máximo 4). O capitão só aparece em encontro comum contra nível 3+.
+  Pedágio: botão "Pagar N moedas" na primeira rodada do combate; o dinheiro
+  vai para o tesouro do bando.
+- **Capitão Nemesis que perde**: nova criatura `capitao_bandoleiro` (nível 5,
+  fora das tabelas). Derrubado, foge ferido com chance que cai a cada queda
+  (75%, 45%, 15%; 20% encurralado no esconderijo), ganha cicatriz e alcunha
+  pelo tipo de dano do jogador ("o Rosto Aberto", "o Caolho"...), +1 nível e
+  vem preparado contra aquele tipo de dano (+2 defesa). Mas cada cicatriz tira
+  5 de vida e 1 de acerto/defesa: três cicatrizes e dois níveis a mais ainda o
+  deixam mais fraco que no começo (testado). Recuperado com rancor ≥ 3, passa a
+  **caçar o jogador** em qualquer estrada (fato público "pergunta por você pelo
+  nome"). Rendido, vai preso. Vencer o jogador lhe dá nível e gente.
+- **Esconderijo**: vitórias deixam pistas; na segunda (ou ao derrubar o
+  capitão) o esconderijo é revelado. Ação de mundo `atacar_esconderijo`
+  (botão em Comunidade, quando você está lá): vitória devolve o tesouro e
+  desfaz a base.
+- **Gancho no combate**: `registrarDesfechoBando` em `encerrar()` (combat.ts),
+  logo depois de `registrarConfronto`.
+- **Narrador e tela**: `bandosConhecidos`/`descreverBando` vão para o pacote do
+  LLM (`bandosConhecidos`) e para a seção "bandos na estrada" em
+  `MundoVivo.tsx`. O narrador recebe; a engine decide.
+
+### Arquivos
+Novos: `engine/bandos.ts`, `engine/bandos.selftest.ts`.
+Alterados: `engine/types.ts`, `engine/combat.ts`, `engine/viagem.ts`,
+`engine/mundo.ts`, `engine/acoesMundo.ts`, `engine/llm.ts`, `engine/index.ts`,
+`content/vaelhorn/bestiary.ts`, `package.json`, `ui/store.ts`,
+`ui/screens/Combate.tsx`, `ui/screens/MundoVivo.tsx`.
+
+### Verificações
+- tsc limpo.
+- `bandos.selftest.ts`: 40 checagens — nascimento determinístico e sem mexer
+  no RNG, crescimento/pedágio/fato, teto de grupo por nível, fuga com cicatriz,
+  retorno caçando, cicatriz enfraquece, 20/20 capitães morrem em até oito
+  quedas, captura, derrota do jogador, pedágio com e sem dinheiro, esconderijo,
+  viagem real (23 encontros de bando em 120 viagens, nunca mais de 1 inimigo
+  em nível 1), gancho real em `encerrar()`, save.
+- `test:engine` completo, jornadas, casas, vaelhorn_expansao, expo export: ok.
+
+### Problema encontrado (não resolvido aqui)
+`simLongo 10 6`: antes 1 morte em 6 campanhas; agora 3. Medido com bandos
+desligados por variável temporária: volta exatamente ao 1/6 anterior. Mas
+instrumentando as mortes, **nenhuma é de bando** — os três bandos já estavam
+destruídos em todas, e a morte vem fora de combate aos 25–28 anos, com
+sanidade e corrupção em 100 e condição "mutilado" (a maldição da Marca do
+Caçador, sessão 24). Os encontros de bando consomem o RNG principal e mudam a
+trajetória, e mais campanhas caem no caminho da Marca. A instrumentação foi
+revertida. Vale olhar a Marca: 3 de 6 campanhas morrendo dela aos 25 é muito.
+
+### Próximo passo sugerido
+- Medir a Marca do Caçador (quantas campanhas a despertam, e em que idade morrem).
+- Item 2 da lista: estação do ano nos encontros e bando de feras escalado por nível.
+- Item 3: especialização de cidades (fundição em Corveira vendendo carvão e
+  minério aproxima a forja do começo do jogo).

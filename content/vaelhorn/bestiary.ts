@@ -168,6 +168,17 @@ export const criaturasVaelhorn: Criatura[] = [
     moralBase: 65, xp: 40, faccaoId: 'foragidos',
     loot: [{ item: 'espada_longa', chance: 0.3 }, { item: 'cota_de_malha', chance: 0.2 }, { item: 'pocao_cura_menor', chance: 0.3 }],
   },
+  // Não entra em tabela de encontro: só aparece à frente de um bando
+  // (engine/bandos.ts), que dá a ele nome, nível, cicatrizes e memória.
+  {
+    id: 'capitao_bandoleiro',
+    nome: 'Capitão bandoleiro',
+    descricao: 'Quem manda no bando porque foi o último a ficar de pé na briga anterior.',
+    nivel: 5, vida: 44, defesa: 15, acerto: 15, ataqueNome: 'golpe de cutelo',
+    dano: { base: 12, dispersao: 0.35, tipo: 'cortante' },
+    moralBase: 70, xp: 60, faccaoId: 'ladroes',
+    loot: [{ item: 'espada_curta', chance: 0.4 }, { item: 'moeda_antiga', chance: 0.6 }, { item: 'pocao_cura_menor', chance: 0.3 }],
+  },
   {
     id: 'capanga_do_senhorio',
     nome: 'Capanga do senhorio',

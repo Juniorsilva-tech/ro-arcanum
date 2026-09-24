@@ -17,6 +17,7 @@ export function Combate() {
   const combConjurar = useGame((s) => s.combConjurar);
   const combUsar = useGame((s) => s.combUsar);
   const combFugir = useGame((s) => s.combFugir);
+  const combPagarPedagio = useGame((s) => s.combPagarPedagio);
   const fecharLuta = useGame((s) => s.fecharLuta);
   const alternarSakai = useGame((s) => s.alternarSakaiModoAcao);
 
@@ -135,6 +136,11 @@ export function Combate() {
               <Acao nome="Defender" onPress={combDefender} />
               <Acao nome="Fugir" cor={cores.mudo} onPress={combFugir} />
             </View>
+            {!!s.bando?.pedagio && s.rodada === 1 && (
+              <View style={[styles.botoesLinha, { marginTop: esp.sm }]}>
+                <Acao nome={`Pagar ${s.bando.pedagio} moedas`} cor={cores.ouro} onPress={combPagarPedagio} />
+              </View>
+            )}
             <View style={[styles.chips, { marginTop: esp.sm }]}>
               {!!jog.tatico?.sono && <Acao nome="Despertar" onPress={() => combTatica('despertar')} />}
               {!!jog.tatico?.preso && <Acao nome="Libertar-se" onPress={() => combTatica('libertar')} />}

@@ -14,6 +14,7 @@ import { dataPorExtenso, NOME_PERIODO } from './time';
 import { memoriaParaNarrador, diasDeConvivio, marcosRecentes } from './memoria';
 import { calcularRitmo } from './ritmo';
 import { comoEstaOVale } from './mundo';
+import { bandosConhecidos, descreverBando } from './bandos';
 import { ecosRecentes } from './convivio';
 import { ehNatureza, inferirNatureza, type Natureza } from './risco';
 import { artesConhecidasResolvidas } from './fusao';
@@ -449,6 +450,9 @@ export function montarPacote(
     ocorrenciasConfirmadas: camp.continuidade?.eventos.filter(e => e.local === ctx.local.id).slice(-3),
     ameacasConhecidas: camp.continuidade?.ameacas.filter(a => a.descoberta && a.estado === 'ativa').slice(-3)
       .map(a => ({ local: content.locais.find(l => l.id === a.local)?.nome, diasAteAtaque: a.prazo - camp.calendario.dia })),
+    // Bandos que o protagonista conhece (engine/bandos.ts): nome, capitão,
+    // cicatrizes, se caça o jogador. O narrador não decide quem vive.
+    bandosConhecidos: bandosConhecidos(camp).slice(0, 3).map(b => descreverBando(content, b)),
     rivaisEncontrados: Object.values(camp.kimetsu?.rivais ?? {}).filter(r => r.reencontros > 0 && r.local === ctx.local.id).slice(-3)
       .map(r => ({ nome: r.nome, vivo: r.vivo, encontros: r.reencontros, ultimoConfronto: r.memoria.at(-1) })),
     // O que rolou entre elas sem o jogador por perto — é o que a boca do povo

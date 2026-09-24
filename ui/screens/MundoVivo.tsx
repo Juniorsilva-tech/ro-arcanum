@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useGame } from '../store';
 import { TextoMono, TextoSerif, Card, Botao, Divisor } from '../components';
-import { EDIFICIOS, fatosConhecidos, biografiaCivil, type TipoEdificio } from '@/engine';
+import { EDIFICIOS, fatosConhecidos, biografiaCivil, bandosConhecidos, descreverBando, type TipoEdificio } from '@/engine';
 
 export function ComunidadeViva() {
   const camp = useGame(s => s.camp)!;
@@ -28,6 +28,13 @@ export function ComunidadeViva() {
         <Botao titulo="Ouvir notícias" onPress={() => agir({ tipo: 'noticias' })} />
       </>}
     </View>
+    {bandosConhecidos(camp).length > 0 && <>
+      <Divisor label="bandos na estrada" />
+      {bandosConhecidos(camp).map(b => <Card key={b.id}>
+        <TextoMono>{descreverBando(content, b)}</TextoMono>
+        {b.esconderijoConhecido && b.esconderijo === camp.localAtual && b.estado !== 'destruido' && <Botao titulo="Atacar o esconderijo · risco de combate" onPress={() => agir({ tipo: 'atacar_esconderijo' })} />}
+      </Card>)}
+    </>}
     {c && <Card>
       <TextoSerif>Abastecimento e serviços</TextoSerif>
       <TextoMono>Alimentos: {Math.floor(c.comida)} · materiais: {Math.floor(c.materiais)} · remédios: {Math.floor(c.remedios)}</TextoMono>

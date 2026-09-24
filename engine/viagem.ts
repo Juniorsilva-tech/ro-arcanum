@@ -3,6 +3,7 @@
 // do período do dia — sem grafo de waypoints novo, sem hora de relógio de
 // parede, sem Math.random(). Tudo em cima do RNG determinístico da
 // campanha, então é reproduzível como qualquer outro sorteio do jogo.
+import { encontroDeBandoNaViagem, prepararCombateDeBando } from './bandos';
 import type { Campaign, ContentBundle, Local } from './types';
 import { nextFloat, pick } from './rng';
 import { avancarPeriodos, periodoAtual, type Periodo } from './time';
@@ -238,14 +239,23 @@ export function viajar(content: ContentBundle, camp: Campaign, destino: string):
   descobrirNoticias(content, camp);
 
   const pool = encontrosElegiveis(content, camp, encontrosDoLugar(content, alvo));
+  const nemesis = emboscadaNemesis(content, camp);
+  // Bando antes da tabela genérica: quem manda na estrada é ele (engine/bandos.ts).
+  const bando = nemesis ? null : encontroDeBandoNaViagem(
+    content, camp, origemDaViagem, destino, PERIODOS_DE_RISCO.has(periodoAtual(camp.calendario)),
+  );
   const encontro =
-    emboscadaNemesis(content, camp) ??
+    nemesis ??
+    bando?.criaturas ??
     rolarEncontroContextual(
       content, camp, periodoAtual(camp.calendario),
       perigoEfetivoDaRota(content, camp, origemDaViagem, destino, rota.perigo),
       pool,
     );
 
-  if (encontro) iniciarCombate(content, camp, encontro);
+  if (encontro) {
+    iniciarCombate(content, camp, encontro);
+    if (bando) prepararCombateDeBando(content, camp, bando);
+  }
   return { ok: true, destino: alvo, primeiraVez, encontro: encontro ?? undefined };
 }
