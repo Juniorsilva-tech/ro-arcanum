@@ -153,7 +153,7 @@ const rico = (c: Campaign) => { const f = c.feudo!; f.materiais = 500; f.tesouro
   const cursor = c.rng.cursor;
   c.calendario.dia++;
   const rel = processarDiaColonia(C, c)!;
-  ok(!c.feudo!.ameaca && rel.eventos.some(e => e.includes(a.nome)), 'no dia marcado, o dia da colônia resolve a batalha');
+  ok(!c.feudo!.ameaca && rel.eventos.some(e => e.toLowerCase().includes(a.nome.toLowerCase())), 'no dia marcado, o dia da colônia resolve a batalha');
   ok(c.rng.cursor === cursor, 'ameaça e batalha não consomem o RNG da campanha');
   const d = fundada('campo_ceifa', 'save');
   rico(d);

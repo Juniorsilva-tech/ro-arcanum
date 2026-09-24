@@ -25,7 +25,9 @@ export function AmeacaDaColonia() {
         <>
           <Divisor label="ameaça" />
           <Card acento={cores.cinabrio}>
-            <TextoSerif style={{ fontSize: 18 }}>{a.nome} · chega em {Math.max(0, a.chegaEm - dia)} dias</TextoSerif>
+            <TextoSerif style={{ fontSize: 18 }}>
+              {a.nome} · {a.chegaEm - dia <= 0 ? 'chega hoje' : `chega em ${a.chegaEm - dia} ${a.chegaEm - dia === 1 ? 'dia' : 'dias'}`}
+            </TextoSerif>
             <TextoMono>{a.texto}</TextoMono>
             {a.conselho.length > 0 && (
               <View style={{ marginTop: 6 }}>
@@ -59,7 +61,7 @@ export function AmeacaDaColonia() {
               {LISTA_PREPARACOES.filter(p => a.preparacoes[p] === undefined).map(p => {
                 const ficha = PREPARACOES[p];
                 const pode = podePreparar(camp, p);
-                const custo = p === 'tributo' ? `${a.tributo} de ouro` : [
+                const custo = p === 'tributo' ? (a.tributo ? `${a.tributo} de ouro` : 'não aceitam moeda') : [
                   ficha.custo.materiais ? `${ficha.custo.materiais} de material` : '',
                   ficha.custo.ouro ? `${ficha.custo.ouro} de ouro` : '',
                   ficha.custo.comida ? `${ficha.custo.comida} de comida` : '',
@@ -67,7 +69,7 @@ export function AmeacaDaColonia() {
                 const atrasa = dia + ficha.dias > a.chegaEm;
                 return (
                   <View key={p}>
-                    <Botao titulo={`${ficha.nome} · ${custo} · ${ficha.dias} ${ficha.dias === 1 ? 'dia' : 'dias'}`} variante="fantasma" onPress={async () => setResposta(await decidir([p]))} />
+                    <Botao titulo={`${ficha.nome} · ${custo}${ficha.dias ? ` · ${ficha.dias} ${ficha.dias === 1 ? 'dia' : 'dias'}` : ' · na hora'}`} variante="fantasma" onPress={async () => setResposta(await decidir([p]))} />
                     <TextoMono style={{ fontSize: 12, color: pode.pode && !atrasa ? cores.mudo : cores.cinabrio }}>
                       {ficha.descricao}{ficha.defesa ? ` (+${ficha.defesa} de defesa)` : ''}.
                       {!pode.pode ? ` ${pode.motivo}` : atrasa ? ' Não fica pronta a tempo.' : ''}

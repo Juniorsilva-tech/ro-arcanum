@@ -195,6 +195,11 @@ function rngDoDia(camp: Campaign, chave: string) {
  * Capacidade real: o menor entre abrigos e água. Moradias dão 25 cada; os
  * abrigos do começo, 20.
  */
+/** Quanto o celeiro guarda: 300, mais 250 por nível de lavoura e silos. */
+export function capacidadeDoCeleiro(f: FeudoState): number {
+  return 300 + (f.edificios.lavoura_silos ?? 0) * 250;
+}
+
 export function capacidadeReal(content: ContentBundle, f: FeudoState): number {
   const s = sitioDe(content, f.sitio);
   if (!s) return f.capacidadeHabitacional;
@@ -234,6 +239,15 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   r.rebanho = processarRebanhos(camp, s, inverno);
   r.eventos.push(...r.rebanho.morreram);
   if (r.rebanho.nasceram.length) r.eventos.push(`Nasceram crias: ${r.rebanho.nasceram.join(', ')}.`);
+  // O celeiro tem tamanho: o que passa dele estraga. Sem isto, ovo e leite
+  // se acumulavam para sempre (2.445 de comida para 11 pessoas no teste na
+  // tela) e a fome deixava de existir.
+  const celeiro = capacidadeDoCeleiro(f);
+  if (f.comida > celeiro) {
+    const perdido = f.comida - celeiro;
+    f.comida = celeiro;
+    if (camp.calendario.dia % 10 === 0) r.eventos.push(`O celeiro está cheio: ${Math.round(perdido)} de comida estragou. Mais silos guardariam.`);
+  }
   if (f.comida === 0) {
     f.estabilidade = Math.max(0, f.estabilidade - 4);
     r.eventos.push('A comida acabou: a colônia passa fome.');

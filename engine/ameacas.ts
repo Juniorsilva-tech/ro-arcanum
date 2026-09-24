@@ -86,6 +86,8 @@ export type ResultadoBatalha = {
 };
 
 const DIAS_DE_AVISO = 3;
+/** Começo de frase: "uma matilha" vira "Uma matilha". */
+const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const INTERVALO_MINIMO = 20;
 
 function rngDe(camp: Campaign, chave: string): RngState {
@@ -175,7 +177,8 @@ export function processarAmeacas(content: ContentBundle, camp: Campaign, s: Siti
     };
     f.ameaca = a;
     f.ultimaAmeaca = dia;
-    linhas.push(`${a.texto} Chegam em ${a.chegaEm - dia} dias. A assembleia precisa decidir o que fazer.`);
+    const faltam = a.chegaEm - dia;
+    linhas.push(`${a.texto} Chegam em ${faltam} ${faltam === 1 ? 'dia' : 'dias'}. A assembleia precisa decidir o que fazer.`);
     break;
   }
   return linhas;
@@ -280,7 +283,7 @@ export function resolverBatalha(content: ContentBundle, camp: Campaign): Resulta
 
   // Tributo pago: quem aceita moeda não vem.
   if (a.preparacoes.tributo !== undefined) {
-    linhas.push(`${a.nome} recebeu ${a.tributo} de ouro e seguiu outro caminho. A estrada vai saber que aqui se paga.`);
+    linhas.push(`${maiuscula(a.nome)} recebeu ${a.tributo} de ouro e seguiu outro caminho. A estrada vai saber que aqui se paga.`);
     f.renome = Math.max(0, (f.renome ?? 0) - 3);
     if (a.tipo === 'bando' && a.origem) { const b = camp.bandos?.bandos[a.origem]; if (b) b.tesouro += a.tributo; }
     if (a.tipo === 'casa') (f.acordos ??= []).includes(a.origem!) || f.acordos!.push(a.origem!);
@@ -290,7 +293,7 @@ export function resolverBatalha(content: ContentBundle, camp: Campaign): Resulta
   // Defesa: o que a colônia é, mais o que se preparou a tempo.
   let defesa = f.seguranca * 0.4 + (f.edificios.muralha_baluarte ?? 0) * 10 + (f.edificios.quartel ?? 0) * 8;
   defesa += segurancaDosCavalos(f) + (eficiencia(f, 'guarda') - 0.6) * 20;
-  linhas.push(`${a.nome} chegou. A colônia tinha ${Math.round(defesa)} de defesa antes do que foi preparado.`);
+  linhas.push(`${maiuscula(a.nome)} chegou. A colônia tinha ${Math.round(defesa)} de defesa antes do que foi preparado.`);
   for (const p of LISTA_PREPARACOES) {
     if (a.preparacoes[p] === undefined || p === 'tributo') continue;
     const ficha = PREPARACOES[p];
@@ -359,7 +362,7 @@ export function resolverBatalha(content: ContentBundle, camp: Campaign): Resulta
   if (camp.vivo) {
     registrarFato(camp, {
       tipo: `colonia_${desfecho}`, local: f.sitio ?? f.localId, publico: true, atores: ['jogador'],
-      texto: desfecho === 'repelida' ? `${f.nome} repeliu ${a.nome}.` : desfecho === 'resistida' ? `${f.nome} resistiu a ${a.nome}, com perdas.` : `${a.nome} saqueou ${f.nome}.`,
+      texto: desfecho === 'repelida' ? `${f.nome} repeliu ${a.nome}.` : desfecho === 'resistida' ? `${f.nome} resistiu a ${a.nome}, com perdas.` : `${maiuscula(a.nome)} saqueou ${f.nome}.`,
     });
   }
   if (desfecho !== 'resistida') registrarMarco(camp, linhas[linhas.length - 1]);

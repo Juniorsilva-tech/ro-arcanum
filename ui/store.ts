@@ -837,9 +837,13 @@ export const useGame = create<GameState>((set, get) => ({
     const { camp, content } = get();
     if (!camp || !content) return '';
     camp.turno++;
-    camp.capitulo.periodosDecorridos += 4;
-    camp.calendario = avancarPeriodos(camp.calendario, 4);
-    crescerImpulsos(camp, 4);
+    // "Avançar 1 dia" é um dia inteiro: PERIODOS.length (6), não 4. Com 4, cada
+    // clique andava dois terços de dia e a ameaça anunciada "em 3 dias" pedia
+    // quatro cliques e meio.
+    const umDia = PERIODOS.length;
+    camp.capitulo.periodosDecorridos += umDia;
+    camp.calendario = avancarPeriodos(camp.calendario, umDia);
+    crescerImpulsos(camp, umDia);
     // avancarMundo já processa o dia do feudo; chamar processarCicloReino de
     // novo aqui contava a produção duas vezes.
     avancarMundo(content, camp);

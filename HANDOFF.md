@@ -673,27 +673,56 @@ erros antes do commit dele.
 
 ---
 
-## Sessão 59 (24/09/2026) — Correção e Interatividade do Mapa de Vaelhorn
+## Sessão 59 (24/09/2026) — Correção, Pan/Drag com Mouse e Interatividade do Mapa de Vaelhorn
 
 ### O que foi feito
 1. **Calibração e Alinhamento Preciso das Coordenadas (`content/vaelhorn/mapa.ts`)**:
    - Mapeados com exatidão todos os 19 locais de `locations.ts` (Vale de Halvet e arredores) e 34 locais de `continente.ts` (Marca de Tessel, Bosque de Vintra, Planalto de Corveira, Ermo de Solgar, Costa de Mareu, Baixios de Halvern) sobre a arte original `mapa_continente.jpg` (1376 × 768).
-   - Corrigidas inversões geográficas antigas: Solgar no deserto ao sudoeste (`x: 25.5%, y: 83%`), Vintra na floresta a oeste (`x: 28.5%, y: 39%`), Corveira no planalto central/sul (`x: 43%, y: 75%`), Mareu na costa a sudeste (`x: 69.5%, y: 75%`), Tessel nas montanhas nevadas ao norte (`x: 46.5%, y: 17%`), e Vale de Halvet no vale central fluvial (`x: 58%, y: 46%`).
-   - Removido o desalinhamento gerado pelo fallback pseudo-aleatório de hash para IDs ausentes.
+   - Ajustado o Vale de Halvet (`y: 56%`) para posicionar perfeitamente sobre a vila desenhada abaixo do rio, eliminando sobreposição com o escudo vermelho superior.
+   - Corrigidas inversões geográficas: Solgar no deserto ao sudoeste (`x: 25.5%, y: 83%`), Vintra na floresta a oeste (`x: 28.5%, y: 39%`), Corveira no planalto central/sul (`x: 43%, y: 75%`), Mareu na costa a sudeste (`x: 69.5%, y: 75%`), Tessel nas montanhas nevadas ao norte (`x: 46.5%, y: 17%`).
 
-2. **Aspect Ratio e Layout Sem Cortes (`ui/screens/MapaVisual.tsx`)**:
-   - Ajustado o container `.mapa` para `aspectRatio: 1376 / 768`, `width: '100%'`, `maxHeight: 560`, `alignSelf: 'center'`.
-   - `resizeMode="contain"` na imagem de fundo para garantir proporção idêntica em qualquer largura de tela.
-   - Legenda reposicionada externamente logo abaixo do mapa (`legendaAbaixo`), evitando obstruir as regiões sul e o oceano.
+2. **Navegação por Arrasto com Mouse (Pan & Drag) e Zoom (`ui/screens/MapaVisual.tsx`)**:
+   - Implementado canvas virtual de proporção 1:1 nativa (**1376 × 768**) dentro de um viewport com `overflow: 'hidden'`.
+   - Adicionado `PanResponder`: o jogador pode clicar, segurar e arrastar o mapa livremente com o mouse em qualquer direção (`cursor: 'grab' / 'grabbing'`).
+   - Diferenciação inteligente de clique vs arrasto (threshold > 3px): arrastar move o mapa suavemente sem ativar pinos por engano; clicar em um pino sem arrastar ativa a viagem imediatamente.
+   - Barra de controles flutuantes no topo:
+     - `＋`: Aproximar zoom (até 2.0x).
+     - `－`: Afastar zoom (até 0.45x).
+     - `🎯`: Foco automático na posição atual do jogador (`camp.localAtual`).
+     - `🗺️`: Ver o continente inteiro ajustado à tela.
+   - Centralização automática na posição do jogador ao abrir o mapa.
+   - Legenda mantida externamente abaixo do mapa.
 
 3. **Interatividade e Viagem por Clique no Mapa (`MapaVisual.tsx` e `Paineis.tsx`)**:
-   - `MapaVisual` agora recebe `onViajar?: (destino: string) => void`.
-   - `Paineis.tsx` passa `onViajar={viajar}` na renderização de `MapaVisual`.
-   - Pinos de rotas conectadas agora são `<Pressable>` acessíveis com indicador `✦ Viajar`, destacando custo de períodos (`ao lado` ou `Xp`), efeito de clique/pressionado e retorno visual imediato.
-   - Clicar em um pino de destino válido executa a viagem imediatamente.
-   - Pinos distantes e capitais não diretamente conectadas exibem orientações na barra superior (`bannerFeedback`) indicando as rotas intermediárias necessárias.
+   - `MapaVisual` recebe `onViajar={viajar}` de `Paineis.tsx`.
+   - Pinos de rotas conectadas são `<Pressable>` com tag `✦ Viajar`, indicando períodos de viagem e efetuando a transição de local ao clique.
+   - Pinos distantes exibem aviso informativo no topo do mapa.
 
 ### Validações
 - `npm run typecheck`: 0 erros.
 - `npm run test:vaelhorn`: todos os testes passaram.
-- `npx expo export --platform web`: build web concluído com sucesso em 2577ms.
+- `npx expo export --platform web`: build web concluído com sucesso em 2601ms.
+
+### Teste da colônia na tela (web) — sessão 58
+Save real gerado pela engine (colônia "Pedra Alta" na Colina dos Forcados, dia
+339, matilha anunciada, rebanho), gravado no armazenamento do navegador e
+carregado pelo "Continuar". Testado clicando: Feudo → Soberania (sítio, ameaça,
+conselho, assembleia por texto livre "finquem uma paliçada, ponham sentinela
+no alto e armem uma milícia" → paliçada, vigias, milícia; avançar dias; batalha
+repelida com relatório por preparação), Gente (ofícios, fichas com história,
+dar cargo: obras 60% → 85%) e Rebanho (pasto/feno, comprar +1, abater 1).
+
+Achado e corrigido no teste:
+- **"Avançar 1 Dia" andava 4 períodos, e o dia tem 6** (`supervisionarObrasAcao`
+  em `ui/store.ts`): cada clique era dois terços de dia. Agora usa
+  `PERIODOS.length`.
+- Celeiro sem teto: 2.445 de comida para 11 pessoas (ovo e leite acumulando
+  para sempre). Agora `capacidadeDoCeleiro` = 300 + 250 por lavoura/silos; o
+  resto estraga, com aviso a cada 10 dias.
+- "pagar tributo · 0 de ouro" para quem não aceita moeda → "não aceitam moeda";
+  "chega em 1 dias" → "1 dia"; preparação sem prazo mostra "na hora"; frases
+  da batalha começam com maiúscula ("Uma matilha chegou").
+
+O servidor da porta 8081 (do outro lado) está quebrado desde o `npm ci` desta
+sessão (`expo/virtual/env` não resolve): precisa ser reiniciado. O da 8082
+funciona.
