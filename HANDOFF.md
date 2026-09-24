@@ -622,3 +622,14 @@ revertida. Vale olhar a Marca: 3 de 6 campanhas morrendo dela aos 25 é muito.
 - Item 2 da lista: estação do ano nos encontros e bando de feras escalado por nível.
 - Item 3: especialização de cidades (fundição em Corveira vendendo carvão e
   minério aproxima a forja do começo do jogo).
+
+### Plano para a próxima sessão (nuvem)
+Depois da sessão 46 o Claude auditou o projeto e escreveu
+`docs/PLANO-FABLE-5.1.md`: 9 fases em ordem (Marca do Caçador; famílias entre
+NPCs — hoje 0 dos 246 têm pai, mãe, irmão ou cônjuge; histórias e segredos —
+130 NPCs sem segredo; casas nobres com membros — hoje nenhum; estações, feras
+em bando e caravanas; cidades com identidade e forja ao alcance; Tsukimichi
+com 6 NPCs e 0 missões; consequências visíveis e Diretor de Arcos; manutenção
+de arquivos gigantes e teste de interface), com protocolo de validação,
+critério de pronto e testes de cada fase. O próximo agente deve seguir esse
+documento.
