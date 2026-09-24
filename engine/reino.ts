@@ -24,6 +24,10 @@ import type {
   CasaDinastica,
 } from './types';
 import { registrarMarco } from './memoria';
+import { createRng, nextFloat, pick, seedFromString } from './rng';
+
+const NOMES_FILHAS = ['Aveline', 'Brunna', 'Cerys', 'Doria', 'Edra', 'Hanna', 'Liesel', 'Marit', 'Saski', 'Wenda'];
+const NOMES_FILHOS = ['Aldren', 'Bram', 'Corvin', 'Dannel', 'Evert', 'Gerrit', 'Joris', 'Lenard', 'Tobin', 'Wouter'];
 
 export type PontoAssentamentoDef = {
   id: string;
@@ -194,6 +198,17 @@ export const CATALOGO_EDIFICIOS: Record<TipoEdificioModular, EdificioModularDef>
     efeitoPorNivel: '+20 de Segurança do feudo e reduz as perdas em incursões e conflitos continentais a zero.',
     acumulativo: false,
   },
+  cisterna_poco: {
+    tipo: 'cisterna_poco',
+    nome: 'Poço & Cisterna',
+    categoria: 'producao',
+    descricao: 'Um poço cavado até a água, ou uma cisterna de pedra que guarda a chuva. Em sítio sem água, é o que decide se a colônia cresce.',
+    custoBaseOuro: 25,
+    custoBaseMateriais: 40,
+    tempoBasePeriodos: 12,
+    efeitoPorNivel: 'Água para mais 40 pessoas por nível.',
+    acumulativo: true,
+  },
   boticario_hospital: {
     tipo: 'boticario_hospital',
     nome: 'Enfermaria Real & Boticário',
@@ -357,6 +372,7 @@ export function obterFeudo(camp: Campaign): FeudoState {
         lavoura_silos: 2,
         muralha_baluarte: 1,
         boticario_hospital: 0,
+        cisterna_poco: 0,
       },
       obrasEmAndamento: [],
       rotasComerciais: [],
@@ -515,7 +531,7 @@ export function iniciarObraFeudo(
   const periodosCalculados = Math.max(4, Math.floor(def.tempoBasePeriodos * (1 - reducaoTempo)));
 
   const novaObra: ObraAtiva = {
-    id: `obra_${tipo}_${Date.now()}_${camp.calendario.dia}`,
+    id: `obra_${tipo}_${camp.calendario.dia}_${camp.turno}_${feudo.obrasEmAndamento.length}`,
     tipo,
     nome: `${def.nome} (Nível ${nivelAtual + 1})`,
     nivelAlvo: nivelAtual + 1,
@@ -627,7 +643,7 @@ export function despacharCaravanaFeudo(
   const riscoEstrada = Math.max(5, 35 - (patrulhaAtiva ? patrulhaAtiva.eficaciaPacificacao : 0) - (feudo.seguranca / 5));
 
   const novaRota: RotaComercial = {
-    id: `caravana_${destinoId}_${Date.now()}`,
+    id: `caravana_${destinoId}_${camp.calendario.dia}_${feudo.rotasComerciais.length}`,
     destinoId,
     destinoNome,
     diasViagemTotal,
@@ -712,6 +728,13 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
   // Roda cálculos econômicos a cada ciclo de dia completo (a cada 4 períodos)
   const diasFracao = periodos / 4;
 
+  // Colônia num sítio real: produção, consumo, renda e gente são do
+  // engine/colonia.ts (processarDiaColonia, chamado em avancarMundo). O resto
+  // deste passe (obras, conselho, oficiais, vassalos, linhagem, tramas) vale
+  // para as duas.
+  const comSitio = !!feudo.sitio;
+  if (!comSitio) {
+
   // 2. Consumo de alimentos
   const consumoComida = Math.floor(feudo.populacao * 0.12 * diasFracao);
   feudo.comida = Math.max(0, feudo.comida - consumoComida);
@@ -741,6 +764,8 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
   // 6. Arrecadação de tributos comerciais e de moradias
   const rendaDiaria = ((feudo.edificios.moradias ?? 1) * 3 + (feudo.edificios.mercado_feitoria ?? 1) * 5) * diasFracao;
   feudo.tesouro += Math.floor(rendaDiaria);
+
+  }
 
   // 7. Custo de manutenção das patrulhas
   const custoPatrulhas = feudo.rotasPatrulha
@@ -776,7 +801,7 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
   feudo.rotasComerciais = rotasRestantes;
 
   // 9. Dinâmica de imigração e refugiados vindos de cidades continentais em crise
-  if (camp.vivo?.cidades && feudo.comida > 50 && feudo.populacao < feudo.capacidadeHabitacional) {
+  if (!comSitio && camp.vivo?.cidades && feudo.comida > 50 && feudo.populacao < feudo.capacidadeHabitacional) {
     for (const [cidadeId, c] of Object.entries(camp.vivo.cidades)) {
       if (c.fomeDias > 3 || c.doenca > 40 || c.inseguranca > 60) {
         // Cidades em crise mandam refugiados em busca de segurança no feudo
@@ -870,8 +895,11 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
   if (feudo.gestacao?.ativa) {
     if (camp.calendario.dia >= feudo.gestacao.diaPrevisaoParto) {
       // Nascimento do herdeiro dinástico!
-      const ehMenino = (camp.turno % 2) === 0;
-      const nomeBebe = ehMenino ? 'Aemon' : 'Lyanna';
+      // Sexo e nome por sorteio derivado (antes: paridade do turno e nomes de
+      // outra saga). O vale dá nome de mulher às filhas e de homem aos filhos.
+      const rngParto = createRng((camp.rng.seed ^ seedFromString(`parto:${camp.calendario.dia}`)) >>> 0);
+      const ehMenino = nextFloat(rngParto) < 0.5;
+      const nomeBebe = pick(rngParto, ehMenino ? NOMES_FILHOS : NOMES_FILHAS);
       darLuzHerdeiro(camp, `${nomeBebe} da Casa ${feudo.casaDinastica?.nome || feudo.nome}`, ehMenino ? 'm' : 'f');
     }
   }
@@ -904,7 +932,7 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
       if (trama.progresso >= 100) {
         // Golpe bem sucedido! A cidade alvo capitula e torna-se um feudo vassalo da dinastia
         const novoVassalo: LordeVassalo = {
-          id: `vassalo_${trama.alvoLocalId}_${Date.now()}`,
+          id: `vassalo_${trama.alvoLocalId}_${camp.calendario.dia}`,
           npcId: trama.liderNpcId || 'lorde_local',
           nomeLorde: `Lorde Regente de ${trama.alvoNome}`,
           feudoCedidoId: trama.alvoLocalId,
@@ -1127,7 +1155,7 @@ export function recrutarOficial(
   }
 
   const novoOficial: OficialReino = {
-    id: `oficial_${npcId}_${Date.now()}`,
+    id: `oficial_${npcId}_${camp.calendario.dia}`,
     npcId,
     nome: nomeNpc,
     patente: 'recruta',
@@ -1350,7 +1378,7 @@ export function darLuzHerdeiro(
   };
 
   const novoHerdeiro: FilhoHerdeiro = {
-    id: `herdeiro_${Date.now()}_${camp.calendario.dia}`,
+    id: `herdeiro_${camp.calendario.dia}_${camp.turno}`,
     nome: nomeBebe.trim() || (genero === 'm' ? 'Aemon' : 'Lyanna'),
     idadeAnos: 0,
     diaNascimento: camp.calendario.dia,
@@ -1425,7 +1453,7 @@ export function concederFeudoVassalo(
   }
 
   const novoVassalo: LordeVassalo = {
-    id: `vassalo_${lordeNpcId}_${Date.now()}`,
+    id: `vassalo_${lordeNpcId}_${camp.calendario.dia}`,
     npcId: lordeNpcId,
     nomeLorde,
     feudoCedidoId,
@@ -1555,7 +1583,7 @@ export function iniciarTramaUsurpacao(
   }
 
   const novaTrama: TramaReino = {
-    id: `trama_${alvoCidadeId}_${Date.now()}`,
+    id: `trama_${alvoCidadeId}_${camp.calendario.dia}`,
     tipo: 'usurpacao_cidade',
     alvoLocalId: alvoCidadeId,
     alvoNome,

@@ -749,3 +749,95 @@ Alterados:
   cada 20 dias; se cansar no celular, suba `DIAS_PARA_REPETIR_ALVO`.
 - **Import circular** `combat.ts` ↔ `caravanas.ts` (só funções). Funciona.
 Simulação longa: idêntica às sessões 54 e 55, linha por linha.
+
+---
+
+## Sessão 57 — Claude — colônia num lugar real (etapa A de F)
+
+Pedido do dono: aprofundar o assentamento/reino do Gemini. O dono pediu para
+terminar só a etapa A nesta sessão e fazer o resto em outra.
+
+### Auditoria do que existia (`engine/reino.ts`, `ui/screens/Assentamento.tsx`)
+- A fundação acontecia num "ponto" que não era lugar do mapa
+  (`halvet_colinas`) e podia ser feita de qualquer lugar. O jogo achava o
+  soberano sempre ausente, e nenhuma cidade sabia da colônia.
+- As vantagens dos pontos eram texto (quase nenhuma estava no código), e
+  desvantagem não havia.
+- A colônia nascia com castelo, quartel, mercado, forja e muralha prontos.
+- A população era um número, que crescia só por refugiados (4 por vez,
+  sempre que alguma cidade estivesse em crise).
+- Estabilidade e segurança não tinham efeito nenhum.
+- "Declarar guerra" só gravava um id. Ninguém atacava a colônia.
+- Tier por contagem de prédios.
+- Bugs:
+  - "supervisionar obras" processava o dia duas vezes;
+  - `Date.now()` em ids de regra;
+  - herdeiro nascia menino ou menina pela paridade do turno, com nomes de
+    outra saga.
+
+### Etapa A (feita)
+- `content/vaelhorn/sitios.ts`: seis sítios reais, os lugares sem dona de
+  cada região (Campos da Ceifa, Colina dos Forcados, Clareira das Pedras,
+  Farol Quebrado, Ruína de Areia, Vau de Pedra). Cada um tem:
+  - terreno de 0 a 3 (água, solo, madeira, pedra, caça, pesca, pasto, defesa,
+    passagem, perigo, inverno);
+  - casa que reivindica a terra;
+  - animais da região;
+  - um traço próprio: o trigo do marechal (Tessel leva 1/5 da roça), a vista
+    do planalto, o círculo de pedras, o farol apagado (destroços; reacender),
+    a areia que devolve (achados e obra soterrada), a travessia (pedágio e
+    cheias).
+- `engine/colonia.ts`:
+  - funda-se estando no sítio;
+  - começa com 6 pessoas, abrigos e uma roça;
+  - a água limita a população (poço e cisterna, edifício novo
+    `cisterna_poco`);
+  - o passe diário da colônia usa o terreno (substitui a economia antiga
+    quando há sítio);
+  - `efeitosDoSitio` escreve vantagens e desvantagens a partir dos mesmos
+    números da regra;
+  - saves antigos migram para o sítio real.
+- Bugs acima corrigidos (dia duplo, `Date.now`, herdeiro por sorteio
+  derivado com nomes do mundo).
+- Tela: fundação lista os sítios com vantagens e desvantagens exatas
+  (`ui/screens/Colonia.tsx`); card do sítio com o relatório do dia na aba
+  Soberania.
+- Teste: `engine/colonia.selftest.ts` (terreno, água, traços, fundação no
+  lugar, migração, sem consumo de RNG).
+
+### Próximas etapas (não feitas; plano para a próxima sessão)
+- **B. Gente** — rascunho pronto e testado só no papel em
+  `docs/colonia-etapa-B/`:
+  - 24 arquétipos de quem chega, com histórias;
+  - colonos com nome, aptidões por ofício, temperamento, humor e lealdade;
+  - chegada por renome, com aceitar ou recusar à porta;
+  - responsáveis por ofício mudam a produção;
+  - aba "Gente".
+  - `aplicar_B.py` copia os arquivos e liga tudo (tipos, colonia.ts, store,
+    aba). Rodar, depois `typecheck` e `tsx engine/colonos.selftest.ts`.
+    Ainda não foi executado contra o repositório.
+- **C. Comida e animais**: cultivos por sítio; rebanhos (galinha, porco,
+  cabra, ovelha, vaca, cavalo, mula) com função real (ovos, carne, leite, lã,
+  tração, patrulha, carga); reprodução; feno no inverno; doença; cuidadora
+  responsável. `SitioColonia.animais` já diz quantos há por região.
+- **D. Audiências** (estilo *Yes, Your Grace*): pedidos diários gerados do
+  estado (briga entre colonas briguentas, falta de comida, proposta de
+  comércio, crime, casamento), com escolhas e consequências em
+  recursos, humor e renome.
+- **E. Ameaça e assembleia**:
+  - aviso com dias de antecedência (+2 na Colina dos Forcados);
+  - assembleia em que o texto livre do jogador é mapeado para um CATÁLOGO de
+    preparações reais (armadilhas, paliçada, fosso, vigias, evacuar, estocar,
+    milícia, pedir ajuda a uma casa, pagar tributo), cada uma com custo,
+    gente e tempo;
+  - o conselho opina conforme o temperamento;
+  - batalha resolvida mostrando o que cada preparação fez;
+  - ameaças vêm do que existe: bandos, casas rivais, onis (o círculo de
+    pedras impede onis).
+- **F. Renome e mundo**:
+  - o tier passa a vir de renome, gente e governo;
+  - casas mandam enviados, cobram tributo e oferecem acordo (o acordo com
+    Tessel tira o quinto do trigo);
+  - bandos miram colônia rica.
+
+Verificações: `typecheck`, `test:engine` completo (com `colonia.selftest.ts`), `test:jornadas`, `test:casas`, `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica às sessões 54-56 (o simulador não funda colônia).

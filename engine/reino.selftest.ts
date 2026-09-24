@@ -198,6 +198,7 @@ feudoT.edificios = {
   lavoura_silos: 4,
   muralha_baluarte: 3,
   boticario_hospital: 2,
+  cisterna_poco: 0,
 };
 
 processarCicloReino(campTier, 4);

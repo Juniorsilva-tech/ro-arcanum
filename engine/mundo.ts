@@ -28,6 +28,7 @@ import { processarCaravanas } from './caravanas';
 import { processarDiretorDeArcos } from './diretor';
 import { avancarCicloSubespaco } from './tsukimichi';
 import { processarCicloReino } from './reino';
+import { processarDiaColonia } from './colonia';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -237,6 +238,8 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     }
     if (camp.feudo?.fundado) {
       processarCicloReino(camp, 4);
+      // Colônia num sítio real: o terreno decide a economia (engine/colonia.ts).
+      processarDiaColonia(content, camp);
     }
     m.diaProcessado = dia;
   }

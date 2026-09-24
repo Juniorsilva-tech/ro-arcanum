@@ -17,6 +17,7 @@ import { iniciarFamilia } from './familia';
 import { migrarProgressaoNpcs } from './progressaoNpc';
 import { recalcularRecursosMaximos } from './progresso';
 import { iniciarMundoVivo } from './historiaViva';
+import { migrarColonia } from './colonia';
 import { migrarAptidao } from './aptidao';
 import { estadoMarca } from './marca';
 
@@ -130,6 +131,8 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   camp.mundo ??= mundoInicial(camp);
   iniciarContinuidade(content, camp);
   iniciarMundoVivo(content, camp);
+  // Colônia fundada num ponto que não era lugar do mapa vai para o sítio real.
+  migrarColonia(content, camp);
   migrarProgressaoNpcs(content, camp);
   // Marca despertada antes da sessão 47: o prazo passa a contar do carregamento.
   estadoMarca(camp);

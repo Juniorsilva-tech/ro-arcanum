@@ -64,4 +64,5 @@ export * from './edificiosRegionais';
 export * from './memoriaMundo';
 export * from './diretor';
 export * from './trabalhosEspecializados';
+export * from './colonia';
 export * from './segredos';

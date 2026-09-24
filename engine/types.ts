@@ -756,6 +756,8 @@ export type ContentBundle = {
   // (engine/edificiosRegionais.ts). Ausente = todas iguais, teto 5.
   edificiosRegionais?: EdificioRegional[];
   tetoEdificios?: Record<string, number>;
+  /** Lugares sem dona onde se pode fundar colônia (engine/colonia.ts). */
+  sitiosColonia?: import('../content/vaelhorn/sitios').SitioColonia[];
   // Pares de facções com rivalidade de fundo real o bastante pra às vezes
   // virar guerra aberta, longe do jogador (ver engine/guerra.ts). Ausente =
   // cenário sem esse tipo de tensão política.
@@ -1000,7 +1002,8 @@ export type TipoEdificioModular =
   | 'oficina_forja'
   | 'lavoura_silos'
   | 'muralha_baluarte'
-  | 'boticario_hospital';
+  | 'boticario_hospital'
+  | 'cisterna_poco';
 
 export type ObraAtiva = {
   id: string;
@@ -1160,6 +1163,14 @@ export type FeudoState = {
   vassalos?: LordeVassalo[];
   tramasAtivas?: TramaReino[];
   guerraDeclaradaAlvoId?: string;
+
+  // Colônia num lugar real do mapa (engine/colonia.ts, sessão 57).
+  /** Id do sítio (content/vaelhorn/sitios.ts); ausente = regra antiga. */
+  sitio?: string;
+  /** Casas com quem há acordo (ex.: 'tessel' deixa de levar o quinto do trigo). */
+  acordos?: string[];
+  farolAceso?: boolean;
+  ultimoRelatorio?: { dia: number } & import('./colonia').RelatorioDia;
 };
 
 // ── Contratos de Caça a Monstros (Estilo The Witcher) & Treinos Imersivos

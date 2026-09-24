@@ -78,6 +78,8 @@ import {
   despacharCaravanaFeudo,
   definirRotaPatrulhaFeudo,
   processarCicloReino,
+  fundarColonia,
+  reacenderFarol,
   fundarCasaDinastica,
   nomearConselheiro,
   removerConselheiro,
@@ -278,6 +280,8 @@ interface GameState {
   executarTreinoQuaseMorteAcao: () => Promise<string>;
 
   fundarFeudoAcao: (nome: string, localId: string, bioma?: BiomaFeudo) => Promise<string>;
+  fundarColoniaAcao: (nome: string) => Promise<string>;
+  reacenderFarolAcao: () => Promise<string>;
   iniciarObraFeudoAcao: (tipo: TipoEdificioModular) => Promise<string>;
   despacharCaravanaFeudoAcao: (destinoId: string, destinoNome: string, cargaTipo: CargaCaravana) => Promise<string>;
   definirPatrulhaFeudoAcao: (regiaoAlvo: string, nomeRegiao: string, soldados: number) => Promise<string>;
@@ -698,6 +702,24 @@ export const useGame = create<GameState>((set, get) => ({
     return r.mensagem;
   },
 
+  async fundarColoniaAcao(nome) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const r = fundarColonia(content, camp, nome);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async reacenderFarolAcao() {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const r = reacenderFarol(content, camp);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
   async fundarFeudoAcao(nome, localId, bioma) {
     const { camp } = get();
     if (!camp) return '';
@@ -741,8 +763,9 @@ export const useGame = create<GameState>((set, get) => ({
     camp.capitulo.periodosDecorridos += 4;
     camp.calendario = avancarPeriodos(camp.calendario, 4);
     crescerImpulsos(camp, 4);
+    // avancarMundo já processa o dia do feudo; chamar processarCicloReino de
+    // novo aqui contava a produção duas vezes.
     avancarMundo(content, camp);
-    processarCicloReino(camp, 4);
     const msg = 'Você passou o dia supervisionando as obras, inspecionando os armazéns e organizando o feudo.';
     set({ camp: { ...camp }, feed: [...get().feed, nf(msg, 'sistema')] });
     await persistir(camp, set);

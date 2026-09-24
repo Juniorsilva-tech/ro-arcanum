@@ -6,6 +6,7 @@ import { Pagina, BarraVoltar } from './_layout';
 import { TextoMono, TextoSerif, Card, Botao, Divisor, Medidor, Selo } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
+import { FundacaoColonia, SitioDaColonia } from './Colonia';
 import {
   obterFeudo,
   CATALOGO_EDIFICIOS,
@@ -128,49 +129,7 @@ export function Assentamento() {
 
       {/* Caso o feudo ainda não tenha sido fundado formalmente */}
       {!feudo.fundado ? (
-        <Card style={{ marginVertical: esp.md }}>
-          <TextoSerif style={{ fontSize: 22, color: cores.ouro }}>Reivindicar Terras & Fundar Assentamento</TextoSerif>
-          <TextoMono style={{ marginVertical: esp.sm }}>
-            O soberano pode estabelecer sua sede de clã e construir um reino a partir de qualquer bioma do continente.
-            Escolha uma posição estratégica para fundar sua fortaleza:
-          </TextoMono>
-
-          <Divisor label="pontos estratégicos do continente" />
-          {PONTOS_DE_ASSENTAMENTO.map((p) => {
-            const selecionado = localSelecionado === p.id;
-            return (
-              <Card
-                key={p.id}
-                onPress={() => {
-                  setLocalSelecionado(p.id);
-                  setBiomaEscolhido(p.bioma);
-                  if (!nomeNovoFeudo) setNomeNovoFeudo(p.nome);
-                }}
-                acento={selecionado ? cores.ouro : undefined}
-                style={[selecionado && { borderColor: cores.ouro, borderWidth: 1 }]}
-              >
-                <View style={styles.linhaEntre}>
-                  <TextoSerif style={{ fontSize: 18 }}>{p.nome}</TextoSerif>
-                  <Selo texto={p.bioma.toUpperCase()} cor={cores.verdigris} />
-                </View>
-                <TextoMono style={{ color: cores.mudo, marginVertical: 4 }}>{p.descricao}</TextoMono>
-                <TextoMono style={{ color: cores.verdigris }}>{p.vantagem}</TextoMono>
-                <TextoMono style={{ fontSize: 11, marginTop: 4 }}>
-                  Recursos Iniciais: {p.recursosIniciais.comida} comida · {p.recursosIniciais.materiais} materiais · {p.recursosIniciais.ouro} ouro
-                </TextoMono>
-              </Card>
-            );
-          })}
-
-          <View style={{ marginTop: esp.md, gap: 8 }}>
-            <Botao
-              titulo="Fincar Estandarte & Iniciar Domínio"
-              sub={`Estabelecer feudo no ponto selecionado`}
-              variante="acento"
-              onPress={() => fundar(nomeNovoFeudo || 'Novo Domínio', localSelecionado, biomaEscolhido)}
-            />
-          </View>
-        </Card>
+        <FundacaoColonia />
       ) : (
         <>
           {/* Navegação de Abas do Assentamento */}
@@ -242,6 +201,7 @@ export function Assentamento() {
           {/* ABA GERAL: Visão Geral de Recursos, Soberania e Canteiro Ativo */}
           {abaAtiva === 'geral' && (
             <View style={{ gap: esp.md }}>
+              <SitioDaColonia />
               <Card>
                 <View style={styles.linhaEntre}>
                   <TextoSerif style={{ fontSize: 20 }}>Recursos & Estoques do Feudo</TextoSerif>
@@ -258,21 +218,21 @@ export function Assentamento() {
                   </View>
                   <View style={styles.caixaRecurso}>
                     <Text style={styles.rotuloRecurso}>Tesouro</Text>
-                    <Text style={[styles.valorRecurso, { color: cores.ouro }]}>{feudo.tesouro} o</Text>
+                    <Text style={[styles.valorRecurso, { color: cores.ouro }]}>{Math.floor(feudo.tesouro)} o</Text>
                   </View>
                   <View style={styles.caixaRecurso}>
                     <Text style={styles.rotuloRecurso}>Materiais</Text>
-                    <Text style={styles.valorRecurso}>{feudo.materiais} m</Text>
+                    <Text style={styles.valorRecurso}>{Math.floor(feudo.materiais)} m</Text>
                   </View>
                   <View style={styles.caixaRecurso}>
                     <Text style={styles.rotuloRecurso}>Provisões</Text>
                     <Text style={[styles.valorRecurso, { color: feudo.comida < 20 ? cores.cinabrio : cores.vellum }]}>
-                      {feudo.comida} c
+                      {Math.floor(feudo.comida)} c
                     </Text>
                   </View>
                   <View style={styles.caixaRecurso}>
                     <Text style={styles.rotuloRecurso}>Remédios</Text>
-                    <Text style={styles.valorRecurso}>{feudo.remedios} r</Text>
+                    <Text style={styles.valorRecurso}>{Math.floor(feudo.remedios)} r</Text>
                   </View>
                   <View style={styles.caixaRecurso}>
                     <Text style={styles.rotuloRecurso}>Ouro Pessoal</Text>
