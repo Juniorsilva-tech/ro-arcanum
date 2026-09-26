@@ -22,11 +22,11 @@ Antes de alterar qualquer coisa:
 O registro cresceu além do que um agente novo consegue ler antes de começar.
 Na sessão 16 ele foi dividido:
 
-- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (56 em
+- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (58 em
   diante), problemas abertos e próximo passo. É o que se lê antes de trabalhar.
-- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 55, na íntegra e sem edição. Consultar
+- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 57, na íntegra e sem edição. Consultar
   quando for preciso saber *por que* alguma decisão antiga foi tomada. As
-  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, 51 a 53 na sessão 58, e 54 a 55 na sessão 62.
+  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, 51 a 53 na sessão 58, 54 a 55 na sessão 62, e 56 a 57 na sessão 69.
 
 Nada foi apagado. Ao encerrar uma sessão, escreva aqui; quando este arquivo
 passar de ~800 linhas, mova as sessões mais antigas para o arquivo do mesmo
@@ -67,223 +67,6 @@ jeito, mantendo o texto original.
 | 66 | Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores e Realismo Imersivo |
 | 67 | Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo |
 | 68 | Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado |
-
----
-
-## Sessão 56 — Claude — as moradoras: história, segredo e nome
-
-### Estado encontrado
-- 71 das 249 pessoas do elenco não tinham história.
-- 49 moradoras procedurais tinham um "segredo" que era só a história pública
-  do lugar com uma frase na frente. O povoamento sorteava uma linha de
-  `Local.historia` e escrevia "Mentiu no depoimento da época. O cerco de
-  dezoito anos atrás durou quarenta dias.". Qualquer pessoa na praça sabe
-  isso.
-- Nomes: a lista de alcunhas tinha formas masculinas, e saíam "Elna o Manco",
-  "Lira o Surdo", "Sela o Gordo", "Eda o Torto" — num vale onde toda
-  moradora é mulher.
-- A ocupação "moça que some por dias" saía para mulheres de 41 a 59 anos.
-
-### O que foi feito
-- **71 histórias** (origem, ferida, desejo, medo) e **49 segredos** no lugar
-  dos segredos-modelo, em `content/vaelhorn/historias-moradores.ts`. Cada um
-  foi casado com o que o elenco já tinha:
-  - **Tessel:** o cerco; a gêmea do registro.
-  - **Corveira:** o desabamento; os trinta e quatro nomes que Wyn apaga e
-    guarda no forro do casaco.
-  - **Mareu:** a peste; o galpão da quarentena.
-  - **Porto do Sal:** as salinas.
-  - **Juncal:** a Toca.
-  - **Lenha Alta:** o inverno em que algo entrou na aldeia.
-  - **Ferro Velho:** o metal recuperado.
-
-  Cada segredo diz em `comoDescobrir` o caminho em jogo.
-- **Alcunhas no feminino**: 'o Torto' → 'a Torta', 'o Manco' → 'a Manca',
-  'o Novo' → 'a Nova', 'o Gordo' → 'a Gorda', 'o Surdo' → 'a Surda'.
-  - Mesma posição na lista, então o sorteio não muda e ninguém troca de
-    nome-próprio, ofício ou idade.
-  - 28 menções em textos já escritos foram trocadas junto (segredos,
-    famílias, histórias), e as famílias "as do Gordo" e "as do Torto" viraram
-    "as da Gorda" e "as da Torta".
-  - "moça que some por dias" virou "mulher que some por dias".
-- Seis histórias recitavam o próprio segredo. O teste da sessão 49 pegou, e
-  elas foram reescritas para aludir.
-
-### Arquivos
-Novo: `content/vaelhorn/historias-moradores.ts`.
-Alterados:
-- `content/vaelhorn/index.ts` (prioridade: segredo reescrito > segredo da
-  moradora > segredo do conteúdo);
-- `content/vaelhorn/povoamento.ts` (alcunhas, ocupação);
-- `content/vaelhorn/segredos.ts`, `familias.ts`, `historias-continente.ts`
-  (nomes);
-- `engine/lore.selftest.ts`.
-
-### Verificações
-- `historiasNpc.selftest.ts`: 249 histórias e 249 segredos; campos com 40+
-  caracteres, sem genérico e sem repetição; nenhuma história copia trecho de
-  segredo.
-- `lore.selftest.ts`:
-  - nenhum segredo-modelo;
-  - as 249 pessoas com história e segredo;
-  - nenhuma moradora com alcunha no masculino;
-  - as 172 moradoras com o mesmo nome-próprio, ofício, idade e lugar.
-    Compara o povoamento com o pacote, os dois já com as alcunhas novas.
-- `familiasNpc`, `elenco`, `povoamento`, `continente`, `typecheck`,
-  `test:engine` completo, `test:jornadas`, `test:casas`, `vaelhorn_expansao`,
-  `expo export`: verdes.
-
----
-
-## Resumo do trabalho das sessões 47 a 56 (plano docs/PLANO-FABLE-5.1.md)
-
-### Fases concluídas
-| Fase | Sessão | O que mudou para quem joga |
-| --- | --- | --- |
-| 1. Marca do Caçador | 47 | A Marca desperta só em luta de verdade (oni de nível 8+, à beira da morte), avisa o preço e pode ser contida na Casa Sem Nome na Névoa. |
-| 2. Famílias entre NPCs | 48 | 43 famílias; luto, herança de ofício e gratidão se espalham pela família. |
-| 3. NPCs com história | 49 | Histórias e segredos com consequência. |
-| 4. Casas nobres | 50 | As quatro casas têm gente, sucessão pela regra, e agem no mundo (obra, celeiro, patrulha, missão, casamento, trama). |
-| 5. Estações, feras, caravanas | 51 | Feras por estação, matilha com teto por nível (nível 1 nunca enfrenta dois), nevasca nos passos, caravanas de grão que podem ser atacadas e escoltadas. |
-| 6. Cidades e forja | 52 | Um edifício por região (Fundição Alta, Cais Grande, Praça de Armas, Cisterna e Bazar, Pátio da Madeira); capitais até nível 7; a primeira forja no dia 1. |
-| 8. O mundo lembra, Diretor de Arcos | 53 | Voltar a um lugar onde você fez algo marcante gera uma linha; no máximo um gancho a cada 3 dias apontando para o que existe; "O que o mundo lembra de você" na Crônica. |
-| (pedido do dono) Ligar o que estava solto | 54 | Trabalhos do lugar, treino com Musashi e Bai Long, contratos de monstro com tela; 16 armas lendárias com história e dono; 23 onis com prosa. |
-| (pedido do dono) História | 55–56 | Bestiário de 71 criaturas; os 53 lugares e as 4 casas com história; as 249 pessoas com história e segredo próprios. |
-
-### Fases não feitas
-- **Fase 7 (NPCs de Tsukimichi)**: fora, a pedido do dono ("foca só em
-  vaelhorn").
-- **Fase 9 (quebrar `store.ts`/`Paineis.tsx`, teste de interface)**: não
-  feita. O plano a põe por último e "só se sobrar tempo"; o dono pediu
-  história antes.
-
-### O que testar no celular (lista curta)
-1. **Primeira forja**: crie personagem, vá da taverna à Feira Coberta,
-   trabalhe um turno, compre carvão e dois minérios, forje uma lâmina curta
-   no Inventário.
-2. **Corveira**: na tela Comunidade, veja a Fundição Alta; forje lá sem
-   carvão; faça um turno na galeria funda.
-3. **Contrato de monstro**: na taverna, aceite "O Terror das Caravanas de
-   Val-Cinza"; na Mata de Corvos, procure as pistas; passe óleo contra feras
-   (se tiver) e enfrente o lobo.
-4. **Treino**: vá ao Passo do Lobo e faça um livro dos katas; tente de novo
-   no mesmo dia (tem de recusar).
-5. **Crônica**: depois de vencer umas criaturas, abra a Crônica e veja o
-   Bestiário e "O que o mundo lembra de você".
-6. **Casa**: cumpra missões para gente de uma casa (Tessel é a mais fácil) e
-   veja a casa confiar o elmo e depois a espada.
-7. **Inverno**: jogue até o inverno e veja se aparece a nevasca e mais lobo
-   na estrada.
-
-### Riscos conhecidos
-- **Narração real não foi testada**: não havia `EXPO_PUBLIC_NOUS_API_KEY`
-  neste ambiente. O narrador local (sem chave) foi o único exercitado.
-- **Fome rara**: com caravanas e o peixe do Cais Grande, dias-cidade em fome
-  caíram de 2.621 para ~550 por campanha. Botões: `COMIDA_PARA_MANDAR` e
-  `CARGA_MAXIMA` em `engine/caravanas.ts`, `comidaPorDia` do cais.
-- **Morte pela Marca na simulação**: o simulador nunca vai conter a Marca;
-  em uma das rodadas (sessão 52) uma campanha morreu dela. É a regra
-  funcionando; se incomodar, a política da simulação precisa aprender a
-  conter.
-- **Linha do tempo de Mir** (decisão do dono): o cenário diz "três gerações"
-  de Leva; As Ruínas de Mir e Vell dizem "vinte anos". Os textos novos não
-  datam o incêndio.
-- **Ganchos repetidos**: o diretor pode voltar ao mesmo capitão ou casa a
-  cada 20 dias; se cansar no celular, suba `DIAS_PARA_REPETIR_ALVO`.
-- **Import circular** `combat.ts` ↔ `caravanas.ts` (só funções). Funciona.
-Simulação longa: idêntica às sessões 54 e 55, linha por linha.
-
----
-
-## Sessão 57 — Claude — colônia num lugar real (etapa A de F)
-
-Pedido do dono: aprofundar o assentamento/reino do Gemini. O dono pediu para
-terminar só a etapa A nesta sessão e fazer o resto em outra.
-
-### Auditoria do que existia (`engine/reino.ts`, `ui/screens/Assentamento.tsx`)
-- A fundação acontecia num "ponto" que não era lugar do mapa
-  (`halvet_colinas`) e podia ser feita de qualquer lugar. O jogo achava o
-  soberano sempre ausente, e nenhuma cidade sabia da colônia.
-- As vantagens dos pontos eram texto (quase nenhuma estava no código), e
-  desvantagem não havia.
-- A colônia nascia com castelo, quartel, mercado, forja e muralha prontos.
-- A população era um número, que crescia só por refugiados (4 por vez,
-  sempre que alguma cidade estivesse em crise).
-- Estabilidade e segurança não tinham efeito nenhum.
-- "Declarar guerra" só gravava um id. Ninguém atacava a colônia.
-- Tier por contagem de prédios.
-- Bugs:
-  - "supervisionar obras" processava o dia duas vezes;
-  - `Date.now()` em ids de regra;
-  - herdeiro nascia menino ou menina pela paridade do turno, com nomes de
-    outra saga.
-
-### Etapa A (feita)
-- `content/vaelhorn/sitios.ts`: seis sítios reais, os lugares sem dona de
-  cada região (Campos da Ceifa, Colina dos Forcados, Clareira das Pedras,
-  Farol Quebrado, Ruína de Areia, Vau de Pedra). Cada um tem:
-  - terreno de 0 a 3 (água, solo, madeira, pedra, caça, pesca, pasto, defesa,
-    passagem, perigo, inverno);
-  - casa que reivindica a terra;
-  - animais da região;
-  - um traço próprio: o trigo do marechal (Tessel leva 1/5 da roça), a vista
-    do planalto, o círculo de pedras, o farol apagado (destroços; reacender),
-    a areia que devolve (achados e obra soterrada), a travessia (pedágio e
-    cheias).
-- `engine/colonia.ts`:
-  - funda-se estando no sítio;
-  - começa com 6 pessoas, abrigos e uma roça;
-  - a água limita a população (poço e cisterna, edifício novo
-    `cisterna_poco`);
-  - o passe diário da colônia usa o terreno (substitui a economia antiga
-    quando há sítio);
-  - `efeitosDoSitio` escreve vantagens e desvantagens a partir dos mesmos
-    números da regra;
-  - saves antigos migram para o sítio real.
-- Bugs acima corrigidos (dia duplo, `Date.now`, herdeiro por sorteio
-  derivado com nomes do mundo).
-- Tela: fundação lista os sítios com vantagens e desvantagens exatas
-  (`ui/screens/Colonia.tsx`); card do sítio com o relatório do dia na aba
-  Soberania.
-- Teste: `engine/colonia.selftest.ts` (terreno, água, traços, fundação no
-  lugar, migração, sem consumo de RNG).
-
-### Próximas etapas (não feitas; plano para a próxima sessão)
-- **B. Gente** — rascunho pronto e testado só no papel em
-  `docs/colonia-etapa-B/`:
-  - 24 arquétipos de quem chega, com histórias;
-  - colonos com nome, aptidões por ofício, temperamento, humor e lealdade;
-  - chegada por renome, com aceitar ou recusar à porta;
-  - responsáveis por ofício mudam a produção;
-  - aba "Gente".
-  - `aplicar_B.py` copia os arquivos e liga tudo (tipos, colonia.ts, store,
-    aba). Rodar, depois `typecheck` e `tsx engine/colonos.selftest.ts`.
-    Ainda não foi executado contra o repositório.
-- **C. Comida e animais**: cultivos por sítio; rebanhos (galinha, porco,
-  cabra, ovelha, vaca, cavalo, mula) com função real (ovos, carne, leite, lã,
-  tração, patrulha, carga); reprodução; feno no inverno; doença; cuidadora
-  responsável. `SitioColonia.animais` já diz quantos há por região.
-- **D. Audiências** (estilo *Yes, Your Grace*): pedidos diários gerados do
-  estado (briga entre colonas briguentas, falta de comida, proposta de
-  comércio, crime, casamento), com escolhas e consequências em
-  recursos, humor e renome.
-- **E. Ameaça e assembleia**:
-  - aviso com dias de antecedência (+2 na Colina dos Forcados);
-  - assembleia em que o texto livre do jogador é mapeado para um CATÁLOGO de
-    preparações reais (armadilhas, paliçada, fosso, vigias, evacuar, estocar,
-    milícia, pedir ajuda a uma casa, pagar tributo), cada uma com custo,
-    gente e tempo;
-  - o conselho opina conforme o temperamento;
-  - batalha resolvida mostrando o que cada preparação fez;
-  - ameaças vêm do que existe: bandos, casas rivais, onis (o círculo de
-    pedras impede onis).
-- **F. Renome e mundo**:
-  - o tier passa a vir de renome, gente e governo;
-  - casas mandam enviados, cobram tributo e oferecem acordo (o acordo com
-    Tessel tira o quinto do trigo);
-  - bandos miram colônia rica.
-
-Verificações: `typecheck`, `test:engine` completo (com `colonia.selftest.ts`), `test:jornadas`, `test:casas`, `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica às sessões 54-56 (o simulador não funda colônia).
 
 ---
 
@@ -515,6 +298,11 @@ erros antes do commit dele.
 - `npm run test:vaelhorn`: todos os testes passaram.
 - `npx expo export --platform web`: build web concluído com sucesso em 2601ms.
 
+## Sessão 58 (continuação) — Claude — colônia na tela e revisão do mapa
+
+(Estas três partes são da sessão 58 e foram escritas depois da sessão 59 do
+outro agente; ficam aqui na ordem em que aconteceram.)
+
 ### Teste da colônia na tela (web) — sessão 58
 Save real gerado pela engine (colônia "Pedra Alta" na Colina dos Forcados, dia
 339, matilha anunciada, rebanho), gravado no armazenamento do navegador e
@@ -585,7 +373,7 @@ menos de 3% um do outro.
 - Testado no navegador: arrastos fortes nas quatro direções param na borda
   com a imagem cobrindo a janela; hover mostra e esconde o nome; clique viaja.
 
-### Vivedez do Mundo, Cidades do Continente e Ciclo Dia/Tarde/Noite (sessão 60)
+## Sessão 60 — Gemini — Vivedez do Mundo, Cidades do Continente e Ciclo Dia/Tarde/Noite
 Auditoria profunda e implementação da vivedez do mundo e identidade visual dos reinos:
 - **Resgate e Expansão de Cidades (`engine/cidades.ts`)**:
   - Povoações em ruínas (`populacao === 0 && integridade < 40`) recebem expedições de resgate de cidades vizinhas prósperas (transferência de mantimentos, materiais e colonos).
@@ -607,7 +395,7 @@ Auditoria profunda e implementação da vivedez do mundo e identidade visual dos
   - `npm run typecheck` limpo.
   - `npx expo export --platform web` gerou bundle e 19 assets com sucesso.
 
-### Profundidade dos NPCs, Humor Vivo, Desejos Pessoais & Intimidade Progressiva (sessão 61)
+## Sessão 61 — Gemini — Profundidade dos NPCs, Humor Vivo, Desejos Pessoais & Intimidade Progressiva
 Implementação completa da psicologia viva, intimidade e anseios dos NPCs:
 - **Engine de Intimidade & Humor (`engine/intimidadeNpc.ts`)**:
   - `calcularHumorNpc`: calcula em tempo real o estado de espírito humano do morador (`luto`, `aterrorizado`, `tenso`, `cauteloso`, `acolhedor`, `grato`, `sereno`, `morto`) cruzando tensão, medo, luto recente familiar, anseios apoiados e histórico de convívio.
@@ -632,7 +420,7 @@ Implementação completa da psicologia viva, intimidade e anseios dos NPCs:
   - `npm run typecheck` sem erros.
   - `npx expo export --platform web` gerou bundle e assets perfeitamente.
 
-### Cosmologia, As 7 Bruxas dos Pecados Capitais (Re:Zero), Religião & 67 Pontos do Mapa (sessão 62)
+## Sessão 62 — Gemini — Cosmologia, As 7 Bruxas dos Pecados Capitais (Re:Zero), Religião & 67 Pontos do Mapa
 Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais, as 7 Bruxas dos Pecados Capitais e crônicas vivas para todos os pontos do mapa:
 - **Cosmologia Central & Guerra Primordial (`content/vaelhorn/cosmologia.ts`)**:
   - `MITO_ORIGEM_MAGIA`: A Guerra do Firmamento em que os Deuses Maiores caíram sobre a terra; o "Mana" é o sangue e as cinzas incandescentes dos cadáveres divinos escorrendo pelas veias do continente. Conjurar magia é uma profanação que acorda a dor dos deuses sepultados.
@@ -677,7 +465,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `npm run typecheck`: 0 erros de tipagem.
   - `npx expo export --platform web`: exportação web concluída com código 0 e todos os bundles e assets gerados.
 
-### Sessão 63 — Gemini — Longcat Padrão, Correção Streaming da Nous, Prólogo Prodígio & Teste In-Game
+## Sessão 63 — Gemini — Longcat Padrão, Correção Streaming da Nous, Prólogo Prodígio & Teste In-Game
 - **Longcat como Modelo Padrão Definitivo**:
   - `engine/llm.ts`: `MODELO_PADRAO_NOUS` alterado de `'upstage/solar-pro4:free'` para `'meituan/longcat-2.0:free'` e posicionado como 1ª opção em `SUGESTOES_NOUS`.
   - `ui/storage.ts`: `configPadrao` atualizado para `{ provider: 'nous', modelo: 'meituan/longcat-2.0:free', usarModelo: true, avisoAceito: false }`.
@@ -706,7 +494,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `npx tsx engine/cosmologia.selftest.ts` e `engine/intimidadeNpc.selftest.ts`: 100% aprovados.
   - `npm run test:engine`: 40+ suítes de teste + 6 campanhas de 10 anos (21.000 ações) concluídas com 0 violações de invariante.
 
-### Sessão 64 — Gemini — Remoção do Longcat Descontinuado & Ativação do Space Bunny Alpha
+## Sessão 64 — Gemini — Remoção do Longcat Descontinuado & Ativação do Space Bunny Alpha
 
 - **Descontinuação do Longcat & Modelos na Nous Research**:
   - A Nous Research descontinuou oficialmente o tier gratuito do Longcat (`meituan/longcat-2.0:free`), retornando HTTP 404. A variante paga (`meituan/longcat-2.0`) exige saldo de créditos (erro 401: balance too low). Modelos como `ling/ling-3.0-flash-*:free` e `poolside/laguna-xs-2.1:free` também foram encerrados (404).
@@ -722,7 +510,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `ui/storage.ts`:
     * `configPadrao` atualizado para `stealth/space-bunny-alpha`.
     * `carregarConfig`: adicionada migração automática transparente para qualquer save com referências a `longcat`, `hy3:free`, `ling-3.0` ou `laguna-xs`, atualizando direto para o novo padrão funcional.
-### Sessão 65 — Gemini — Diagnóstico Isolado por Modelo & Correção do Prompt Adulto
+## Sessão 65 — Gemini — Diagnóstico Isolado por Modelo & Correção do Prompt Adulto
 
 - **Diagnóstico Isolado por Modelo (Fim do Fallback Silencioso nos Testes)**:
   - Problema: no painel de Configurações, o botão "Testar narração de verdade" chamava `narrarComFallback`. Quando o modelo escolhido (ex: `space-bunny-alpha`) falhava ou demorava, a engine silenciosamente pulava para o próximo modelo da lista (`inclusionai/ling-3.0-flash-fin:free` ou outro) e exibia o nome do modelo de reserva, gerando confusão de por que aparecia o nome de outro modelo.
@@ -740,7 +528,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `npm run typecheck`: 0 erros.
   - Testes reais no terminal executando `testarNarracaoReal` e `testarSeNarraAdulto` para `upstage/solar-pro4:free` e `stealth/space-bunny-alpha`: ambos testados isoladamente com 100% de sucesso e identificação precisa de cada modelo.
 
-### Sessão 66 — Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores & Realismo Imersivo
+## Sessão 66 — Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores & Realismo Imersivo
 
 - **Objetivo**:
   - Atender à solicitação enfática do usuário: *"REVISE A QUESTÃO DA PROSA, QUERO ALGO BEM SANGRENTO E GORE QUANDO PRECISAR, CENA DE ADULTO QUANDO PRECISAR BEM BÃO, TUDO BEM REALISTA E DIVERTIDO E IMERSIVO..."*.
@@ -767,7 +555,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
 - **Próximo passo recomendado**:
   - Jogar diretamente pelo app e aproveitar a intensidade máxima dos combates sangrentos e romances adultos.
 
-### Sessão 67 — Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo
+## Sessão 67 — Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo
 
 - **Objetivo**:
   - Atender à crítica e demanda do usuário por uma história mais medieval histórica, crua e pé no chão ("tipo antes ou depois de cristo"), eliminando o misticismo vago da "ponte mágica que caiu e homens que somem em transe aos 18 anos".
@@ -803,7 +591,7 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
 - **Próximo passo recomendado**:
   - Continuar expandindo facções e encontros regionais pé no chão ou testar a experiência de jogo diretamente no cliente.
 
-### Sessão 68 — Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado
+## Sessão 68 — Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado
 
 - **Objetivo**:
   - Atender à demanda do usuário de revisar e aprofundar as missões e histórias, expurgando resquícios de fantasia genérica ou mágica e substituindo por ameaças viscerais, conflito eclesiástico feudal e crueza medieval.
@@ -838,3 +626,73 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `engine/despertar.selftest.ts`: 100% aprovado.
   - `engine/historiasNpc.selftest.ts`: 100% aprovado.
   - `npm run test:vaelhorn` e `npm run test:casas`: 100% aprovados.
+
+---
+
+## Sessão 69 — Claude — revisão do trabalho do Gemini (sessões 60 a 68)
+
+### Estado encontrado
+As sessões 60 a 68 (Gemini) estavam inteiras sem commit: 33 arquivos
+alterados e 11 novos. Conferido antes de mexer: tsc limpo, `test:engine`
+completo (simulação longa 6/6, 0 violações), jornadas, casas,
+vaelhorn_expansao, expo export; nenhum segredo no diff. Commitado como estava
+(`2a2ce70`).
+
+Problemas achados na revisão, e o que o dono pediu: resolver 1, 3, 4, 5 e 6;
+**deixar o 2 de fora**.
+
+1. Tudo sem commit — resolvido em `2a2ce70`.
+2. **(Não feito, a pedido do dono.)** A regra de 18+ nas cenas adultas é só uma
+   frase no prompt (`engine/llm.ts`, regra 5a e a linha seguinte); a engine não
+   bloqueia nada. O jogo tem menores: o jogador na infância (6 a 10 anos), a
+   colona "Sabine a Menina" (14) e órfãos procedurais. Fica registrado como
+   risco aberto.
+3. Direções contraditórias: a sessão 62 pôs deuses caídos, mana de sangue
+   divino e bruxas como fato; a 67 pediu mundo medieval pé no chão. Resolvido
+   tratando a cosmologia como CRENÇA: o mito é "o que a Igreja ensina", o
+   narrador (regra 2e de `llm.ts`) conta como fé e medo, nunca como fato, e
+   nunca faz deus ou bruxa aparecer. As crônicas que afirmavam que a Invejosa
+   incendiou Mir, rachou a ponte e levou os meninos agora contam a revolta
+   esmagada pela Coroa, a sabotagem e o Tributo de Sangue, com a bruxa como o
+   que o povo prefere culpar.
+4. Personagens de Re:Zero (Satella, Echidna, Typhon, Minerva, Sekhmet, Daphne,
+   Carmilla, Hector, Pandora; "Autoridade", "Santo da Espada", "Evangelhos",
+   "Bispos do Pecado", "Culto da Bruxa"): viraram as **Sete Pecadoras** do vale
+   — Ysmera a Invejosa, Aldonsa a Juíza, Brunhe a Colérica, Morgelle a
+   Adormecida, Dagra a Faminta, Liessa a Encantadora, Otília a Escrivã, Anselmo
+   o Enlutado, Rosamunda a Vaidosa. O dono pediu que a inspiração em Re:Zero
+   ficasse forte: ficaram os arquétipos (a que devora as irmãs com mãos de
+   sombra e ama sem deixar espaço, a juíza de olhar manso cuja culpa quebra os
+   ossos, a cura aos socos, a que mal respira e derruba exércitos com mãos
+   invisíveis, a de olhos vendados que pariu as feras, a sem rosto que é amada
+   até a morte, a que serve chá das almas, o viúvo cujo luto pesa como chumbo,
+   a de cabelos de prata que desfaz o que aconteceu). Cada uma tem a lenda e o
+   que os autos da Ordem registram (eram curandeira, escrivã, juíza de aldeia,
+   pregador contra o Tributo...). O culto virou "Filhos do Véu Negro".
+   `cosmologia.selftest.ts` agora barra qualquer nome ou termo copiado. Livro
+   (VI · As Sete Pecadoras), autodiagnóstico e narrador atualizados.
+   Commit `8432807`.
+5. Premissa antiga que sobrou (meninos que "iam à ponte" aos dezoito) em
+   `familias.ts`, `historias-vale.ts`, `historias-moradores.ts`,
+   `colonos.ts`, `segredos.ts` e um comentário de `types.ts`: reescritas para o
+   Tributo de Sangue. O segredo de Orla (esconde meninos na Toca) fecha com a
+   Coroa levando três deles assim mesmo. "Leva" já servia como o recrutamento.
+   Commits `100edfb` e `f0baf83` (o teste de histórias passou a reconhecer
+   Coroa, Tributo, Sangue, Ordem e Selo como termos do mundo; eu tinha
+   commitado o primeiro com esse teste falhando, e corrigi em seguida).
+6. HANDOFF:
+   - `scripts/test_repetition_logic.ts`, citado na sessão 63 como teste
+     aprovado, **não existe** no repositório.
+   - As sessões 60 a 68 estavam como subtítulos dentro das sessões 58/59;
+     agora são sessões. A continuação da sessão 58 (colônia na tela, mapa)
+     ganhou título próprio.
+   - Sessões 56 e 57 movidas para `HANDOFF-ARQUIVO.md` sem edição.
+
+### Verificações
+tsc limpo; `test:engine` completo (inclui cosmologia, lore, historiasNpc,
+familiasNpc); expo export web.
+
+### Próximo passo
+- Decidir a trava de idade da engine (item 2), que continua aberta.
+- O modelo padrão da Nous é `stealth/space-bunny-alpha` (sessão 64); conferir
+  de tempos em tempos se continua no ar.
