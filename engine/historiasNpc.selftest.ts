@@ -114,7 +114,7 @@ ok(historias.length >= 150, `${historias.length} NPCs com história escrita (mí
   C.faccoes.forEach(f => junta(f.nome));
   C.criaturas.forEach(c => junta(c.nome));
   (C.familias ?? []).forEach(f => { junta(f.nome); (f.ausentes ?? []).forEach(a => junta(a.nome)); });
-  junta('Corrente Leva Mir Halvet Vaelhorn Hashira Lua Luas Superior Superiores Inferior Chamas Água Trovão Flor Pedra Sol Fera Kamado Kocho Rengoku Ubuyashiki Shinazugawa Idrin Além-Sal Sexto Verrão Varn Ost Quelha Bico-Fino Meia-Orelha Olho-Vivo Pé-de-Ferro Boca-Seca Mão-Curta Sete-Dedos Calada Braza Junco Quilm Arne Bigorna Cava-Fundo Gordo Torto Velha Magra Norte Ponte Surdo Manco');
+  junta('Corrente Leva Coroa Tributo Sangue Ordem Selo Mir Halvet Vaelhorn Hashira Lua Luas Superior Superiores Inferior Chamas Água Trovão Flor Pedra Sol Fera Kamado Kocho Rengoku Ubuyashiki Shinazugawa Idrin Além-Sal Sexto Verrão Varn Ost Quelha Bico-Fino Meia-Orelha Olho-Vivo Pé-de-Ferro Boca-Seca Mão-Curta Sete-Dedos Calada Braza Junco Quilm Arne Bigorna Cava-Fundo Gordo Torto Velha Magra Norte Ponte Surdo Manco');
   const estranhos = new Map<string, string>();
   for (const n of historias) {
     for (const t of Object.values(n.historia!)) {
