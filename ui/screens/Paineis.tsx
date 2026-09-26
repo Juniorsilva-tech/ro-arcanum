@@ -1437,6 +1437,10 @@ export function Missoes() {
 }
 
 // ─────────────────────────────────────────────── O LIVRO
+const NOME_SLOT_LIVRO: Record<string, string> = {
+  arma: 'Armas', armadura: 'Armaduras', escudo: 'Escudos', acessorio: 'Acessórios', consumivel: 'Consumíveis',
+  ferramenta: 'Ferramentas', material: 'Materiais', misc: 'Diversos',
+};
 const ROTULO_CAMADA: Record<string, string> = {
   desconhecida: '?', ouvida: 'boato', localizada: 'sabe onde', acessivel: 'ao alcance', obtida: 'seu', perdida: 'perdido',
 };
@@ -1473,6 +1477,12 @@ export function Livro() {
   const estTrabalhos = estadosDaSecao(content, camp, 'trabalhos', content.trabalhos.map((x) => x.id));
   const estArtes = estadosDaSecao(content, camp, 'artes', content.artes.map((x) => x.id));
   const estReliquias = estadosDaSecao(content, camp, 'reliquias', content.reliquias.map((x) => x.id));
+  const estLugares = estadosDaSecao(content, camp, 'lugares', content.locais.map((x) => x.id));
+  const estItens = estadosDaSecao(content, camp, 'itens', content.itens.map((x) => x.id));
+  const [regiaoAberta, setRegiaoAberta] = useState<string | null>(null);
+  const [slotAberto, setSlotAberto] = useState<string | null>(null);
+  const regioesConhecidas = [...new Set(content.locais.filter((l) => estLugares[l.id] !== 'desconhecida').map((l) => l.regiao ?? 'Sem região'))];
+  const slotsConhecidos = [...new Set(content.itens.filter((i) => estItens[i.id] !== 'desconhecida').map((i) => i.slot))];
   const nomeLocal = (id?: string) => content.locais.find((l) => l.id === id)?.nome ?? 'lugar desconhecido';
   const regiaoDe = (id?: string) => content.locais.find((l) => l.id === id)?.regiao ?? 'algum lugar';
 
@@ -1678,7 +1688,81 @@ export function Livro() {
         );
       })}
 
-      <Divisor label="V · Cosmologia & Os Deuses Primordiais" />
+      {/* V · Lugares, por região. Lugar escondido só aparece depois de
+          descoberto; da região que você conhece, o resto é boato. */}
+      <Divisor label={`V · Lugares · ${descobertas(estLugares)} de ${content.locais.length}`} />
+      {regioesConhecidas.map((reg) => {
+        const lugares = content.locais.filter((l) => (l.regiao ?? 'Sem região') === reg && estLugares[l.id] !== 'desconhecida');
+        const esteve = lugares.filter((l) => estLugares[l.id] === 'obtida').length;
+        const aberta = regiaoAberta === reg;
+        return (
+          <Card key={reg}>
+            <Pressable onPress={() => setRegiaoAberta(aberta ? null : reg)}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18 }}>{reg}</TextoSerif>
+                <TextoMono style={{ color: cores.mudo }}>{esteve} visitados · {lugares.length} conhecidos {aberta ? '▲' : '▼'}</TextoMono>
+              </View>
+            </Pressable>
+            {aberta && lugares.map((l) => {
+              const e = estLugares[l.id];
+              return (
+                <View key={l.id} style={styles.livroLinha}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.livroNome, e === 'ouvida' ? { color: cores.mudo } : e === 'obtida' ? { color: cores.verdigris } : null]}>{l.nome}</Text>
+                    <TextoMono style={{ color: e === 'ouvida' ? cores.mudo : undefined }}>
+                      {e === 'ouvida' ? 'ouviu falar; ainda não sabe o caminho' : e === 'localizada' ? `${l.tipo} · há estrada daqui` : `${l.tipo}${l.id === camp.localAtual ? ' · você está aqui' : ''}`}
+                    </TextoMono>
+                  </View>
+                  <Selo texto={e === 'obtida' ? 'esteve lá' : e === 'localizada' ? 'sabe o caminho' : 'boato'} cor={corCamada(e)} />
+                </View>
+              );
+            })}
+          </Card>
+        );
+      })}
+
+      {/* VI · Itens, por tipo. Boato: vendem na sua região. Sabe onde: numa
+          loja em que você esteve, ou na mão de quem você venceu. Ao alcance:
+          à venda aqui. Seu: já passou pela sua mochila. */}
+      <Divisor label={`VI · Itens · ${descobertas(estItens)} de ${content.itens.length}`} />
+      {slotsConhecidos.map((slot) => {
+        const itens = content.itens.filter((i) => i.slot === slot && estItens[i.id] !== 'desconhecida');
+        const aberta = slotAberto === slot;
+        return (
+          <Card key={slot}>
+            <Pressable onPress={() => setSlotAberto(aberta ? null : slot)}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 18 }}>{NOME_SLOT_LIVRO[slot] ?? slot}</TextoSerif>
+                <TextoMono style={{ color: cores.mudo }}>{itens.filter((i) => estItens[i.id] === 'obtida').length} seus · {itens.length} conhecidos {aberta ? '▲' : '▼'}</TextoMono>
+              </View>
+            </Pressable>
+            {aberta && itens.map((i) => {
+              const e = estItens[i.id];
+              const lojasVistas = (i.lojas ?? []).filter((l) => camp.locaisVisitados.includes(l)).map(nomeLocal);
+              const detalhe = e === 'obtida' || e === 'acessivel';
+              return (
+                <View key={i.id} style={styles.livroLinha}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.livroNome, e === 'ouvida' ? { color: cores.mudo } : e === 'obtida' ? { color: cores.verdigris } : null]}>{i.nome}</Text>
+                    {e === 'ouvida' && <TextoMono style={{ color: cores.mudo }}>vendem na sua região</TextoMono>}
+                    {e === 'localizada' && <TextoMono>{lojasVistas.length ? `à venda em ${lojasVistas.join(', ')}` : 'quem você venceu carregava um'}</TextoMono>}
+                    {detalhe && (
+                      <TextoMono>
+                        {i.descricao}
+                        {i.dano ? ` · dano ${i.dano.base}` : ''}{i.defesa ? ` · +${i.defesa} def` : ''} · vale {i.valor}
+                        {e === 'acessivel' ? ' · à venda aqui' : ''}
+                      </TextoMono>
+                    )}
+                  </View>
+                  <Selo texto={ROTULO_CAMADA[e]} cor={e === 'obtida' && i.raridade && i.raridade !== 'comum' ? corGrauReliquia(i.raridade) : corCamada(e)} />
+                </View>
+              );
+            })}
+          </Card>
+        );
+      })}
+
+      <Divisor label="VII · Cosmologia & Os Deuses Primordiais" />
       <Card acento={cores.ouro}>
         <TextoSerif style={{ fontSize: 19, color: cores.ouro }}>{MITO_ORIGEM_MAGIA.titulo}</TextoSerif>
         <TextoSerif style={{ fontSize: 14.5, color: '#dcd1b8', marginTop: esp.xs, lineHeight: 22 }}>
@@ -1700,7 +1784,7 @@ export function Livro() {
         </Card>
       ))}
 
-      <Divisor label="VI · As Sete Pecadoras & O Tabu da Invejosa" />
+      <Divisor label="VIII · As Sete Pecadoras & O Tabu da Invejosa" />
       <TextoMono style={{ color: cores.mudo, marginBottom: esp.sm }}>
         As nove que a Ordem dos Santos do Selo queimou há 400 anos: o que a lenda conta e o que os autos registram.
       </TextoMono>
@@ -1733,7 +1817,7 @@ export function Livro() {
         );
       })}
 
-      <Divisor label="VII · Facções e Ordens Antigas" />
+      <Divisor label="IX · Facções e Ordens Antigas" />
       {FACCOES_ANTIGAS.map((f) => (
         <Card key={f.id} acento={cores.linha}>
           <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>{f.nome}</TextoSerif>

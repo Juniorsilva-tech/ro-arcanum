@@ -19,8 +19,9 @@
 // o dia virar; `atualizarLivro` grava, e roda no dia do mundo.
 import type { Campaign, ContentBundle, EstadoEntrada } from './types';
 import { calcularContexto } from './availability';
+import { localConhecido } from './viagem';
 
-export type SecaoLivro = 'mestres' | 'trabalhos' | 'artes' | 'reliquias';
+export type SecaoLivro = 'mestres' | 'trabalhos' | 'artes' | 'reliquias' | 'itens' | 'lugares';
 
 const ORDEM: EstadoEntrada[] = ['desconhecida', 'ouvida', 'localizada', 'acessivel', 'obtida'];
 const nivel = (e: EstadoEntrada | undefined) => (e ? ORDEM.indexOf(e) : 0);
@@ -85,6 +86,34 @@ function derivar(content: ContentBundle, camp: Campaign, secao: SecaoLivro, id: 
     }
     return e;
   }
+  if (secao === 'lugares') {
+    const l = content.locais.find((x) => x.id === id);
+    if (!l) return 'desconhecida';
+    // Lugar escondido não é boato de ninguém até ser descoberto.
+    if (!localConhecido(camp, l)) return 'desconhecida';
+    if (k.visitados.has(id)) return 'obtida'; // esteve lá
+    if (k.vizinhos.has(id)) return 'localizada'; // sabe o caminho
+    return l.regiao && k.regioes.has(l.regiao) ? 'ouvida' : 'desconhecida';
+  }
+  if (secao === 'itens') {
+    const it = content.itens.find((x) => x.id === id);
+    if (!it) return 'desconhecida';
+    if ((p.inventario[id] ?? 0) > 0 || Object.values(p.equipado ?? {}).includes(id)) return 'obtida';
+    const lojas = it.lojas ?? [];
+    if (lojas.includes(camp.localAtual)) return 'acessivel';
+    // Item comum só se conhece vendo a loja; boato é só do que é raro o
+    // bastante para o povo comentar (notável para cima) e vendido na região.
+    let e: EstadoEntrada = 'desconhecida';
+    const raro = !!it.raridade && it.raridade !== 'comum';
+    for (const loja of lojas) {
+      const c = camadaDoLugar(content, k, loja);
+      if (c === 'localizada') e = maior(e, 'localizada');
+      else if (c === 'ouvida' && raro) e = maior(e, 'ouvida');
+    }
+    // Quem você já venceu mostrou o que carrega.
+    if (content.criaturas.some((c) => camp.flags[`matou.${c.id}`] && (c.loot ?? []).some((x) => x.item === id))) e = maior(e, 'localizada');
+    return e;
+  }
   const t = content.trabalhos.find((x) => x.id === id);
   if (!t) return 'desconhecida';
   const e = camadaDoLugar(content, k, t.onde);
@@ -119,6 +148,8 @@ export function atualizarLivro(content: ContentBundle, camp: Campaign): void {
     ['trabalhos', content.trabalhos.map((x) => x.id)],
     ['artes', content.artes.map((x) => x.id)],
     ['reliquias', content.reliquias.map((x) => x.id)],
+    ['itens', content.itens.map((x) => x.id)],
+    ['lugares', content.locais.map((x) => x.id)],
   ];
   for (const [secao, ids] of secoes) {
     const agora = estadosDaSecao(content, camp, secao, ids);

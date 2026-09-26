@@ -731,3 +731,23 @@ obra de terceiros impedem publicar o jogo em loja.
 - Campanha nova: 6 de 25 mestres, 10 de 16 trabalhos, 17 de 81 artes e 9 de 15
   relíquias saem do escuro, quase todos como boato do vale.
 - Teste: `engine/livro.selftest.ts`, no `test:engine`. Conferido na tela web.
+
+### Sessão 69 (continuação) — itens e lugares no Livro, e o mapa por camada
+- `engine/livro.ts` ganhou as seções `itens` e `lugares` (`LivroState.itens`,
+  `LivroState.lugares` opcionais para saves antigos).
+  - Lugares: escondido (`localConhecido` falso) nunca aparece antes de
+    descoberto; da região de um lugar visitado = boato; vizinho por estrada =
+    sabe o caminho; visitado = esteve lá.
+  - Itens: comum só se conhece vendo a loja (localizada) ou vencendo quem o
+    carrega (loot); boato só para item notável ou mais raro vendido na região;
+    à venda onde você está = ao alcance; na mochila = seu, e fica seu mesmo
+    vendido. Campanha nova: 40 de 169 itens, 11 de 53 lugares.
+  - O Livro agora também se grava no fim de cada turno (`turn.ts`), não só na
+    virada do dia, para comprar e vender no mesmo dia não passar em branco.
+- Livro: "V · Lugares" (por região, abre e fecha) e "VI · Itens" (por tipo);
+  o lore passou a VII a IX.
+- Mapa: marcador só para lugar conhecido (as cidades pintadas são no mínimo
+  boato); a crônica de um boato mostra só o provérbio do povo, a de "sabe o
+  caminho" mostra fé e provérbio, e a inteira só depois de estar lá. Antes o
+  mapa mostrava os 53 lugares, inclusive os escondidos, com crônica completa.
+- Teste: `livro.selftest.ts` com os casos de lugares e itens.

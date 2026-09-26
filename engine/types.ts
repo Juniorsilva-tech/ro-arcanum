@@ -518,6 +518,9 @@ export type LivroState = {
   trabalhos: Record<string, EstadoEntrada>;
   artes: Record<string, EstadoEntrada>;
   reliquias: Record<string, EstadoEntrada>;
+  /** Itens e lugares do Livro (engine/livro.ts); ausentes em saves antigos. */
+  itens?: Record<string, EstadoEntrada>;
+  lugares?: Record<string, EstadoEntrada>;
 };
 
 // ── Combate (GDD §16, §17). Resolvido 100% pela engine.

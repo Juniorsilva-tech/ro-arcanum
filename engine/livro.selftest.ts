@@ -87,4 +87,47 @@ const contar = (c: Campaign) => ({
   ok(Object.values(d.livro.mestres).some((e) => e !== 'desconhecida'), 'e o dia do mundo grava as camadas');
 }
 
+// ── Lugares ───────────────────────────────────────────────────────────────
+{
+  const c = nova('lugares');
+  const est = estadosDaSecao(C, c, 'lugares', C.locais.map((l) => l.id));
+  const ocultos = C.locais.filter((l) => l.oculto);
+  ok(ocultos.length > 0 && ocultos.every((l) => est[l.id] === 'desconhecida'), `lugar escondido não aparece antes de descoberto (${ocultos.map((l) => l.id).join(', ')})`);
+  ok(est[c.localAtual] === 'obtida', 'onde você está, você esteve');
+  const vizinho = C.locais.find((l) => l.id === c.localAtual)!.rotas.map((r) => r.destino).find((d) => !C.locais.find((l) => l.id === d)?.oculto)!;
+  ok(['localizada', 'obtida'].includes(est[vizinho]), `vizinho por estrada: sabe o caminho (${vizinho})`);
+  ok(Object.values(est).some((e) => e === 'ouvida') && descobertas(est) < C.locais.length, `da região, boato; e muito ainda no escuro (${descobertas(est)} de ${C.locais.length})`);
+  const oculto = ocultos[0];
+  c.flags[oculto.oculto!.flag] = true;
+  c.locaisVisitados.push(oculto.id);
+  ok(estadoNoLivro(C, c, 'lugares', oculto.id) === 'obtida', `descoberto e visitado, ${oculto.nome} entra no Livro`);
+}
+
+// ── Itens ─────────────────────────────────────────────────────────────────
+{
+  const c = nova('itens');
+  const doMercado = C.itens.find((i) => (i.lojas ?? []).length === 1 && i.lojas![0] === 'mercado')!;
+  c.localAtual = 'taverna';
+  c.locaisVisitados = c.locaisVisitados.filter((l) => l !== 'mercado');
+  const antes = estadoNoLivro(C, c, 'itens', doMercado.id);
+  c.locaisVisitados.push('mercado');
+  const depois = estadoNoLivro(C, c, 'itens', doMercado.id);
+  c.localAtual = 'mercado';
+  const aqui = estadoNoLivro(C, c, 'itens', doMercado.id);
+  ok(antes === 'desconhecida' && depois === 'localizada' && aqui === 'acessivel', `${doMercado.nome}: ${antes} → visto no mercado (${depois}) → à venda aqui (${aqui})`);
+  const n0 = descobertas(estadosDaSecao(C, nova('itens0'), 'itens', C.itens.map((i) => i.id)));
+  ok(n0 < C.itens.length / 3, `no começo, poucos itens conhecidos (${n0} de ${C.itens.length}): item comum só vendo a loja`);
+  c.personagem.inventario[doMercado.id] = 1;
+  atualizarLivro(C, c);
+  delete c.personagem.inventario[doMercado.id];
+  ok(estadoNoLivro(C, c, 'itens', doMercado.id) === 'obtida', 'o que passou pela mochila fica como seu, mesmo vendido');
+  const semLoja = (id: string) => !C.itens.find((i) => i.id === id)?.lojas?.length;
+  const cria = C.criaturas.find((k) => (k.loot ?? []).some((x) => semLoja(x.item) && C.itens.some((i) => i.id === x.item)))!;
+  const saque = cria.loot!.find((x) => semLoja(x.item) && C.itens.some((i) => i.id === x.item))!.item;
+  const c2 = nova('saque');
+  ok(estadoNoLivro(C, c2, 'itens', saque) === 'desconhecida', `${saque}, que ninguém vende, começa desconhecido`);
+  c2.flags[`matou.${cria.id}`] = true;
+  ok(estadoNoLivro(C, c2, 'itens', saque) === 'localizada', `vencer ${cria.nome} mostra que carrega ${saque}`);
+}
+
 console.log('\nO Livro: OK.');

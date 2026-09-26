@@ -13,7 +13,7 @@ import type { Campaign, ContentBundle } from '@/engine/types';
 import { posicaoMapa, CAPITAIS_CONTINENTE, COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
 import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
 import { cores, fontes, esp } from '../theme';
-import { rotasVisiveis } from '@/engine';
+import { rotasVisiveis, estadosDaSecao } from '@/engine';
 
 const IMAGEM_MAPA_VAELHORN = require('../../assets/feudo/mapa_continente.jpg');
 const IMAGEM_MAPA_TSUKIMICHI = require('../../assets/feudo/asora.jpg');
@@ -34,6 +34,8 @@ export type MarcadorMapa = {
   podeViajar: boolean;
   periodos?: number;
   feudo?: boolean;
+  /** Camada no Livro (engine/livro.ts): boato, sabe o caminho, esteve lá. */
+  camada?: string;
 };
 
 export function MapaVisual({
@@ -253,6 +255,9 @@ export function MapaVisual({
     id: string; nome: string; sub?: string; x: number; y: number; pintado: boolean;
     atual: boolean; conhecido: boolean; podeViajar: boolean; periodos?: number; feudo?: boolean;
   };
+  // O mapa mostra o que o Livro conhece: lugar desconhecido não aparece, e o
+  // escondido só depois de descoberto. As cidades pintadas são, no mínimo, boato.
+  const camadasLugar = estadosDaSecao(content, camp, 'lugares', content.locais.map((l) => l.id));
   const marcadores: MarcadorMapa[] = (() => {
     const lista = new Map<string, MarcadorMapa>();
     const montar = (id: string, extra: Partial<MarcadorMapa> = {}): MarcadorMapa | undefined => {
@@ -274,26 +279,27 @@ export function MapaVisual({
         conhecido: visitados.has(id),
         podeViajar: Boolean(rota && onViajar),
         periodos: rota?.periodos,
+        camada: id === camp.localAtual ? 'obtida' : camadasLugar[id] ?? 'desconhecida',
         ...extra,
       };
     };
     if (!ehTsukimichi && modoVisao === 'geral') {
       for (const cap of CAPITAIS_CONTINENTE) {
         const m = montar(cap.id, { pintado: true, sub: cap.tipo, x: cap.x, y: cap.y });
-        if (m) lista.set(cap.id, m);
+        if (m) lista.set(cap.id, { ...m, camada: m.camada === 'desconhecida' ? 'ouvida' : m.camada });
       }
       for (const id of Object.keys(COORDENADAS_LOCAIS)) {
         if (id.match(/^(tsige_|wasteland_|asora_|rotsgard_)/)) continue;
         if (lista.has(id)) continue;
         const m = montar(id);
-        if (m) lista.set(id, m);
+        if (m && m.camada !== 'desconhecida') lista.set(id, m);
       }
     } else if (ehTsukimichi && modoVisao === 'geral') {
       for (const id of Object.keys(COORDENADAS_LOCAIS)) {
         if (!id.match(/^(tsige_|wasteland_|asora_|rotsgard_)/)) continue;
         if (lista.has(id)) continue;
         const m = montar(id);
-        if (m) lista.set(id, m);
+        if (m && m.camada !== 'desconhecida') lista.set(id, m);
       }
     }
     for (const id of pontosConectados) {
@@ -495,6 +501,44 @@ export function MapaVisual({
 
           {(() => {
             const cronica = CRONICAS_MAPA[lugarInspecionado.id];
+            const camada = lugarInspecionado.camada ?? 'obtida';
+            if (cronica && camada === 'ouvida') {
+              // De um boato, só o que o povo diz.
+              return (
+                <View style={styles.cronicaCorpo}>
+                  <Text style={styles.cronicaTextoVazio}>Você só ouviu falar deste lugar. O povo diz:</Text>
+                  <View style={styles.cronicaBloco}>
+                    <View style={styles.cronicaBlocoHeader}>
+                      <Text style={styles.cronicaBlocoIcone}>🕯️</Text>
+                      <Text style={styles.cronicaBlocoTitulo}>Superstição & Provérbio do Povo</Text>
+                    </View>
+                    <Text style={styles.cronicaBlocoTexto}>{cronica.supersticaoPopular}</Text>
+                  </View>
+                </View>
+              );
+            }
+            if (cronica && camada === 'localizada') {
+              // Sabe o caminho: a fé do lugar e o que se diz; o resto, só indo lá.
+              return (
+                <View style={styles.cronicaCorpo}>
+                  <View style={styles.cronicaBloco}>
+                    <View style={styles.cronicaBlocoHeader}>
+                      <Text style={styles.cronicaBlocoIcone}>🏛️</Text>
+                      <Text style={styles.cronicaBlocoTitulo}>Fé & Divindades Adoradas</Text>
+                    </View>
+                    <Text style={styles.cronicaBlocoTexto}>{cronica.divindadeOuCrenca}</Text>
+                  </View>
+                  <View style={styles.cronicaBloco}>
+                    <View style={styles.cronicaBlocoHeader}>
+                      <Text style={styles.cronicaBlocoIcone}>🕯️</Text>
+                      <Text style={styles.cronicaBlocoTitulo}>Superstição & Provérbio do Povo</Text>
+                    </View>
+                    <Text style={styles.cronicaBlocoTexto}>{cronica.supersticaoPopular}</Text>
+                  </View>
+                  <Text style={styles.cronicaTextoVazio}>O resto da história deste lugar, só estando lá.</Text>
+                </View>
+              );
+            }
             if (!cronica) {
               return (
                 <Text style={styles.cronicaTextoVazio}>

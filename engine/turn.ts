@@ -1,4 +1,5 @@
 // ARCANUM · Resolvedor de turno. A engine resolve; o modelo (ou o fallback) narra (GDD §4.4, §35).
+import { atualizarLivro } from './livro';
 import type {
   Campaign,
   ContentBundle,
@@ -363,6 +364,8 @@ export function resolverIntencao(
   }
 
   clampRecursos(p);
+  // O que passou pela mão neste turno entra no Livro (engine/livro.ts).
+  atualizarLivro(content, camp);
 
   camp.ultimoResultado = {
     grau: grau ?? 'sucesso',
