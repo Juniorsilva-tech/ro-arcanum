@@ -7,6 +7,7 @@
 import type { Campaign, ContentBundle, Item, Personagem } from './types';
 import { registrarMarco } from './memoria';
 import { registrarFato } from './historiaViva';
+import { temMarca } from './marca';
 
 export type CorNichirinId =
   | 'preta'
@@ -46,7 +47,7 @@ export const CATALAGO_CORES_NICHIRIN: Record<CorNichirinId, InfoCorNichirin> = {
     estiloAfinidade: 'Respiração do Sol (Hinokami)',
     corHex: '#18181b',
     descricaoLore:
-      'A cor mais rara, temida e misteriosa de todas. Diziam as lendas que espadachins de lâmina negra morriam jovens porque ninguém compreendia a Respiração do Sol — a arte primordial da qual todas as outras derivaram. O corte retém brasa solar pura que jamais se apaga.',
+      'A cor mais rara de todas. Por muito tempo os caçadores a tiveram por sinal de má sorte, de espadachim sem destino claro: poucos portadores viviam o bastante para que alguém entendesse o padrão. A verdade é que a lâmina negra tem afinidade com a Respiração do Sol, a matriz de que todas as outras derivam.',
     efeitoResumo: '+15% de dano contra Onis e chamas solares perpétuas no corte.',
     bonusCombate: {
       danoOniExtra: 0.15,
@@ -168,6 +169,16 @@ export const CATALAGO_CORES_NICHIRIN: Record<CorNichirinId, InfoCorNichirin> = {
 };
 
 /**
+ * A lâmina só muda de cor na mão de quem domina a Respiração de Concentração
+ * Total: qualquer forma de respiração aprendida, ou o treino de quase-morte.
+ */
+export function dominaConcentracaoTotal(camp: Campaign): boolean {
+  const p = camp.personagem;
+  if ((p.artesConhecidas ?? []).some((a) => a.startsWith('respiracao_') || a.startsWith('hinokami'))) return true;
+  return ((p as { treinoQuaseMorte?: { ciclosConcluidos?: number } }).treinoQuaseMorte?.ciclosConcluidos ?? 0) > 0;
+}
+
+/**
  * Determina qual cor de Nichirin sintoniza naturalmente com o personagem,
  * baseado em suas artes de combate aprendidas, linhagem e distribuição de atributos.
  */
@@ -188,8 +199,7 @@ export function determinarCorNichirin(camp: Campaign): CorNichirinId {
   if (artes.some((a) => a.includes('fera'))) return 'indigo';
 
   // 2. Destino Solar Inato: marca mística de caçador ou atributos de pico excepcionais
-  const temMarca = Boolean(camp.flags['marca_cacador'] || camp.flags['marca.ativa'] || camp.personagem.classeId === 'cacadora');
-  if (temMarca && p.atributos.fisico >= 16 && (p.atributos.social ?? 10) >= 14) {
+  if (temMarca(camp) && p.atributos.fisico >= 16 && (p.atributos.social ?? 10) >= 14) {
     return 'preta';
   }
 
@@ -243,17 +253,9 @@ export function verificarDespertarNichirin(
     };
   }
 
-  // Lâmina de Yoriichi possui a lendária cor Preta do Sol primordial desde a sua forja
-  if (item.id === 'lamina_da_origem_solar') {
-    item.corNichirin = 'preta';
-    item.corNichirinNome = 'Negra Obsidiana (Sol Primordial)';
-    item.corNichirinAfinidade = 'Respiração do Sol';
-    camp.personagem.corNichirinInata ??= 'preta';
-    return {
-      despertou: true,
-      info: CATALAGO_CORES_NICHIRIN.preta,
-      mensagem: 'A Lâmina de Yoriichi repousa em sua mão com a cor negra perpétua do primeiro espadachim solar.',
-    };
+  // O aço só reage a quem domina a Concentração Total; até lá, fica neutro.
+  if (!dominaConcentracaoTotal(camp)) {
+    return { despertou: false };
   }
 
   // Determina a cor sintonizada com a alma do caçador
@@ -262,7 +264,10 @@ export function verificarDespertarNichirin(
   const info = CATALAGO_CORES_NICHIRIN[corId];
 
   // Cria uma instância única no inventário do personagem para preservar a cor desperta
-  const instanciaId = `${item.id}_${corId}_${Date.now().toString(36)}`;
+  const forjados = camp.personagem.itensForjados ?? [];
+  let n = forjados.length + 1;
+  while (forjados.some((f) => f.id === `${item.id}_${corId}_${n}`)) n++;
+  const instanciaId = `${item.id}_${corId}_${n}`;
   const itemDesperto: Item = {
     ...item,
     id: instanciaId,

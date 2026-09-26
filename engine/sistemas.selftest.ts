@@ -3,7 +3,10 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { jogadorDeTeste } from './balanco';
 import { comprar, equipar, estoqueNaLoja, armaEquipada } from './items';
 import { alternarCompanheiro } from './grupo';
-import { iniciarCombate, jogadorAtaca, jogadorAcaoTatica } from './combat';
+import { iniciarCombate, jogadorAtaca, jogadorAcaoTatica, jogadorDefende, jogadorAtor } from './combat';
+import { flexionarOficio } from './familia';
+import { despertarMarca } from './marca';
+import { itemPorId } from './items';
 import { normalizarCampanha } from './migracao';
 import { cidadeIdDoLocal } from './historiaViva';
 import { iniciarObra, processarCidades } from './cidades';
@@ -131,3 +134,70 @@ console.log(`✓ ${C.criaturas.length * 4} combates de catálogo com compra, gru
   console.log('✓ Troca tática de arma durante o combate com recálculo');
 }
 
+// ── Correções da revisão das sessões 70–77 ────────────────────────────────
+{
+  // Sangramento não mata oni: oni só morre por Nichirin ou sol.
+  const c = nova('sangra-oni');
+  iniciarCombate(C, c, ['oni_faminto']);
+  const s = c.combate!;
+  s.ambiente = { ...(s.ambiente ?? {}), abrigoSolar: true } as typeof s.ambiente;
+  const oni = s.atores.find(a => a.oni)!;
+  oni.vida = 2;
+  (oni.tatico ??= {}).sangramento = 3;
+  jogadorAtor(s).defesa = 99;
+  jogadorDefende(C, c);
+  ok((oni.tatico!.sangramento ?? 0) < 3, 'o sangramento correu no turno do oni');
+  ok(oni.vida >= 1 && !s.log.some(l => l.includes(`${oni.nome} sucumbe`)), `sangramento deixa o oni de pé (vida ${oni.vida})`);
+  console.log('✓ Sangramento e queimadura não matam oni');
+}
+{
+  // Contra-golpe do Bastião derruba o último inimigo e encerra a luta.
+  const c = nova('bastiao');
+  c.personagem.inventario['espada_ancestral_halvet'] = 1;
+  equipar(C, c, 'espada_ancestral_halvet');
+  iniciarCombate(C, c, ['rato_gigante']);
+  const s = c.combate!;
+  const rato = s.atores.find(a => !a.ehJogador && !a.ehAliado)!;
+  rato.vida = 5;
+  jogadorAtor(s).defesa = 99;
+  jogadorDefende(C, c);
+  ok(rato.vida === 0 && s.terminado, `inimigo morto pelo contra-golpe encerra o combate (vida ${rato.vida}, terminado ${s.terminado})`);
+  console.log('✓ Contra-golpe do Bastião encerra a luta quando derruba o último');
+}
+{
+  ok(flexionarOficio('artesã', 'm') === 'artesão' && flexionarOficio('soldado', 'f') === 'soldada', 'ofício flexiona com letra acentuada');
+  console.log('✓ Ofício da família no gênero certo');
+}
+{
+  // Nichirin: sem Concentração Total o aço não reage; com respiração, muda de cor.
+  const c = nova('nichirin');
+  c.personagem.artesConhecidas = [];
+  c.personagem.inventario['lamina_nichirin'] = 1;
+  equipar(C, c, 'lamina_nichirin');
+  ok(c.personagem.equipado.arma === 'lamina_nichirin', 'novato empunha a Nichirin e o aço continua neutro');
+  c.personagem.artesConhecidas = ['respiracao_agua_primeira_forma'];
+  equipar(C, c, 'lamina_nichirin');
+  const id = c.personagem.equipado.arma!;
+  ok(id === 'lamina_nichirin_azul_1', `com Respiração da Água, a lâmina fica azul e o id é determinístico (${id})`);
+  ok(itemPorId(C, id, c.personagem)?.corNichirin === 'azul', 'instância azul no acervo do personagem');
+  ok(!C.itens.find(i => i.id === 'lamina_nichirin')!.corNichirin, 'o item do catálogo não é alterado');
+  console.log('✓ Nichirin muda de cor só com Concentração Total');
+}
+{
+  // Lâmina Carmesim: pede Nichirin desperta e a Marca; o corte segura a regeneração do oni.
+  const c = nova('akato');
+  c.personagem.artesConhecidas = ['respiracao_agua_primeira_forma'];
+  c.personagem.inventario['lamina_nichirin'] = 1;
+  equipar(C, c, 'lamina_nichirin');
+  iniciarCombate(C, c, ['oni_ancestral']);
+  const s = c.combate!;
+  s.ambiente = { ...(s.ambiente ?? {}), abrigoSolar: true } as typeof s.ambiente;
+  if (s.ordem[s.turno] !== 'jogador') jogadorDefende(C, c);
+  jogadorAcaoTatica(C, c, 'lamina_carmesim');
+  ok(s.log.some(l => l.includes('falta a Marca')) && !jogadorAtor(s).laminaCarmesimAte, 'sem a Marca o aço não esquenta');
+  despertarMarca(c, 'teste');
+  c.personagem.recursos.vigor = 10;
+  jogadorAcaoTatica(C, c, 'lamina_carmesim');
+  ok((jogadorAtor(s).laminaCarmesimAte ?? 0) > 0 && c.personagem.recursos.vigor === 6, 'com a Marca, a lâmina fica rubra e custa 4 de vigor');
+  console.log('✓ Lâmina Carmesim exige Marca e Nichirin desperta');
+}

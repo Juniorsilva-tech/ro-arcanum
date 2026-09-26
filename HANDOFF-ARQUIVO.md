@@ -5418,3 +5418,308 @@ terminar só a etapa A nesta sessão e fazer o resto em outra.
   - bandos miram colônia rica.
 
 Verificações: `typecheck`, `test:engine` completo (com `colonia.selftest.ts`), `test:jornadas`, `test:casas`, `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica às sessões 54-56 (o simulador não funda colônia).
+
+---
+
+## Sessão 58 — Claude (PC) — testes quebrados no PC e etapa B da colônia
+
+### Estado encontrado
+Puxados os 12 commits da nuvem (sessões 47 a 57, até `9dfee20`). Rodando a
+suíte no PC depois de `npm ci`: typecheck, jornadas, vaelhorn e expo export
+verdes, mas `test:engine` falhava em `edificiosRegionais.selftest.ts` ("Cinco
+edifícios, um por cidade") e `test:casas` em "todo membro existe no elenco".
+
+Causa: 105 arquivos `.js` compilados em 16/09 ao lado dos `.ts` em
+`engine/`, `content/` e `ui/` (ignorados pelo git, por isso ausentes na
+nuvem). O `tsx` resolvia `./npcs` para o `.js` velho e carregava o elenco de
+antes das sessões 47-57. Apagados só os `.js` que têm `.ts`/`.tsx` irmão; os
+dois testes passaram na hora. Nada de código mudou para isso.
+
+Pendente da sessão 57: etapa B da colônia (rascunho em
+`docs/colonia-etapa-B/`, com `aplicar_B.py` nunca executado), e etapas C a F.
+
+### Etapa B da colônia (gente) — aplicada
+- Rodado `aplicar_B.py` numa cópia ajustada para o PC (caminhos da nuvem
+  trocados, leitura em UTF-8 com quebra de linha normalizada — no Windows os
+  arquivos estão em CRLF e as trocas exatas do script procuram `\n`). Todas as
+  trocas bateram. O rascunho em `docs/colonia-etapa-B/` foi removido: o código
+  agora vive em `engine/colonos.ts`, `content/vaelhorn/colonos.ts`,
+  `ui/screens/GenteColonia.tsx` e `engine/colonos.selftest.ts`.
+- Corrigido o que o rascunho trazia quebrado:
+  - `OficioColonia`/`Temperamento` não eram exportados pela engine (três erros
+    de tipo na UI e no store): reexportados em `engine/colonos.ts`.
+  - Duas histórias abaixo do mínimo de 80 caracteres que o próprio teste
+    exige (`mae_da_leva`, `cozinheira`): reescritas, mesmo tom.
+  - Regra da fome no humor: `comida > 0` contava como alimentada a colônia com
+    5,6 de comida para seis bocas (a caça do dia entra antes do humor).
+    Agora fome é não ter o do dia para todos (`comida >= populacao`).
+  - `colonia.selftest.ts` (etapa A) esperava o material cru do sítio; desde a
+    etapa B ele passa pela eficiência de quem cuida das obras (60% sem
+    responsável). O teste agora confere com `eficiencia`.
+- `colonos.selftest.ts` entrou no `test:engine`.
+- Não abri a aba "Gente" no navegador: exige fundar uma colônia num sítio, o
+  que pede viagem. Typecheck e `expo export` cobrem a compilação da tela.
+
+### Verificações
+typecheck, `test:engine` completo, jornadas, casas, vaelhorn_expansao, expo
+export: verdes. Simulação longa: 6/6 campanhas até o fim do prazo, 0 mortes,
+0 violações.
+
+### Nota: dois arquivos de terceiros entraram no commit `fd304af`
+O `git add -A` do commit da etapa B levou junto `scripts/RO ARCANUM.bat`
+(novo: inicializador do jogo no Windows, sobe o Expo e a ponte Hermes) e duas
+linhas alteradas em `scripts/sync_hermes.ts` (dica e `process.exitCode = 1`
+quando não há token). Não fui eu que escrevi. Conferido: nenhum dos dois tem
+chave ou token, só código que lê o `auth.json` do Hermes na máquina. Ficaram
+no commit. Se não deviam estar no repositório, é só remover.
+
+### Etapa C da colônia (animais) — feita
+- `engine/rebanhos.ts`: sete espécies com função real — galinha (ovo), cabra
+  e vaca (leite), ovelha (lã → ouro), porco (carne guardada, abate), mula
+  (material por dia), cavalo (segurança, teto de +15).
+- Todo animal come: o pasto do sítio (`terreno.pasto` × 6) sustenta um tanto,
+  o resto sai do celeiro como feno, depois da comida das pessoas. No inverno o
+  pasto cai a 20%. Sem feno, morre um animal por dia (o que mais come).
+- Crias só na primavera, só com casal, acumuladas em fração por espécie
+  (`criasAcumuladas`), e mais crias com responsável pelo ofício `rebanho`.
+  Rebanho apertado adoece mais; quem cuida segura.
+- Compra: só as espécies da região do sítio, no máximo `sitio.animais[x]`
+  por estação (`comprasAnimais`), pelo preço da ficha. Abate dá a carne da
+  ficha; mula e cavalo não se abatem.
+- Ligado em `processarDiaColonia` (relatório `rebanho`, eventos de cria e
+  morte) e na segurança (patrulha montada).
+- Tela: aba "Rebanho" no assentamento (`ui/screens/RebanhoColonia.tsx`).
+- Teste: `engine/rebanhos.selftest.ts` (25 checagens), no `test:engine`.
+- **Não feito da etapa C**: "cultivos por sítio" (plantas diferentes por
+  região). A lavoura continua pelo `solo` do terreno. Fica para quando houver
+  motivo de jogo além do nome da planta.
+
+### Etapa D da colônia (audiências) — feita
+- `engine/audiencias.ts`: um pedido por vez, no mínimo a cada 3 dias, nascido
+  do estado — fome (celeiro abaixo de 4 dias de comida), briga (duas colonas
+  briguentas ou de humor abaixo de 35), furto (segurança abaixo de 45; a
+  comida sumida já sai do celeiro quando alguém vem contar), casamento (duas
+  pessoas de humor 70+, sem união anterior), ferramentas (quem cuida de obras
+  ou oficina, com material em estoque) e mercador (chance pela passagem do
+  sítio).
+- Cada opção diz o efeito antes da escolha, e a regra cumpre exatamente isso:
+  comprar grão, racionar (60% do consumo por 10 dias, ligado em
+  `processarDiaColonia`), abater (pela carne da ficha de `rebanhos.ts`), dar
+  razão, mediar, castigar, expulsar, perdoar, pôr vigia, abençoar com ou sem
+  festa (a união fica em `Colono.conjuge`), negar. Falta de recurso recusa a
+  opção sem gastar o pedido.
+- Sem resposta até o prazo: a ordem cai 3, o renome cai 1 e os envolvidos
+  ficam de pior humor.
+- Tela: bloco "pedem audiência" no topo da aba Gente.
+- Teste: `engine/audiencias.selftest.ts` (16 checagens), no `test:engine`.
+
+Verificações: typecheck, `test:engine` completo (simulação longa 6/6 até o
+fim, 0 mortes, 0 violações), jornadas, casas, vaelhorn_expansao, expo export.
+
+### Etapa E da colônia (ameaça e assembleia) — feita
+- `engine/ameacas.ts`. A ameaça vem do mundo, nunca de tabela solta:
+  - o bando ativo da região do sítio (4+ homens), com chance maior quanto
+    mais rica a colônia e quanto mais gente passa por ela;
+  - feras, pelo perigo do sítio, com chance e força maiores no inverno;
+  - a casa que reivindica a terra, sem acordo e com 15+ pessoas;
+  - oni, se houver rival oni vivo — nunca na Clareira das Pedras (o círculo).
+- Aviso de 3 dias; 5 na Colina dos Forcados (o traço "vista do planalto" da
+  etapa A agora vale). No máximo uma ameaça a cada 20 dias.
+- Assembleia: texto livre traduzido para um catálogo fechado de nove
+  preparações (armadilhas, paliçada, fosso, vigias, evacuar, estocar, milícia,
+  pedir ajuda, pagar tributo), cada uma com custo, gente mínima e dias. O que
+  não se traduz volta como "não entendi" com a lista. Também dá para escolher
+  nos botões. O conselho (as três colonas mais leais) opina pelo temperamento.
+- Batalha no dia marcado: defesa = segurança, muralha, quartel, cavalos, guarda
+  + preparações PRONTAS A TEMPO (a atrasada aparece no relatório como não
+  pronta). Desfecho: repelida, resistida ou saqueada; evacuar zera mortes e
+  deixa levar mais; estocar guarda metade; saque mata no máximo um quarto;
+  pedir ajuda só funciona com acordo ou casa com reputação 10+ (e ninguém
+  ajuda contra a própria casa que reivindica). Tributo evita a batalha: vai
+  para o tesouro do bando; pago a uma casa, vira acordo (o que também tira o
+  quinto do trigo de Tessel nos Campos da Ceifa).
+- De volta ao mundo: bando repelido perde 3 homens e deixa pista; bando que
+  saqueia soma ao tesouro; fato público com o desfecho; marco.
+- Força ajustada pelo teste: bando 8 + 4 por homem; matilha 10 + 6 por
+  perigo (+8 no inverno). Com a força antiga, preparar tudo não salvava.
+- `deBando()` em `bandos.ts`: "dos Corvos do Passo", "da Mão Cinzenta" (antes
+  saía "de os Corvos").
+- Tela: `ui/screens/AmeacaColonia.tsx`, na aba Soberania, abaixo do sítio.
+- Teste: `engine/ameacas.selftest.ts` (26 checagens), no `test:engine`.
+
+Verificações: typecheck, `test:engine` (simulação longa 6/6, 0 mortes, 0
+violações), jornadas, casas, vaelhorn_expansao, expo export.
+
+Outro agente está editando `content/vaelhorn/mapa.ts` e
+`ui/screens/MapaVisual.tsx` ao mesmo tempo (desde 11:14 de 24/09). Não toquei
+nesses dois arquivos e eles ficaram fora dos meus commits.
+
+### Etapa F da colônia (renome e mundo) — feita
+- `engine/renome.ts`:
+  - **Nível** da colônia com sítio vem de renome, gente e governo
+    (`tierDaColonia`), com teto 2 + 1 a cada 20 de renome — colônia grande e
+    desconhecida não passa de vila. Cai só quando o renome despenca (dois
+    níveis abaixo), um degrau por vez. Em `reino.ts`, a contagem de prédios
+    ficou só para colônia sem sítio.
+  - **Enviado da casa** a cada marco de renome (15, 40, 80): a casa que
+    reivindica a terra, ou a que tem sede na região (Clareira e Ruína de Areia
+    não têm casa: ninguém vem). Entra como audiência do tipo `enviado`:
+    acordo (acaba a cobrança — inclusive o quinto do trigo de Tessel — e a
+    ameaça da casa; reputação +5), proteção (acordo + segurança +10) ou
+    recusa (a casa fica hostil em `casasHostis` e vem cobrar mais cedo: com
+    8+ pessoas em vez de 15, e três vezes mais provável).
+  - **Fato público** ao fundar e a cada mudança de nível.
+- `casas.ts`: `estadoDaCasa()` cria o estado padrão da casa quando falta. Antes
+  só `processarCasas` criava, e um acordo no mesmo dia da fundação mexia na
+  reputação de nada (o teste pegou).
+- Teste: `engine/renome.selftest.ts` (20 checagens).
+
+### Jornada da colônia (tudo ligado) — `engine/coloniaJornada.selftest.ts`
+Funda nos seis sítios e deixa o relógio do mundo andar 400 dias em cada
+(`avancarPeriodos` + `avancarMundo`), com um jogador simples que aceita quem
+chega, dá cargo, responde audiências (no furto: vigia, perdão, só então
+expulsão) e decide a assembleia. Confere todo dia: nenhum recurso negativo
+ou NaN, gente com nome nunca maior que a população, humor 0-100, rebanho
+inteiro, nível 1-10; e no fim o save round-trip de cada colônia. Resultado:
+42 chegadas, 416 audiências, 3 enviados, 39 ameaças e 39 batalhas, crias em
+20 dias, as seis subiram de nível.
+
+A jornada achou três problemas de jogo, corrigidos:
+- furto era quase todo pedido (colônia pequena, guarda fraca): agora pede 8+
+  pessoas e tem sorteio próprio de 35%; intervalo entre audiências de 3 para
+  5 dias;
+- concordância: "Casimir do Litoral foi posta para fora", "ela vai embora"
+  para homem, "cada uma" para dois homens. Agora pelo gênero do colono;
+- (no teste, não no jogo) somar o dia à mão não vira a estação; a jornada
+  usa o relógio do jogo.
+- `colonia.selftest.ts` (etapa A) comparava o celeiro depois de 10 dias; com
+  10 pessoas e guarda fraca, o furto (etapa D) passou a mexer nele. O teste
+  agora soma o que o terreno deu pelo relatório do dia (roça + caça −
+  consumo − tributo): 47 no Campo da Ceifa contra 16 na Ruína de Areia.
+
+### Verificações (sessão 58, final)
+typecheck dos meus arquivos limpo; `test:engine` completo com as seis suítes
+novas (colonos, rebanhos, audiencias, ameacas, renome, coloniaJornada) e a
+simulação longa (6/6 até o fim, 0 mortes, 0 violações); jornadas, casas,
+vaelhorn_expansao, expo export.
+
+**Atenção:** `npm run typecheck` na árvore de trabalho acusa erros em
+`ui/screens/MapaVisual.tsx` (estilos `bannerFeedback`, `capitalClicavel`...
+que não existem). É o trabalho em andamento do OUTRO agente, que está
+editando `MapaVisual.tsx` e `content/vaelhorn/mapa.ts` sem commit. Os
+arquivos commitados compilam. Quem terminar o mapa precisa fechar esses
+erros antes do commit dele.
+
+### Próximo passo
+- Cultivos por sítio (sobrou da etapa C), se houver efeito de jogo além do
+  nome.
+- Ver a colônia na tela (web ou APK): fundar num dos seis sítios e passar
+  pelas abas Soberania (ameaça e assembleia), Gente (audiências e chegadas)
+  e Rebanho.
+
+---
+
+## Sessão 59 (24/09/2026) — Correção, Pan/Drag com Mouse e Interatividade do Mapa de Vaelhorn
+
+### O que foi feito
+1. **Calibração e Alinhamento Preciso das Coordenadas (`content/vaelhorn/mapa.ts`)**:
+   - Mapeados com exatidão todos os 19 locais de `locations.ts` (Vale de Halvet e arredores) e 34 locais de `continente.ts` (Marca de Tessel, Bosque de Vintra, Planalto de Corveira, Ermo de Solgar, Costa de Mareu, Baixios de Halvern) sobre a arte original `mapa_continente.jpg` (1376 × 768).
+   - Ajustado o Vale de Halvet (`y: 56%`) para posicionar perfeitamente sobre a vila desenhada abaixo do rio, eliminando sobreposição com o escudo vermelho superior.
+   - Corrigidas inversões geográficas: Solgar no deserto ao sudoeste (`x: 25.5%, y: 83%`), Vintra na floresta a oeste (`x: 28.5%, y: 39%`), Corveira no planalto central/sul (`x: 43%, y: 75%`), Mareu na costa a sudeste (`x: 69.5%, y: 75%`), Tessel nas montanhas nevadas ao norte (`x: 46.5%, y: 17%`).
+
+2. **Navegação por Arrasto com Mouse (Pan & Drag) e Zoom (`ui/screens/MapaVisual.tsx`)**:
+   - Implementado canvas virtual de proporção 1:1 nativa (**1376 × 768**) dentro de um viewport com `overflow: 'hidden'`.
+   - Adicionado `PanResponder`: o jogador pode clicar, segurar e arrastar o mapa livremente com o mouse em qualquer direção (`cursor: 'grab' / 'grabbing'`).
+   - Diferenciação inteligente de clique vs arrasto (threshold > 3px): arrastar move o mapa suavemente sem ativar pinos por engano; clicar em um pino sem arrastar ativa a viagem imediatamente.
+   - Barra de controles flutuantes no topo:
+     - `＋`: Aproximar zoom (até 2.0x).
+     - `－`: Afastar zoom (até 0.45x).
+     - `🎯`: Foco automático na posição atual do jogador (`camp.localAtual`).
+     - `🗺️`: Ver o continente inteiro ajustado à tela.
+   - Centralização automática na posição do jogador ao abrir o mapa.
+   - Legenda mantida externamente abaixo do mapa.
+
+3. **Interatividade e Viagem por Clique no Mapa (`MapaVisual.tsx` e `Paineis.tsx`)**:
+   - `MapaVisual` recebe `onViajar={viajar}` de `Paineis.tsx`.
+   - Pinos de rotas conectadas são `<Pressable>` com tag `✦ Viajar`, indicando períodos de viagem e efetuando a transição de local ao clique.
+   - Pinos distantes exibem aviso informativo no topo do mapa.
+
+### Validações
+- `npm run typecheck`: 0 erros.
+- `npm run test:vaelhorn`: todos os testes passaram.
+- `npx expo export --platform web`: build web concluído com sucesso em 2601ms.
+
+## Sessão 58 (continuação) — Claude — colônia na tela e revisão do mapa
+
+(Estas três partes são da sessão 58 e foram escritas depois da sessão 59 do
+outro agente; ficam aqui na ordem em que aconteceram.)
+
+### Teste da colônia na tela (web) — sessão 58
+Save real gerado pela engine (colônia "Pedra Alta" na Colina dos Forcados, dia
+339, matilha anunciada, rebanho), gravado no armazenamento do navegador e
+carregado pelo "Continuar". Testado clicando: Feudo → Soberania (sítio, ameaça,
+conselho, assembleia por texto livre "finquem uma paliçada, ponham sentinela
+no alto e armem uma milícia" → paliçada, vigias, milícia; avançar dias; batalha
+repelida com relatório por preparação), Gente (ofícios, fichas com história,
+dar cargo: obras 60% → 85%) e Rebanho (pasto/feno, comprar +1, abater 1).
+
+Achado e corrigido no teste:
+- **"Avançar 1 Dia" andava 4 períodos, e o dia tem 6** (`supervisionarObrasAcao`
+  em `ui/store.ts`): cada clique era dois terços de dia. Agora usa
+  `PERIODOS.length`.
+- Celeiro sem teto: 2.445 de comida para 11 pessoas (ovo e leite acumulando
+  para sempre). Agora `capacidadeDoCeleiro` = 300 + 250 por lavoura/silos; o
+  resto estraga, com aviso a cada 10 dias.
+- "pagar tributo · 0 de ouro" para quem não aceita moeda → "não aceitam moeda";
+  "chega em 1 dias" → "1 dia"; preparação sem prazo mostra "na hora"; frases
+  da batalha começam com maiúscula ("Uma matilha chegou").
+
+O servidor da porta 8081 (do outro lado) está quebrado desde o `npm ci` desta
+sessão (`expo/virtual/env` não resolve): precisa ser reiniciado. O da 8082
+funciona.
+
+### Mapa — revisão (sessão 58, depois da sessão 59 do outro agente)
+O trabalho do mapa do outro agente (sessão 59) estava parado desde 12:00 e com
+typecheck limpo; commitado como estava (`54bfbd5`) antes das correções, para
+ficar separado. Conferido desenhando os pontos do jogo sobre
+`assets/feudo/mapa_continente.jpg` (o canvas tem o tamanho da imagem, 1376×768):
+- **Capital inexistente**: `halvern` ("Halvetia Capital") não é local do jogo;
+  clicar para viajar pedia viagem a lugar nenhum. Virou `casa_senhorial` (A
+  Casa de Pedra, sede da Casa de Halvet), posta no castelo desenhado.
+- **Nomes inventados**: "Tesselgarde", "Corveiraborg", "Mareuborg",
+  "Vintraborg", "Solgar Capital" vinham do texto pintado na imagem. A legenda
+  agora usa os nomes do jogo (Tessel, Corveira, Mareu, Vintra, Solgar), e os
+  subtítulos inventados ("Porto Imperial") viraram descrições simples. **A
+  imagem continua com os nomes antigos pintados** — só uma imagem nova tira.
+- **Baixios no lugar errado**: Juncal, Juncal de Baixo e a Toca estavam a
+  leste, em cima da praça e do cemitério; pelas rotas só se ligam ao Vau de
+  Pedra e ao lago. Foram para oeste, no Rio-Verde.
+- A Vila dos Ferreiros (escondida) estava em cima da Mina de Corveira; o
+  Mosteiro do Alto, colado no moinho. Afastados.
+- 11 ids mortas na tabela (`templo`, `quartel`, `ferreiro`, `vila`, `bosque`,
+  `mosteiro`, `caverna`, `mansao`, `porto`, `pantano`, `halvern`) removidas;
+  nenhum código as usava como local.
+- O marcador do feudo mostra o nome da colônia (era "Seu Feudo").
+Resultado: 53 locais com coordenada, nenhuma capital inválida, nenhum par a
+menos de 3% um do outro.
+
+### Mapa — arrasto e marcadores (pedido do dono, com print)
+- **"Arrasto um pouquinho e ele quase some"**: o arrasto somava o gesto à
+  posição que ele mesmo atualizava a cada movimento, então o deslocamento era
+  contado de novo a cada quadro. Agora soma à posição de quando o arrasto
+  começou. E o mapa fica preso: nunca sai da janela nem mostra faixa vazia
+  (`limitarPan`, zoom mínimo = a imagem cobrindo a janela). O zoom mantém o
+  centro da janela.
+- **O `onLayout` da janela do mapa não dispara no navegador**: o mapa ficava
+  no zoom 0,85 e posição 0 de partida, e nenhum botão (＋, －, centralizar,
+  ver tudo) fazia nada. No web a janela é medida direto no elemento com
+  `ResizeObserver`; no celular continua o `onLayout`.
+- **Ícones em cima da pintura**: as cidades desenhadas (Tessel, Corveira,
+  Mareu, Vintra, Solgar, Casa de Pedra, Rês Enforcada) viraram áreas
+  clicáveis invisíveis sobre o desenho, com contorno dourado só ao passar o
+  mouse. Os outros lugares são um ponto pequeno (dourado = dá para ir,
+  verde = já esteve, losango = sua colônia); o seu lugar é um anel. O nome
+  aparece só no hover (web) ou no primeiro toque (celular, e o segundo toque
+  viaja). Sem caixas de nome fixas por cima do mapa.
+- Testado no navegador: arrastos fortes nas quatro direções param na borda
+  com a imagem cobrindo a janela; hover mostra e esconde o nome; clique viaja.

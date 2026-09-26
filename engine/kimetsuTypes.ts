@@ -79,4 +79,6 @@ export type EstadoTatico = {
   emFuria?: number;
   queimadura?: number;
   sangramento?: number;
+  // Já sentiu o peso da Soberana do Eclipse (o -2 de acerto vale uma vez).
+  abalado?: boolean;
 };

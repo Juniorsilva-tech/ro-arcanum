@@ -46,7 +46,7 @@ import {
 import { multiplicadoresDeIdentidade } from './identidade';
 import { fichaCombatente, inicializarProgressaoNpc, treinarNpc } from './progressaoNpc';
 import { selarAlma, chimAlcancado } from './ascensao';
-import { aplicarPressaoPosCombateMarca, bonusCombateMarca, despertarMarca, NIVEL_MINIMO_ONI_MARCA } from './marca';
+import { aplicarPressaoPosCombateMarca, bonusCombateMarca, despertarMarca, NIVEL_MINIMO_ONI_MARCA, temMarca } from './marca';
 import { registrarFato } from './historiaViva';
 import { processarMissoesVivas } from './missoesVivas';
 import { calcularContexto } from './availability';
@@ -498,8 +498,16 @@ function inimigosVivos(s: CombatState): CombatActor[] {
   return s.atores.filter((a) => !a.ehJogador && !a.ehAliado && vivo(a));
 }
 
-function jogadorAtor(s: CombatState): CombatActor {
+export function jogadorAtor(s: CombatState): CombatActor {
   return s.atores.find((a) => a.ehJogador)!;
+}
+
+// Contra-golpe do Bastião: atinge o agressor de verdade — o ataque inimigo às
+// vezes chega numa cópia do ator com acerto ajustado — e pancada não mata oni.
+function contraGolpe(camp: Campaign, atacante: CombatActor, dano: number): void {
+  const real = camp.combate?.atores.find((a) => a.id === atacante.id) ?? atacante;
+  real.vida = Math.max(real.oni ? 1 : 0, real.vida - dano);
+  atacante.vida = real.vida;
 }
 
 function resolverAtaque(
@@ -567,8 +575,8 @@ function resolverAtaque(
     registrarFoco(camp, atacante, alvo.id, false);
     let notaContraAtaque = '';
     if (alvo.efeitoPassivoArma === 'contra_ataque_rocha' && atacante.vida > 0) {
-      atacante.vida = Math.max(0, atacante.vida - 7);
-      notaContraAtaque = ' [Bastião de Halvet: o escudo de pedra repele o golpe e contra-ataca (7 dano contundente no agressor)!]';
+      contraGolpe(camp, atacante, 7);
+      notaContraAtaque = ` O Bastião de Halvet devolve o golpe: 7 de dano contundente em ${atacante.nome}.`;
     }
     return `${atacante.nome} ataca ${alvo.nome} e erra.${notaQuebra}${notaContraAtaque}`;
   }
@@ -657,8 +665,11 @@ function resolverAtaque(
     notaPassiva += ' [Quebra-Rocha: lâmina maciça racha a blindagem do inimigo!]';
   } else if (atacante.efeitoPassivoArma === 'peso_imperial' && dano.valor > 0) {
     if ((alvo.tatico?.guarda ?? 0) > 0) alvo.tatico!.guarda = 0;
-    alvo.acerto = Math.max(2, alvo.acerto - 2);
-    notaPassiva += ' [Presença Imperial: peso ancestral abala o espírito do inimigo (-2 acerto)!]';
+    if (!alvo.tatico?.abalado) {
+      (alvo.tatico ??= {}).abalado = true;
+      alvo.acerto = Math.max(2, alvo.acerto - 2);
+      notaPassiva += ' [Presença Imperial: o peso da lâmina abala o inimigo (-2 acerto)]';
+    }
   } else if (atacante.efeitoPassivoArma === 'execucao_sombria' && dano.valor > 0) {
     if (alvo.vidaMax > 0 && alvo.vida / alvo.vidaMax <= 0.35) {
       dano.valor = Math.round(dano.valor * 1.5);
@@ -699,14 +710,20 @@ function resolverAtaque(
     }
   }
 
+  // Lâmina Carmesim: o calor queima o sangue de oni e segura a regeneração.
+  if (alvo.oni && dano.valor > 0 && (atacante.laminaCarmesimAte ?? 0) >= (camp.combate?.rodada ?? 0)) {
+    alvo.imuneRegenTurnos = Math.max(alvo.imuneRegenTurnos ?? 0, 2);
+    notaPassiva += ' A lâmina rubra queima o sangue de oni: a carne não se refaz.';
+  }
+
   if (alvo.corNichirin === 'cinza' && dano.valor > 0) {
     dano.valor = Math.max(1, dano.valor - 2);
     notaPassiva += ' [Nichirin de Pedra: solidez da rocha dissipa o impacto (-2 dano)!]';
   }
 
   if (alvo.efeitoPassivoArma === 'contra_ataque_rocha' && (alvo.defendendo || (alvo.tatico?.guarda ?? 0) > 0) && atacante.vida > 0) {
-    atacante.vida = Math.max(0, atacante.vida - 7);
-    notaPassiva += ' [Bastião de Halvet: absorve impacto com contra-golpe contundente (7 dano no agressor)!]';
+    contraGolpe(camp, atacante, 7);
+    notaPassiva += ` O Bastião de Halvet devolve o golpe: 7 de dano contundente em ${atacante.nome}.`;
   }
 
   alvo.vida = Math.max(0, alvo.vida - dano.valor);
@@ -743,10 +760,8 @@ function resolverAtaque(
   if (alvo.vida > 0 && alvo.oni && contraOni) {
     notaOni = ` Nichirin pode finalizar esse oni quando sua postura ceder.`;
   }
-  const tagCrit = crit ? ' 💥 [GOLPE CRÍTICO!]' : '';
-  const verboAcerto = crit
-    ? `${atacante.nome} desfere um GOLPE CRÍTICO devastador em ${alvo.nome}`
-    : `${atacante.nome} acerta ${alvo.nome}`;
+  const tagCrit = crit ? ' [crítico]' : '';
+  const verboAcerto = `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''}`;
 
   return `${verboAcerto} — ${dano.valor} de dano ${dano.tipo}.${tagCrit}${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaPassiva}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
 }
@@ -942,13 +957,13 @@ function processarEfeitosContinuos(camp: Campaign, a: CombatActor): void {
   if ((a.tatico?.queimadura ?? 0) > 0) {
     a.tatico!.queimadura!--;
     const danoChama = 4;
-    a.vida = Math.max(0, a.vida - danoChama);
+    a.vida = Math.max(a.oni ? 1 : 0, a.vida - danoChama);
     camp.combate!.log.push(`🔥 [Chamas Solares]: ${a.nome} queima no fogo purificador (-${danoChama} PV)!`);
   }
   if ((a.tatico?.sangramento ?? 0) > 0) {
     a.tatico!.sangramento!--;
     const danoSangue = 3;
-    a.vida = Math.max(0, a.vida - danoSangue);
+    a.vida = Math.max(a.oni ? 1 : 0, a.vida - danoSangue);
     camp.combate!.log.push(`🩸 [Sangramento]: ${a.nome} perde sangue das feridas abertas (-${danoSangue} PV)!`);
   }
 }
@@ -1066,7 +1081,7 @@ function executarArteOni(camp: Campaign, a: CombatActor, jog: CombatActor): bool
   return false;
 }
 
-export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar' | 'humilhar' | 'trocar_arma';
+export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar' | 'humilhar' | 'trocar_arma' | 'lamina_carmesim';
 export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: AcaoTatica, alvoId?: string): void {
   const s = camp.combate;
   if (!s || s.terminado || s.ordem[s.turno] !== 'jogador') return;
@@ -1076,6 +1091,19 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
     if (!jog.tatico.sono) { s.log.push('Você já está desperto.'); return; }
     jog.tatico.sono = 0;
     s.log.push('Você reconhece a indução e desperta, retomando a atenção.');
+  } else if (acao === 'lamina_carmesim') {
+    // Akatō: quem tem a Marca aperta a empunhadura com força sobre-humana e o
+    // aço superaquece. Por três rodadas, o corte queima o sangue de oni e a
+    // regeneração não fecha a ferida.
+    if (!podeAgir(camp)) return;
+    if (!jog.corNichirin) { s.log.push('Só o aço de uma Nichirin desperta responde a esse aperto.'); return; }
+    if (!temMarca(camp)) { s.log.push('Você aperta a empunhadura, mas o aço não esquenta: falta a Marca.'); return; }
+    if ((jog.laminaCarmesimAte ?? 0) >= s.rodada) { s.log.push('A lâmina já está rubra.'); return; }
+    const p = camp.personagem;
+    if ((p.recursos.vigor ?? 0) < 4) { s.log.push('Sem fôlego para apertar o aço até ele arder (4 de vigor).'); return; }
+    p.recursos.vigor -= 4;
+    jog.laminaCarmesimAte = s.rodada + 3;
+    s.log.push('Você aperta a empunhadura até os dedos doerem. O aço esquenta e fica vermelho-vivo.');
   } else if (acao === 'trocar_arma') {
     if (!podeAgir(camp)) return;
     if ((jog.tatico.preso ?? 0) > 0) {
@@ -1343,6 +1371,10 @@ function avancarAteJogador(content: ContentBundle, camp: Campaign): void {
     if (jog.vida <= 0) {
       encerrar(camp, 'derrota', content);
       return;
+    }
+    if (!vivo(ator)) {
+      s.log.push(`${ator.nome} cai com o contra-golpe.`);
+      if (inimigosVivos(s).length === 0) { encerrar(camp, 'vitoria', content); return; }
     }
     avancaTurno(s, camp);
   }

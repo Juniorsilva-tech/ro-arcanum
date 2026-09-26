@@ -375,6 +375,9 @@ export const itensVaelhorn: Item[] = [
     bonusCritico: 0.15,
     multiplicadorCritico: 2.2,
     efeitoPassivo: 'chamas_solares',
+    corNichirin: 'preta',
+    corNichirinNome: 'Negra Obsidiana (Sol Primordial)',
+    corNichirinAfinidade: 'Respiração do Sol',
     dano: { base: 24, dispersao: 0.15, tipo: 'cortante' },
   }),
   it({

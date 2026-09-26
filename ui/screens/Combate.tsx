@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextoSerif, TextoMono, Medidor, Divisor, Botao } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
-import { itemPorId, artesConhecidasResolvidas } from '@/engine';
+import { itemPorId, artesConhecidasResolvidas, temMarca } from '@/engine';
 import type { Item } from '@/engine';
 
 export function Combate() {
@@ -422,6 +422,13 @@ export function Combate() {
 
               {!!jog.tatico?.sono && <Acao nome="Despertar" onPress={() => combTatica('despertar')} />}
               {!!jog.tatico?.preso && <Acao nome="Libertar-se" onPress={() => combTatica('libertar')} />}
+              {!!jog.corNichirin && temMarca(camp) && (
+                <Acao
+                  nome={(jog.laminaCarmesimAte ?? 0) >= s.rodada ? `Lâmina Carmesim (até a rodada ${jog.laminaCarmesimAte})` : 'Lâmina Carmesim · 4 vigor'}
+                  cor={cores.cinabrio}
+                  onPress={() => combTatica('lamina_carmesim')}
+                />
+              )}
               <Acao nome="Observar" onPress={() => combTatica('observar', alvoVivo?.id)} />
               <Acao nome="Flanquear" onPress={() => combTatica('flanquear')} />
               <Acao nome="Cobertura" onPress={() => combTatica('cobertura')} />

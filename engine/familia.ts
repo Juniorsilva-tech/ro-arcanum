@@ -52,28 +52,24 @@ function oficio(camp: Campaign, talento: AttrKey): string {
   return pick(camp.rng, porTalento[talento] ?? OFICIOS_COMUNS);
 }
 
+// Ofício no gênero de quem o exerce. `\b` do JS não reconhece letra acentuada
+// ("artesã" nunca casava), por isso a fronteira é por \p{L}.
+const OFICIO_M_F: [string, string][] = [
+  ['criador de animais', 'criadora de animais'], ['curandeiro', 'curandeira'], ['caçador', 'caçadora'],
+  ['artesão', 'artesã'], ['mago de corte', 'maga de corte'], ['administrador', 'administradora'],
+  ['ferreiro', 'ferreira'], ['lavrador', 'lavradora'], ['mineiro', 'mineira'], ['mago itinerante', 'maga itinerante'],
+  ['batedor', 'batedora'], ['herói aposentado', 'heroína aposentada'], ['mestre da espada', 'mestra da espada'],
+  ['nobre fugitivo', 'nobre fugitiva'], ['rei exilado', 'rainha exilada'], ['mercador itinerante', 'mercadora itinerante'],
+  ['soldado', 'soldada'],
+];
+
 export function flexionarOficio(of: string, genero: 'm' | 'f'): string {
-  if (genero === 'm') {
-    return of
-      .replace(/\bcriadora de animais\b/g, 'criador de animais')
-      .replace(/\bcurandeira\b/g, 'curandeiro')
-      .replace(/\bcaçadora\b/g, 'caçador')
-      .replace(/\bartesã\b/g, 'artesão')
-      .replace(/\bmaga de corte\b/g, 'mago de corte')
-      .replace(/\badministradora\b/g, 'administrador');
-  } else {
-    return of
-      .replace(/\bcriador de animais\b/g, 'criadora de animais')
-      .replace(/\bferreiro\b/g, 'ferreira')
-      .replace(/\blavrador\b/g, 'lavradora')
-      .replace(/\bmineiro\b/g, 'mineira')
-      .replace(/\bmago itinerante\b/g, 'maga itinerante')
-      .replace(/\bbatedor\b/g, 'batedora')
-      .replace(/\bherói aposentado\b/g, 'heroína aposentada')
-      .replace(/\bmestre da espada\b/g, 'mestra da espada')
-      .replace(/\bnobre fugitivo\b/g, 'nobre fugitiva')
-      .replace(/\brei exilado\b/g, 'rainha exilada');
+  let r = of;
+  for (const [m, f] of OFICIO_M_F) {
+    const [de, para] = genero === 'm' ? [f, m] : [m, f];
+    r = r.replace(new RegExp(`(?<!\\p{L})${de}(?!\\p{L})`, 'gu'), para);
   }
+  return r;
 }
 
 function estadoNpc(content: ContentBundle, idade: number): NpcDinamico {

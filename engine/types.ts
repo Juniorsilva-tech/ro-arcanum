@@ -600,6 +600,8 @@ export type CombatActor = {
   // Cor da lâmina Nichirin desperta em combate
   corNichirin?: 'preta' | 'azul' | 'vermelha' | 'amarela' | 'verde' | 'cinza' | 'branca' | 'lavanda' | 'rosa' | 'indigo';
   nomeCorNichirin?: string;
+  // Lâmina Carmesim (akatō): até esta rodada, o corte queima o sangue de oni.
+  laminaCarmesimAte?: number;
   posicao?: 'frente' | 'flanco' | 'cobertura';
   retirado?: boolean;
   capturado?: boolean;
