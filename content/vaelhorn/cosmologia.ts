@@ -11,9 +11,10 @@
 // guardou as lendas dos poderes; os autos da Ordem guardam outra história. O
 // narrador conta as duas como coisas que se dizem, nunca como fato.
 //
-// (Sessão 69: as bruxas vinham de Re:Zero com nome, poder e termos copiados.
-// A inspiração ficou — a Invejosa que devora as irmãs, a juíza da culpa, a cura
-// pela fúria, o chá da que quer saber tudo —, mas as figuras agora são do vale.)
+// (Sessão 69: as bruxas usam os nomes das bruxas de Re:Zero, a pedido do
+// dono, com lendas próprias do vale: o que o povo conta e o que os autos da
+// Ordem registram. Termos da obra — "Autoridade", "Evangelho", "Santo da
+// Espada" — ficaram de fora.)
 
 export type Divindade = {
   id: string;
@@ -122,7 +123,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'inveja',
     pecado: 'Inveja',
-    nome: 'Ysmera · A Invejosa',
+    nome: 'Satella · A Invejosa',
     autoridade: 'A sombra que come o que os outros têm',
     naturezaPoder:
       'A lenda diz que ela cobiçou tudo o que as outras tinham — o dom, o amor, o nome — e as engoliu uma a uma ' +
@@ -134,12 +135,12 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
       'testemunhou contra todas para salvar a própria pele; a fogueira veio mesmo assim. O "inverno da Invejosa" ' +
       'foi uma peste que chegou pelo rio no mesmo ano.',
     reliquiaOuMarca:
-      'O nome proibido. Dizer "Ysmera" dentro de casa é chamar desgraça; as mães benzem a boca da criança que diz.',
+      'O nome proibido. Dizer "Satella" dentro de casa é chamar desgraça; as mães benzem a boca da criança que diz.',
   },
   {
     id: 'soberba',
     pecado: 'Soberba',
-    nome: 'Aldonsa · A Juíza',
+    nome: 'Typhon · A Juíza',
     autoridade: 'Fazer a culpa pesar no corpo',
     naturezaPoder:
       'Conta-se que era uma menina de olhar manso, e que quem mentia diante dela caía com os ossos quebrados ' +
@@ -151,7 +152,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'ira',
     pecado: 'Ira',
-    nome: 'Brunhe · A Colérica',
+    nome: 'Minerva · A Colérica',
     autoridade: 'Curar com raiva',
     naturezaPoder:
       'Dizem que odiava a dor dos outros com tanta raiva que curava aos socos: cada golpe fechava uma ferida, ' +
@@ -164,7 +165,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'preguica',
     pecado: 'Preguiça',
-    nome: 'Morgelle · A Adormecida',
+    nome: 'Sekhmet · A Adormecida',
     autoridade: 'O sono que não acaba',
     naturezaPoder:
       'A lenda diz que respirar já a cansava, que passava os dias deitada, e que ainda assim nenhum exército ' +
@@ -177,7 +178,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'gula',
     pecado: 'Gula',
-    nome: 'Dagra · A Faminta',
+    nome: 'Daphne · A Faminta',
     autoridade: 'Parir as feras do ermo',
     naturezaPoder:
       'Conta-se que andava de olhos vendados para não ver o mundo como comida, e que tinha tanta fome — dela e ' +
@@ -190,7 +191,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'luxuria',
     pecado: 'Luxúria',
-    nome: 'Liessa · A Encantadora',
+    nome: 'Carmilla · A Encantadora',
     autoridade: 'Ser amada até a morte',
     naturezaPoder:
       'Dizem que era tímida e não tinha rosto que se lembrasse: quem a olhava via nela quem mais amou na vida, ' +
@@ -202,7 +203,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'ganancia',
     pecado: 'Ganância',
-    nome: 'Otília · A Escrivã',
+    nome: 'Echidna · A Escrivã',
     autoridade: 'Querer saber tudo',
     naturezaPoder:
       'A lenda diz que queria saber tudo o que foi e o que será, que guardava as almas dos mortos em livros e ' +
@@ -215,7 +216,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'tristeza',
     pecado: 'Tristeza (Melancolia)',
-    nome: 'Anselmo · O Enlutado',
+    nome: 'Hector · O Enlutado',
     autoridade: 'O peso do luto',
     naturezaPoder:
       'Conta-se que onde ele chorava o ar ficava pesado como chumbo, que as casas afundavam na lama e os homens ' +
@@ -228,7 +229,7 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'va_gloria',
     pecado: 'Vã-Glória',
-    nome: 'Rosamunda · A Vaidosa',
+    nome: 'Pandora · A Vaidosa',
     autoridade: 'Desfazer o que aconteceu',
     naturezaPoder:
       'Uma moça de cabelos de prata e vestido branco. A lenda diz que, se a ferissem, ela sorria e dizia ' +
@@ -598,7 +599,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Planalto de Corveira',
     divindadeOuCrenca: 'O Julgamento da Soberba e o Medo da Lei.',
     passadoGuerraDeuses: 'Ponto alto onde os generais do firmamento empalavam os rebeldes.',
-    marcaDasBruxas: 'Inspirada no tribunal da Juíza Aldonsa: quem mente diante da forca tem os membros partidos pela própria consciência.',
+    marcaDasBruxas: 'Inspirada no tribunal da Juíza Typhon: quem mente diante da forca tem os membros partidos pela própria consciência.',
     supersticaoPopular: 'Corvo pousado em corda vazia aponta o próximo condenado com o bico.',
   },
   mosteiro_alto: {
@@ -625,7 +626,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Planalto de Corveira',
     divindadeOuCrenca: 'A Centelha Sagrada Primordial.',
     passadoGuerraDeuses: 'Fosso de magma que nunca esfria, remanescente do impacto do martelo de Vandul.',
-    marcaDasBruxas: 'Diz-se que aqui Brunhe, a Colérica, curou uma aldeia inteira de febre gritando uma noite inteira.',
+    marcaDasBruxas: 'Diz-se que aqui Minerva, a Colérica, curou uma aldeia inteira de febre gritando uma noite inteira.',
     supersticaoPopular: 'Água lançada no poço de lava ferve em vapor que profetiza desgraças da guerra.',
   },
 
@@ -710,7 +711,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Costa de Mareu',
     divindadeOuCrenca: 'Marcos de Pedra dos Naufrágios.',
     passadoGuerraDeuses: 'Caminho cortado a machado nas falésias pelos primeiros colonizadores celestes.',
-    marcaDasBruxas: 'Fendas onde o vento produz sons de luto, herança do luto de Anselmo, o Enlutado.',
+    marcaDasBruxas: 'Fendas onde o vento produz sons de luto, herança do luto de Hector, o Enlutado.',
     supersticaoPopular: 'Caminhar na beirada do abismo ao entardecer convida a mão invisível da Preguiça a empurrá-lo.',
   },
   mercado_peixe: {
@@ -858,7 +859,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Academia de Rotsgard',
     divindadeOuCrenca: 'O Culto da Teoria Mágica e dos Tomos Selados.',
     passadoGuerraDeuses: 'Cripta de manuscritos resgatados das chamas da Guerra Primordial.',
-    marcaDasBruxas: 'O setor restrito contém cópias censuradas dos páginas da Escrivã Otília.',
+    marcaDasBruxas: 'O setor restrito contém cópias censuradas dos páginas da Escrivã Echidna.',
     supersticaoPopular: 'Tomo com capa de pele que sangra quando aberto nunca deve ser lido sem três amuletos de chumbo.',
   },
   asora_vila_central: {

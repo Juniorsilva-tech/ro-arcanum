@@ -265,7 +265,7 @@ export function Config() {
         `✓ DIAGNÓSTICO DO JOGO EXECUTADO COM SUCESSO!\n\n` +
         `• ${pontos} pontos do mapa com crônicas vivas, deuses e marcas de bruxas mapeadas.\n` +
         `• ${deuses} Deuses Primordiais (Sol-Voraz, Vandul, Yrmara, Vintrath).\n` +
-        `• ${bruxas} Pecadoras queimadas pela Ordem, com a Invejosa (Ysmera).\n` +
+        `• ${bruxas} Pecadoras queimadas pela Ordem, com a Invejosa (Satella).\n` +
         `• ${faccoes} Facções e Ordens Antigas integradas.\n` +
         `• Sistema cognitivo de NPCs e Intimidade em conformidade.\n` +
         `• Todos os sistemas ativos e sem falhas!`

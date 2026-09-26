@@ -696,3 +696,12 @@ familiasNpc); expo export web.
 - Decidir a trava de idade da engine (item 2), que continua aberta.
 - O modelo padrão da Nous é `stealth/space-bunny-alpha` (sessão 64); conferir
   de tempos em tempos se continua no ar.
+
+### Sessão 69 (continuação) — nomes de Re:Zero de volta
+A pedido do dono, as Pecadoras voltaram aos nomes das bruxas de Re:Zero
+(Satella a Invejosa, Typhon a Juíza, Minerva a Colérica, Sekhmet a Adormecida,
+Daphne a Faminta, Carmilla a Encantadora, Echidna a Escrivã, Hector o
+Enlutado, Pandora a Vaidosa), com as lendas do vale escritas nesta sessão. Os
+termos da obra ("Autoridade", "Evangelho", "Santo da Espada") continuam fora,
+e o teste de cosmologia confere as duas coisas. Risco já registrado: nomes de
+obra de terceiros impedem publicar o jogo em loja.

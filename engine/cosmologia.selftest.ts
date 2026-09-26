@@ -77,10 +77,14 @@ console.log('--- TESTES DE COSMOLOGIA, DEUSES, BRUXAS E CRÔNICAS DO MAPA ---');
   ok(/autos|queimad|fogueira/.test(invejosa.desfecho), 'E o desfecho diz o que os autos da Ordem registram');
   // Nenhum nome, termo ou personagem copiado de Re:Zero.
   const texto = JSON.stringify(BRUXAS_DOS_PECADOS) + JSON.stringify(CRONICAS_MAPA) + JSON.stringify(FACCOES_ANTIGAS);
-  const copiados = ['Satella', 'Echidna', 'Typhon', 'Minerva', 'Sekhmet', 'Daphne', 'Carmilla', 'Pandora', 'Hector', 'Autoridade', 'Evangelho', 'Bispos do Pecado', 'Santo da Espada', 'Dragão Divino', 'Grande Sábio'];
+  // Os nomes vêm de Re:Zero (pedido do dono); os termos da obra, não.
+  for (const nome of ['Satella', 'Echidna', 'Typhon', 'Minerva', 'Sekhmet', 'Daphne', 'Carmilla', 'Pandora', 'Hector']) {
+    ok(BRUXAS_DOS_PECADOS.some((b) => b.nome.startsWith(nome)), `${nome} está entre as Pecadoras`);
+  }
+  const copiados = ['Autoridade', 'Evangelho', 'Bispos do Pecado', 'Santo da Espada', 'Dragão Divino', 'Grande Sábio'];
   const achados = copiados.filter((n) => texto.includes(n));
-  ok(achados.length === 0, `Nenhum nome ou termo copiado de Re:Zero (${achados.join(', ') || 'nenhum'})`);
-  console.log('✓ 3. As Sete Pecadoras validadas, sem nada copiado de Re:Zero');
+  ok(achados.length === 0, `Nenhum termo da obra copiado (${achados.join(', ') || 'nenhum'})`);
+  console.log('✓ 3. As Sete Pecadoras validadas, com os nomes de Re:Zero e lendas do vale');
 }
 
 
