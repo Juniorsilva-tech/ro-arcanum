@@ -476,6 +476,8 @@ export type Mestre = {
 export type Trabalho = {
   id: string;
   nome: string;
+  /** Onde se faz: o Livro revela o trabalho quando você conhece o lugar (engine/livro.ts). */
+  onde?: string;
   tipo: 'fixo' | 'contrato' | 'oficio' | 'obrigacao';
   requisitos: string;
   periodosPorCiclo: number;

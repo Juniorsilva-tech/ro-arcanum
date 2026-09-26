@@ -8,6 +8,7 @@
 // um punhado de estados que mudam sozinhos, chegam ao narrador e mexem no
 // preço da loja. Barato de rodar, e o bastante para o vale parecer vivo.
 import { processarBandos } from './bandos';
+import { atualizarLivro } from './livro';
 import type { Campaign, ContentBundle, Estacao } from './types';
 import { nextFloat, nextInt, pick } from './rng';
 import { registrarMarco } from './memoria';
@@ -243,6 +244,8 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     }
     m.diaProcessado = dia;
   }
+  // O Livro sobe de camada com o que o jogador descobriu (engine/livro.ts).
+  atualizarLivro(content, camp);
   } finally { camp.calendario = calendarioFinal; }
 }
 

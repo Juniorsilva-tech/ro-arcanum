@@ -229,6 +229,7 @@ export const mestresVaelhorn: Mestre[] = [
 export const trabalhosVaelhorn: Trabalho[] = [
   {
     id: 'servir_taverna',
+    onde: 'taverna',
     nome: 'Servir na taverna',
     tipo: 'fixo',
     requisitos: 'Nenhum',
@@ -239,6 +240,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'guarda_noturna',
+    onde: 'praca',
     nome: 'Ronda noturna',
     tipo: 'fixo',
     requisitos: 'Disposição da guarda',
@@ -252,6 +254,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'contrato_cacada',
+    onde: 'floresta',
     nome: 'Contrato de caçada',
     tipo: 'contrato',
     requisitos: 'Arco ou lança',
@@ -261,6 +264,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'ajudar_forja',
+    onde: 'mercado',
     nome: 'Braço na forja',
     tipo: 'oficio',
     requisitos: 'Força razoável',
@@ -271,6 +275,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'entrega_grimm',
+    onde: 'mercado',
     nome: 'Entrega para Grimma',
     tipo: 'contrato',
     requisitos: 'Disposição dos ladrões',
@@ -284,6 +289,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'divida_do_fiador',
+    onde: 'taverna',
     nome: 'Saldar a dívida da Fiadora',
     tipo: 'obrigacao',
     requisitos: 'Dever a Vess',
@@ -293,6 +299,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'turno_na_mina',
+    onde: 'mina',
     nome: 'Turno na mina',
     tipo: 'fixo',
     requisitos: 'Costas boas e nenhum medo de teto baixo',
@@ -303,6 +310,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'escolta_de_carga',
+    onde: 'estrada',
     nome: 'Escolta de carga',
     tipo: 'contrato',
     requisitos: 'Uma arma e disposição de usá-la na estrada',
@@ -313,6 +321,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'copista_da_casa',
+    onde: 'casa_senhorial',
     nome: 'Copista na casa de pedra',
     tipo: 'oficio',
     requisitos: 'Saber ler e escrever sem tremer a mão',
@@ -323,6 +332,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'cavar_covas',
+    onde: 'cemiterio',
     nome: 'Cavar covas com Oda',
     tipo: 'oficio',
     requisitos: 'Estômago',
@@ -333,6 +343,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'pesca_no_espelho',
+    onde: 'lago',
     nome: 'Pesca no Espelho',
     tipo: 'oficio',
     requisitos: 'Paciência e uma vara',
@@ -343,6 +354,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'servico_aos_sem_nome',
+    onde: 'acampamento',
     nome: 'Serviço para os Sem-Nome',
     tipo: 'contrato',
     requisitos: 'Ruvela confiar em você',
@@ -357,6 +369,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'extracao_fenda_corveira',
+    onde: 'mina_corveira',
     nome: 'Extração Profunda na Fenda de Corveira',
     tipo: 'fixo',
     requisitos: 'Físico forte e coragem diante da escuridão',
@@ -367,6 +380,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'estiva_docas_mareu',
+    onde: 'mareu',
     nome: 'Estiva e Calafetagem nas Docas de Mareu',
     tipo: 'oficio',
     requisitos: 'Braço forte e resistência ao salitre',
@@ -377,6 +391,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'patrulha_muralha_tessel',
+    onde: 'tessel',
     nome: 'Guarnição de Sentinela no Sulco de Tessel',
     tipo: 'fixo',
     requisitos: 'Precisão ou Físico, e disciplina militar',
@@ -387,6 +402,7 @@ export const trabalhosVaelhorn: Trabalho[] = [
   },
   {
     id: 'cacada_contrato_witcher',
+    onde: 'floresta',
     nome: 'Quadro de Avisos: Contrato Profissional de Besta',
     tipo: 'contrato',
     requisitos: 'Rastrear, óleos adequados e armas preparadas',

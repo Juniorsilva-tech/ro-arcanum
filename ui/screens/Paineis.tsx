@@ -53,6 +53,8 @@ import {
   periodoAtual,
   calcularHumorNpc,
   obterIntimidadeNpc,
+  estadosDaSecao,
+  descobertas,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -1435,6 +1437,13 @@ export function Missoes() {
 }
 
 // ─────────────────────────────────────────────── O LIVRO
+const ROTULO_CAMADA: Record<string, string> = {
+  desconhecida: '?', ouvida: 'boato', localizada: 'sabe onde', acessivel: 'ao alcance', obtida: 'seu', perdida: 'perdido',
+};
+function corCamada(e: string): string {
+  return e === 'obtida' ? cores.verdigris : e === 'acessivel' ? cores.ouro : e === 'perdida' ? cores.cinabrio : cores.mudo;
+}
+
 export function Livro() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
@@ -1458,6 +1467,14 @@ export function Livro() {
 
   const ensinamAqui = mestresQueEnsinamAqui(content, camp);
   const localNome = content.locais.find((l) => l.id === camp.localAtual)?.nome ?? '';
+  // Camadas do Livro (engine/livro.ts): o que você já ouviu, sabe onde é,
+  // pode alcançar agora ou já conquistou.
+  const estMestres = estadosDaSecao(content, camp, 'mestres', content.mestres.map((x) => x.id));
+  const estTrabalhos = estadosDaSecao(content, camp, 'trabalhos', content.trabalhos.map((x) => x.id));
+  const estArtes = estadosDaSecao(content, camp, 'artes', content.artes.map((x) => x.id));
+  const estReliquias = estadosDaSecao(content, camp, 'reliquias', content.reliquias.map((x) => x.id));
+  const nomeLocal = (id?: string) => content.locais.find((l) => l.id === id)?.nome ?? 'lugar desconhecido';
+  const regiaoDe = (id?: string) => content.locais.find((l) => l.id === id)?.regiao ?? 'algum lugar';
 
   return (
     <Pagina>
@@ -1557,65 +1574,109 @@ export function Livro() {
         </>
       )}
 
-      <Divisor label="I · Mestres" />
-      {content.mestres.map((m) => (
-        <Card key={m.id}>
-          <TextoSerif style={{ fontSize: 20 }}>{m.nome}</TextoSerif>
-          <TextoMono>{m.dominio} · {m.localBase}</TextoMono>
-          <Text style={styles.mestreMec}>{m.mecanicaUnica}</Text>
-          <TextoMono style={{ color: cores.linha, marginTop: 4 }}>custo: {m.custo}</TextoMono>
-        </Card>
-      ))}
-
-      <Divisor label="II · Trabalhos" />
-      {content.trabalhos.map((t) => (
-        <View key={t.id} style={styles.livroLinha}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.livroNome}>{t.nome}</Text>
-            <TextoMono>{t.tipo} · {t.renda >= 0 ? `+${t.renda}` : t.renda} moedas / {t.periodosPorCiclo}p</TextoMono>
-          </View>
-        </View>
-      ))}
-
-      <Divisor label="III · Artes" />
-      {[...content.artes, ...(camp.artesCriadas ?? [])].map((a) => {
-        const conhecida = p.artesConhecidas.includes(a.id);
+      {/* I a IV: só o que já saiu do escuro, com o detalhe da camada em que
+          está (engine/livro.ts). Desconhecido não aparece; ouvido é boato;
+          localizado diz onde; acessível e obtido mostram tudo. */}
+      <Divisor label={`I · Mestres · ${descobertas(estMestres)} de ${content.mestres.length}`} />
+      {content.mestres.filter((m) => estMestres[m.id] !== 'desconhecida').map((m) => {
+        const e = estMestres[m.id];
+        const completo = e === 'acessivel' || e === 'obtida';
         return (
-          <View key={a.id} style={styles.livroLinha}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.livroNome, conhecida ? { color: cores.verdigris } : null]}>
-                {conhecida ? '✦ ' : ''}
-                {a.origem === 'fusao' ? '⟡ ' : ''}
-                {a.nome}
-              </Text>
-              <TextoMono>{a.escola} · {a.efeito}</TextoMono>
+          <Card key={m.id} acento={e === 'perdida' ? cores.cinabrio : completo ? cores.verdigris : undefined}>
+            <View style={styles.linhaTitulo}>
+              <TextoSerif style={{ fontSize: 20, color: e === 'ouvida' ? cores.mudo : undefined }}>{m.nome}</TextoSerif>
+              <Selo texto={ROTULO_CAMADA[e]} cor={corCamada(e)} />
             </View>
-            <Selo texto={a.grau} cor={corGrauReliquia(a.grau)} />
+            {e === 'ouvida' && <TextoMono style={{ color: cores.mudo }}>Dizem que ensina {m.dominio.toLowerCase()} em {regiaoDe(m.localBase)}.</TextoMono>}
+            {e !== 'ouvida' && <TextoMono>{m.dominio} · {nomeLocal(m.localBase)}</TextoMono>}
+            {(completo || e === 'perdida') && <Text style={styles.mestreMec}>{m.mecanicaUnica}</Text>}
+            {e === 'localizada' && <TextoMono style={{ color: cores.linha, marginTop: 4 }}>Encontre quem ensina em {nomeLocal(m.localBase)} para saber o que ele muda.</TextoMono>}
+            {completo && <TextoMono style={{ color: cores.linha, marginTop: 4 }}>custo: {m.custo}</TextoMono>}
+            {e === 'perdida' && <TextoMono style={{ color: cores.cinabrio, marginTop: 4 }}>Morreu. O que sabia foi com ele.</TextoMono>}
+          </Card>
+        );
+      })}
+
+      <Divisor label={`II · Trabalhos · ${descobertas(estTrabalhos)} de ${content.trabalhos.length}`} />
+      {content.trabalhos.filter((t) => estTrabalhos[t.id] !== 'desconhecida').map((t) => {
+        const e = estTrabalhos[t.id];
+        return (
+          <View key={t.id} style={styles.livroLinha}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.livroNome, e === 'ouvida' ? { color: cores.mudo } : null]}>{t.nome}</Text>
+              {e === 'ouvida' ? (
+                <TextoMono style={{ color: cores.mudo }}>Ouviu falar que pagam por isso em {regiaoDe(t.onde)}.</TextoMono>
+              ) : (
+                <TextoMono>
+                  {t.tipo} · {t.renda >= 0 ? `+${t.renda}` : t.renda} moedas / {t.periodosPorCiclo}p · {nomeLocal(t.onde)}
+                  {t.requisitos && t.requisitos !== 'Nenhum' ? ` · pede: ${t.requisitos}` : ''}
+                </TextoMono>
+              )}
+            </View>
+            <Selo texto={ROTULO_CAMADA[e]} cor={corCamada(e)} />
           </View>
         );
       })}
 
-      <Divisor label="IV · Relíquias" />
-      {content.reliquias.map((r) => (
-        <Card key={r.id} acento={corGrauReliquia(r.grau)}>
-          <View style={styles.linhaTitulo}>
-            <TextoSerif style={{ fontSize: 19 }}>{r.nome}</TextoSerif>
-            <Selo texto={r.grau} cor={corGrauReliquia(r.grau)} />
-          </View>
-          <TextoSerif style={{ fontSize: 16, color: cores.mudo, marginTop: 4 }}>{r.descricao}</TextoSerif>
-          {r.grau === 'unica' && r.donoAtual && (
-            <View style={styles.unica}>
-              <Rotulo cor={cores.cinabrio}>Tem dono</Rotulo>
-              <Text style={styles.unicaUso}>{r.usoPeloDono}</Text>
-              {r.viasDeTomada && (
-                <TextoMono style={{ color: cores.linha, marginTop: 4 }}>
-                  vias: {r.viasDeTomada.join(' · ')}
-                </TextoMono>
-              )}
+      <Divisor label={`III · Artes · ${descobertas(estArtes) + (camp.artesCriadas?.length ?? 0)} de ${content.artes.length + (camp.artesCriadas?.length ?? 0)}`} />
+      {[...content.artes, ...(camp.artesCriadas ?? [])]
+        .filter((a) => a.origem === 'fusao' || estArtes[a.id] !== 'desconhecida')
+        .map((a) => {
+          const e = a.origem === 'fusao' ? 'obtida' : estArtes[a.id];
+          const conhecida = e === 'obtida';
+          return (
+            <View key={a.id} style={styles.livroLinha}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.livroNome, conhecida ? { color: cores.verdigris } : e === 'ouvida' ? { color: cores.mudo } : null]}>
+                  {conhecida ? '✦ ' : ''}
+                  {a.origem === 'fusao' ? '⟡ ' : ''}
+                  {a.nome}
+                </Text>
+                <TextoMono>{a.escola}{e === 'acessivel' || conhecida ? ` · ${a.efeito}` : e === 'ouvida' ? ' · alguém por aí ensina' : ' · você sabe quem ensina'}</TextoMono>
+              </View>
+              <Selo texto={conhecida || e === 'acessivel' ? a.grau : ROTULO_CAMADA[e]} cor={conhecida || e === 'acessivel' ? corGrauReliquia(a.grau) : corCamada(e)} />
             </View>
-          )}
-        </Card>
-      ))}
+          );
+        })}
+
+      <Divisor label={`IV · Relíquias · ${descobertas(estReliquias)} de ${content.reliquias.length}`} />
+      {content.reliquias.filter((r) => estReliquias[r.id] !== 'desconhecida').map((r) => {
+        const e = estReliquias[r.id];
+        if (e === 'ouvida') {
+          return (
+            <Card key={r.id}>
+              <View style={styles.linhaTitulo}>
+                <TextoSerif style={{ fontSize: 19, color: cores.mudo }}>{r.nome}</TextoSerif>
+                <Selo texto={ROTULO_CAMADA[e]} cor={corCamada(e)} />
+              </View>
+              <TextoMono style={{ color: cores.mudo, marginTop: 4 }}>
+                Um boato: está em algum lugar de {regiaoDe(r.localAtual ?? content.npcs.find((n) => n.id === r.donoAtual)?.localBase)}.
+              </TextoMono>
+            </Card>
+          );
+        }
+        return (
+          <Card key={r.id} acento={corGrauReliquia(r.grau)}>
+            <View style={styles.linhaTitulo}>
+              <TextoSerif style={{ fontSize: 19 }}>{r.nome}</TextoSerif>
+              <Selo texto={e === 'obtida' ? 'sua' : r.grau} cor={e === 'obtida' ? cores.verdigris : corGrauReliquia(r.grau)} />
+            </View>
+            <TextoSerif style={{ fontSize: 16, color: cores.mudo, marginTop: 4 }}>{r.descricao}</TextoSerif>
+            {r.localAtual && e !== 'obtida' && <TextoMono style={{ color: cores.linha, marginTop: 4 }}>em {nomeLocal(r.localAtual)}</TextoMono>}
+            {r.grau === 'unica' && r.donoAtual && r.donoAtual !== 'jogador' && (
+              <View style={styles.unica}>
+                <Rotulo cor={cores.cinabrio}>Tem dono</Rotulo>
+                <Text style={styles.unicaUso}>{r.usoPeloDono}</Text>
+                {r.viasDeTomada && (
+                  <TextoMono style={{ color: cores.linha, marginTop: 4 }}>
+                    vias: {r.viasDeTomada.join(' · ')}
+                  </TextoMono>
+                )}
+              </View>
+            )}
+          </Card>
+        );
+      })}
 
       <Divisor label="V · Cosmologia & Os Deuses Primordiais" />
       <Card acento={cores.ouro}>

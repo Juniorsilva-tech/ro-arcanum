@@ -705,3 +705,29 @@ Enlutado, Pandora a Vaidosa), com as lendas do vale escritas nesta sessão. Os
 termos da obra ("Autoridade", "Evangelho", "Santo da Espada") continuam fora,
 e o teste de cosmologia confere as duas coisas. Risco já registrado: nomes de
 obra de terceiros impedem publicar o jogo em loja.
+
+### Sessão 69 (continuação) — termos de Re:Zero e o Livro em camadas
+- Termos da obra de volta (pedido do dono: jogo 100% local, não será vendido):
+  "Autoridade" no Livro, Satella selada pelo Santo da Espada, o Dragão Divino e
+  o Grande Sábio, o Culto da Bruxa com Evangelho e Bispos do Pecado. O teste de
+  cosmologia confere nomes e termos. Commit `a1f9600`.
+- **O Livro mostrava tudo desde o primeiro minuto.** `camp.livro` tinha estado
+  por entrada (desconhecida, ouvida, localizada, acessível, obtida, perdida),
+  mas nada o mudava, e a tela ignorava o estado. Novo `engine/livro.ts` deriva a
+  camada do que o jogador fez:
+  - ouvida: o lugar da entrada é da região de algum lugar visitado ou vizinho
+    por estrada (boato);
+  - localizada: esteve no lugar, ou conhece quem guarda a relíquia;
+  - acessível: está com o mestre / no lugar do trabalho;
+  - obtida: aprendeu arte do mestre, conhece a arte, tem a relíquia;
+  - perdida: o mestre morreu.
+  A camada só sobe (exceto perdida). `atualizarLivro` grava no fim de
+  `avancarMundo`; a tela lê `estadosDaSecao` na hora.
+- `Trabalho.onde` novo (tipo + os 16 trabalhos de `book.ts`) para o Livro saber
+  onde cada trabalho se faz.
+- Tela: seções I a IV mostram "N de M", escondem o desconhecido e dão o detalhe
+  da camada (boato só com o nome e a região; "sabe onde" com o lugar; completo
+  ao alcance ou conquistado). V a VII (lore) continuam abertas.
+- Campanha nova: 6 de 25 mestres, 10 de 16 trabalhos, 17 de 81 artes e 9 de 15
+  relíquias saem do escuro, quase todos como boato do vale.
+- Teste: `engine/livro.selftest.ts`, no `test:engine`. Conferido na tela web.
