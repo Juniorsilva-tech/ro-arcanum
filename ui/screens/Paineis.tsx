@@ -2,12 +2,19 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
-import { TextoSerif, TextoMono, Card, Medidor, Divisor, Rotulo, Selo, Botao } from '../components';
+import { TextoSerif, TextoMono, Card, Medidor, Divisor, Rotulo, Selo, Botao, BannerIlustrado } from '../components';
 import { cores, fontes, esp, corPressao, corImpulso } from '../theme';
 import { useGame } from '../store';
 import { ComunidadeViva, CompromissosVivos, HistoriaViva, BiografiaViva } from './MundoVivo';
 import { Progressao } from './Progressao';
 import { MapaVisual } from './MapaVisual';
+import { imagemDoLocal } from './Assentamento';
+import {
+  MITO_ORIGEM_MAGIA,
+  DEUSES_PRIMORDIAIS,
+  BRUXAS_DOS_PECADOS,
+  FACCOES_ANTIGAS,
+} from '@/content/vaelhorn/cosmologia';
 import {
   derivados,
   defesaJogador,
@@ -43,6 +50,9 @@ import {
   parentesConhecidos,
   familiasDe,
   feitosDoJogador,
+  periodoAtual,
+  calcularHumorNpc,
+  obterIntimidadeNpc,
 } from '@/engine';
 
 // ─────────────────────────────────────────────── FICHA
@@ -500,12 +510,24 @@ export function Vinculos() {
         const parente = camp.familia?.membros.find(m => m.id === n.id);
         const noGrupo = (camp.grupo ?? []).includes(n.id);
         const presente = combatentesPresentes.some(p => p.id === n.id);
+        const humor = calcularHumorNpc(camp, content, n);
+        const intimidade = obterIntimidadeNpc(camp, n);
+        const origemTxt = intimidade.origem ? n.historia?.origem : undefined;
+        const desejoTxt = intimidade.desejo ? n.historia?.desejo : undefined;
+        const feridaTxt = intimidade.ferida ? n.historia?.ferida : undefined;
+        const medoTxt = intimidade.medo ? n.historia?.medo : undefined;
         return (
           <Card key={n.id}>
             <View style={styles.linhaTitulo}>
               <TextoSerif style={{ fontSize: 22, color: cores.vellum }}>{n.nome}</TextoSerif>
-              {din.tensao >= 60 && <Selo texto="afastando-se" cor={cores.cinabrio} />}
+              <View style={{ flexDirection: 'row', gap: esp.xs, alignItems: 'center' }}>
+                <Selo texto={`${humor.icone} ${humor.rotulo.toUpperCase()}`} cor={humor.cor} />
+                {din.tensao >= 60 && <Selo texto="afastando-se" cor={cores.cinabrio} />}
+              </View>
             </View>
+            <TextoMono style={{ fontSize: 13, color: humor.cor, marginBottom: esp.xs }}>
+              {humor.descricao}
+            </TextoMono>
             <TextoMono style={{ marginBottom: esp.sm }}>{ocupacaoEfetiva(camp, n)}</TextoMono>
             <FamiliaDoNpc id={n.id} />
             {n.combatente && <TextoMono>Prática adquirida: {retratoProgressaoNpc(camp, n)?.maestria} · vida máxima {retratoProgressaoNpc(camp, n)?.vidaMax} · dano {retratoProgressaoNpc(camp, n)?.dano}</TextoMono>}
@@ -527,6 +549,71 @@ export function Vinculos() {
                 <Medidor key={e.id} rotulo={e.nome} valor={Math.max(0, v + 20)} max={40} cor={cor} compacto />
               );
             })}
+            <View style={styles.intimidadeBox}>
+              <Rotulo cor={cores.ouro}>Camadas de Intimidade & História</Rotulo>
+              <View style={styles.camadaItem}>
+                <TextoMono style={styles.camadaTitulo}>📖 Origem:</TextoMono>
+                <TextoSerif style={origemTxt ? styles.camadaTexto : styles.camadaOculta}>
+                  {origemTxt ?? 'Origem ainda desconhecida.'}
+                </TextoSerif>
+              </View>
+              <View style={styles.camadaItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.xs }}>
+                  <TextoMono style={styles.camadaTitulo}>💭 Anseio de Vida:</TextoMono>
+                  {intimidade.desejoApoiado && <Selo texto="APOIADO & LEAL" cor={cores.verdigris} />}
+                </View>
+                <TextoSerif style={desejoTxt ? styles.camadaTexto : styles.camadaOculta}>
+                  {desejoTxt ?? '🔒 Conquiste mais confiança ou converse a sós para desvendar este anseio.'}
+                </TextoSerif>
+              </View>
+              <View style={styles.camadaItem}>
+                <TextoMono style={styles.camadaTitulo}>💔 Ferida Íntima:</TextoMono>
+                <TextoSerif style={feridaTxt ? styles.camadaTexto : styles.camadaOculta}>
+                  {feridaTxt ?? '🔒 Aprofunde os laços para que ela se sinta segura em abrir suas cicatrizes.'}
+                </TextoSerif>
+              </View>
+              <View style={styles.camadaItem}>
+                <TextoMono style={styles.camadaTitulo}>👁️ Maior Medo:</TextoMono>
+                <TextoSerif style={medoTxt ? styles.camadaTexto : styles.camadaOculta}>
+                  {medoTxt ?? '🔒 Uma alma só revela seus terrores mais profundos a quem é íntimo de verdade.'}
+                </TextoSerif>
+              </View>
+            </View>
+
+            {din.vivo && (
+              <View style={styles.acoesIntimidade}>
+                <Rotulo cor={cores.mudo}>Ações de Vínculo</Rotulo>
+                <View style={{ gap: esp.xs, marginTop: 4 }}>
+                  <Botao
+                    titulo="Conversar a sós"
+                    variante="fantasma"
+                    onPress={() => agirMundo({ tipo: 'conversar_a_sos', npcId: n.id })}
+                  />
+                  {camp.personagem.dinheiro >= 10 && (
+                    <Botao
+                      titulo="Oferecer presente · 10 moedas"
+                      variante="fantasma"
+                      onPress={() => agirMundo({ tipo: 'presentear_npc', npcId: n.id })}
+                    />
+                  )}
+                  {humor.id === 'luto' && (
+                    <Botao
+                      titulo="Prestar condolências & confortar luto"
+                      variante="acento"
+                      onPress={() => agirMundo({ tipo: 'confortar_luto_npc', npcId: n.id })}
+                    />
+                  )}
+                  {intimidade.desejo && !intimidade.desejoApoiado && camp.personagem.dinheiro >= 20 && (
+                    <Botao
+                      titulo="Apoiar anseio de vida · 20 moedas"
+                      variante="acento"
+                      onPress={() => agirMundo({ tipo: 'apoiar_desejo_npc', npcId: n.id })}
+                    />
+                  )}
+                </View>
+              </View>
+            )}
+
             {!!din.memoria.length && (
               <View style={styles.memoriaRecente}>
                 <Rotulo cor={cores.mudo}>Memórias recentes</Rotulo>
@@ -1191,13 +1278,25 @@ export function Mapa() {
   const reconstruir = useGame((s) => s.reconstruirLocal);
   const viajar = useGame((s) => s.viajar);
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
+  const periodo = periodoAtual(camp.calendario);
+  const imagemLocal = imagemDoLocal(local?.id, local?.regiao);
+  const atmosferaAtual = local?.atmosferaPorPeriodo?.[periodo] || local?.descricaoBase;
 
   return (
     <Pagina>
       <BarraVoltar titulo="Mapa" />
-      <Rotulo cor={cores.ouro}>{local.regiao}</Rotulo>
-      <TextoSerif style={{ fontSize: 26, marginTop: 2 }}>{local.nome}</TextoSerif>
-      <TextoMono style={{ marginBottom: esp.lg }}>você está aqui · perigo {local.perigo}/10</TextoMono>
+      {local && (
+        <BannerIlustrado
+          source={imagemLocal}
+          periodo={periodo}
+          titulo={local.nome}
+          subtitulo={`Você está aqui · ${local.regiao} · Perigo ${local.perigo}/10`}
+          seloTexto={local.tipo.toUpperCase()}
+          seloCor={local.perigo >= 4 ? cores.cinabrio : cores.ouro}
+          altura={210}
+          descricaoAtmosfera={atmosferaAtual}
+        />
+      )}
       <ComunidadeViva />
 
       <Divisor label="mapa do mundo conhecido" />
@@ -1517,6 +1616,72 @@ export function Livro() {
           )}
         </Card>
       ))}
+
+      <Divisor label="V · Cosmologia & Os Deuses Primordiais" />
+      <Card acento={cores.ouro}>
+        <TextoSerif style={{ fontSize: 19, color: cores.ouro }}>{MITO_ORIGEM_MAGIA.titulo}</TextoSerif>
+        <TextoSerif style={{ fontSize: 14.5, color: '#dcd1b8', marginTop: esp.xs, lineHeight: 22 }}>
+          {MITO_ORIGEM_MAGIA.texto}
+        </TextoSerif>
+      </Card>
+      {DEUSES_PRIMORDIAIS.map((d) => (
+        <Card key={d.id} acento={cores.ouro}>
+          <View style={styles.linhaTitulo}>
+            <TextoSerif style={{ fontSize: 18, color: '#f3e3ba' }}>{d.nome}</TextoSerif>
+            <Selo texto={d.simbolo} cor={cores.ouro} />
+          </View>
+          <TextoMono style={{ color: cores.ouro, marginTop: 2 }}>{d.titulo}</TextoMono>
+          <TextoMono style={{ marginTop: 2 }}>Domínio: {d.dominio}</TextoMono>
+          <TextoMono style={{ color: cores.mudo, marginTop: 2 }}>Culto: {d.culto}</TextoMono>
+          <TextoSerif style={{ fontSize: 14, color: '#cbd5d1', marginTop: 4, lineHeight: 20 }}>
+            {d.mito}
+          </TextoSerif>
+        </Card>
+      ))}
+
+      <Divisor label="VI · As Bruxas dos Pecados & O Tabu da Inveja" />
+      <TextoMono style={{ color: cores.mudo, marginBottom: esp.sm }}>
+        As 7 Bruxas dos Pecados Capitais e os antigos hereges devorados há 400 anos por Satella.
+      </TextoMono>
+      {BRUXAS_DOS_PECADOS.map((b) => {
+        const ehSatella = b.id === 'inveja';
+        return (
+          <Card key={b.id} acento={ehSatella ? cores.cinabrio : cores.verdigris}>
+            <View style={styles.linhaTitulo}>
+              <TextoSerif style={{ fontSize: 18, color: ehSatella ? cores.cinabrio : cores.ouro }}>
+                {b.nome}
+              </TextoSerif>
+              <Selo
+                texto={b.pecado.toUpperCase()}
+                cor={ehSatella ? cores.cinabrio : cores.verdigris}
+              />
+            </View>
+            <TextoMono style={{ color: ehSatella ? cores.cinabrio : cores.ouro, marginTop: 2 }}>
+              Autoridade: {b.autoridade}
+            </TextoMono>
+            <TextoSerif style={{ fontSize: 14, color: '#cbd5d1', marginTop: 4, lineHeight: 20 }}>
+              {b.naturezaPoder}
+            </TextoSerif>
+            <TextoMono style={{ color: cores.linha, marginTop: 4 }}>
+              Desfecho: {b.desfecho}
+            </TextoMono>
+            <TextoMono style={{ color: cores.mudo, marginTop: 2 }}>
+              Marca/Relíquia: {b.reliquiaOuMarca}
+            </TextoMono>
+          </Card>
+        );
+      })}
+
+      <Divisor label="VII · Facções e Ordens Antigas" />
+      {FACCOES_ANTIGAS.map((f) => (
+        <Card key={f.id} acento={cores.linha}>
+          <TextoSerif style={{ fontSize: 18, color: cores.ouro }}>{f.nome}</TextoSerif>
+          <TextoMono style={{ color: cores.vellum, marginTop: 2 }}>Sede: {f.sede}</TextoMono>
+          <TextoMono style={{ marginTop: 2 }}>Crença: {f.crenca}</TextoMono>
+          <TextoMono style={{ color: cores.linha, marginTop: 2 }}>Dogma: {f.dogma}</TextoMono>
+          <TextoMono style={{ color: cores.cinabrio, marginTop: 2 }}>Relação com as Bruxas: {f.relacaoComBruxas}</TextoMono>
+        </Card>
+      ))}
     </Pagina>
   );
 }
@@ -1620,4 +1785,35 @@ const styles = StyleSheet.create({
   chipAprenderSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10 },
   questObj: { flexDirection: 'row', gap: esp.sm, alignItems: 'flex-start', marginTop: 4 },
   questCheck: { fontFamily: fontes.mono, fontSize: 13 },
+  intimidadeBox: {
+    marginTop: esp.md,
+    paddingTop: esp.md,
+    borderTopWidth: 1,
+    borderTopColor: cores.linha,
+    gap: esp.xs,
+  },
+  camadaItem: {
+    marginBottom: 4,
+  },
+  camadaTitulo: {
+    fontSize: 11,
+    color: cores.ouro,
+  },
+  camadaTexto: {
+    fontSize: 14,
+    color: cores.vellum,
+    marginTop: 1,
+  },
+  camadaOculta: {
+    fontSize: 13,
+    color: cores.mudo,
+    fontStyle: 'italic',
+    marginTop: 1,
+  },
+  acoesIntimidade: {
+    marginTop: esp.md,
+    paddingTop: esp.sm,
+    borderTopWidth: 1,
+    borderTopColor: cores.fundo3,
+  },
 });

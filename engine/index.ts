@@ -71,3 +71,5 @@ export * from './audiencias';
 export * from './ameacas';
 export * from './renome';
 export * from './segredos';
+export * from './intimidadeNpc';
+

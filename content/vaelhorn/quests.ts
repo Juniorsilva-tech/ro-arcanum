@@ -27,12 +27,12 @@ export const questsVaelhorn: Quest[] = [
   },
   {
     id: 'q_cripta',
-    titulo: 'O que dorme sob a capela',
-    descricao: 'Presságios apontam para a cripta. Descubra o que profanaram lá embaixo.',
+    titulo: 'O Que Dorme Sob a Capela',
+    descricao: 'As noviças cochicham sobre gemidos vindos das lajes da cripta. Descubra o que a Madre Corvane esconde sob o ossuário dos mártires.',
     dador: 'irma_perla',
     objetivos: [
-      { id: 'presagio', texto: 'Ler os presságios na capela', flag: 'presagio.vago' },
-      { id: 'abrir', texto: 'Chegar à porta da cripta', flag: 'porta.aberta' },
+      { id: 'presagio', texto: 'Investigar os manuscritos da capela', flag: 'presagio.vago' },
+      { id: 'abrir', texto: 'Forçar a porta de ferro da cripta', flag: 'porta.aberta' },
     ],
     recompensa: { item: 'incenso_de_purga', xp: 30, reputacao: [{ faccaoId: 'igreja', delta: 5 }] },
   },
@@ -47,8 +47,8 @@ export const questsVaelhorn: Quest[] = [
   // ── Segunda leva: o vale inteiro ─────────────────────────────────────────
   {
     id: 'q_ponte',
-    titulo: 'A noite em que a ponte caiu',
-    descricao: 'Todo mundo conta a história e ninguém conta a mesma. Morda ouviu algo que os outros não.',
+    titulo: 'A Sabotagem da Travessia',
+    descricao: 'A ponte imperial não ruiu por acaso: foi derrubada na insurreição. Morda, que mendiga nas ruínas, ouviu os oficiais darem a ordem.',
     dador: 'morda',
     objetivos: [
       { id: 'ir', texto: 'Ir até a Ponte Caída', flag: 'visitou.ponte' },
@@ -153,13 +153,13 @@ export const questsVaelhorn: Quest[] = [
   {
     id: 'q_selado',
     titulo: 'O Último Selo',
-    descricao: 'Sarine trancou algo sob a capela e passou a vida bebendo por causa disso. O selo está cedendo.',
+    descricao: 'Sarine emparedou vivo um homem sob as lajes da capela e afoga a culpa no álcool há trinta anos. Os grilhões nas catacumbas estão estalando.',
     dador: 'sarine',
     objetivos: [
-      { id: 'presagio', texto: 'Ler um presságio claro', flag: 'presagio.claro' },
+      { id: 'presagio', texto: 'Encontrar a ata da inquisição', flag: 'presagio.claro' },
       { id: 'sarine', texto: 'Arrancar a confissão de Sarine', flag: 'segredo.sarine' },
-      { id: 'corvane', texto: 'Descobrir o que a madre desce para fazer', flag: 'segredo.madre_corvane' },
-      { id: 'fim', texto: 'Enfrentar O Selado', flag: 'matou.o_selado' },
+      { id: 'corvane', texto: 'Descobrir o que a madre desce para fazer no ossuário', flag: 'segredo.madre_corvane' },
+      { id: 'fim', texto: 'Eliminar O Selado nas profundezas', flag: 'matou.o_selado' },
     ],
     recompensa: { dinheiro: 400, xp: 400, item: 'selo_partido', reputacao: [{ faccaoId: 'igreja', delta: 10 }, { faccaoId: 'vila', delta: 10 }] },
   },

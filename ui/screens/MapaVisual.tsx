@@ -10,7 +10,8 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import type { Campaign, ContentBundle } from '@/engine/types';
-import { posicaoMapa, CAPITAIS_CONTINENTE } from '@/content/vaelhorn/mapa';
+import { posicaoMapa, CAPITAIS_CONTINENTE, COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
+import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
 import { cores, fontes, esp } from '../theme';
 import { rotasVisiveis } from '@/engine';
 
@@ -19,6 +20,21 @@ const IMAGEM_MAPA_TSUKIMICHI = require('../../assets/feudo/asora.jpg');
 
 const CANVAS_WIDTH = 1376;
 const CANVAS_HEIGHT = 768;
+
+export type MarcadorMapa = {
+  id: string;
+  nome: string;
+  regiao?: string;
+  sub?: string;
+  x: number;
+  y: number;
+  pintado: boolean;
+  atual: boolean;
+  conhecido: boolean;
+  podeViajar: boolean;
+  periodos?: number;
+  feudo?: boolean;
+};
 
 export function MapaVisual({
   content,
@@ -31,6 +47,7 @@ export function MapaVisual({
 }) {
   const [modoVisao, setModoVisao] = useState<'geral' | 'local'>('geral');
   const [feedbackViagem, setFeedbackViagem] = useState<string | null>(null);
+  const [lugarInspecionado, setLugarInspecionado] = useState<MarcadorMapa | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(0.85);
   const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 });
@@ -236,23 +253,47 @@ export function MapaVisual({
     id: string; nome: string; sub?: string; x: number; y: number; pintado: boolean;
     atual: boolean; conhecido: boolean; podeViajar: boolean; periodos?: number; feudo?: boolean;
   };
-  const marcadores: Marcador[] = (() => {
-    const lista = new Map<string, Marcador>();
-    const montar = (id: string, extra: Partial<Marcador> = {}): Marcador | undefined => {
+  const marcadores: MarcadorMapa[] = (() => {
+    const lista = new Map<string, MarcadorMapa>();
+    const montar = (id: string, extra: Partial<MarcadorMapa> = {}): MarcadorMapa | undefined => {
       const local = content.locais.find((l) => l.id === id);
-      if (!local) return undefined;
+      const cronica = CRONICAS_MAPA[id];
+      if (!local && !cronica) return undefined;
       const rota = rotas.find((r) => r.destino === id);
-      const pos = posicaoMapa(id, local.regiao);
+      const regiao = local?.regiao ?? cronica?.regiao;
+      const pos = COORDENADAS_LOCAIS[id] ?? posicaoMapa(id, regiao);
+      const nome = local?.nome ?? cronica?.nome ?? id;
       return {
-        id, nome: local.nome, x: pos.x, y: pos.y, pintado: false,
-        atual: id === camp.localAtual, conhecido: visitados.has(id),
-        podeViajar: Boolean(rota && onViajar), periodos: rota?.periodos, ...extra,
+        id,
+        nome,
+        regiao,
+        x: pos.x,
+        y: pos.y,
+        pintado: false,
+        atual: id === camp.localAtual,
+        conhecido: visitados.has(id),
+        podeViajar: Boolean(rota && onViajar),
+        periodos: rota?.periodos,
+        ...extra,
       };
     };
     if (!ehTsukimichi && modoVisao === 'geral') {
       for (const cap of CAPITAIS_CONTINENTE) {
         const m = montar(cap.id, { pintado: true, sub: cap.tipo, x: cap.x, y: cap.y });
         if (m) lista.set(cap.id, m);
+      }
+      for (const id of Object.keys(COORDENADAS_LOCAIS)) {
+        if (id.match(/^(tsige_|wasteland_|asora_|rotsgard_)/)) continue;
+        if (lista.has(id)) continue;
+        const m = montar(id);
+        if (m) lista.set(id, m);
+      }
+    } else if (ehTsukimichi && modoVisao === 'geral') {
+      for (const id of Object.keys(COORDENADAS_LOCAIS)) {
+        if (!id.match(/^(tsige_|wasteland_|asora_|rotsgard_)/)) continue;
+        if (lista.has(id)) continue;
+        const m = montar(id);
+        if (m) lista.set(id, m);
       }
     }
     for (const id of pontosConectados) {
@@ -342,10 +383,11 @@ export function MapaVisual({
               ganham ícone: são uma área clicável invisível sobre o próprio
               desenho. Os outros lugares são um ponto pequeno. O nome aparece
               ao passar o mouse (web) ou no primeiro toque (celular); clicar
-              num lugar com rota viaja. */}
+              num lugar inspeciona sua crônica ancestral e permite viajar se houver rota. */}
           {marcadores.map((m) => {
             const focado = foco === m.id;
-            const rotulo = focado || (m.atual && modoVisao === 'local');
+            const inspecionado = lugarInspecionado?.id === m.id;
+            const rotulo = focado || (m.atual && modoVisao === 'local') || inspecionado;
             return (
               <Pressable
                 key={m.id}
@@ -353,10 +395,8 @@ export function MapaVisual({
                 onHoverOut={() => setFoco((f) => (f === m.id ? null : f))}
                 onPress={() => {
                   if (arrastou.current) return;
-                  // Sem mouse, o primeiro toque só mostra o nome.
-                  if (!ehWeb && foco !== m.id) { setFoco(m.id); return; }
-                  if (m.podeViajar) onViajar?.(m.id);
-                  else if (!m.atual) setFeedbackViagem(`${m.nome}: não há rota direta daqui. Siga pelas estradas.`);
+                  setLugarInspecionado(m);
+                  setFoco(m.id);
                 }}
                 style={[
                   m.pintado ? styles.areaPintada : styles.areaPonto,
@@ -365,8 +405,8 @@ export function MapaVisual({
                 accessibilityRole="button"
                 accessibilityLabel={m.atual ? `${m.nome} - você está aqui` : m.podeViajar ? `Viajar para ${m.nome}` : m.nome}
               >
-                {/* Contorno só quando o mouse está em cima de uma cidade pintada. */}
-                {m.pintado && focado && <View style={styles.contornoPintado} />}
+                {/* Contorno quando o mouse está em cima ou inspecionado */}
+                {m.pintado && (focado || inspecionado) && <View style={styles.contornoPintado} />}
                 {!m.pintado && (
                   <View
                     style={[
@@ -374,7 +414,7 @@ export function MapaVisual({
                       m.podeViajar && styles.pontinhoRota,
                       !m.conhecido && styles.pontinhoDesconhecido,
                       m.feudo && styles.pontinhoFeudo,
-                      focado && styles.pontinhoFocado,
+                      (focado || inspecionado) && styles.pontinhoFocado,
                     ]}
                   />
                 )}
@@ -387,9 +427,11 @@ export function MapaVisual({
                       <Text style={styles.rotuloAtual}>você está aqui</Text>
                     ) : m.podeViajar ? (
                       <Text style={styles.rotuloViajar}>
-                        {ehWeb ? 'clique para viajar' : 'toque de novo para viajar'} · {m.periodos === 0 ? 'ao lado' : `${m.periodos} ${m.periodos === 1 ? 'período' : 'períodos'}`}
+                        {m.periodos === 0 ? 'ao lado' : `${m.periodos} ${m.periodos === 1 ? 'período' : 'períodos'}`} · toque para crônica
                       </Text>
-                    ) : null}
+                    ) : (
+                      <Text style={styles.rotuloInspecionar}>toque para ler crônica</Text>
+                    )}
                   </View>
                 )}
               </Pressable>
@@ -427,6 +469,108 @@ export function MapaVisual({
         </View>
       </View>
 
+      {/* Crônica Cósmica e Histórica do Lugar Inspecionado */}
+      {lugarInspecionado && (
+        <View style={styles.cardCronica}>
+          <View style={styles.cronicaCabecalho}>
+            <View style={styles.cronicaTituloBox}>
+              <Text style={styles.cronicaIcone}>📜</Text>
+              <View style={styles.cronicaTitulos}>
+                <Text style={styles.cronicaNome}>{lugarInspecionado.nome}</Text>
+                <Text style={styles.cronicaRegiao}>
+                  {lugarInspecionado.regiao ?? 'Continente de Vaelhorn'}
+                  {lugarInspecionado.sub ? ` · ${lugarInspecionado.sub}` : ''}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => setLugarInspecionado(null)}
+              style={styles.cronicaFecharBtn}
+              accessibilityLabel="Fechar crônica"
+              hitSlop={10}
+            >
+              <Text style={styles.cronicaFecharTxt}>✕</Text>
+            </Pressable>
+          </View>
+
+          {(() => {
+            const cronica = CRONICAS_MAPA[lugarInspecionado.id];
+            if (!cronica) {
+              return (
+                <Text style={styles.cronicaTextoVazio}>
+                  Este território preserva segredos ancestrais ainda não registrados pelos monges e cronistas.
+                </Text>
+              );
+            }
+            return (
+              <View style={styles.cronicaCorpo}>
+                {/* 1. Deuses e Passado na Guerra Primordial */}
+                <View style={styles.cronicaBloco}>
+                  <View style={styles.cronicaBlocoHeader}>
+                    <Text style={styles.cronicaBlocoIcone}>⚔️</Text>
+                    <Text style={styles.cronicaBlocoTitulo}>Guerra dos Deuses & Sangue do Mana</Text>
+                  </View>
+                  <Text style={styles.cronicaBlocoTexto}>{cronica.passadoGuerraDeuses}</Text>
+                </View>
+
+                {/* 2. Religião e Culto Local */}
+                <View style={styles.cronicaBloco}>
+                  <View style={styles.cronicaBlocoHeader}>
+                    <Text style={styles.cronicaBlocoIcone}>🏛️</Text>
+                    <Text style={styles.cronicaBlocoTitulo}>Fé & Divindades Adoradas</Text>
+                  </View>
+                  <Text style={styles.cronicaBlocoTexto}>{cronica.divindadeOuCrenca}</Text>
+                </View>
+
+                {/* 3. Cicatriz das Bruxas dos Pecados */}
+                <View style={styles.cronicaBloco}>
+                  <View style={styles.cronicaBlocoHeader}>
+                    <Text style={styles.cronicaBlocoIcone}>👁️</Text>
+                    <Text style={styles.cronicaBlocoTitulo}>Cicatriz das Bruxas dos Pecados</Text>
+                  </View>
+                  <Text style={styles.cronicaBlocoTexto}>{cronica.marcaDasBruxas}</Text>
+                </View>
+
+                {/* 4. Superstição Popular */}
+                <View style={styles.cronicaBloco}>
+                  <View style={styles.cronicaBlocoHeader}>
+                    <Text style={styles.cronicaBlocoIcone}>🕯️</Text>
+                    <Text style={styles.cronicaBlocoTitulo}>Superstição & Provérbio do Povo</Text>
+                  </View>
+                  <Text style={styles.cronicaBlocoTexto}>{cronica.supersticaoPopular}</Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* Rodapé do Card: Ação de Viagem ou Estado */}
+          <View style={styles.cronicaRodape}>
+            {lugarInspecionado.atual ? (
+              <View style={styles.badgeAtual}>
+                <Text style={styles.badgeAtualTexto}>📍 Você está acampado neste local</Text>
+              </View>
+            ) : lugarInspecionado.podeViajar ? (
+              <Pressable
+                style={styles.btnViajarCronica}
+                onPress={() => {
+                  onViajar?.(lugarInspecionado.id);
+                  setLugarInspecionado(null);
+                }}
+              >
+                <Text style={styles.btnViajarCronicaTexto}>
+                  🚶 Iniciar Viagem para {lugarInspecionado.nome} ({lugarInspecionado.periodos ?? 1}{' '}
+                  {lugarInspecionado.periodos === 1 ? 'período' : 'períodos'})
+                </Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.cronicaSemRota}>
+                🧭 Sem rota direta a partir do local atual. Viaje passo a passo pelas estradas conectadas.
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Legenda curta, fora do mapa para não cobrir a arte. */}
       <View style={styles.legendaAbaixo}>
         <View style={styles.itemLegenda}>
@@ -442,7 +586,7 @@ export function MapaVisual({
           <Text style={styles.legendaTxt}>Já esteve</Text>
         </View>
         <View style={styles.itemLegenda}>
-          <Text style={styles.legendaTxt}>{ehWeb ? 'Passe o mouse para ver o nome · as cidades desenhadas também se clicam' : 'Toque para ver o nome · toque de novo para viajar'}</Text>
+          <Text style={styles.legendaTxt}>{ehWeb ? 'Passe o mouse para ver o nome · clique em qualquer ponto para ler sua história' : 'Toque em qualquer ponto para ler a história do lugar'}</Text>
         </View>
       </View>
     </View>
@@ -450,6 +594,140 @@ export function MapaVisual({
 }
 
 const styles = StyleSheet.create({
+  cardCronica: {
+    marginTop: 10,
+    backgroundColor: 'rgba(15, 18, 17, 0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.4)',
+    borderRadius: 10,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+  },
+  cronicaCabecalho: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(212, 175, 55, 0.2)',
+    paddingBottom: 8,
+    marginBottom: 10,
+  },
+  cronicaTituloBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  cronicaIcone: {
+    fontSize: 20,
+  },
+  cronicaTitulos: {
+    flex: 1,
+  },
+  cronicaNome: {
+    fontFamily: fontes.monoMedium,
+    fontSize: 14,
+    color: cores.ouro,
+    letterSpacing: 0.5,
+  },
+  cronicaRegiao: {
+    fontFamily: fontes.mono,
+    fontSize: 10.5,
+    color: cores.mudo,
+    marginTop: 2,
+  },
+  cronicaFecharBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  cronicaFecharTxt: {
+    fontFamily: fontes.monoMedium,
+    fontSize: 13,
+    color: cores.mudo,
+  },
+  cronicaCorpo: {
+    gap: 10,
+  },
+  cronicaBloco: {
+    backgroundColor: 'rgba(25, 30, 28, 0.5)',
+    borderRadius: 6,
+    padding: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: cores.ouro,
+  },
+  cronicaBlocoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  cronicaBlocoIcone: {
+    fontSize: 12,
+  },
+  cronicaBlocoTitulo: {
+    fontFamily: fontes.monoMedium,
+    fontSize: 10.5,
+    color: '#f0e6d2',
+    letterSpacing: 0.4,
+  },
+  cronicaBlocoTexto: {
+    fontFamily: fontes.mono,
+    fontSize: 10.5,
+    color: '#cbd5d1',
+    lineHeight: 15,
+  },
+  cronicaTextoVazio: {
+    fontFamily: fontes.mono,
+    fontSize: 11,
+    color: cores.mudo,
+    fontStyle: 'italic',
+    paddingVertical: 8,
+  },
+  cronicaRodape: {
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  badgeAtual: {
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    borderWidth: 1,
+    borderColor: cores.ouro,
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  badgeAtualTexto: {
+    fontFamily: fontes.monoMedium,
+    fontSize: 11,
+    color: cores.ouro,
+  },
+  btnViajarCronica: {
+    backgroundColor: 'rgba(212, 175, 55, 0.22)',
+    borderWidth: 1,
+    borderColor: cores.ouro,
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  btnViajarCronicaTexto: {
+    fontFamily: fontes.monoMedium,
+    fontSize: 11.5,
+    color: cores.ouro,
+  },
+  cronicaSemRota: {
+    fontFamily: fontes.mono,
+    fontSize: 10,
+    color: cores.mudo,
+    textAlign: 'center',
+  },
   // Área clicável sobre uma cidade pintada: invisível, do tamanho do desenho.
   areaPintada: {
     position: 'absolute', width: 64, height: 56, marginLeft: -32, marginTop: -30,
@@ -485,6 +763,7 @@ const styles = StyleSheet.create({
   rotuloSub: { fontFamily: fontes.mono, fontSize: 9, color: cores.mudo },
   rotuloAtual: { fontFamily: fontes.mono, fontSize: 9, color: cores.ouro, marginTop: 2 },
   rotuloViajar: { fontFamily: fontes.mono, fontSize: 9, color: cores.ouro, marginTop: 2 },
+  rotuloInspecionar: { fontFamily: fontes.mono, fontSize: 9, color: '#a2c4c9', marginTop: 2 },
   container: {
     marginVertical: esp.md,
   },

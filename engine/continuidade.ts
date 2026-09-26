@@ -91,8 +91,13 @@ export function processarContinuidade(content: ContentBundle, camp: Campaign): v
     const ameaca = estado.ameacas.find(a => a.local === local && a.estado !== 'resolvida');
     if (ameaca?.estado === 'ativa' && dia >= ameaca.prazo) {
       ameaca.estado = 'devastou';
-      lugar.integridade = Math.max(0, lugar.integridade - 35);
-      lugar.populacao = Math.max(0, lugar.populacao - 8);
+      // Muralha fortificada além do padrão (nível > 1) protege contra dano estrutural e perdas humanas:
+      const cid = camp.vivo?.cidades[local];
+      const nivelMuralha = Math.max(0, (cid?.edificios.muralha ?? 1) - 1);
+      const danoIntegridade = Math.max(10, 35 - nivelMuralha * 6);
+      const perdasGente = Math.max(2, 8 - nivelMuralha * 2);
+      lugar.integridade = Math.max(0, lugar.integridade - danoIntegridade);
+      lugar.populacao = Math.max(0, lugar.populacao - perdasGente);
       lugar.obra = Math.max(0, lugar.obra - 20);
       acontecimento(camp, local, `O ataque anunciado atingiu ${content.locais.find(l => l.id === local)?.nome}: casas danificadas e moradores dispersos.`);
     }
@@ -116,7 +121,9 @@ export function processarContinuidade(content: ContentBundle, camp: Campaign): v
       }
     }
   }
-  if (dia >= estado.proximaAmeaca && estado.ameacas.filter(a => a.estado !== 'resolvida').length < 2 && nextFloat(camp.rng) < .08) {
+  const chanceBase = camp.calendario.estacao === 'inverno' ? .14 : .08;
+  const chanceAmeaca = camp.mundo?.invernoRigoroso && dia < camp.mundo.invernoRigoroso.ate ? .22 : chanceBase;
+  if (dia >= estado.proximaAmeaca && estado.ameacas.filter(a => a.estado !== 'resolvida').length < 2 && nextFloat(camp.rng) < chanceAmeaca) {
     const locais = Object.keys(estado.locais).filter(l => !estado.ameacas.some(a => a.local === l && a.estado !== 'resolvida'));
     const criaturas = content.criaturas.filter(c => c.oni && !c.chefe);
     if (locais.length && criaturas.length) criarAmeacaLocal(content, camp, pick(camp.rng, locais), pick(camp.rng, criaturas).id);

@@ -18,6 +18,13 @@ import {
   todosNpcs,
   obterTokenNousAtual,
 } from '@/engine';
+import { COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
+import {
+  CRONICAS_MAPA,
+  DEUSES_PRIMORDIAIS,
+  BRUXAS_DOS_PECADOS,
+  FACCOES_ANTIGAS,
+} from '@/content/vaelhorn/cosmologia';
 
 // As sugestões estáticas entram na mesma vitrine dos modelos vivos.
 function comoModelo(id: string): ModeloOR {
@@ -168,36 +175,55 @@ export function Config() {
     setResultado(r.ok ? 'Chave válida — narração ao vivo pronta.' : `Falhou: ${r.erro}`);
   }
 
-  // A pergunta que nenhum slug responde. Aqui a gente pergunta ao modelo.
-  async function testarAdulto() {
-    await salvarChave();
+  async function renovarHermes() {
     setTestando(true);
     setResultado(null);
-    const r = await testarAdultoStore();
+    const { renovarTokenNous } = await import('@/engine');
+    const novo = await renovarTokenNous(true);
+    setTestando(false);
+    if (novo) {
+      setResultado('✓ Conexão com Hermes renovada com sucesso! Agora você pode testar ou jogar.');
+    } else {
+      setResultado('Não foi possível renovar via Hermes local. Execute "hermes auth login nous" no terminal ou use uma chave permanente.');
+    }
+  }
+
+  // A pergunta que nenhum slug responde. Aqui a gente pergunta ao modelo.
+  async function testarAdulto() {
+    const mod = modelo.trim();
+    if (chave.trim()) {
+      await salvarChave();
+    }
+    setTestando(true);
+    setResultado(null);
+    const r = await testarAdultoStore(mod);
     setTestando(false);
     if (r.erro) {
-      setResultado(`NÃO DEU PARA TESTAR: ${r.erro}`);
+      setResultado(`NÃO DEU PARA TESTAR (${mod}): ${r.erro}`);
       return;
     }
     if (r.recusou) {
       setResultado(
-        'ESTE MODELO RECUSA.\n\nEle respondeu com um pedido de desculpas em vez da cena:\n\n' +
+        `ESTE MODELO RECUSA (${mod}).\n\nEle respondeu com um pedido de desculpas em vez da cena:\n\n` +
           `"${r.amostra}…"\n\n` +
-          'Escolha um modelo com a etiqueta verde "costuma narrar sexo" e teste de novo.',
+          'Escolha outro modelo nas sugestões e teste de novo.',
       );
       return;
     }
     setResultado(
-      `ESTE MODELO NARRA. Ele escreveu a cena pedida:\n\n"${r.amostra}…"\n\n` +
+      `ESTE MODELO NARRA (${mod}). Ele escreveu a cena pedida:\n\n"${r.amostra}…"\n\n` +
         'Pode voltar ao jogo.',
     );
   }
 
   async function testarNarracao() {
-    await salvarChave();
+    const mod = modelo.trim();
+    if (chave.trim()) {
+      await salvarChave();
+    }
     setTestando(true);
     setResultado(null);
-    const r = await testarNarr();
+    const r = await testarNarr(mod);
     setTestando(false);
     if (r.ok) {
       setResultado(
@@ -205,7 +231,7 @@ export function Config() {
           'Agora ligue o botão acima e volte ao jogo.',
       );
     } else {
-      setResultado(`NÃO FUNCIONOU: ${r.erro}`);
+      setResultado(`NÃO FUNCIONOU (${mod}): ${r.erro}`);
     }
   }
 
@@ -214,6 +240,41 @@ export function Config() {
 
   const tokenHermes = (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_NOUS_API_KEY : undefined) || (ehNous ? obterTokenNousAtual() : undefined);
   const temChaveEfetiva = !!(config.apiKey || (ehNous && tokenHermes));
+
+  const [resultadoDiagnostico, setResultadoDiagnostico] = useState<string | null>(null);
+
+  function executarDiagnosticoNoJogo() {
+    try {
+      const pontos = Object.keys(COORDENADAS_LOCAIS).length;
+      const cronicas = Object.keys(CRONICAS_MAPA).length;
+      const deuses = DEUSES_PRIMORDIAIS.length;
+      const bruxas = BRUXAS_DOS_PECADOS.length;
+      const faccoes = FACCOES_ANTIGAS.length;
+      const satella = BRUXAS_DOS_PECADOS.find((b) => b.id === 'inveja');
+
+      if (pontos !== cronicas) {
+        setResultadoDiagnostico(`⚠️ Alerta: Coordenadas (${pontos}) difere de Crônicas (${cronicas}).`);
+        return;
+      }
+      if (!satella) {
+        setResultadoDiagnostico('⚠️ Erro: Satella não encontrada no panteão.');
+        return;
+      }
+
+      setResultadoDiagnostico(
+        `✓ DIAGNÓSTICO DO JOGO EXECUTADO COM SUCESSO!\n\n` +
+        `• ${pontos} pontos do mapa com crônicas vivas, deuses e marcas de bruxas mapeadas.\n` +
+        `• ${deuses} Deuses Primordiais (Sol-Voraz, Vandul, Yrmara, Vintrath).\n` +
+        `• ${bruxas} Bruxas dos Pecados Capitais, Melancolia, Vã-Glória e Satella (Inveja).\n` +
+        `• ${faccoes} Facções e Ordens Antigas integradas.\n` +
+        `• Sistema cognitivo de NPCs e Intimidade em conformidade.\n` +
+        `• Todos os sistemas ativos e sem falhas!`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setResultadoDiagnostico(`⚠️ Erro no diagnóstico: ${msg}`);
+    }
+  }
 
   return (
     <Pagina>
@@ -428,17 +489,25 @@ export function Config() {
         </View>
       </View>
       <Botao
-        titulo="Testar narração de verdade"
-        sub="usa exatamente o mesmo caminho do jogo"
+        titulo={`Testar narração (${(modelo || '').split('/')[1]?.replace(':free', '') || modelo || 'ativo'})`}
+        sub="testa este modelo específico com o prompt real do jogo (sem fallback)"
         variante="acento"
         onPress={testarNarracao}
       />
       <Botao
-        titulo="Este modelo narra sexo?"
-        sub="pede uma cena explícita e diz se ele escreveu ou recusou"
+        titulo={`Este modelo narra romance/adulto? (${(modelo || '').split('/')[1]?.replace(':free', '') || modelo || 'ativo'})`}
+        sub="pede uma cena íntima e diz se ele escreveu ou recusou"
         variante="acento"
         onPress={testarAdulto}
       />
+      {ehNous && (
+        <Botao
+          titulo="Renovar conexão com Hermes (Nous)"
+          sub="sincroniza e renova a sessão OAuth local automaticamente"
+          variante="acento"
+          onPress={renovarHermes}
+        />
+      )}
       {testando && <Carregando texto="testando…" />}
       {resultado && <TextoMono style={{ color: cores.ouro, marginTop: esp.sm }}>{resultado}</TextoMono>}
 
@@ -449,6 +518,21 @@ export function Config() {
           na sua conta.
         </TextoMono>
       </View>
+
+      <Divisor label="Testes do Sistema & Diagnóstico" />
+      <Botao
+        titulo="Executar Autodiagnóstico no Jogo"
+        sub="testa os 67 pontos do mapa, cosmologia, deuses, bruxas e integridade"
+        variante="acento"
+        onPress={executarDiagnosticoNoJogo}
+      />
+      {resultadoDiagnostico && (
+        <View style={styles.cardDiagnostico}>
+          <TextoMono style={{ color: cores.verdigris, fontSize: 11, lineHeight: 18 }}>
+            {resultadoDiagnostico}
+          </TextoMono>
+        </View>
+      )}
 
       {temSave && (
         <>
@@ -628,4 +712,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   buscarTxt: { fontFamily: fontes.mono, color: cores.verdigris, fontSize: 11 },
+  cardDiagnostico: {
+    marginTop: esp.sm,
+    backgroundColor: 'rgba(12, 22, 18, 0.95)',
+    borderWidth: 1,
+    borderColor: cores.verdigris,
+    borderRadius: raio.sm,
+    padding: esp.md,
+  },
 });

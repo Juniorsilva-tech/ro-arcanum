@@ -1,10 +1,9 @@
 // ARCANUM · Gente de Halvet. Elas se movem, lembram e guardam segredos (GDD §10).
 //
-// A LEVA (ver cenário): desde que Mir queimou, todo homem nascido no vale caminha
-// até a ponte no inverno dos dezoito e não volta. Quem ficou foram elas — e foram
-// elas que herdaram a forja, a rede, a lança e a dívida. Por isso não há um só
-// homem do vale nesta lista: só os de fora e os que a Leva devolveu errado, e
-// esses estão no bestiário, não aqui.
+// A LEVA (ver cenário): desde que a insurreição de Mir foi esmagada na revolta, todo
+// rapaz nascido no vale é levado acorrentado pela Coroa aos dezoito anos no Tributo de Sangue.
+// Quem ficou foram elas — e foram elas que herdaram a forja, a rede, a lança e a dívida.
+// Por isso não há um só homem do vale nesta lista: só os de fora e os foragidos de guerra.
 //
 // Cada uma tem voz (como fala), índole (o que a move) e corpo (como é de carne).
 // O narrador recebe os três: é o que separa uma pessoa de uma ficha.
@@ -137,12 +136,12 @@ export const npcsVaelhorn: NPC[] = [
     vozNarrativa: 'Autoridade gasta. Fala como quem já ouviu todas as desculpas, inclusive as boas.',
     relacoes: [
       { npc: 'ruvela', tipo: 'desconfia', nota: 'A desertora serviu sob o seu comando.' },
-      { npc: 'lunn', tipo: 'protege', nota: 'Cobriu o sono dela na noite da ponte.' },
+      { npc: 'lunn', tipo: 'protege', nota: 'Cobriu a sentinela dela na noite da sabotagem da ponte.' },
     ],
     personalidade: 'Corrompível, mas com uma linha que não cruza. Cansada da vila e de si.',
     corpo: 'Quadrada de ombro, coxa grossa de montaria, uma barriga que a cota já não disfarça. Corta o cabelo ela mesma, curto e torto. Nariz quebrado duas vezes.',
     segredo: {
-      conteudo: 'Deixou a ponte cair de propósito para encobrir um contrabando seu.',
+      conteudo: 'Derrubou os arcos da ponte de propósito durante a revolta para encobrir um contrabando militar seu.',
       comoDescobrir: 'Confrontá-la com a marca do poço, ou ouvir Grimma bêbada.',
     },
   },
@@ -406,8 +405,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Consciente do dever, aterrorizada pelo escuro, incapaz de mentir sem gaguejar.',
     corpo: 'Magrinha, quase menina de corpo apesar dos vinte e quatro. Peito pequeno amassado sob a armadura mal ajustada, pernas compridas, sardas por toda parte que o sol alcança.',
     segredo: {
-      conteudo: 'Dorme no turno da madrugada. Na noite da ponte, dormiu — e por isso ninguém tocou o sino.',
-      comoDescobrir: 'Subir à torre de madrugada e encontrá-la desperta cedo demais, ou pressioná-la sobre a noite da ponte.',
+      conteudo: 'Dormiu no posto da sentinela na noite da sabotagem da ponte e não tocou o sino de alarme.',
+      comoDescobrir: 'Subir à torre de madrugada e encontrá-la desperta cedo demais, ou pressioná-la sobre a noite da sabotagem.',
     },
   },
   {
@@ -593,8 +592,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Ex-soldada com código próprio. Não mata quem não deve, e decide sozinha quem deve.',
     corpo: 'Alta, de ombro reto de quartel. Cicatriz de lança acima do seio direito, peito pequeno, cintura que ainda cabe na cota velha. Anda como quem espera ser atacada.',
     segredo: {
-      conteudo: 'Serviu sob a Sargenta Bael e desertou na mesma noite em que a ponte caiu.',
-      comoDescobrir: 'Mostrar-lhe a insígnia da guarda, ou ouvir Bael falar do dia em que perdeu metade da tropa.',
+      conteudo: 'Serviu sob a Sargenta Bael e desertou na mesma noite em que a ponte militar foi derrubada.',
+      comoDescobrir: 'Mostrar-lhe a insígnia da guarda, ou ouvir Bael falar do dia em que perdeu metade da tropa na sabotagem.',
     },
   },
   {
@@ -673,8 +672,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Orgulhosa da própria inutilidade aparente. Sabe tudo que atravessa e nada do que fica.',
     corpo: 'Sentada há tantos anos que o corpo criou a forma da pedra. Olhos brancos, mãos que leem rosto por toque, e ela pede para tocar o seu assim que você chega perto.',
     segredo: {
-      conteudo: 'Ouviu a ponte cair e ouviu, antes disso, alguém rir do outro lado.',
-      comoDescobrir: 'Alimentá-la três vezes sem pedir nada, ou perguntar diretamente pela noite da queda.',
+      conteudo: 'Estava na ponte na noite da sabotagem e ouviu os conspiradores darem a ordem de dinamitar os arcos.',
+      comoDescobrir: 'Alimentá-la três vezes sem pedir nada, ou perguntar diretamente pela noite da sabotagem.',
     },
   },
   {

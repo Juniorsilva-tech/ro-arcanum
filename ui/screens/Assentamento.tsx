@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, Pressable, TextInput } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
-import { TextoMono, TextoSerif, Card, Botao, Divisor, Medidor, Selo } from '../components';
+import { TextoMono, TextoSerif, Card, Botao, Divisor, Medidor, Selo, BannerIlustrado } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
 import { FundacaoColonia, SitioDaColonia } from './Colonia';
@@ -18,6 +18,7 @@ import {
   CARGOS_CONSELHO_INFO,
   CUSTOS_PROMOCAO_OFICIAL,
   FIGURAS_BRASAO,
+  periodoAtual,
   type TipoEdificioModular,
   type CargaCaravana,
   type BiomaFeudo,
@@ -26,8 +27,8 @@ import {
   type PatenteMilitar,
 } from '@/engine';
 
-// Imagens estáticas geradas para cada bioma, patamar e mapa
-const IMAGENS_FEUDO: Record<string, any> = {
+// Imagens estáticas geradas para cada bioma, patamar, mapa e capitais de reinos
+export const IMAGENS_FEUDO: Record<string, any> = {
   acampamento: require('../../assets/feudo/acampamento.jpg'),
   aldeia: require('../../assets/feudo/aldeia.jpg'),
   castelo: require('../../assets/feudo/castelo.jpg'),
@@ -38,7 +39,39 @@ const IMAGENS_FEUDO: Record<string, any> = {
   montanha: require('../../assets/feudo/montanha.jpg'),
   asora: require('../../assets/feudo/asora.jpg'),
   mapa_continente: require('../../assets/feudo/mapa_continente.jpg'),
+  cidade_tessel: require('../../assets/feudo/cidade_tessel.jpg'),
+  cidade_corveira: require('../../assets/feudo/cidade_corveira.jpg'),
+  cidade_mareu: require('../../assets/feudo/cidade_mareu.jpg'),
+  cidade_solgar: require('../../assets/feudo/cidade_solgar.jpg'),
 };
+
+/** Mapeia qualquer ID de local ou região para sua ilustração correspondente */
+export function imagemDoLocal(localId?: string, regiao?: string): any {
+  if (!localId) return IMAGENS_FEUDO.acampamento;
+  const id = localId.toLowerCase();
+  if (id.includes('tessel')) return IMAGENS_FEUDO.cidade_tessel;
+  if (id.includes('corveira')) return IMAGENS_FEUDO.cidade_corveira;
+  if (id.includes('mareu')) return IMAGENS_FEUDO.cidade_mareu;
+  if (id.includes('solgar')) return IMAGENS_FEUDO.cidade_solgar;
+  if (id.includes('asora')) return IMAGENS_FEUDO.asora;
+
+  // Por região / bioma
+  const reg = (regiao || '').toLowerCase();
+  if (reg.includes('costa') || reg.includes('mar') || reg.includes('litoral') || reg.includes('porto')) {
+    return IMAGENS_FEUDO.costa;
+  }
+  if (reg.includes('deserto') || reg.includes('ermo') || reg.includes('areia')) {
+    return IMAGENS_FEUDO.deserto;
+  }
+  if (reg.includes('montanha') || reg.includes('pico') || reg.includes('planalto')) {
+    return IMAGENS_FEUDO.montanha;
+  }
+  if (reg.includes('floresta') || reg.includes('bosque') || reg.includes('mata') || reg.includes('selva')) {
+    return IMAGENS_FEUDO.floresta;
+  }
+
+  return IMAGENS_FEUDO.aldeia;
+}
 
 export type AbaAssentamento = 'geral' | 'gente' | 'rebanho' | 'trono' | 'quartel' | 'linhagem' | 'vassalos' | 'intrigas' | 'distritos' | 'rotas' | 'asora' | 'mapa';
 
@@ -94,41 +127,58 @@ export function Assentamento() {
   const feudo = obterFeudo(camp);
   const tierInfo = obterTierReinoInfo(feudo.tierReino, feudo.bioma);
 
+  // Modo de exibição da imagem de cabeçalho
+  const [modoVista, setModoVista] = useState<'dinamica' | 'bioma' | 'arquitetura'>('dinamica');
+
   // Seleciona a imagem visual de cabeçalho
-  let imagemCabecalho = IMAGENS_FEUDO.acampamento;
+  const imagemArquitetura = feudo.tierReino <= 2 ? IMAGENS_FEUDO.acampamento
+    : feudo.tierReino <= 4 ? IMAGENS_FEUDO.aldeia
+    : feudo.tierReino <= 6 ? IMAGENS_FEUDO.castelo
+    : IMAGENS_FEUDO.cidadela;
+  const imagemBioma = IMAGENS_FEUDO[feudo.bioma] ?? IMAGENS_FEUDO.acampamento;
+
+  let imagemCabecalho = imagemArquitetura;
   if (isTsukimichi && feudo.bioma === 'asora') {
     imagemCabecalho = IMAGENS_FEUDO.asora;
-  } else if (feudo.bioma === 'deserto') {
-    imagemCabecalho = IMAGENS_FEUDO.deserto;
-  } else if (feudo.bioma === 'floresta') {
-    imagemCabecalho = IMAGENS_FEUDO.floresta;
-  } else if (feudo.bioma === 'costa') {
-    imagemCabecalho = IMAGENS_FEUDO.costa;
-  } else if (feudo.bioma === 'montanha') {
-    imagemCabecalho = IMAGENS_FEUDO.montanha;
+  } else if (modoVista === 'bioma') {
+    imagemCabecalho = imagemBioma;
+  } else if (modoVista === 'arquitetura') {
+    imagemCabecalho = imagemArquitetura;
   } else {
-    // Planície / Vale: segue a evolução arquitetural por Tier
-    if (feudo.tierReino <= 2) imagemCabecalho = IMAGENS_FEUDO.acampamento;
-    else if (feudo.tierReino <= 4) imagemCabecalho = IMAGENS_FEUDO.aldeia;
-    else if (feudo.tierReino <= 6) imagemCabecalho = IMAGENS_FEUDO.castelo;
-    else imagemCabecalho = IMAGENS_FEUDO.cidadela;
+    // Modo dinâmico: Tiers 1–4 destacam o bioma regional; Tiers 5+ revelam o Castelo / Cidadela fortificada
+    if (feudo.bioma !== 'planicie' && feudo.tierReino <= 4) {
+      imagemCabecalho = imagemBioma;
+    } else {
+      imagemCabecalho = imagemArquitetura;
+    }
   }
 
   return (
     <Pagina>
       <BarraVoltar titulo={isTsukimichi ? 'Soberania de Asora' : 'Feudo & Castelo'} />
 
-      {/* Banner Visual Ilustrativo da Cidade / Bioma */}
-      <View style={styles.bannerContainer}>
-        <Image source={imagemCabecalho} style={styles.bannerImagem} resizeMode="cover" />
-        <View style={styles.bannerGradiente}>
-          <View style={styles.bannerInfo}>
-            <Selo texto={feudo.bioma.toUpperCase()} cor={cores.ouro} />
-            <Text style={styles.bannerTitulo}>{feudo.nome}</Text>
-            <Text style={styles.bannerSub}>{tierInfo.titulo}</Text>
-          </View>
-        </View>
-      </View>
+      {/* Banner Visual Ilustrativo da Cidade / Bioma com Iluminação Real */}
+      <BannerIlustrado
+        source={imagemCabecalho}
+        periodo={periodoAtual(camp.calendario)}
+        titulo={feudo.nome}
+        subtitulo={tierInfo.titulo}
+        seloTexto={feudo.bioma.toUpperCase()}
+        seloCor={cores.ouro}
+        altura={205}
+        extraAcao={
+          feudo.bioma !== 'planicie' && feudo.bioma !== 'asora' ? (
+            <Pressable
+              onPress={() => setModoVista(v => v === 'dinamica' ? 'bioma' : v === 'bioma' ? 'arquitetura' : 'dinamica')}
+              style={styles.btnVista}
+            >
+              <Text style={styles.btnVistaTxt}>
+                {modoVista === 'bioma' ? '👁 Bioma' : modoVista === 'arquitetura' ? '🏰 Fortaleza' : '✨ Dinâmico'}
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
 
       {/* Caso o feudo ainda não tenha sido fundado formalmente */}
       {!feudo.fundado ? (
@@ -1209,6 +1259,19 @@ const styles = StyleSheet.create({
     fontFamily: fontes.mono,
     fontSize: 12,
     color: cores.mudo,
+  },
+  btnVista: {
+    backgroundColor: 'rgba(20, 17, 16, 0.75)',
+    borderColor: cores.linha,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: raio.sm,
+  },
+  btnVistaTxt: {
+    fontFamily: fontes.mono,
+    fontSize: 11,
+    color: cores.ouro,
   },
   abasContainer: {
     flexDirection: 'row',

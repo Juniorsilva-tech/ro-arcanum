@@ -14,6 +14,7 @@ import type { OpcaoResolvida } from './turn';
 import type { Contexto } from './availability';
 import { disponibilidadeVerbo } from './availability';
 import { type Natureza, inferirNatureza } from './risco';
+import { calcularHumorNpc, obterIntimidadeNpc } from './intimidadeNpc';
 
 // A ordem é estável de propósito: o jogador aprende onde fica cada tipo de
 // escolha e para de reler as cinco toda vez.
@@ -52,6 +53,56 @@ function preencher(
 ): OpcaoResolvida | undefined {
   const categorias = CATEGORIAS_POR_EIXO[eixo];
   const alvo = ctx.presentes[0];
+
+  if (eixo === 'aproximar' && alvo) {
+    const humor = calcularHumorNpc(camp, content, alvo);
+    const intimidade = obterIntimidadeNpc(camp, alvo);
+
+    if (humor.id === 'luto' && !jaUsados.has(`confortar_luto_${alvo.id}`)) {
+      jaUsados.add(`confortar_luto_${alvo.id}`);
+      return {
+        id: `grade_aproximar_confortar_luto_${alvo.id}`,
+        rotulo: `Prestar condolências & confortar — ${alvo.nome}`,
+        dica: `Acolher o luto de ${alvo.nome}. Reduz a dor, cura a tensão e aproxima a família.`,
+        natureza: 'aproximar',
+        custoPeriodos: 1,
+        origem: 'cena',
+        alvoId: alvo.id,
+      };
+    }
+
+    if (
+      intimidade.desejo &&
+      !intimidade.desejoApoiado &&
+      camp.personagem.dinheiro >= 20 &&
+      !jaUsados.has(`apoiar_desejo_${alvo.id}`)
+    ) {
+      jaUsados.add(`apoiar_desejo_${alvo.id}`);
+      const resumoDesejo = alvo.historia?.desejo ? `"${alvo.historia.desejo.slice(0, 50)}..."` : 'seu objetivo mais íntimo';
+      return {
+        id: `grade_aproximar_apoiar_desejo_${alvo.id}`,
+        rotulo: `Apoiar anseio pessoal (20 moedas) — ${alvo.nome}`,
+        dica: `Financiar o anseio de ${alvo.nome}: ${resumoDesejo}. Zera a tensão e firma devoção inabalável.`,
+        natureza: 'aproximar',
+        custoPeriodos: 1,
+        origem: 'cena',
+        alvoId: alvo.id,
+      };
+    }
+
+    if (!intimidade.desejo && !jaUsados.has(`conversar_a_sos_${alvo.id}`)) {
+      jaUsados.add(`conversar_a_sos_${alvo.id}`);
+      return {
+        id: `grade_aproximar_conversar_a_sos_${alvo.id}`,
+        rotulo: `Conversar a sós — ${alvo.nome}`,
+        dica: `Afastar-se da multidão com ${alvo.nome}. Reduz tensão, sobe confiança e revela camadas íntimas da sua história.`,
+        natureza: 'aproximar',
+        custoPeriodos: 1,
+        origem: 'cena',
+        alvoId: alvo.id,
+      };
+    }
+  }
 
   const candidatos = content.verbos.filter((v) => {
     if (!categorias.includes(v.categoria)) return false;

@@ -349,9 +349,10 @@ interface GameState {
   proximoCapitulo: () => Promise<void>;
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
   buscarModelosGratis: () => Promise<ModeloOR[]>;
-  testarSeNarraAdulto: () => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string }>;
-  testarNarracaoReal: () => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
+  testarSeNarraAdulto: (modeloEspecifico?: string) => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string; modelo?: string }>;
+  testarNarracaoReal: (modeloEspecifico?: string) => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
   tentarNarrarDeNovo: () => Promise<void>;
+  desistirIaEUsarLocal: () => Promise<void>;
   exportarSave: () => Promise<void>;
   importarSave: (json: string) => Promise<void>;
 }
@@ -1438,34 +1439,69 @@ export const useGame = create<GameState>((set, get) => ({
 
   async testarChaveApi() {
     const { config } = get();
-    const chave = chaveEfetiva(config);
+    let chave = chaveEfetiva(config);
+    if (!chave && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      chave = (await renovarTokenNous(true)) ?? undefined;
+    }
     if (!chave) return { ok: false, erro: 'Sem chave.' };
     const { testarChave } = await import('@/engine');
-    return testarChave({ provider: config.provider, apiKey: chave, modelo: config.modelo });
+    let res = await testarChave({ provider: config.provider, apiKey: chave, modelo: config.modelo });
+    if (!res.ok && res.erro && /401|chave inválida|sem permissão/i.test(res.erro) && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      const nova = await renovarTokenNous(true);
+      if (nova && nova !== chave) {
+        res = await testarChave({ provider: config.provider, apiKey: nova, modelo: config.modelo });
+      }
+    }
+    return res;
   },
 
   async buscarModelosGratis() {
     const { config } = get();
-    const chave = chaveEfetiva(config);
+    let chave = chaveEfetiva(config);
+    if (!chave && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      chave = (await renovarTokenNous(true)) ?? undefined;
+    }
     const { listarModelos } = await import('@/engine');
     return listarModelos(config.provider, chave, true);
   },
 
   // Responde de uma vez a pergunta que não se responde pelo slug: este modelo
-  // narra sexo, ou recusa?
-  async testarSeNarraAdulto() {
+  // narra sexo/romance adulto, ou recusa?
+  async testarSeNarraAdulto(modeloEspecifico?: string) {
     const { config } = get();
-    const chave = chaveEfetiva(config);
+    let chave = chaveEfetiva(config);
+    if (!chave && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      chave = (await renovarTokenNous(true)) ?? undefined;
+    }
     if (!chave) return { narra: false, recusou: false, erro: 'Sem chave salva.' };
+    const modeloAlvo = (modeloEspecifico && modeloEspecifico.trim()) || config.modelo;
     const { testarCenaAdulta } = await import('@/engine');
-    return testarCenaAdulta({ provider: config.provider, apiKey: chave, modelo: config.modelo });
+    let r = await testarCenaAdulta({ provider: config.provider, apiKey: chave, modelo: modeloAlvo });
+    if (r.erro && /401|chave inválida|sem permissão/i.test(r.erro) && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      const nova = await renovarTokenNous(true);
+      if (nova && nova !== chave) {
+        r = await testarCenaAdulta({ provider: config.provider, apiKey: nova, modelo: modeloAlvo });
+      }
+    }
+    return { ...r, modelo: modeloAlvo };
   },
 
-  // Diagnóstico honesto: roda o MESMO caminho do jogo e mostra o que voltou.
-  async testarNarracaoReal() {
+  // Diagnóstico honesto: roda O MODELO EXATO escolhido pelo jogador,
+  // sem trocar silenciosamente por outro modelo de reserva.
+  async testarNarracaoReal(modeloEspecifico?: string) {
     const { config } = get();
-    const chave = chaveEfetiva(config);
+    let chave = chaveEfetiva(config);
+    if (!chave && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      chave = (await renovarTokenNous(true)) ?? undefined;
+    }
     if (!chave) return { ok: false, erro: 'Sem chave salva.' };
+    const modeloAlvo = (modeloEspecifico && modeloEspecifico.trim()) || config.modelo;
     const content = get().content ?? bundlePorId('vaelhorn')!;
     const camp =
       get().camp ??
@@ -1482,17 +1518,32 @@ export const useGame = create<GameState>((set, get) => ({
       custoPeriodos: 0,
       efeitosAplicados: [],
     } as unknown as Parameters<typeof narrarComFallback>[4];
-    const res = await narrarComFallback(
-      { provider: config.provider, apiKey: chave, modelo: config.modelo },
+    // Usa narrarComModelo diretamente: testa o modelo exato que o jogador pediu para testar!
+    const { narrarComModelo } = await import('@/engine');
+    let res = await narrarComModelo(
+      { provider: config.provider, apiKey: chave, modelo: modeloAlvo },
       content,
       camp,
       cena.contexto,
       r,
     );
-    if (res.texto) {
-      return { ok: true, amostra: res.texto.slice(0, 220), modelo: res.modeloUsado ?? config.modelo };
+    if (res.erro && /401|chave inválida|sem permissão/i.test(res.erro) && config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      const nova = await renovarTokenNous(true);
+      if (nova && nova !== chave) {
+        res = await narrarComModelo(
+          { provider: config.provider, apiKey: nova, modelo: modeloAlvo },
+          content,
+          camp,
+          cena.contexto,
+          r,
+        );
+      }
     }
-    return { ok: false, erro: res.erro ?? 'sem resposta' };
+    if (res.texto) {
+      return { ok: true, amostra: res.texto.slice(0, 220), modelo: modeloAlvo };
+    }
+    return { ok: false, erro: res.erro ?? 'sem resposta', modelo: modeloAlvo };
   },
 
   // Sem narrador não há história: o turno fica guardado e o jogador reemite o
@@ -1501,6 +1552,28 @@ export const useGame = create<GameState>((set, get) => ({
     const pend = get().pendente;
     if (!pend || get().ocupado) return;
     await narrar(get, set, pend.fato, pend.acaoLivre);
+  },
+
+  async desistirIaEUsarLocal() {
+    const pend = get().pendente;
+    const camp = get().camp;
+    const content = get().content;
+    const cena = get().cena;
+    if (!pend || !camp || !content || !cena) return;
+    const fato = pend.fato;
+    const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
+    registrarNaCronica(camp, fato);
+    set({
+      camp: { ...camp },
+      feed: [...get().feed, nf(fato, 'narracao')],
+      cena: { ...cena, opcoes: grade },
+      iaStatus: 'off',
+      iaErro: undefined,
+      textoStreaming: undefined,
+      ocupado: false,
+      pendente: undefined,
+    });
+    await persistir(camp, set);
   },
 
   // Exporta a campanha ativa como JSON e dispara download no browser.

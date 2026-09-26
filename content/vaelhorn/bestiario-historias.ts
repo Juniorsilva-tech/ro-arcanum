@@ -152,8 +152,8 @@ export const HISTORIAS_CRIATURAS: Record<string, HistoriaCriatura> = {
     sinais: 'Tudo perto dela arde. Água benta e distância ajudam; quem fica muito perto, queima por dentro.',
   },
   o_selado: {
-    historia: 'O que Sarine trancou embaixo da capela, e que puxa os filhos do vale até a ponte. O selo rachou uma vez, na noite em que a ponte caiu. Não tem forma fixa porque nunca precisou de uma.',
-    sinais: 'Não se vence o Selado com força só. Quem desce sem o que Sarine deixou escrito não volta para contar.',
+    historia: 'O antigo inquisidor da Sé que Sarine e as freiras emparedaram vivo no ossuário da capela para calar os abusos do clero e o roubo dos dízimos durante a revolta. Enlouquecido pela treva e pela fome, sobreviveu alimentado com restos e arrasta grilhões maciços.',
+    sinais: 'Arrasta correntes pesadas de ferro e golpeia às cegas pelo som. Lâmina afiada ou tocha de fogo no peito arrebenta os ligamentos podres.',
   },
 
   // ─────────────────────────────── Onis sem nome
@@ -176,44 +176,44 @@ export const HISTORIAS_CRIATURAS: Record<string, HistoriaCriatura> = {
 
   // ─────────────────────────────── Os guardiões das expedições
   sentinela_de_basalto: {
-    historia: 'Posta pela rainha diante da galeria onde esconderam a coroa de Valtorius, quando o reino ficou sem rei. Não dorme, não come, e não reconhece rainha nenhuma desde então.',
-    sinais: 'Pedra que anda, sem sangue de oni. Lenta para virar; quem a rodeia encontra as juntas.',
+    historia: 'Esculpida por mestres pedreiros do cerco para defender a galeria onde os nobres esconderam a Coroa de Valtorius durante a queda da dinastia. Não sangra, não dorme e esmaga invasores com blocos de cantaria.',
+    sinais: 'Lenta para manobrar na pedra. Esquivar dos golpes pesados e atingir as juntas de argamassa desmantela a estrutura.',
   },
   espadachim_sem_bandeira: {
-    historia: 'Uma veterana de caravanas que vende a lâmina e exige duelo de quem atravessa o posto dela no acampamento. No cinto, embainhada, uma cimitarra que não é dela: a Lâmina de Idrin.',
-    sinais: 'Duelista honesta: aceita rendição e não bate em quem caiu. Lê a guarda do outro em três golpes.',
+    historia: 'Uma veterana de guerra calejada que vende a lâmina e exige duelo mortal de quem tenta cruzar o desfiladeiro. No cinto envelhecido traz embainhada a cimitarra de um senhor que ela degolou em campanha.',
+    sinais: 'Duelista impiedosa que não hesita em cortar artérias expostas. Lê a guarda em três golpes; aparar a estocada inicial abre a defesa.',
   },
   quimera_do_desfiladeiro: {
-    historia: 'Caça nas pedras altas e deixa os restos pendurados nas árvores, como despensa. Entre os ossos do ninho, há um arco que ninguém conseguiu alcançar.',
-    sinais: 'Ataca de cima e de trás. Cada cabeça tem sua vontade; quem faz uma brigar com a outra ganha um instante.',
+    historia: 'Predador ancestral que espreita nas escarpas altas e pendura tripas e carcaças desossadas nas copas dos pinheiros. Entre os ossos do ninho repousa um arco de chifre de um caçador de sangue nobre.',
+    sinais: 'Ataca por cima e pelas costas com saltos brutais. Fogo e lanças longas forçam a fera a descer para o combate corporal.',
   },
   arauto_da_cripta: {
-    historia: 'Um morto armado, de juramento, que marcha no ossuário desde que enterraram São Vandro com a lança. A madre diz que ele não defende a lança dos vivos: defende os vivos do que a lança lembra.',
-    sinais: 'A marcha faz o ossuário tremer, e os outros mortos acordam com ela. Silenciar a cripta antes de enfrentá-lo muda a luta.',
+    historia: 'O antigo carrasco da Sé sepultado em cota de ferro oxidado que vigia o ossuário dos supliciados pela inquisição. A foice que empunha ainda conserva sangue e cartilagem seca nas ranhuras.',
+    sinais: 'O bater pesado de sua marcha faz o ossuário estremecer. Golpes contundentes esfarelam os elos podres da cota oxidada.',
   },
   colosso_da_mina: {
-    historia: 'A máquina de uma gente que cavou Corveira antes das sete casas. Acordou no desabamento do terraço quarto e ficou de pé em cima do lugar onde o Quebra-Rocha caiu.',
-    sinais: 'O punho fecha túnel. Ele não sai da galeria: quem luta perto da saída tem para onde recuar.',
+    historia: 'Monstruoso bate-estacas mecânico com contrapesos de chumbo e bielas de ferro, posto em marcha por mineradores foragidos para interditar o veio profundo do Quebra-Rocha.',
+    sinais: 'O impacto de seus martelos pulveriza vigas e abre fendas no teto. Lutar próximo às escoras de madeira é suicídio.',
   },
   guardia_do_horizonte: {
-    historia: 'A única aluna que venceu Bai Long. Subiu a torre para provar alguma coisa e ficou guardando a passagem de cima, com as manoplas do mestre nas mãos.',
-    sinais: 'A lâmina descreve círculos curtos e as manoplas quebram arma. Quem luta desarmado com ela, ela respeita — e bate mais forte.',
+    historia: 'A campeã renegada que derrotou seu mestre de armas e assumiu o comando do baluarte superior da torre. Desarma guerreiros e parte costelas com manoplas de ferro fundido.',
+    sinais: 'Golpes curtos e brutais que entortam escudos e partem lâminas finas. O combate desarmado exige esquiva cirúrgica.',
   },
   draco_das_cinzas: {
-    historia: 'O que sobrou do fogo de Mir: uma fera que guarda calor sob as escamas e dorme sobre as cinzas mais quentes das ruínas. Não é oni e caça de dia. No meio da ninhada de brasas brilha uma lâmina.',
-    sinais: 'O sopro é brasa viva. Água, lama e distância; de perto, a barriga é mais fina que o dorso.',
+    historia: 'Réptil colossal e carniceiro que fez ninho sobre as ruínas carbonizadas de Mir, devorando qualquer carcaça que o vento desenterre das cinzas. Seu estômago queima com calor sulfuroso.',
+    sinais: 'O bafo fétido é brasa e cinza viva. Lâminas embebidas em óleo e ataques rápidos na barriga evitam o golpe de sua cauda em chicote.',
   },
   cavaleira_do_eclipse: {
-    historia: 'Uma duelista que ninguém sabe de onde veio, com a espada do último rei no cinto. Diz que a achou fincada numa coluna de Mir, apontando para onde o fogo começou, e que só a desembainha contra quem está à altura.',
-    sinais: 'Arte e aço no mesmo golpe. Ela avalia antes de lutar; quem chega ferido, ela manda embora.',
+    historia: 'Última capitã da guarda de honra de Mir. Sobrevivente do massacre imperial, veste cota de malha chamuscada e empunha a espada cerimonial dos nobres, jurando matar quem cruzar seu caminho sem honra de armas.',
+    sinais: 'Técnica militar de trincheira combinada com fúria de sobrevivente. Avalia o oponente com frieza antes da estocada de estômago.',
   },
   arconte_de_vidro: {
-    historia: 'O constructo que vigia o salão de baixo da Torre do Vigia. Tem as rachaduras que a Rainha Ladra deixou nele, e guarda o que tirou de cada um que tentou roubar o salão.',
-    sinais: 'As rachaduras mudam o ritmo dos golpes. Golpe contundente na rachadura certa faz o resto do vidro ceder.',
+    historia: 'Armadura pesada de infantaria cravejada de placas de vidro vulcânico negro e escória de fundição, guarnecendo o arsenal de contrabando nos fundos da Torre do Vigia.',
+    sinais: 'As lascas de vidro negro cortam como navalhas a cada impacto. Martelos e maças estilhaçam as placas protetoras de uma vez.',
   },
   besta_do_primeiro_inverno: {
-    historia: 'Antiga demais para fugir de gente. As velhas de Lenha Alta dizem que ela já estava na mata quando o primeiro inverno veio, e que a mata profunda só existe porque ela não deixa ninguém entrar.',
-    sinais: 'Imensa e paciente. Não persegue quem sai da mata. Quem entra, entra sabendo.',
+    historia: 'Um urso cinzento colossal cujo lombo traz cravadas pontas de flechas ferrugentas e ferros de lança dos soldados do primeiro cerco. Nenhuma patrulha que entrou em sua mata voltou viva.',
+    sinais: 'Massa muscular maciça e couro impenetrável a flechas leves. Fogo e estocadas profundas entre as costelas são a única forma de sangrá-lo.',
   },
 
   // ─────────────────────────────── As presas dos contratos

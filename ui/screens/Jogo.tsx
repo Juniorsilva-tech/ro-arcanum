@@ -68,6 +68,7 @@ export function Jogo() {
   // jogo nunca fica parado por falta de chave (GDD §20, P0).
   const iaLigada = useGame((s) => !!s.config.apiKey);
   const tentarNarrarDeNovo = useGame((s) => s.tentarNarrarDeNovo);
+  const desistirIaEUsarLocal = useGame((s) => s.desistirIaEUsarLocal);
   // Turno resolvido esperando prosa: enquanto existir, ninguém age.
   const pendente = useGame((s) => s.pendente);
   const irPara = useGame((s) => s.irPara);
@@ -220,6 +221,9 @@ export function Jogo() {
               <View style={styles.falhaBotoes}>
                 <Pressable style={styles.botaoOuro} onPress={() => tentarNarrarDeNovo()}>
                   <Text style={styles.botaoOuroTxt}>Tentar de novo</Text>
+                </Pressable>
+                <Pressable style={styles.botaoVazio} onPress={() => desistirIaEUsarLocal()}>
+                  <Text style={styles.botaoVazioTxt}>Usar narrador local</Text>
                 </Pressable>
                 <Pressable style={styles.botaoVazio} onPress={() => irPara('config')}>
                   <Text style={styles.botaoVazioTxt}>Configurações</Text>

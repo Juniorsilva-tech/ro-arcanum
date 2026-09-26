@@ -177,6 +177,35 @@ export function processarBandos(content: ContentBundle, camp: Campaign): void {
     } else if (b.pedagio && b.membros < MEMBROS_PARA_PEDAGIO - 2) {
       b.pedagio = false;
     }
+
+    // Extorsão territorial: quando o bando fica numeroso (10+ membros),
+    // ele exige tributo regular de aldeias indefesas (sem muralha e integridade < 70).
+    if (b.membros >= 10 && comando && dia % 14 === 0) {
+      const vulneravel = content.locais.find(l =>
+        l.regiao === b.regiao &&
+        ['aldeia', 'vila', 'acampamento', 'porto', 'cidade', 'forte'].includes(l.tipo) &&
+        (camp.continuidade?.locais[l.id]?.populacao ?? 0) > 0 &&
+        (camp.vivo?.cidades[l.id]?.edificios.muralha ?? 0) <= 1 &&
+        (camp.continuidade?.locais[l.id]?.integridade ?? 100) < 70
+      );
+      if (vulneravel && camp.vivo) {
+        const cAlvo = camp.vivo.cidades[vulneravel.id];
+        const pAlvo = camp.continuidade!.locais[vulneravel.id];
+        if (cAlvo) {
+          const valorExtorquido = Math.min(12, cAlvo.tesouro);
+          cAlvo.tesouro -= valorExtorquido;
+          b.tesouro += valorExtorquido;
+          if (valorExtorquido < 5) {
+            cAlvo.comida = Math.max(0, cAlvo.comida - 15);
+            pAlvo.integridade = Math.max(0, pAlvo.integridade - 5);
+          }
+          registrarFato(camp, {
+            tipo: 'extorsao_bando', local: vulneravel.id, publico: true, atores: [],
+            texto: `${b.nome} extorquiu tributo forçado de ${vulneravel.nome}, ameaçando as famílias se não pagassem.`,
+          });
+        }
+      }
+    }
   }
 }
 

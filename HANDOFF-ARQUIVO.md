@@ -1,6 +1,6 @@
-# HANDOFF — ARQUIVO (sessões 1 a 38)
+# HANDOFF — ARQUIVO (sessões 1 a 55)
 
-Registro histórico das sessões 1 a 38, movido de `HANDOFF.md` nas sessões 16, 40, 42, 43, 44, 48, 51 e 56 para
+Registro histórico das sessões 1 a 55, movido de `HANDOFF.md` nas sessões 16, 40, 42, 43, 44, 48, 51, 56, 58 e 62 para
 que o handoff vivo caiba na leitura de um agente novo. Nada aqui foi editado ou
 removido — é o texto original, na ordem original. O handoff ativo, com as
 sessões recentes e o próximo passo, está em `HANDOFF.md`.
@@ -5003,3 +5003,201 @@ dentro da dispersão entre sementes (nas sessões 50 a 52 as derrotas foram
 O dono pediu nesta sessão: procurar erros e coisas não ligadas no jogo, e
 depois aprofundar história (casas, cidades, armas lendárias, bestiário,
 personagens). Fase 9 (quebrar arquivos gigantes) fica para depois disso.
+
+---
+
+## Sessão 54 — Claude — o que estava solto no jogo
+
+Pedido do dono nesta sessão: "procura erros no jogo, coisas que não estão
+linkadas", e depois aprofundar a história. Esta sessão é a primeira parte.
+
+### Como procurei
+Três varreduras, todas em scripts de leitura (fora do repositório):
+1. **Referências do conteúdo**: rotas, rotinas, relações, lojas, loot,
+   encontros, mestres, casas, famílias. Nenhum id quebrado nessas listas.
+2. **Ações de mundo sem tela**: cada `tipo` de `AcaoMundo` contra as chamadas
+   da interface.
+3. **Funções exportadas que ninguém chama** (fora do próprio arquivo e dos
+   testes).
+
+### O que estava solto, e o que foi feito
+- **Três sistemas da sessão 45 sem tela nenhuma**, só nos testes:
+  - **Trabalhos especializados** (galeria de Corveira, cais de Mareu, muralha
+    de Tessel, caçada por contrato). Não checavam lugar: "turno na Fenda de
+    Corveira" pagava 24 moedas, 2 minérios e +1 de Atletismo na taverna de
+    Halvet, sem limite — dinheiro do nada e perícia infinita. Agora
+    (`engine/trabalhosEspecializados.ts`):
+    - só na cidade do ofício, uma vez por dia;
+    - pagam do tesouro da comunidade, como o trabalho comum;
+    - a perícia sobe até 3 e para;
+    - a caçada exige um troféu de contrato.
+  - **Treinos imersivos** (katas, palma de ferro, cascata, duas espadas). Cada
+    kata dava +1 permanente num atributo por 4 de vigor, e a cascata dava +1
+    de Resiliência e devolvia o vigor inteiro: katas e cascata em sequência
+    eram atributo infinito, por cima da aptidão e do teto humano. Agora
+    (`engine/treinamentoImersivo.ts`, mesmos nomes exportados):
+    - só onde o mestre ensina (Musashi no Passo do Lobo, Bai Long no Mosteiro
+      Alto), uma vez por semana por modalidade, 3 períodos;
+    - o ganho vai pela maestria (`treinar`), sem atributo solto;
+    - a perícia sobe até 3; técnica só com o mestre (`aprenderArte`);
+    - a cascata alivia 10 de cada pressão e devolve o vigor.
+    Decisão: o jeito conservador de ligar um sistema que quebrava a curva de
+    poder era ligá-lo às regras que a curva já usa, e não do jeito que estava.
+  - **Contratos de monstro**. O combate já funcionava: óleo dá dano, e vencer
+    o alvo conclui o contrato e dá o troféu. Faltavam a tela e três coisas:
+    - dois contratos apontavam para lugares que não existem (`pantano`,
+      `montanhas`). Agora são o Juncal e o Passo do Lobo;
+    - as mensagens mostravam rolagem e id cru ("Rolagem: 15 vs 11",
+      "[oleo_anti_besta]");
+    - nada checava lugar.
+    Feito: aceitar no quadro (taverna ou Feira Coberta), procurar pista e
+    enfrentar só no lugar do contrato. A recusa não gasta tempo. Contratantes
+    sem barões nem companhias. Saves antigos: ao abrir o quadro, os campos
+    fixos (título, contratante, lugar) voltam aos do conteúdo; o estado fica.
+  - Tela: seções "trabalho do lugar", "treino com mestre" e "contratos de
+    monstro" em Comunidade (`MundoVivo.tsx`).
+- **Item que "permite" um verbo sem permitir**: o giz de ritual e o incensário
+  diziam no inventário "permite realizar_ritual"/"benzer", mas o verbo
+  continuava exigindo Arcana. `verbosConcedidos` existia e ninguém chamava.
+  Agora `disponibilidadeVerbo(…, content)` aceita o item no lugar da perícia
+  (sem `content`, a regra antiga).
+- **Texto técnico no lugar da descrição de 23 onis**: as Luas, Muzan, Nakime e
+  os outros com identidade apareciam no jogo como "Kamanue — identidade
+  canônica em uma cronologia alternativa de Vaelhorn. Mecânica de combate
+  adaptada: garras.". Prosa escrita para cada um em
+  `content/vaelhorn/descricoes-onis.ts`.
+- **16 peças lendárias sem fonte nenhuma**: as relíquias das casas, a espada e
+  a coroa do último rei, quatro armas perdidas e as manoplas de Bai Long. Não
+  vinham de loja, loot nem missão. O texto falava de barões, almirantes e
+  patriarcas. Agora (`content/vaelhorn/lendas.ts`):
+  - cada peça tem história (`Item.historia`) casada com o elenco (Valda e
+    Aldren; Idrun e Odile no cerco; Oren no desabamento de Corveira);
+  - **9 ficam com os adversários fixos das expedições**, que as deixam cair
+    quando vencidos. Exemplos: a Cavaleira do Eclipse com a Soberana do
+    Eclipse, o Colosso da mina com o Quebra-Rocha soterrado no desabamento, o
+    Arauto da cripta com a lança de São Vandro;
+  - **7 são confiadas pelas casas** a quem elas passaram a chamar de sua
+    (reputação 25/30 e 40, uma peça por dia, fato público; `confiarReliquias`
+    em `engine/casas.ts`);
+  - a história aparece no inventário e vai para o narrador quando a peça está
+    equipada (`pecasComHistoria`).
+- **Lugares que contradiziam o mundo**: Tessel dizia "O marechal atual herdou
+  o posto do pai… ninguém lembra de eleição", contra as três gerações de
+  marechalas e a sucessão por eleição da Fase 4. O Mosteiro tinha "os irmãos".
+  Corrigidos. Troquei uma linha por outra, então o sorteio do povoamento não
+  muda; só o texto do segredo-modelo que cita a linha.
+
+### Encontrado e não corrigido (para o dono decidir)
+- **Linha do tempo de Mir**: o cenário diz que o vale é das mulheres "por três
+  gerações", desde que Mir queimou; As Ruínas de Mir dizem "faz vinte anos",
+  e Vell (34) era menino quando aconteceu. Não escolhi: os textos novos desta
+  sessão não datam o incêndio.
+- **49 segredos-modelo** de moradores procedurais são história pública do
+  lugar vestida de segredo ("Mentiu no depoimento da época. O cerco de dezoito
+  anos atrás durou quarenta dias."). Ficam para a próxima sessão, junto das 71
+  pessoas sem história.
+- As feras da Grande Terra Desolada e de Tsige falam de "Wasteland" (termo de
+  Tsukimichi). Ficaram fora, a pedido do dono.
+- Funções exportadas sem uso restantes: 13 em `tsukimichi.ts` (fora do
+  escopo) e utilidades de tela sem tela (`resumoFamilia`,
+  `retratoConviccoes`, `efeitoDaClasse`, `faixaDeAptidao`,
+  `pesoDoEquipamento`, `deveFecharCapitulo`). Não removi.
+
+### Arquivos
+Novos: `engine/trabalhosEspecializados.ts`, `engine/ligacoes.selftest.ts`,
+`content/vaelhorn/descricoes-onis.ts`, `content/vaelhorn/lendas.ts`.
+Alterados: `engine/treinamentoImersivo.ts` (reescrito, mesmos nomes),
+`engine/contratosMonstros.ts`, `engine/acoesMundo.ts`, `engine/availability.ts`
+(e quem chama: `grade.ts`, `llm.ts`, `campanhaLonga.ts`, `ui/screens/Jogo.tsx`),
+`engine/casas.ts`, `engine/memoriaMundo.ts`, `engine/llm.ts`, `engine/types.ts`
+(`Item.historia`), `engine/index.ts`, `content/vaelhorn/casas.ts`
+(`CasaNobre.reliquias`), `content/vaelhorn/index.ts`,
+`content/vaelhorn/kimetsu.ts`, `content/vaelhorn/continente.ts`,
+`engine/vaelhorn_expansao.selftest.ts` (as regras novas),
+`ui/screens/MundoVivo.tsx`, `ui/screens/Inventario.tsx`, `package.json`.
+
+### Verificações
+- `ligacoes.selftest.ts` (novo). Cobre:
+  - trabalhos: lugar, tesouro, uma vez por dia, teto 3, troféu;
+  - treino: lugar, sem atributo nem técnica, maestria, semanal, teto 3,
+    cascata sem atributo;
+  - contratos: lugares existem, quadro, recusa sem gastar tempo, texto sem
+    rolagem nem id, save antigo corrigido;
+  - verbos: o giz vale pela Arcana;
+  - onis: nenhum texto técnico;
+  - peças lendárias: as 16 têm caminho, cada guardião é de expedição e deixa a
+    peça, sem barão/almirante/patriarca, 2+ parágrafos, a casa confia na ordem
+    e uma vez, a história vai ao narrador.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export`: verdes. Depois disso só troquei texto
+  das lendas (datas de Mir); reexecutei `typecheck`, `ligacoes`, `casas` e
+  `vaelhorn_expansao`, verdes.
+
+Simulação longa depois (`simLongo 10 6`): 6 de 6 até o fim do prazo, 0
+mortes, 0 violações; níveis 29 a 33; população 3.530 a 4.185; fome 0 no fim.
+O simulador não usa trabalhos, treinos nem contratos, então nada disso muda a
+curva dele.
+
+### Próximo passo
+História: bestiário (rascunho pronto), as 19 localidades do coração do vale
+sem história, as quatro casas, e as 71 pessoas sem história com os 49
+segredos-modelo. A história nova de lugar entra no pacote DEPOIS do
+povoamento: o povoamento sorteia o segredo dos moradores a partir de
+`Local.historia`, e mexer nela antes mudaria quem mora em cada lugar.
+
+---
+
+## Sessão 55 — Claude — história: bestiário, lugares, casas
+
+### O que foi feito
+- **Bestiário** (`content/vaelhorn/bestiario-historias.ts`, `Criatura.historia`
+  e `Criatura.sinais`), para as **71 criaturas do vale**:
+  - fauna, gente da estrada, os mortos, os seres de Mir, os chefes com nome,
+    os guardiões das expedições, as presas dos contratos e os onis (as Luas,
+    no que a Casa Sem Nome sabe delas);
+  - `historia` é o que o vale conta; `sinais` é o que serve na estrada;
+  - aparece na Crônica, seção "Bestiário", só para o que o jogador já venceu
+    (flag `matou.<id>`, que o combate já gravava);
+  - ficaram de fora as feras da Grande Terra Desolada e de Tsige.
+- **Lugares** (`content/vaelhorn/historias-locais.ts`): os 19 lugares do
+  coração do vale não tinham história, e o narrador recebia
+  `historiaDesteLugar: []` justamente na taverna onde o jogo começa. Agora os
+  53 têm. Quatro descrições que contradiziam o mundo foram corrigidas: "o
+  senhor de Halvet", "os pescadores", "os mineiros" e o "Cristo de madeira"
+  da Capela de São Vandro.
+- **Casas** (`content/vaelhorn/historias-casas.ts`, `CasaNobre.historia`): a
+  origem, o que cada uma perdeu e o que a move. Aparece no card da casa, em
+  Comunidade, e vai ao narrador em `casasPresentes[].historia`.
+- As datas seguem o que o conteúdo já dizia: o cerco de Tessel há 18 anos, o
+  desabamento de Corveira há 12, a peste de Mareu há 40. As histórias foram
+  conferidas contra o elenco antes de entrar: Borka, Oda, Heska, Torana e
+  Duna, Lunn e a noite em que o sino não tocou, Ruvela.
+
+### Decisão importante
+O povoamento sorteia o segredo de cada moradora a partir de `Local.historia`.
+Dar história a um lugar que não tinha **mudaria quem mora nele**: nomes,
+ofícios e as famílias da Fase 2 que apontam para esses ids. A história nova
+entra no pacote depois do povoamento (`comHistoriaDosLugares` em
+`content/vaelhorn/index.ts`), e o teste prova que as 172 moradoras são as
+mesmas. A tabela da simulação longa saiu idêntica à da sessão 54, linha por
+linha.
+
+### Arquivos
+Novos: `content/vaelhorn/bestiario-historias.ts`,
+`content/vaelhorn/historias-locais.ts`, `content/vaelhorn/historias-casas.ts`,
+`engine/lore.selftest.ts`.
+Alterados: `engine/types.ts`, `content/vaelhorn/casas.ts`,
+`content/vaelhorn/index.ts`, `engine/llm.ts`, `ui/screens/Paineis.tsx`,
+`ui/screens/MundoVivo.tsx`, `package.json`.
+
+### Verificações
+- `lore.selftest.ts`:
+  - as 71 criaturas do vale com história e sinais, sem emoji, "Wasteland" ou
+    texto técnico;
+  - os 53 lugares com história e as descrições corrigidas;
+  - as 172 moradoras idênticas (nome, ofício, idade, lugar), e nenhum segredo
+    sorteado das linhas novas;
+  - o narrador recebe a história da taverna e a da Casa Tessel.
+- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
+  `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica à
+  anterior.

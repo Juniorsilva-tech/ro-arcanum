@@ -91,6 +91,15 @@ function eventoAosSeis(camp: Campaign, familia: FamiliaState): EventoInfancia {
       { id: 'proteger_irmaos', rotulo: 'Cuidar de quem restou', descricao: 'Carisma e vínculo familiar crescem; você assume peso cedo.' },
     ],
   };
+  if (camp.genese?.marca === 'genio') return {
+    id: 'prodigio_revelado', idade: 6, titulo: 'O Despertar do Prodígio',
+    descricao: 'Aos seis anos, você já entendia conceitos e técnicas antes que os adultos terminassem de falar. Sua genialidade precoce assombra quem te observa.',
+    opcoes: [
+      { id: 'estudo_profundo', rotulo: 'Devorar tratados arcanos e pergaminhos', descricao: 'Aumenta raciocínio e percepção; sua mente opera anos à frente dos outros.' },
+      { id: 'perfeicao_marcial', rotulo: 'Treinar reflexos corporais e marcialidade', descricao: 'Aumenta físico e precisão; seus movimentos reproduzem técnicas de mestre.' },
+      { id: 'ajudar_familia', rotulo: 'Aplicar intelecto nas finanças e na casa', descricao: 'Aumenta social e o patrimônio da família; todos reconhecem seu valor.' },
+    ],
+  };
   const tipo = pick(camp.rng, ['peste', 'cobradores', 'fome', 'talento'] as const);
   if (tipo === 'peste') return { id: 'peste', idade: 6, titulo: 'A febre entrou em casa', descricao: 'Um dos seus pais adoeceu e os remédios custam mais do que a família possui.', opcoes: [
     { id: 'buscar_cura', rotulo: 'Procurar a curandeira', descricao: 'Consome patrimônio, com a melhor chance de salvar quem adoeceu.' },
@@ -195,7 +204,7 @@ function proximoEvento(camp: Campaign, familia: FamiliaState, idade: number): Ev
     return eventoAosQuatorzeTsukimichi(camp, familia);
   }
   if (idade === 6) return eventoAosSeis(camp, familia);
-  if (idade === 10) return nextFloat(camp.rng) < .45 ? eventoCativeiro(10) : eventoTalento(10);
+  if (idade === 10) return camp.genese?.marca === 'genio' ? eventoTalento(10) : nextFloat(camp.rng) < .45 ? eventoCativeiro(10) : eventoTalento(10);
   return { id: 'partida', idade: 14, titulo: 'A vida adulta se aproxima', descricao: 'O mundo oferece um caminho, enquanto sua família ainda cobra presença.', opcoes: [
     { id: 'aprendizado', rotulo: 'Partir para aprender um ofício', descricao: 'Ganha técnica e deixa a família conduzir a própria vida.' },
     { id: 'defender', rotulo: 'Ficar para defender a casa', descricao: 'Fortalece corpo e vínculos; inimigos passam a conhecer seu nome.' },
@@ -311,6 +320,7 @@ export function iniciarFamilia(content: ContentBundle, camp: Campaign): void {
   familia.eventoAtual = nascimento(camp, familia);
   camp.familia = familia;
   camp.personagem.idade = 0;
+  if (g.marca === 'genio') camp.flags['infancia_genio'] = true;
   camp.npcsProcedurais = membros.map(npcDeParente);
   for (const m of membros) camp.npcState[m.id] = estadoNpc(content, m.idadeNoNascimento);
 }
@@ -344,6 +354,22 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
     if (opcaoId === 'buscar_responsavel') { alterarAtributo(camp, 'percepcao', 2); camp.flags['jurou_vingar_familia'] = true; }
     if (opcaoId === 'proteger_irmaos') alterarAtributo(camp, 'social', 2);
     texto += ' Seus pais morreram; a forma como você respondeu ficou em você.';
+  } else if (evento.id === 'prodigio_revelado') {
+    camp.flags['infancia_genio'] = true;
+    if (opcaoId === 'estudo_profundo') {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      f.prestigio += 2;
+    } else if (opcaoId === 'perfeicao_marcial') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      f.prestigio += 2;
+    } else {
+      alterarAtributo(camp, 'social', 2);
+      f.patrimonio += 20;
+      f.prestigio += 1;
+    }
+    texto += ' Sua mente extraordinária e precoce impressionou a todos.';
   } else if (evento.id === 'peste' && alvo) {
     const chance = opcaoId === 'buscar_cura' ? .88 : opcaoId === 'pedir_ajuda' ? .45 + f.prestigio * .04 : .55;
     if (opcaoId === 'buscar_cura') f.patrimonio = Math.max(0, f.patrimonio - 25);

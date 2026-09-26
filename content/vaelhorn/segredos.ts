@@ -712,11 +712,11 @@ export const CONSEQUENCIAS: Record<string, ConsequenciaSegredo> = {
   },
   // Segredos que já existiam e passam a ter consequência.
   sargenta_bael: {
-    texto: 'Você sabe que Bael deixou a ponte cair. Ruvela, que desertou naquela noite, passa a tratar você como quem enfim entendeu.',
+    texto: 'Você sabe que Bael derrubou os arcos da ponte de propósito durante a revolta. Ruvela, que desertou naquela noite, passa a tratar você como quem enfim entendeu.',
     efeitos: [rel('ruvela', 'confianca', 4), rel('sargenta_bael', 'medo', 5)],
   },
   lunn: {
-    texto: 'Lunn contou que dormiu no turno da ponte. Ela passa a confiar em você como confia na mãe — e com o mesmo medo.',
+    texto: 'Lunn confessou que dormiu na sentinela na noite da sabotagem da ponte e não tocou o sino de alarme. Ela passa a confiar em você como confia na mãe — e com o mesmo medo.',
     efeitos: [rel('lunn', 'confianca', 4), rel('lunn', 'medo', 2)],
   },
   teoda: {
@@ -756,7 +756,7 @@ export const CONSEQUENCIAS: Record<string, ConsequenciaSegredo> = {
     efeitos: [rel('irma_perla', 'confianca', 4), rel('madre_corvane', 'disposicao', -4), rep('igreja', -2)],
   },
   morda: {
-    texto: 'Morda ouviu alguém rir do outro lado da ponte antes de ela cair. Oda, que nunca a deixou passar fome, passa a confiar em quem a escutou.',
+    texto: 'Morda estava na margem na noite da sabotagem e ouviu a ordem de dinamitar os arcos antes do estrondo. Oda, que nunca a deixou passar fome, passa a confiar em quem a escutou.',
     efeitos: [rel('oda', 'confianca', 3), rel('morda', 'confianca', 3)],
   },
   viuva_do_farol: {

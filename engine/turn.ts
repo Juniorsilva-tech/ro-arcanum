@@ -31,6 +31,12 @@ import {
   executarMomentoRomanceServa,
 } from './tsukimichi';
 import { iniciarCombate } from './combat';
+import {
+  conversarASos,
+  apoiarDesejoNpc,
+  confortarLutoNpc,
+  presentearNpc,
+} from './intimidadeNpc';
 
 export type OpcaoResolvida = {
   id: string;
@@ -305,6 +311,46 @@ export function resolverIntencao(
   } else if (intencao.tipo === 'opcao' && intencao.opcao.id === 'romance_passeio_vila') {
     const resRomance = executarMomentoRomanceServa(camp, '', 'passeio_vila');
     fatoBase = resRomance.fato;
+  } else if (
+    intencao.tipo === 'opcao' &&
+    (intencao.opcao.id.startsWith('grade_aproximar_conversar_a_sos_') ||
+      intencao.opcao.id.startsWith('conversar_a_sos_'))
+  ) {
+    const alvoId = intencao.alvoId ?? intencao.opcao.alvoId ?? alvo?.id;
+    if (alvoId) {
+      const res = conversarASos(content, camp, alvoId);
+      fatoBase = res.texto;
+    }
+  } else if (
+    intencao.tipo === 'opcao' &&
+    (intencao.opcao.id.startsWith('grade_aproximar_apoiar_desejo_') ||
+      intencao.opcao.id.startsWith('apoiar_desejo_'))
+  ) {
+    const alvoId = intencao.alvoId ?? intencao.opcao.alvoId ?? alvo?.id;
+    if (alvoId) {
+      const res = apoiarDesejoNpc(content, camp, alvoId);
+      fatoBase = res.texto;
+    }
+  } else if (
+    intencao.tipo === 'opcao' &&
+    (intencao.opcao.id.startsWith('grade_aproximar_confortar_luto_') ||
+      intencao.opcao.id.startsWith('confortar_luto_'))
+  ) {
+    const alvoId = intencao.alvoId ?? intencao.opcao.alvoId ?? alvo?.id;
+    if (alvoId) {
+      const res = confortarLutoNpc(content, camp, alvoId);
+      fatoBase = res.texto;
+    }
+  } else if (
+    intencao.tipo === 'opcao' &&
+    (intencao.opcao.id.startsWith('grade_aproximar_presentear_') ||
+      intencao.opcao.id.startsWith('presentear_'))
+  ) {
+    const alvoId = intencao.alvoId ?? intencao.opcao.alvoId ?? alvo?.id;
+    if (alvoId) {
+      const res = presentearNpc(content, camp, alvoId);
+      fatoBase = res.texto;
+    }
   }
 
   const fato = cartaUsada ? `${fatoBase} (a memória de "${cartaUsada}" pesou na hora.)` : fatoBase;

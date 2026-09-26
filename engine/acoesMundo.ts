@@ -35,6 +35,7 @@ import {
   PERIODOS_DE_TREINO,
 } from './treinamentoImersivo';
 import { fazerTrabalhoEspecializado, type TrabalhoEspecializadoId } from './trabalhosEspecializados';
+import { conversarASos, apoiarDesejoNpc, confortarLutoNpc, presentearNpc } from './intimidadeNpc';
 
 export type AcaoMundo =
   | { tipo: 'desafio'; id: string }
@@ -65,7 +66,11 @@ export type AcaoMundo =
   | {
       tipo: 'trabalho_especializado';
       trabalhoId: TrabalhoEspecializadoId;
-    };
+    }
+  | { tipo: 'conversar_a_sos'; npcId: string }
+  | { tipo: 'apoiar_desejo_npc'; npcId: string }
+  | { tipo: 'confortar_luto_npc'; npcId: string }
+  | { tipo: 'presentear_npc'; npcId: string; itemId?: string };
 export type ResultadoAcaoMundo = { ok: boolean; texto: string; combate?: boolean };
 
 export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: AcaoMundo): ResultadoAcaoMundo {
@@ -105,6 +110,22 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
     p.dinheiro -= 5;
     treinar(content, camp, 'espada', { mestre: .5, esforco: .8, recursos: .7, observadorId: npc.id });
     return terminar(`Você e ${npc.nome} treinaram juntos. A prática melhora a capacidade de ambos.`, 2);
+  }
+  if (acao.tipo === 'conversar_a_sos') {
+    const r = conversarASos(content, camp, acao.npcId);
+    return r.ok ? terminar(r.texto, 1) : { ok: false, texto: r.texto };
+  }
+  if (acao.tipo === 'apoiar_desejo_npc') {
+    const r = apoiarDesejoNpc(content, camp, acao.npcId);
+    return r.ok ? terminar(r.texto, 1) : { ok: false, texto: r.texto };
+  }
+  if (acao.tipo === 'confortar_luto_npc') {
+    const r = confortarLutoNpc(content, camp, acao.npcId);
+    return r.ok ? terminar(r.texto, 1) : { ok: false, texto: r.texto };
+  }
+  if (acao.tipo === 'presentear_npc') {
+    const r = presentearNpc(content, camp, acao.npcId);
+    return r.ok ? terminar(r.texto, 1) : { ok: false, texto: r.texto };
   }
   if (acao.tipo === 'consolidar_legado') {
     if (!camp.flags['desafio.concluido.expedicao_cavaleira_do_eclipse'] || maestriaDe(camp, 'espada') < 80) return { ok: false, texto: 'Supere a prova do eclipse e alcance maestria 80 na lâmina.' };

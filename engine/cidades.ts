@@ -82,6 +82,65 @@ export function processarCidades(content: ContentBundle, camp: Campaign): void {
         atores: [], publico: true,
       });
     }
+    // Ruínas profundas (integridade < 40 e população zero): sem socorro externo
+    // a vila ficava morta para sempre. Agora, se o lugar estiver calmo, uma cidade
+    // vizinha próspera organiza uma expedição pioneira de reconstrução.
+    if (povo.populacao === 0 && povo.integridade < 40 && !ameaca && !guerra && c.doenca < 40 && dia % 45 === 0) {
+      const patrona = Object.entries(v.cidades).find(([outraId, d]) =>
+        outraId !== id && d.comida >= 120 && d.materiais >= 40 && (camp.continuidade!.locais[outraId]?.populacao ?? 0) >= 20
+      );
+      if (patrona) {
+        const [patronaId, dPatrona] = patrona;
+        const povoPatrona = camp.continuidade!.locais[patronaId];
+        dPatrona.materiais -= 30;
+        dPatrona.comida -= 30;
+        povoPatrona.populacao -= 3;
+        povo.integridade = Math.min(100, povo.integridade + 25);
+        povo.populacao = 4;
+        c.comida = Math.max(c.comida, 25);
+        const nomePatrona = content.locais.find(l => l.id === patronaId)?.nome ?? patronaId;
+        registrarFato(camp, {
+          tipo: 'expedicao_reconstrucao', local: id,
+          texto: `Artífices e famílias partiram de ${nomePatrona} para reerguer as ruínas de ${nome}.`,
+          atores: [], publico: true,
+        });
+      }
+    }
+    // Metrópole rica e saturada funda entreposto ou povoado pioneiro em sítio livre da região:
+    if (dia % 60 === 0 && povo.populacao >= c.edificios.moradias * 50 && c.comida >= 300 && c.materiais >= 120 && !ameaca && !guerra) {
+      const ultimaFundacao = v.contadores.ultimaFundacaoPioneira ?? -200;
+      if (dia - ultimaFundacao >= 120) {
+        const regiaoAtual = content.locais.find(l => l.id === id)?.regiao;
+        const sitioLivre = content.sitiosColonia?.find(s =>
+          s.id !== camp.feudo?.sitio &&
+          s.id !== camp.feudo?.localId &&
+          (!camp.continuidade!.locais[s.id] || camp.continuidade!.locais[s.id].populacao === 0) &&
+          (s.regiao === regiaoAtual || !regiaoAtual)
+        ) ?? content.sitiosColonia?.find(s =>
+          s.id !== camp.feudo?.sitio &&
+          s.id !== camp.feudo?.localId &&
+          (!camp.continuidade!.locais[s.id] || camp.continuidade!.locais[s.id].populacao === 0)
+        );
+        if (sitioLivre) {
+          v.contadores.ultimaFundacaoPioneira = dia;
+          c.comida -= 80;
+          c.materiais -= 60;
+          povo.populacao -= 6;
+          camp.continuidade!.locais[sitioLivre.id] = { integridade: 55, populacao: 6, obra: 0, nivel: 1 };
+          v.cidades[sitioLivre.id] ??= {
+            comida: 70, materiais: 40, remedios: 10, tesouro: 20,
+            edificios: { lavoura: 1, moradias: 1, enfermaria: 0, muralha: 0, mercado: 0 },
+            fomeDias: 0, doenca: 0, inseguranca: 10, secaAte: 0, ultimoIncidente: dia,
+            estoque: {},
+          };
+          registrarFato(camp, {
+            tipo: 'fundacao_pioneira', local: sitioLivre.id,
+            texto: `${nome} enviou carroças de ferramentas e pioneiros para erguer um novo assentamento em ${sitioLivre.nome}.`,
+            atores: [], publico: true,
+          });
+        }
+      }
+    }
     if (c.projeto && !ameaca && !guerra && c.fomeDias === 0 && povo.populacao > 0) {
       c.projeto.progresso += condicao;
       if (c.projeto.progresso >= c.projeto.necessario) {

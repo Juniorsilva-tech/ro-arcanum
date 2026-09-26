@@ -30,12 +30,14 @@ import { itemPorId } from './items';
 import { conviccoesDoNpc } from './reflexao';
 import { avisosDoDia } from './memoriaMundo';
 import { descreverEdificioRegional } from './edificiosRegionais';
+import { calcularHumorNpc, obterIntimidadeNpc } from './intimidadeNpc';
 import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
 import {
   obterOcupantesSubespaco,
   verificarSupressaoMana,
   avaliarReacaoHumanosPresenca,
 } from './tsukimichi';
+import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
 
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous';
 
@@ -51,19 +53,11 @@ export const MODELO_PADRAO_OPENROUTER = 'thedrummer/rocinante-12b';
 export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
 
-// Sugestões Nous Research / Hermes (inclui os modelos gratuitos do portal)
+// Sugestões Nous Research / Hermes (modelos gratuitos e ativos validados na infraestrutura)
 export const SUGESTOES_NOUS = [
-  'upstage/solar-pro4:free', // Solar Pro 4 (grátis, forte em narrativa e diálogos)
-  'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (grátis, ágil)
-  'poolside/laguna-s-2.1:free', // Laguna S 2.1 (grátis)
-  'poolside/laguna-xs-2.1:free', // Laguna XS 2.1 (grátis)
-  'thinkingmachines/inkling:free', // Inkling (grátis)
-  'nvidia/nemotron-3.5-lightning:free', // Nemotron 3.5 Lightning (grátis)
-  'inclusionai/ling-3.0-flash-fin:free', // Ling 3.0 Flash (grátis)
-  'meituan/longcat-2.0:free', // Longcat 2.0 (grátis)
-  'nousresearch/hermes-3-llama-3.1-70b', // Hermes 3 70B
-  'nousresearch/hermes-3-llama-3.1-405b', // Hermes 3 405B
-  'tencent/hy3', // Tencent Hunyuan 3
+  'upstage/solar-pro4:free', // Solar Pro 4 (padrão: rápido ~7s, estável, excelente em português)
+  'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (ultrarrápido ~2-3s)
+  'stealth/space-bunny-alpha', // Space Bunny Alpha (mais lento ~25s, tom visceral)
 ];
 
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
@@ -129,6 +123,7 @@ export const FABRICANTE: Record<string, string> = {
   tencent: 'Tencent',
   inclusionai: 'Inclusion AI',
   meituan: 'Meituan',
+  stealth: 'Stealth (Nous)',
 };
 
 /** Nome do fabricante a partir do slug. Desconhecido vira o proprio prefixo. */
@@ -155,7 +150,9 @@ export function agruparPorFabricante<T extends { id: string }>(
 
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
   // ── Nous Research & Gratuitos Testados ────────────────────────────────────
-  { id: 'meituan/longcat-2.0:free', nota: 'Nous grátis: testado, narra sexo explícito sem recusa e prosa rica', pago: false },
+  { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: testado no RPG, narra sem recusa, prosa riquíssima e sem censura', pago: false },
+  { id: 'upstage/solar-pro4:free', nota: 'Nous grátis: testado, excelente português e coerência narrativa', pago: false },
+  { id: 'stepfun/step-3.7-flash:free', nota: 'Nous grátis: rápido (2-3s), ágil para turnos dinâmicos', pago: false },
   { id: 'nousresearch/hermes-3-llama-3.1-405b:free', nota: 'Nous grátis, o maior: melhor prosa da lista sem pagar', pago: false },
   { id: 'nousresearch/deephermes-3-llama-3-8b-preview:free', nota: 'Nous grátis, pequeno e rápido; cena curta', pago: false },
   { id: 'nousresearch/deephermes-3-mistral-24b-preview:free', nota: 'Nous grátis, meio-termo: aguenta diálogo', pago: false },
@@ -198,7 +195,7 @@ const IDS_NAO_NARRA = ['openrouter/free', 'openrouter/auto'];
 // Linhagens conhecidas por escrever cena adulta sem travar. São finetunes de
 // interpretação e bases pouco alinhadas — o que este jogo pede.
 const PERMISSIVOS = [
-  'longcat', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
+  'space-bunny', 'solar', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
   'toppy', 'rocinante', 'unslopnemo', 'magnum', 'midnight-rose', 'wizardlm',
   'airoboros', 'xwin', 'anubis', 'cydonia', 'behemoth', 'sorcerer', 'lzlv',
   'goliath', 'psyfighter', 'remm', 'weaver', 'tiefighter', 'fimbulvetr',
@@ -307,23 +304,44 @@ export async function listarModelosNous(
     let chave = apiKey?.trim() || obterTokenNousAtual();
     const headers: Record<string, string> = {};
     if (chave) headers.authorization = `Bearer ${chave}`;
-    let resp = await fetch('https://inference-api.nousresearch.com/v1/models', { headers });
-    if (resp.status === 401 && (!apiKey || !apiKey.trim())) {
-      const novaChave = await renovarTokenNous(true);
-      if (novaChave && novaChave !== chave) {
-        chave = novaChave;
-        headers.authorization = `Bearer ${chave}`;
-        resp = await fetch('https://inference-api.nousresearch.com/v1/models', { headers });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    let resp: Response;
+    try {
+      resp = await fetch('https://inference-api.nousresearch.com/v1/models', {
+        headers,
+        signal: ctrl.signal,
+      });
+      if (resp.status === 401) {
+        const novaChave = await renovarTokenNous(true);
+        if (novaChave && novaChave !== chave) {
+          chave = novaChave;
+          headers.authorization = `Bearer ${chave}`;
+          resp = await fetch('https://inference-api.nousresearch.com/v1/models', {
+            headers,
+            signal: ctrl.signal,
+          });
+        }
       }
+    } finally {
+      clearTimeout(timer);
     }
     if (!resp.ok) {
       return SUGESTOES_NOUS.map(comoModeloOR);
     }
     const data = (await resp.json()) as { data?: { id: string }[] };
     const modelos: ModeloOR[] = [];
+    const DEAD_MODELS = [
+      'meituan/longcat-2.0:free',
+      'ling/ling-3.0-flash-saunter:free',
+      'ling/ling-3.0-flash-fin:free',
+      'poolside/laguna-xs-2.1:free',
+      'tencent/hy3:free',
+    ];
     for (const m of data.data ?? []) {
       const id = m.id;
-      const free = id.endsWith(':free');
+      if (DEAD_MODELS.includes(id)) continue;
+      const free = id.endsWith(':free') || id === 'stealth/space-bunny-alpha';
       if (apenasGratis && !free) continue;
       modelos.push({
         id,
@@ -333,6 +351,11 @@ export async function listarModelosNous(
         perfil: perfilDoModelo(id),
         contexto: 0,
       });
+    }
+    for (const sug of SUGESTOES_NOUS) {
+      if (!modelos.some((m) => m.id === sug)) {
+        modelos.push(comoModeloOR(sug));
+      }
     }
     modelos.sort((a, b) => {
       const idxA = SUGESTOES_NOUS.indexOf(a.id);
@@ -352,7 +375,7 @@ function comoModeloOR(id: string): ModeloOR {
   return {
     id,
     nome: id,
-    free: id.endsWith(':free'),
+    free: id.endsWith(':free') || id === 'stealth/space-bunny-alpha',
     moderado: false,
     perfil: perfilDoModelo(id),
     contexto: 0,
@@ -439,6 +462,14 @@ export function montarPacote(
       ganchos: ctx.local.ganchos,
       privacidade: ctx.privacidade,
       perigo: ctx.local.perigo,
+      cronica: CRONICAS_MAPA[ctx.local.id]
+        ? {
+            crenca: CRONICAS_MAPA[ctx.local.id].divindadeOuCrenca,
+            passadoGuerra: CRONICAS_MAPA[ctx.local.id].passadoGuerraDeuses,
+            cicatrizBruxas: CRONICAS_MAPA[ctx.local.id].marcaDasBruxas,
+            supersticao: CRONICAS_MAPA[ctx.local.id].supersticaoPopular,
+          }
+        : undefined,
     },
     quando: {
       data: dataPorExtenso(camp.calendario, content.cenario.ancoraCalendario),
@@ -471,21 +502,32 @@ export function montarPacote(
     // O que rolou entre elas sem o jogador por perto — é o que a boca do povo
     // repete, e o que dá ao vale história própria.
     boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
-    presentes: ctx.presentes.map((n) => ({
-      nome: n.nome,
-      idade: camp.npcState[n.id]?.idade ?? n.idade,
-      ocupacao: ocupacaoEfetiva(camp, n),
-      voz: n.vozNarrativa,
-      indole: n.personalidade,
-      corpo: n.corpo,
-      parentesco: n.parentesco,
-      // Família no elenco (engine/familiasNpc.ts): até três parentes, o nó da
-      // família como a vizinhança conta, e o luto recente. Segredo não entra.
-      familia: familiaParaNarrador(content, camp, n.id, ctx.presentes.map(x => x.id)),
-      // De onde ela veio, o que perdeu, o que quer (content/vaelhorn/historias-*.ts).
-      // Para aludir: a regra 2b do sistema proíbe revelar o que não foi descoberto.
-      historia: n.historia,
-      situacaoCivil: camp.vivo?.pessoas[n.id] && { atividade: camp.vivo.pessoas[n.id].objetivo, prestigio: camp.vivo.pessoas[n.id].prestigio },
+    presentes: ctx.presentes.map((n) => {
+      const hum = calcularHumorNpc(camp, content, n);
+      const intimi = obterIntimidadeNpc(camp, n);
+      return {
+        nome: n.nome,
+        idade: camp.npcState[n.id]?.idade ?? n.idade,
+        ocupacao: ocupacaoEfetiva(camp, n),
+        voz: n.vozNarrativa,
+        indole: n.personalidade,
+        corpo: n.corpo,
+        parentesco: n.parentesco,
+        // Família no elenco (engine/familiasNpc.ts): até três parentes, o nó da
+        // família como a vizinhança conta, e o luto recente. Segredo não entra.
+        familia: familiaParaNarrador(content, camp, n.id, ctx.presentes.map(x => x.id)),
+        // De onde ela veio, o que perdeu, o que quer (content/vaelhorn/historias-*.ts).
+        // Para aludir: a regra 2b do sistema proíbe revelar o que não foi descoberto.
+        historia: n.historia,
+        humor: hum.descricao,
+        humorId: hum.id,
+        intimidade: {
+          desejo: intimi.desejo ? n.historia?.desejo : undefined,
+          ferida: intimi.ferida ? n.historia?.ferida : undefined,
+          medo: intimi.medo ? n.historia?.medo : undefined,
+          desejoApoiado: intimi.desejoApoiado,
+        },
+        situacaoCivil: camp.vivo?.pessoas[n.id] && { atividade: camp.vivo.pessoas[n.id].objetivo, prestigio: camp.vivo.pessoas[n.id].prestigio },
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
       conheceHaDias: diasDeConvivio(camp, n.id),
@@ -497,11 +539,12 @@ export function montarPacote(
       // O que ESTA pessoa acredita sobre a capacidade do protagonista. Sai da
       // crenca dela (engine/aptidao.ts), formada pelo que ela viu e pela
       // competencia dela no assunto. Pode estar errada, e e' de proposito.
-      oQueEleAchaDeVoce: DOMINIOS
-        .map(d => leituraDoObservador(camp, n.id, d))
-        .filter((x): x is string => !!x)
-        .slice(0, 2),
-    })),
+        oQueEleAchaDeVoce: DOMINIOS
+          .map(d => leituraDoObservador(camp, n.id, d))
+          .filter((x): x is string => !!x)
+          .slice(0, 2),
+      };
+    }),
     // Os fios que estão abertos agora, com o objetivo que falta cumprir.
     arcosAtivos: content.quests
       .filter((q) => camp.questEstado[q.id] === 'ativa')
@@ -670,12 +713,21 @@ export const INSTRUCAO_SISTEMA =
   'pessoas, no instante seguinte. Não reabra a cena, não reapresente quem já está ali, não '  +
   'repita a descrição do ambiente que já foi dada. Se alguém fez uma pergunta na última '  +
   'cena, ela ainda está esperando resposta.\n' +
+  '• PROIBIÇÃO ABSOLUTA DE REPETIÇÃO: "cenasAnteriores" serve EXCLUSIVAMENTE para situar o ' +
+  'narrador sobre o que já aconteceu. É TERMINANTEMENTE PROIBIDO transcrever, copiar, colar, ' +
+  'ecoar ou repetir falas, frases ou acontecimentos que já constam em "cenasAnteriores". O jogador ' +
+  'já leu aquilo na tela anterior. A nova cena deve conter APENAS O QUE ACONTECE DEPOIS: novas falas, novas reações ' +
+  'e o avanço imediato da conversa. Repetir diálogos passados é uma falha inaceitável.\n' +
   '• NOME DO JOGADOR — "personagem.nome" está no pacote pra você narrar em segunda ' +
   'pessoa, não pra qualquer NPC saber de cor. Uma NPC só o chama pelo nome se ' +
   '"jaAconteceu" ou "arcosAtivos" já mostrarem uma apresentação de verdade (ele se ' +
   'apresentou, alguém o apresentou, ela ouviu de outra pessoa). Sem isso registrado, ela ' +
   'não sabe — trate-o por "você" na fala dela, ou por um termo genérico no masculino ' +
   '(acima), e é ótimo se ela perguntar o nome dele como parte da cena.\n' +
+  '• REALISMO VÍVIDO, IMERSÃO E PERSONALIDADE: O mundo não é um tratado solene nem um museu; é uma terra viva, áspera, perigosa e fascinante. ' +
+  'As pessoas têm cinismo de sobrevivente, humor sombrio de taverna, risadas de alívio tenso, malícia, desconfiança de mercenário e humanidade quente. ' +
+  'Faça o texto ser prazeroso, envolvente e divertido de ler: diálogos com atitude, pausas expressivas, reações corporais involuntárias (uma mão que treme na caneca, um cuspe de desdém na terra, um olhar de canto que avalia a bolsa). ' +
+  'Dê peso aos sentidos: o fedor acre de gordura velha e cerveja azeda, o cheiro férrico de sangue seco na cota de malha, o bafo quente do cavalo cansado, o estalo da lenha úmida, a lama espessa chupando as botas.\n' +
   '• Nada de rótulos como "Narrador:", "Opções:", "Cena:". A interface já cuida disso.\n' +
   '\nDIÁLOGO — é aqui que a cena vive. A regra mais importante deste prompt:\n' +
   '• Se há alguém presente, a cena TEM QUE TER FALA. Cena só de descrição está errada.\n' +
@@ -690,11 +742,11 @@ export const INSTRUCAO_SISTEMA =
   '• OBRIGATÓRIO, e a regra que mais importa neste prompt inteiro: cada fala em LINHA ' +
   'PRÓPRIA, começando com travessão e com o NOME DE QUEM FALA entre colchetes logo em ' +
   'seguida. O jogador é sempre [você]. Sem exceção, em toda fala, inclusive a primeira:\n' +
-  '    — [você] Você tem mão boa para pão velho, Aldrica.\n' +
+  '    — [você] O desfiladeiro do norte ainda tem patrulhas ativas?\n' +
   '\n' +
-  '    Ela não levanta os olhos do pano.\n' +
+  '    O sentinela cospe na terra batida e apoia a mão na bainha da espada.\n' +
   '\n' +
-  '    — [Aldrica] Freguês novo é sempre bom de língua. Isso passa.\n' +
+  '    — [Sentinela] Duas levas passaram antes do anoitecer. Se você quiser cruzar sem lutar, vá pela ravina seca.\n' +
   '  A interface lê esse colchete para mostrar de quem é cada fala, e o remove do texto. ' +
   'Sem ele, a tela atribui a fala à pessoa errada — é o pior defeito que uma cena pode ' +
   'ter. Nunca ponha duas falas na mesma linha, e nunca deixe uma fala sem colchete.\n' +
@@ -721,16 +773,31 @@ export const INSTRUCAO_SISTEMA =
   'em "segredoQueVoceSabe"; o que a história apenas insinua continua não dito.\n' +
   '2c) "mundoLembra" são linhas que o jogo já mostrou hoje ao jogador (o que a cidade lembra dele, um boato, um mensageiro). ' +
   'Deixe aparecer num gesto ou numa fala, sem repetir a frase e sem inventar consequência além dela.\n' +
+  '2d) HUMOR VIVO E INTIMIDADE PROGRESSIVA: Cada presente traz "humor" e "intimidade" (desejo, ferida, medo, desejoApoiado). ' +
+  'O humor dita a atitude corporal, o tom da fala e a receptividade do NPC à cena (ex: luto por perda recente na família, pavor por perigo, tensão defensiva, acolhimento ou gratidão sincera). ' +
+  'As camadas de intimidade mostram o quanto o protagonista já conquistou a confiança daquela alma. Quando o jogador conversar a sós, confortar um luto ou apoiar o anseio pessoal de vida (desejoApoiado), narre o impacto emocional tangível, a quebra de defesas e a lealdade incondicional despertada.\n' +
+  '2e) COSMOLOGIA, DEUSES PRIMORDIAIS E O TABU DA BRUXA DA INVEJA (SATELLA / RE:ZERO): O mana é o sangue e cinzas dos Deuses Primordiais tombados na Guerra do Firmamento. As 7 Bruxas dos Pecados Capitais governaram no passado com Autoridades esmagadoras, até serem aniquiladas e devoradas pela Bruxa da Inveja (Satella), que consumiu metade do continente há 400 anos e está selada além do véu. O nome da Bruxa da Inveja é um tabu absoluto e pavoroso que paralisa qualquer habitante comum de terror; menções ao Culto da Bruxa causam pânico e histeria; e o clero dos Santos do Selo purga qualquer suspeita de heresia com fogo e ferro. "local.cronica" traz a fé, o passado mítico e a cicatriz mágica deste solo: faça o mundo transparecer essa superstição visceral, o medo do véu negro e o peso silencioso dos deuses mortos.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +
-  '5) Conteúdo adulto — sexo, violência, temas pesados — é permitido e pode ser ' +
-  'explícito quando a cena pedir, entre adultos e de forma consensual. Se o jogador ' +
-  'PEDE uma cena explícita, escreva a cena explícita, com o corpo e os atos nomeados. ' +
-  'Não corte para o amanhecer, não troque por sugestão poética, não descreva a mobília ' +
-  'no lugar. Fugir do pedido é pior do que recusar.\n' +
-  'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens são adultos (18+). Jamais ' +
-  'sexualize menores em nenhuma hipótese. Cada presente traz a idade — respeite-a.\n' +
+  '5) COMBATE BRUTAL, ULTRAVIOLÊNCIA & GORE VISCERAL PESADO: Quando houver combate, golpe de lâmina, emboscada, impacto físico, ferimento, mutilação ou morte, narre com crueza impiedosa, precisão cirúrgica e horror anatômico explícito. ' +
+  'É TERMINANTEMENTE PROIBIDO amenizar a violência, resumir o impacto ou usar descrições tímidas ou poéticas. A violência neste mundo é horrenda, deformadora, suja e nauseante. ' +
+  'Narre os detalhes sangrentos sem filtros: ' +
+  'a lâmina não apenas corta, ela serra tendões resistentes, arranca nacos de gordura amarelada e abre a carne em camadas fumegantes; ' +
+  'artérias rompidas bombeiam esguichos violentos de sangue arterial rubro e espesso que encharca rostos, queima nos olhos e borbulha no chão lamacento; ' +
+  'ossos e cartilagens são esmagados com estalos secos e pontas fraturadas que rasgam o músculo de dentro para fora, perfurando a pele; ' +
+  'golpes de maça ou martelo afundam e trituram crânios em ruídos ocos, espalhando massa encefálica cinzenta, dentes partidos e calota óssea na poeira; ' +
+  'ventres rasgados despejam vísceras cinzentas e alças intestinais fumegantes entre dedos desesperados que tentam contê-las, liberando o fedor pútrido de bile, fezes e ferro cru; ' +
+  'olhos explodem sob pressão liberando humor vítreo viscoso; membros decepados deixam cotos abertos pulsando jatos em espasmos musculares desesperados; ' +
+  'mostre a agonia prolongada, homens e feras se urinando e defecando de choque, engasgando no refluxo do próprio sangue grosso que borbulha pelas narinas e traqueia, o estertor asmático da morte e a terra ensopada de gore quente. ' +
+  'O protagonista e os presentes sentem tudo: o sangue que gruda nos cílios, o gosto metálico acre na boca e o cheiro nauseante da carnificina.\n' +
+  '5a) CONTEÚDO ADULTO & INTIMIDADE INTENSA ("BEM BÃO"): Quando a cena envolver paixão, desejo carnal, sedução, romance ou sexo entre adultos, narre com volúpia carnal autêntica, vigor físico e detalhes sensoriais e eróticos vívidos. ' +
+  'É TERMINANTEMENTE PROIBIDO cortar covardemente para o fogo da lareira ("fade to black"), pular para a manhã seguinte ou mascarar o ato com eufemismos bobos ou poesia abstrata. ' +
+  'Se o jogador busca intimidade ou a cena chega à cama de palha ou aos lençóis, descreva o calor febril da pele suada, o peso e a textura dos corpos nus sob as mãos, toques firmes explorando curvas e pontos sensíveis, ' +
+  'beijos famintos com troca de saliva, fôlego entrecortado e mordidas na carne, roupas sendo rasgadas ou desatadas com urgência, arrepios e espasmos de volúpia, ' +
+  'o atrito úmido, a penetração ritmada, os gemidos descarados abafados contra o travesseiro e a respiração pesada no pescoço até o ápice do prazer e o cansaço exausto e cúmplice. ' +
+  'Narre o desejo e a entrega física com paixão e sem moralismo.\n' +
+  'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens envolvidos em qualquer cena de teor erótico ou sensual são estritamente adultos (18+). Jamais sexualize menores em nenhuma hipótese. Respeite as idades registradas no pacote.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
   '• Cada presente traz "lembraDeVoce" e "conheceHaDias". USE. Quem já foi ' +
   'traída não recebe você como estranha, e quem você ajudou lembra disso.\n' +
@@ -1089,10 +1156,23 @@ function montarMensagemNarracao(
       'A cena responde à intenção respeitando esse resultado, inclusive quando falha.'
     : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
       'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.';
+  const textoTotal = `${r.fato} ${r.acaoLivre ?? ''} ${r.verbo?.nome ?? ''}`.toLowerCase();
+  const ehCombate =
+    /luta|combate|espada|lâmina|lamina|adaga|golpe|matar|degolar|atacar|cortar|flecha|sangue|esfaquear|oni|ferir|emboscada|derrubar|perfurar|estraçalhar|machado|bater|sangrent/i.test(
+      textoTotal,
+    );
+
+  const diretrizEstilo = ehCombate
+    ? 'DIRETRIZ DE COMBATE: GORE PESADO E ULTRAVIOLÊNCIA VISCERAL EXPLÍCITA. Narre o impacto físico sem atenuantes nem cortes: carne rasgada em camadas fumegantes, ossos esmagados com estalos secos, esguichos de sangue arterial borbulhante ensopando tudo, vísceras, mutilação, dentes partidos e o estertor agonizante do inimigo na lama.'
+    : 'PROSA VIVA, CRUA E IMERSIVA: Narre com realismo medieval, diálogos afiados (com [você] e [Nome]), impacto físico com gore pesado se houver violência, e volúpia carnal explícita se houver intimidade adulta.';
+
   return `${ordem}\n\n` +
     'Contexto do mundo (JSON, material de apoio — não é o assunto da cena):\n' +
     JSON.stringify(pacote) +
-    `\n\nAgora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
+    `\n\nATENÇÃO DE CONTINUIDADE E ESTILO: Prossiga a história A PARTIR DE AGORA. ` +
+    `É expressamente PROIBIDO transcrever, copiar ou repetir qualquer diálogo ou fala de "cenasAnteriores". Escreva APENAS falas e acontecimentos inéditos.\n` +
+    `${diretrizEstilo}\n` +
+    `Agora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
     'Comece pela ação e pela reação. Só o JSON de resposta.';
 }
 
@@ -1111,14 +1191,65 @@ export async function narrarComModeloStream(
 ): Promise<ResultadoNarracao> {
   const userMsg = montarMensagemNarracao(content, camp, ctx, r);
   try {
-    const bruto = cfg.provider === 'anthropic'
-      ? await chamarAnthropic(cfg, userMsg)
-      : await chamarStreamCompat(cfg, userMsg, onChunk);
+    let bruto: ResultadoNarracao;
+    if (cfg.provider === 'anthropic') {
+      bruto = await chamarAnthropic(cfg, userMsg);
+    } else if (cfg.provider === 'nous') {
+      bruto = await chamarNous(cfg, userMsg);
+      if (bruto.texto) onChunk(parcialNarracao(bruto.texto));
+    } else {
+      bruto = await chamarStreamCompat(cfg, userMsg, onChunk);
+    }
     if (bruto.erro) return bruto;
     return interpretarResposta(bruto.texto ?? '', content, camp);
   } catch (e) {
     return { erro: `rede: ${String(e).slice(0, 120)}` };
   }
+}
+
+function normalizarTextoComparacao(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/\[\s*([^\]]+)\s*\]/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Detecta se a narração recém-gerada pelo modelo é um eco/repetição de diálogos
+ * ou frases das cenas anteriores já exibidas na tela do jogador.
+ */
+export function detectarRepeticaoDeCenaAnterior(
+  texto: string,
+  cenasAnteriores: string[],
+): boolean {
+  if (!texto || !cenasAnteriores || cenasAnteriores.length === 0) return false;
+
+  const textoNorm = normalizarTextoComparacao(texto);
+
+  for (const cena of cenasAnteriores) {
+    if (!cena) continue;
+    const cenaNorm = normalizarTextoComparacao(cena);
+
+    // Segmentos significativos (falas, orações, períodos) da cena anterior
+    const segmentos = cenaNorm
+      .split(/[\n.!?—–-]+/)
+      .map((l) => l.trim())
+      .filter((l) => l.length >= 30);
+
+    let repeticoes = 0;
+    for (const seg of segmentos) {
+      if (textoNorm.includes(seg)) {
+        repeticoes++;
+        // Se 2 frases ou falas do passado reaparecerem, é repetição evidente
+        if (repeticoes >= 2) return true;
+        // Ou se um segmento longo (60+ caracteres) é idêntico
+        if (seg.length >= 60) return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Converte a resposta crua em narração + opções válidas. Se o JSON vier
@@ -1131,6 +1262,9 @@ export function interpretarResposta(
 ): ResultadoNarracao {
   const proibidos = camp?.opcoesUsadas ?? [];
   const idsValidos = new Set((content?.itens ?? []).map((i) => i.id));
+  const cenasPassadas = (camp?.cronica ?? [])
+    .filter((c) => c.tipo === 'narracao')
+    .map((c) => c.texto);
 
   const achadoValido = (v: unknown): string | undefined => {
     const id = typeof v === 'string' ? v.trim() : '';
@@ -1154,6 +1288,9 @@ export function interpretarResposta(
   if (json && typeof json === 'object') {
     const narracao = limparNarracao(String(json.narracao ?? ''));
     if (narracao && !pareceJson(narracao) && !foraDeContexto(narracao)) {
+      if (detectarRepeticaoDeCenaAnterior(narracao, cenasPassadas)) {
+        return { erro: 'o modelo repetiu diálogos ou cenas anteriores em vez de avançar a narrativa' };
+      }
       return {
         texto: narracao,
         opcoes: validarOpcoesIA(json.opcoes, proibidos),
@@ -1167,6 +1304,9 @@ export function interpretarResposta(
   if (resgatada) {
     const texto = limparNarracao(resgatada);
     if (texto.length >= 40 && !pareceJson(texto)) {
+      if (detectarRepeticaoDeCenaAnterior(texto, cenasPassadas)) {
+        return { erro: 'o modelo repetiu diálogos ou cenas anteriores em vez de avançar a narrativa' };
+      }
       return {
         texto,
         opcoes: validarOpcoesIA(lerObjetosDoArray(bruto, 'opcoes'), proibidos),
@@ -1177,7 +1317,12 @@ export function interpretarResposta(
 
   // 3) O modelo mandou prosa pura, sem JSON nenhum: serve como narração.
   const solto = limparNarracao(bruto);
-  if (solto && !pareceJson(solto)) return { texto: solto };
+  if (solto && !pareceJson(solto)) {
+    if (detectarRepeticaoDeCenaAnterior(solto, cenasPassadas)) {
+      return { erro: 'o modelo repetiu diálogos ou cenas anteriores em vez de avançar a narrativa' };
+    }
+    return { texto: solto };
+  }
 
   // 4) Sobrou lixo. Melhor a narração local do que despejar JSON na tela.
   return { erro: 'o modelo devolveu uma resposta malformada (JSON cortado)' };
@@ -1252,25 +1397,57 @@ async function lerStreamSse(
   resp: Response,
   onChunk: (textoParcial: string) => void,
 ): Promise<ResultadoNarracao> {
-  if (!resp.body?.getReader) {
+  if (!resp.ok) {
     const bruto = await resp.text();
-    return resp.ok ? { texto: bruto } : { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+    return { erro: explicarErroOpenRouter(resp.status, bruto) };
   }
+
+  const contentType = resp.headers?.get('content-type') ?? '';
+  if (contentType.includes('application/json') || !resp.body?.getReader) {
+    const bruto = await resp.text();
+    try {
+      const data = JSON.parse(bruto) as {
+        choices?: { message?: { content?: string }; delta?: { content?: string } }[];
+        error?: { message?: string };
+      };
+      if (data.error?.message) {
+        return { erro: explicarErroOpenRouter(resp.status, data.error.message) };
+      }
+      const texto = data.choices?.[0]?.message?.content?.trim() ?? data.choices?.[0]?.delta?.content?.trim() ?? '';
+      if (texto) {
+        onChunk(texto);
+        return { texto };
+      }
+    } catch {
+      return { erro: `HTTP ${resp.status}: ${bruto.slice(0, 160)}` };
+    }
+  }
+
+  if (!resp.body) return { erro: 'corpo de resposta ausente' };
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let brutoTotal = '';
   let acumulado = '';
   const consumir = (linha: string) => {
     const data = linha.startsWith('data:') ? linha.slice(5).trim() : '';
     if (!data || data === '[DONE]') return;
     try {
       const obj = JSON.parse(data) as {
-        choices?: { delta?: { content?: string }; message?: { content?: string } }[];
+        choices?: {
+          delta?: { content?: string; reasoning?: string; reasoning_content?: string };
+          message?: { content?: string };
+          text?: string;
+        }[];
         error?: { message?: string };
       };
       if (obj.error?.message) { acumulado = `__ERRO__${obj.error.message}`; return; }
-      const delta = obj.choices?.[0]?.delta?.content ?? obj.choices?.[0]?.message?.content ?? '';
-      if (delta) {
+      const delta =
+        obj.choices?.[0]?.delta?.content ??
+        obj.choices?.[0]?.message?.content ??
+        (obj.choices?.[0] as Record<string, unknown>)?.text ??
+        '';
+      if (typeof delta === 'string' && delta) {
         acumulado += delta;
         const parcial = parcialNarracao(acumulado);
         if (parcial) onChunk(parcial);
@@ -1280,13 +1457,34 @@ async function lerStreamSse(
   while (true) {
     const parte = await reader.read();
     if (parte.done) break;
-    buffer += decoder.decode(parte.value, { stream: true });
+    const chunkTexto = decoder.decode(parte.value, { stream: true });
+    buffer += chunkTexto;
+    brutoTotal += chunkTexto;
     const linhas = buffer.split(/\r?\n/);
     buffer = linhas.pop() ?? '';
     for (const linha of linhas) consumir(linha);
   }
   if (buffer) consumir(buffer);
-  if (acumulado.startsWith('__ERRO__')) return { erro: acumulado.slice(9) };
+  if (acumulado.startsWith('__ERRO__')) return { erro: explicarErroOpenRouter(resp.status, acumulado.slice(9)) };
+
+  // Se o stream não devolveu tokens via SSE data:, tenta resgatar se o corpo foi um JSON inteiro
+  if (!acumulado && brutoTotal.trim()) {
+    try {
+      const data = JSON.parse(brutoTotal.trim()) as {
+        choices?: { message?: { content?: string }; delta?: { content?: string } }[];
+        error?: { message?: string };
+      };
+      if (data.error?.message) return { erro: explicarErroOpenRouter(resp.status, data.error.message) };
+      const texto = data.choices?.[0]?.message?.content?.trim() ?? data.choices?.[0]?.delta?.content?.trim() ?? '';
+      if (texto) {
+        onChunk(texto);
+        return { texto };
+      }
+    } catch {
+      // Ignora erro de JSON parse
+    }
+  }
+
   return acumulado ? { texto: acumulado } : { erro: 'o modelo respondeu vazio' };
 }
 
@@ -1311,12 +1509,14 @@ async function chamarStreamCompat(
   const corpo = () => JSON.stringify({
     model: cfg.modelo || (nous ? MODELO_PADRAO_NOUS : MODELO_PADRAO_OPENROUTER),
     max_tokens: MAX_TOKENS,
-    temperature: 0.9,
+    temperature: 0.8,
+    frequency_penalty: 0.35,
+    presence_penalty: 0.3,
     stream: true,
     messages: [{ role: 'system', content: INSTRUCAO_SISTEMA }, { role: 'user', content: userMsg }],
   });
   let resp = await fetch(url, { method: 'POST', headers, body: corpo() });
-  if (nous && resp.status === 401 && !cfg.apiKey?.trim()) {
+  if (nous && resp.status === 401) {
     const nova = await renovarTokenNous(true);
     if (nova && nova !== chave) {
       chave = nova;
@@ -1334,62 +1534,81 @@ async function chamarNous(
   teto: number = MAX_TOKENS,
 ): Promise<ResultadoNarracao> {
   let chave = resolverApiKey(cfg);
-  let resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${chave}`,
-    },
-    body: JSON.stringify({
-      model: cfg.modelo || MODELO_PADRAO_NOUS,
-      max_tokens: teto,
-      temperature: 0.9,
-      messages: [
-        { role: 'system', content: sistema },
-        { role: 'user', content: userMsg },
-      ],
-    }),
-  });
-
-  // Se o token expirou (HTTP 401) e o usuário está usando o token automático do Hermes,
-  // renova silenciosamente em segundo plano e repete a chamada imediatamente.
-  if (resp.status === 401 && (!cfg.apiKey || !cfg.apiKey.trim())) {
-    const novaChave = await renovarTokenNous(true);
-    if (novaChave && novaChave !== chave) {
-      chave = novaChave;
-      resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${chave}`,
-        },
-        body: JSON.stringify({
-          model: cfg.modelo || MODELO_PADRAO_NOUS,
-          max_tokens: teto,
-          temperature: 0.9,
-          messages: [
-            { role: 'system', content: sistema },
-            { role: 'user', content: userMsg },
-          ],
-        }),
-      });
-    }
-  }
-
-  const bruto = await resp.text();
-  if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
-  let data: {
-    choices?: { message?: { content?: string }; finish_reason?: string }[];
-    error?: { message?: string };
-  };
+  const ehBunny = (cfg.modelo || MODELO_PADRAO_NOUS).includes('space-bunny');
+  const tetoReal = ehBunny ? Math.max(teto, 3500) : teto;
+  const timeoutMs = ehBunny ? 90000 : 75000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    data = JSON.parse(bruto);
-  } catch {
-    return { erro: 'resposta inválida da Nous Research' };
+    let resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${chave}`,
+      },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model: cfg.modelo || MODELO_PADRAO_NOUS,
+        max_tokens: tetoReal,
+        temperature: 0.8,
+        frequency_penalty: 0.35,
+        presence_penalty: 0.3,
+        messages: [
+          { role: 'system', content: sistema },
+          { role: 'user', content: userMsg },
+        ],
+      }),
+    });
+
+    // Se o token expirou (HTTP 401), renova silenciosamente em segundo plano e repete a chamada imediatamente.
+    if (resp.status === 401) {
+      const novaChave = await renovarTokenNous(true);
+      if (novaChave && novaChave !== chave) {
+        chave = novaChave;
+        resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${chave}`,
+          },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            model: cfg.modelo || MODELO_PADRAO_NOUS,
+            max_tokens: tetoReal,
+            temperature: 0.8,
+            frequency_penalty: 0.35,
+            presence_penalty: 0.3,
+            messages: [
+              { role: 'system', content: sistema },
+              { role: 'user', content: userMsg },
+            ],
+          }),
+        });
+      }
+    }
+
+    const bruto = await resp.text();
+    if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
+    let data: {
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
+      error?: { message?: string };
+    };
+    try {
+      data = JSON.parse(bruto);
+    } catch {
+      return { erro: 'resposta inválida da Nous Research' };
+    }
+    if (data.error?.message) return { erro: data.error.message };
+    const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
+    return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { erro: 'tempo limite esgotado (75s) na Nous Research' };
+    }
+    return { erro: `rede: ${String(err).slice(0, 120)}` };
+  } finally {
+    clearTimeout(timer);
   }
-  if (data.error?.message) return { erro: data.error.message };
-  const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
-  return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
 async function chamarOpenRouter(
@@ -1398,39 +1617,53 @@ async function chamarOpenRouter(
   sistema: string = INSTRUCAO_SISTEMA,
   teto: number = MAX_TOKENS,
 ): Promise<ResultadoNarracao> {
-  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${cfg.apiKey}`,
-      'HTTP-Referer': 'https://github.com/Rogualdi/Ro',
-      'X-Title': 'ARCANUM',
-    },
-    body: JSON.stringify({
-      model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
-      max_tokens: teto,
-      temperature: 0.9,
-      messages: [
-        { role: 'system', content: sistema },
-        { role: 'user', content: userMsg },
-      ],
-    }),
-  });
-  const bruto = await resp.text();
-  if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
-  let data: {
-    choices?: { message?: { content?: string }; finish_reason?: string }[];
-    error?: { message?: string };
-  };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
-    data = JSON.parse(bruto);
-  } catch {
-    return { erro: 'resposta inválida da OpenRouter' };
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${cfg.apiKey}`,
+        'HTTP-Referer': 'https://github.com/Rogualdi/Ro',
+        'X-Title': 'ARCANUM',
+      },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
+        max_tokens: teto,
+        temperature: 0.8,
+        frequency_penalty: 0.35,
+        presence_penalty: 0.3,
+        messages: [
+          { role: 'system', content: sistema },
+          { role: 'user', content: userMsg },
+        ],
+      }),
+    });
+    const bruto = await resp.text();
+    if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
+    let data: {
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
+      error?: { message?: string };
+    };
+    try {
+      data = JSON.parse(bruto);
+    } catch {
+      return { erro: 'resposta inválida da OpenRouter' };
+    }
+    // Erro embutido num 200 (a OpenRouter faz isso com limite/roteamento).
+    if (data.error?.message) return { erro: explicarErroOpenRouter(200, data.error.message) };
+    const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
+    return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      return { erro: 'tempo limite esgotado (25s) na OpenRouter' };
+    }
+    return { erro: `rede: ${String(err).slice(0, 120)}` };
+  } finally {
+    clearTimeout(timer);
   }
-  // Erro embutido num 200 (a OpenRouter faz isso com limite/roteamento).
-  if (data.error?.message) return { erro: explicarErroOpenRouter(200, data.error.message) };
-  const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
-  return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
 }
 
 async function chamarAnthropic(
@@ -1504,7 +1737,7 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
           messages: [{ role: 'user', content: 'ok' }],
         }),
       });
-      if (resp.status === 401 && (!cfg.apiKey || !cfg.apiKey.trim())) {
+      if (resp.status === 401) {
         const novaChave = await renovarTokenNous(true);
         if (novaChave && novaChave !== chave) {
           chave = novaChave;
@@ -1555,11 +1788,11 @@ export async function testarCenaAdulta(
 ): Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string }> {
   const sistema =
     'Você é narrador de um romance adulto em português do Brasil, para leitores maiores ' +
-    'de idade. Sexo explícito entre adultos consentindo é permitido e esperado. ' +
-    'Responda apenas com a prosa, sem comentário nem aviso.';
+    'de idade. Cenas sensuais e intimidade física entre adultos consentindo são esperadas. ' +
+    'Responda apenas com a prosa, sem comentário nem aviso moralizante.';
   const pedido =
-    'Escreva um único parágrafo explícito: duas pessoas adultas, sozinhas num quarto de ' +
-    'estalagem, transando. Nomeie as partes do corpo sem eufemismo.';
+    'Escreva um parágrafo de romance adulto e intimidade física intensa: duas pessoas adultas, ' +
+    'sozinhas num quarto de estalagem, entregando-se ao desejo, ao calor da pele e à paixão.';
   try {
     const r =
       cfg.provider === 'anthropic'
@@ -1590,8 +1823,9 @@ export async function narrarComFallback(
   const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
   if (primeira.texto || (cfg.provider !== 'openrouter' && cfg.provider !== 'nous')) return primeira;
 
-  const trocavel = /modelo indisponível|no endpoints|HTTP 404|malformada|recusou|fora de contexto|at capacity/i.test(primeira.erro ?? '');
-  if (!trocavel) return primeira;
+  // Se a chave for comprovadamente inválida (401), nenhum modelo vai responder
+  const chaveInvalida = /chave inválida|sem permissão|401/i.test(primeira.erro ?? '');
+  if (chaveInvalida) return primeira;
 
   // A lista já vem ordenada com os permissivos/prioritários na frente
   const vivos = await listarModelos(cfg.provider, cfg.apiKey, true);

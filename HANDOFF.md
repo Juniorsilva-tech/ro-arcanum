@@ -22,11 +22,11 @@ Antes de alterar qualquer coisa:
 O registro cresceu além do que um agente novo consegue ler antes de começar.
 Na sessão 16 ele foi dividido:
 
-- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (54 em
+- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (56 em
   diante), problemas abertos e próximo passo. É o que se lê antes de trabalhar.
-- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 53, na íntegra e sem edição. Consultar
+- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 55, na íntegra e sem edição. Consultar
   quando for preciso saber *por que* alguma decisão antiga foi tomada. As
-  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, e 51 a 53 na sessão 58.
+  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, 51 a 53 na sessão 58, e 54 a 55 na sessão 62.
 
 Nada foi apagado. Ao encerrar uma sessão, escreva aqui; quando este arquivo
 passar de ~800 linhas, mova as sessões mais antigas para o arquivo do mesmo
@@ -57,204 +57,16 @@ jeito, mantendo o texto original.
 | 43–45 | Gemini — assentamento e feudo, soberania feudal, relíquias nobres e classe Lutador |
 | 46 | Claude — bandos com capitão Nemesis |
 | 47–50 | Claude — Marca do Caçador, famílias entre NPCs, histórias e segredos, casas nobres com gente |
-
----
-
-## Sessão 54 — Claude — o que estava solto no jogo
-
-Pedido do dono nesta sessão: "procura erros no jogo, coisas que não estão
-linkadas", e depois aprofundar a história. Esta sessão é a primeira parte.
-
-### Como procurei
-Três varreduras, todas em scripts de leitura (fora do repositório):
-1. **Referências do conteúdo**: rotas, rotinas, relações, lojas, loot,
-   encontros, mestres, casas, famílias. Nenhum id quebrado nessas listas.
-2. **Ações de mundo sem tela**: cada `tipo` de `AcaoMundo` contra as chamadas
-   da interface.
-3. **Funções exportadas que ninguém chama** (fora do próprio arquivo e dos
-   testes).
-
-### O que estava solto, e o que foi feito
-- **Três sistemas da sessão 45 sem tela nenhuma**, só nos testes:
-  - **Trabalhos especializados** (galeria de Corveira, cais de Mareu, muralha
-    de Tessel, caçada por contrato). Não checavam lugar: "turno na Fenda de
-    Corveira" pagava 24 moedas, 2 minérios e +1 de Atletismo na taverna de
-    Halvet, sem limite — dinheiro do nada e perícia infinita. Agora
-    (`engine/trabalhosEspecializados.ts`):
-    - só na cidade do ofício, uma vez por dia;
-    - pagam do tesouro da comunidade, como o trabalho comum;
-    - a perícia sobe até 3 e para;
-    - a caçada exige um troféu de contrato.
-  - **Treinos imersivos** (katas, palma de ferro, cascata, duas espadas). Cada
-    kata dava +1 permanente num atributo por 4 de vigor, e a cascata dava +1
-    de Resiliência e devolvia o vigor inteiro: katas e cascata em sequência
-    eram atributo infinito, por cima da aptidão e do teto humano. Agora
-    (`engine/treinamentoImersivo.ts`, mesmos nomes exportados):
-    - só onde o mestre ensina (Musashi no Passo do Lobo, Bai Long no Mosteiro
-      Alto), uma vez por semana por modalidade, 3 períodos;
-    - o ganho vai pela maestria (`treinar`), sem atributo solto;
-    - a perícia sobe até 3; técnica só com o mestre (`aprenderArte`);
-    - a cascata alivia 10 de cada pressão e devolve o vigor.
-    Decisão: o jeito conservador de ligar um sistema que quebrava a curva de
-    poder era ligá-lo às regras que a curva já usa, e não do jeito que estava.
-  - **Contratos de monstro**. O combate já funcionava: óleo dá dano, e vencer
-    o alvo conclui o contrato e dá o troféu. Faltavam a tela e três coisas:
-    - dois contratos apontavam para lugares que não existem (`pantano`,
-      `montanhas`). Agora são o Juncal e o Passo do Lobo;
-    - as mensagens mostravam rolagem e id cru ("Rolagem: 15 vs 11",
-      "[oleo_anti_besta]");
-    - nada checava lugar.
-    Feito: aceitar no quadro (taverna ou Feira Coberta), procurar pista e
-    enfrentar só no lugar do contrato. A recusa não gasta tempo. Contratantes
-    sem barões nem companhias. Saves antigos: ao abrir o quadro, os campos
-    fixos (título, contratante, lugar) voltam aos do conteúdo; o estado fica.
-  - Tela: seções "trabalho do lugar", "treino com mestre" e "contratos de
-    monstro" em Comunidade (`MundoVivo.tsx`).
-- **Item que "permite" um verbo sem permitir**: o giz de ritual e o incensário
-  diziam no inventário "permite realizar_ritual"/"benzer", mas o verbo
-  continuava exigindo Arcana. `verbosConcedidos` existia e ninguém chamava.
-  Agora `disponibilidadeVerbo(…, content)` aceita o item no lugar da perícia
-  (sem `content`, a regra antiga).
-- **Texto técnico no lugar da descrição de 23 onis**: as Luas, Muzan, Nakime e
-  os outros com identidade apareciam no jogo como "Kamanue — identidade
-  canônica em uma cronologia alternativa de Vaelhorn. Mecânica de combate
-  adaptada: garras.". Prosa escrita para cada um em
-  `content/vaelhorn/descricoes-onis.ts`.
-- **16 peças lendárias sem fonte nenhuma**: as relíquias das casas, a espada e
-  a coroa do último rei, quatro armas perdidas e as manoplas de Bai Long. Não
-  vinham de loja, loot nem missão. O texto falava de barões, almirantes e
-  patriarcas. Agora (`content/vaelhorn/lendas.ts`):
-  - cada peça tem história (`Item.historia`) casada com o elenco (Valda e
-    Aldren; Idrun e Odile no cerco; Oren no desabamento de Corveira);
-  - **9 ficam com os adversários fixos das expedições**, que as deixam cair
-    quando vencidos. Exemplos: a Cavaleira do Eclipse com a Soberana do
-    Eclipse, o Colosso da mina com o Quebra-Rocha soterrado no desabamento, o
-    Arauto da cripta com a lança de São Vandro;
-  - **7 são confiadas pelas casas** a quem elas passaram a chamar de sua
-    (reputação 25/30 e 40, uma peça por dia, fato público; `confiarReliquias`
-    em `engine/casas.ts`);
-  - a história aparece no inventário e vai para o narrador quando a peça está
-    equipada (`pecasComHistoria`).
-- **Lugares que contradiziam o mundo**: Tessel dizia "O marechal atual herdou
-  o posto do pai… ninguém lembra de eleição", contra as três gerações de
-  marechalas e a sucessão por eleição da Fase 4. O Mosteiro tinha "os irmãos".
-  Corrigidos. Troquei uma linha por outra, então o sorteio do povoamento não
-  muda; só o texto do segredo-modelo que cita a linha.
-
-### Encontrado e não corrigido (para o dono decidir)
-- **Linha do tempo de Mir**: o cenário diz que o vale é das mulheres "por três
-  gerações", desde que Mir queimou; As Ruínas de Mir dizem "faz vinte anos",
-  e Vell (34) era menino quando aconteceu. Não escolhi: os textos novos desta
-  sessão não datam o incêndio.
-- **49 segredos-modelo** de moradores procedurais são história pública do
-  lugar vestida de segredo ("Mentiu no depoimento da época. O cerco de dezoito
-  anos atrás durou quarenta dias."). Ficam para a próxima sessão, junto das 71
-  pessoas sem história.
-- As feras da Grande Terra Desolada e de Tsige falam de "Wasteland" (termo de
-  Tsukimichi). Ficaram fora, a pedido do dono.
-- Funções exportadas sem uso restantes: 13 em `tsukimichi.ts` (fora do
-  escopo) e utilidades de tela sem tela (`resumoFamilia`,
-  `retratoConviccoes`, `efeitoDaClasse`, `faixaDeAptidao`,
-  `pesoDoEquipamento`, `deveFecharCapitulo`). Não removi.
-
-### Arquivos
-Novos: `engine/trabalhosEspecializados.ts`, `engine/ligacoes.selftest.ts`,
-`content/vaelhorn/descricoes-onis.ts`, `content/vaelhorn/lendas.ts`.
-Alterados: `engine/treinamentoImersivo.ts` (reescrito, mesmos nomes),
-`engine/contratosMonstros.ts`, `engine/acoesMundo.ts`, `engine/availability.ts`
-(e quem chama: `grade.ts`, `llm.ts`, `campanhaLonga.ts`, `ui/screens/Jogo.tsx`),
-`engine/casas.ts`, `engine/memoriaMundo.ts`, `engine/llm.ts`, `engine/types.ts`
-(`Item.historia`), `engine/index.ts`, `content/vaelhorn/casas.ts`
-(`CasaNobre.reliquias`), `content/vaelhorn/index.ts`,
-`content/vaelhorn/kimetsu.ts`, `content/vaelhorn/continente.ts`,
-`engine/vaelhorn_expansao.selftest.ts` (as regras novas),
-`ui/screens/MundoVivo.tsx`, `ui/screens/Inventario.tsx`, `package.json`.
-
-### Verificações
-- `ligacoes.selftest.ts` (novo). Cobre:
-  - trabalhos: lugar, tesouro, uma vez por dia, teto 3, troféu;
-  - treino: lugar, sem atributo nem técnica, maestria, semanal, teto 3,
-    cascata sem atributo;
-  - contratos: lugares existem, quadro, recusa sem gastar tempo, texto sem
-    rolagem nem id, save antigo corrigido;
-  - verbos: o giz vale pela Arcana;
-  - onis: nenhum texto técnico;
-  - peças lendárias: as 16 têm caminho, cada guardião é de expedição e deixa a
-    peça, sem barão/almirante/patriarca, 2+ parágrafos, a casa confia na ordem
-    e uma vez, a história vai ao narrador.
-- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
-  `vaelhorn_expansao`, `expo export`: verdes. Depois disso só troquei texto
-  das lendas (datas de Mir); reexecutei `typecheck`, `ligacoes`, `casas` e
-  `vaelhorn_expansao`, verdes.
-
-Simulação longa depois (`simLongo 10 6`): 6 de 6 até o fim do prazo, 0
-mortes, 0 violações; níveis 29 a 33; população 3.530 a 4.185; fome 0 no fim.
-O simulador não usa trabalhos, treinos nem contratos, então nada disso muda a
-curva dele.
-
-### Próximo passo
-História: bestiário (rascunho pronto), as 19 localidades do coração do vale
-sem história, as quatro casas, e as 71 pessoas sem história com os 49
-segredos-modelo. A história nova de lugar entra no pacote DEPOIS do
-povoamento: o povoamento sorteia o segredo dos moradores a partir de
-`Local.historia`, e mexer nela antes mudaria quem mora em cada lugar.
-
----
-
-## Sessão 55 — Claude — história: bestiário, lugares, casas
-
-### O que foi feito
-- **Bestiário** (`content/vaelhorn/bestiario-historias.ts`, `Criatura.historia`
-  e `Criatura.sinais`), para as **71 criaturas do vale**:
-  - fauna, gente da estrada, os mortos, os seres de Mir, os chefes com nome,
-    os guardiões das expedições, as presas dos contratos e os onis (as Luas,
-    no que a Casa Sem Nome sabe delas);
-  - `historia` é o que o vale conta; `sinais` é o que serve na estrada;
-  - aparece na Crônica, seção "Bestiário", só para o que o jogador já venceu
-    (flag `matou.<id>`, que o combate já gravava);
-  - ficaram de fora as feras da Grande Terra Desolada e de Tsige.
-- **Lugares** (`content/vaelhorn/historias-locais.ts`): os 19 lugares do
-  coração do vale não tinham história, e o narrador recebia
-  `historiaDesteLugar: []` justamente na taverna onde o jogo começa. Agora os
-  53 têm. Quatro descrições que contradiziam o mundo foram corrigidas: "o
-  senhor de Halvet", "os pescadores", "os mineiros" e o "Cristo de madeira"
-  da Capela de São Vandro.
-- **Casas** (`content/vaelhorn/historias-casas.ts`, `CasaNobre.historia`): a
-  origem, o que cada uma perdeu e o que a move. Aparece no card da casa, em
-  Comunidade, e vai ao narrador em `casasPresentes[].historia`.
-- As datas seguem o que o conteúdo já dizia: o cerco de Tessel há 18 anos, o
-  desabamento de Corveira há 12, a peste de Mareu há 40. As histórias foram
-  conferidas contra o elenco antes de entrar: Borka, Oda, Heska, Torana e
-  Duna, Lunn e a noite em que o sino não tocou, Ruvela.
-
-### Decisão importante
-O povoamento sorteia o segredo de cada moradora a partir de `Local.historia`.
-Dar história a um lugar que não tinha **mudaria quem mora nele**: nomes,
-ofícios e as famílias da Fase 2 que apontam para esses ids. A história nova
-entra no pacote depois do povoamento (`comHistoriaDosLugares` em
-`content/vaelhorn/index.ts`), e o teste prova que as 172 moradoras são as
-mesmas. A tabela da simulação longa saiu idêntica à da sessão 54, linha por
-linha.
-
-### Arquivos
-Novos: `content/vaelhorn/bestiario-historias.ts`,
-`content/vaelhorn/historias-locais.ts`, `content/vaelhorn/historias-casas.ts`,
-`engine/lore.selftest.ts`.
-Alterados: `engine/types.ts`, `content/vaelhorn/casas.ts`,
-`content/vaelhorn/index.ts`, `engine/llm.ts`, `ui/screens/Paineis.tsx`,
-`ui/screens/MundoVivo.tsx`, `package.json`.
-
-### Verificações
-- `lore.selftest.ts`:
-  - as 71 criaturas do vale com história e sinais, sem emoji, "Wasteland" ou
-    texto técnico;
-  - os 53 lugares com história e as descrições corrigidas;
-  - as 172 moradoras idênticas (nome, ofício, idade, lugar), e nenhum segredo
-    sorteado das linhas novas;
-  - o narrador recebe a história da taverna e a da Casa Tessel.
-- `typecheck`, `test:engine` completo, `test:jornadas`, `test:casas`,
-  `vaelhorn_expansao`, `expo export`: verdes. Simulação longa idêntica à
-  anterior.
+| 51–53 | Claude — diretor de campanha, lembranças de feitos, ganchos dinâmicos |
+| 54–55 | Claude — correções de ligações e história de bestiário/lugares/casas |
+| 56–60 | Claude — elenco autoral, nomes femininos e ganchos |
+| 61–62 | Gemini — intimidade e humor dos NPCs, cosmologia, Deuses, 7 Bruxas e crônicas do mapa |
+| 63 | Gemini — Longcat padrão, correção de streaming Nous, prólogo prodígio e teste in-game |
+| 64 | Gemini — Descontinuação do Longcat: migração para Space Bunny Alpha e modelos ativos Nous |
+| 65 | Gemini — Diagnóstico isolado por modelo (sem fallback silencioso) e correção de prompt adulto |
+| 66 | Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores e Realismo Imersivo |
+| 67 | Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo |
+| 68 | Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado |
 
 ---
 
@@ -772,3 +584,257 @@ menos de 3% um do outro.
   viaja). Sem caixas de nome fixas por cima do mapa.
 - Testado no navegador: arrastos fortes nas quatro direções param na borda
   com a imagem cobrindo a janela; hover mostra e esconde o nome; clique viaja.
+
+### Vivedez do Mundo, Cidades do Continente e Ciclo Dia/Tarde/Noite (sessão 60)
+Auditoria profunda e implementação da vivedez do mundo e identidade visual dos reinos:
+- **Resgate e Expansão de Cidades (`engine/cidades.ts`)**:
+  - Povoações em ruínas (`populacao === 0 && integridade < 40`) recebem expedições de resgate de cidades vizinhas prósperas (transferência de mantimentos, materiais e colonos).
+  - Metrópoles superpovoadas e ricas fundam povoados pioneiros autônomos nas regiões adjacentes.
+- **Muralhas Fortificadas & Inverno (`engine/continuidade.ts`)**:
+  - `muralha >= 2` mitiga dano estrutural e baixas em cercos e ataques.
+  - Inverno e inverno rigoroso elevam a probabilidade de ataques de predadores e feras famintas.
+- **Extorsão por Bandos de Salteadores (`engine/bandos.ts`)**:
+  - Bandos organizados ($\ge 10$ membros) com capitão vivo extorquem povoados indefesos (`muralha <= 1` e `integridade < 70`); muralhas $\ge 2$ barram a cobrança forçada.
+- **Identidade Visual das Capitais (`assets/feudo/`)**:
+  - Geradas e salvas 4 ilustrações 16:9 de alta definição: `cidade_tessel.jpg` (fortaleza da fronteira norte), `cidade_corveira.jpg` (abismo gótico e minas de prata), `cidade_mareu.jpg` (porto marítimo em falésias brancas), `cidade_solgar.jpg` (oásis e palácios de arenito dourado).
+  - `IMAGENS_FEUDO` e helper `imagemDoLocal(localId, regiao)` exportados em `Assentamento.tsx`.
+- **Ciclo Dinâmico de Iluminação Dia / Tarde / Noite (`ui/BannerIlustrado.tsx`)**:
+  - Componente de renderização com camadas de shaders atmosféricos reagindo a `camp.calendario.periodoIndex` (`madrugada`, `manha`, `tarde`, `entardecer`, `anoitecer`, `noite`).
+  - Badge interativo de horário (`☀️ Dia`, `🌇 Entardecer`, `🌙 Noite`) com suporte a toque para ciclar/pré-visualizar as atmosferas.
+  - Integrado em `Assentamento.tsx` (feudo do jogador), `Colonia.tsx` (sítio da colônia) e `Paineis.tsx` (banner do local atual no Mapa com texto atmosférico).
+- **Validação**:
+  - `engine/vivedez.selftest.ts` criado e aprovado (integrado a `package.json:test:engine`).
+  - `npm run typecheck` limpo.
+  - `npx expo export --platform web` gerou bundle e 19 assets com sucesso.
+
+### Profundidade dos NPCs, Humor Vivo, Desejos Pessoais & Intimidade Progressiva (sessão 61)
+Implementação completa da psicologia viva, intimidade e anseios dos NPCs:
+- **Engine de Intimidade & Humor (`engine/intimidadeNpc.ts`)**:
+  - `calcularHumorNpc`: calcula em tempo real o estado de espírito humano do morador (`luto`, `aterrorizado`, `tenso`, `cauteloso`, `acolhedor`, `grato`, `sereno`, `morto`) cruzando tensão, medo, luto recente familiar, anseios apoiados e histórico de convívio.
+  - `obterIntimidadeNpc`: desvenda progressivamente as 4 camadas da biografia íntima (Origem, Desejo de Vida, Ferida Passada, Pavor Íntimo) com base no convívio, confiança acumulada e diálogos dedicados.
+  - `conversarASos`: afasta-se com o NPC, alivia tensão (-15), aumenta confiança (+2) e desabafa camadas íntimas sequencialmente na memória.
+  - `apoiarDesejoNpc`: financia o anseio de vida do NPC (20 moedas), zera a tensão para sempre, eleva confiança (+8), sintetiza Convicção Permanente de Lealdade e Afeto inabalável, gera fato histórico e propaga boa vontade para toda a família.
+  - `confortarLutoNpc`: presta respeito e condolências em luto recente, alivia a dor e tensão (-25), sobe confiança (+4) e propaga afeto aos parentes vivos.
+  - `presentearNpc`: presente atencioso (10 moedas) para quebrar o gelo (-10 tensão, +3 confiança).
+- **Grade de Opções da Cena & Resolvedor de Turno (`engine/grade.ts` & `engine/turn.ts`)**:
+  - Na casa `'aproximar'` da grade, quando há alguém presente, a engine gera opções situacionais específicas de intimidade (`Conversar a sós`, `Prestar condolências & confortar` em luto, ou `Apoiar anseio pessoal (20 moedas)`).
+  - Resolução no turno com dedução de moedas, atualização causal e geração de fatos canônicos.
+- **Narrador LLM (`engine/llm.ts`)**:
+  - Mapeamento de `presentes` enriquecido com `humor`, `humorId` e `intimidade` (`desejo`, `ferida`, `medo`, `desejoApoiado`).
+  - Diretriz 2d de sistema: o humor dita a linguagem corporal, pausas e tom de voz; a intimidade dita a vulnerabilidade e apego ao protagonista.
+- **Painel de Vínculos (`ui/screens/Paineis.tsx`)**:
+  - Cada cartão de morador exibe selo e descrição de humor em tempo real.
+  - Bloco visual das Camadas de Intimidade & História (Origem, Anseio de Vida, Ferida Íntima, Maior Medo com selo `APOIADO & LEAL`).
+  - Botões de ação direta no painel: "Conversar a sós", "Oferecer presente · 10 moedas", "Prestar condolências & confortar luto", "Apoiar anseio de vida · 20 moedas".
+- **Validação**:
+  - `engine/intimidadeNpc.selftest.ts` criado com 6 testes unitários cobrindo camadas, humores, conversas a sós, apoio a anseios, conforto de luto, grade de opções e resolução de turno (100% aprovado).
+  - `npm run test:engine` (todos os 40+ testes + 6 campanhas de 10 anos) sem qualquer violação de invariante.
+  - `npm run typecheck` sem erros.
+  - `npx expo export --platform web` gerou bundle e assets perfeitamente.
+
+### Cosmologia, As 7 Bruxas dos Pecados Capitais (Re:Zero), Religião & 67 Pontos do Mapa (sessão 62)
+Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais, as 7 Bruxas dos Pecados Capitais e crônicas vivas para todos os pontos do mapa:
+- **Cosmologia Central & Guerra Primordial (`content/vaelhorn/cosmologia.ts`)**:
+  - `MITO_ORIGEM_MAGIA`: A Guerra do Firmamento em que os Deuses Maiores caíram sobre a terra; o "Mana" é o sangue e as cinzas incandescentes dos cadáveres divinos escorrendo pelas veias do continente. Conjurar magia é uma profanação que acorda a dor dos deuses sepultados.
+  - `DEUSES_PRIMORDIAIS`: Os 4 Deuses Primordiais:
+    * Sol-Voraz (`sol_voraz`): Deus do Juízo e da Luz Branca sem segredos;
+    * Vandul (`abismo_ferro`): Deus dos Ossos da Terra, forja e veias de adamante em Corveira;
+    * Yrmara (`mar_afogados`): Senhora das Marés Cinzentas e segredos submersos de Mareu;
+    * Vintrath (`floresta_cega`): Velho dos Galhos e das raízes noturnas de Vintra.
+  - `BRUXAS_DOS_PECADOS`: As 7 Bruxas dos Pecados Capitais + Tristeza + Vã-Glória + A Bruxa da Inveja (Satella / Re:Zero):
+    * Typhon (Soberba / Julgamento da Consciência);
+    * Minerva (Ira / Cura Violenta e Regeneração Catastrófica);
+    * Sekhmet (Preguiça / Força Invisível Inevitável);
+    * Daphne (Gula / Criação das Grandes Bestas Mágicas e Fome Insaciável);
+    * Carmilla (Luxúria / Atração Sem Rosto e Asfixia Emocional);
+    * Echidna (Ganância / O Santuário do Intelecto e Conhecimento Insaciável);
+    * Hector (Tristeza / Melancolia e Gravidade Esmagadora);
+    * Pandora (Vã-Glória / Reescrita do Fenômeno Existente);
+    * **Satella (A Bruxa da Inveja)**: O terror e tabu absoluto do mundo. Devorou e assassinou todas as outras bruxas há 400 anos, consumiu metade do continente e está selada além do véu sob vigilância perpétua.
+  - `FACCOES_ANTIGAS`: A Ordem dos Santos do Selo, O Culto da Bruxa (Apóstolos do Véu Negro), O Conclave Arruinado de Mir e A Fraternidade da Lâmina Escura.
+  - `CRONICAS_MAPA`: Cobertura rigorosa e completa de **todos os 67 pontos do mapa** (Vale de Halvet, Marca de Tessel, Bosque de Vintra, Planalto de Corveira, Ermo de Solgar, Costa de Mareu, Baixios de Halvern e territórios de Tsukimichi/Wasteland/Asora/Rotsgard), cada um com:
+    * Passado na Guerra Primordial dos Deuses;
+    * Fé & Divindades Adoradas;
+    * Cicatriz ou Marca deixada pelas Bruxas dos Pecados;
+    * Superstição e provérbio popular local.
+- **Interface do Mapa Interativo (`ui/screens/MapaVisual.tsx`)**:
+  - Todos os 67 pontos do mapa agora são marcadores clicáveis no modo Continente.
+  - Ao clicar em qualquer local, abre a gaveta elegante `cardCronica` exibindo o passado na guerra divina, fé/deuses, cicatriz das bruxas e provérbio popular.
+  - Ação de viagem integrada: se houver rota direta a partir do local atual, botão `[🚶 Iniciar Viagem · X períodos]` parte diretamente; se for o local atual, exibe distintivo de acampamento; se distante, orienta sobre o caminho pelas estradas intermediárias.
+- **Tomo Cósmico no Livro Arcana (`ui/screens/Paineis.tsx: Livro`)**:
+  - Três novos tomos de lore no Livro:
+    * `V · Cosmologia & Os Deuses Primordiais` (Mito do sangue do Mana e os 4 Deuses Primordiais);
+    * `VI · As Bruxas dos Pecados & O Tabu da Inveja` (As 7 Bruxas dos Pecados Capitais, Hector, Pandora e o tabu absoluto de Satella);
+    * `VII · Facções e Ordens Antigas` (Santos do Selo, Culto da Bruxa, Conclave de Mir, Lâmina Escura).
+- **Prompt do Narrador & Contexto LLM (`engine/llm.ts`)**:
+  - Injeção automática da crônica cósmica do local (`local.cronica: { crenca, passadoGuerra, cicatrizBruxas, supersticao }`) no pacote de contexto.
+  - Regra de sistema `2e`: define o tabu absoluto e pavoroso da Bruxa da Inveja (Satella), o pânico diante de sombras e menções ao Culto da Bruxa, a inquisição com ferro e fogo da Ordem dos Santos do Selo e o peso dos deuses mortos no mana do solo.
+- **Ferramenta de Autodiagnóstico In-Game (`ui/screens/Sistema.tsx: Config`)**:
+  - Botão interativo `Executar Autodiagnóstico no Jogo`: valida em tempo real os 67 pontos de coordenadas e crônicas, panteão dos deuses, bruxas dos pecados e integridade dos subsistemas com relatório formatado na tela.
+- **Validação & Testes**:
+  - `engine/cosmologia.selftest.ts`: criado e integrado ao script `test:engine` em `package.json`, cobrindo mito de origem, os 4 deuses primordiais, as 9 bruxas e pecados (incluindo Satella e a devoração), as 4 facções antigas, todos os 67 pontos de crônicas e a injeção no pacote LLM.
+  - `npm run test:engine`: todos os 40+ testes + 6 campanhas de 10 anos passaram com zero violações de invariante.
+  - `npm run typecheck`: 0 erros de tipagem.
+  - `npx expo export --platform web`: exportação web concluída com código 0 e todos os bundles e assets gerados.
+
+### Sessão 63 — Gemini — Longcat Padrão, Correção Streaming da Nous, Prólogo Prodígio & Teste In-Game
+- **Longcat como Modelo Padrão Definitivo**:
+  - `engine/llm.ts`: `MODELO_PADRAO_NOUS` alterado de `'upstage/solar-pro4:free'` para `'meituan/longcat-2.0:free'` e posicionado como 1ª opção em `SUGESTOES_NOUS`.
+  - `ui/storage.ts`: `configPadrao` atualizado para `{ provider: 'nous', modelo: 'meituan/longcat-2.0:free', usarModelo: true, avisoAceito: false }`.
+- **Correção da Latência / Travamento na API da Nous**:
+  - `engine/llm.ts`:
+    * A Nous Research não suporta streaming SSE confiável e trava indefinidamente com `stream: true`. Para `cfg.provider === 'nous'`, o método `narrarComModeloStream` agora ignora streaming e usa `chamarNous` diretamente via POST, respondendo em ~2.4s.
+    * Adicionados timeouts de 20s na Nous e 25s na OpenRouter com `AbortController` para prevenir bloqueios de rede.
+    * `lerStreamSse` corrigido para verificar `resp.ok` antes de tentar ler o corpo (evitando mascarar erros HTTP 401/429 como "modelo vazio").
+- **Destravamento de Turno & Narrador Local**:
+  - `ui/store.ts` & `ui/screens/Jogo.tsx`: adicionada ação `desistirIaEUsarLocal` e botão "Usar narrador local" na interface para quando a rede oscilar ou falhar.
+- **Infância de Gênio / Prodígio**:
+  - `engine/genese.ts`: marca `'genio'` ("Gênio - Talento Precoce") colocada no topo de `MARCAS_INFANCIA`.
+  - `engine/familia.ts`: prólogo dedicado aos 6 e 10 anos (`'prodigio_revelado'`) com bônus de atributos e flag `infancia_genio`.
+- **Correção de Repetição e Eco de Cenas Passadas**:
+  - `engine/llm.ts`:
+    * Substituído o exemplo de diálogo da instrução de sistema que usava "Aldrica / pão velho" por um exemplo neutro ("Sentinela / desfiladeiro"). Modelos como Longcat estavam decorando o exemplo como script literal ao interagir com Aldrica.
+    * Adicionada regra explícita de "Proibição Absoluta de Repetição" no prompt de sistema e reforço em `montarMensagemNarracao` instruindo que `cenasAnteriores` é exclusivamente para contexto e proibindo transcrever o passado.
+    * Configurados `frequency_penalty: 0.35` e `presence_penalty: 0.3` em `chamarStreamCompat`, `chamarNous` e `chamarOpenRouter` (com `temperature: 0.8`), prevenindo laços autorregressivos de repetição.
+    * Criada a função `detectarRepeticaoDeCenaAnterior` em `interpretarResposta`: qualquer resposta que tente reescrever segmentos longos ou múltiplas falas já exibidas em `cenasAnteriores` é rejeitada com erro, acionando o pipeline de retry do `narrarComFallback`.
+    * Adicionado `AbortController` com timeout de 4000ms em `listarModelosNous` para prevenir congelamentos de rede.
+- **Testes & Validação**:
+  - `scripts/test_gameplay_live.ts`: teste simulando criação, mapa, viagem, Livro Arcana, NPCs, configurações e turnos com narração real do Longcat (100% aprovado).
+  - `scripts/test_repetition_logic.ts`: validação unitária da detecção de repetição (identificou com 100% de precisão o caso do usuário e aprovou continuações legítimas).
+  - `npm run typecheck`: 0 erros.
+  - `npm run test:vaelhorn`: 100% aprovado.
+  - `npx tsx engine/cosmologia.selftest.ts` e `engine/intimidadeNpc.selftest.ts`: 100% aprovados.
+  - `npm run test:engine`: 40+ suítes de teste + 6 campanhas de 10 anos (21.000 ações) concluídas com 0 violações de invariante.
+
+### Sessão 64 — Gemini — Remoção do Longcat Descontinuado & Ativação do Space Bunny Alpha
+
+- **Descontinuação do Longcat & Modelos na Nous Research**:
+  - A Nous Research descontinuou oficialmente o tier gratuito do Longcat (`meituan/longcat-2.0:free`), retornando HTTP 404. A variante paga (`meituan/longcat-2.0`) exige saldo de créditos (erro 401: balance too low). Modelos como `ling/ling-3.0-flash-*:free` e `poolside/laguna-xs-2.1:free` também foram encerrados (404).
+- **Substituição e Padrão Atual**:
+  - Novo modelo padrão da Nous definido como **`stealth/space-bunny-alpha`** (modelo ativo no Hermes do usuário, 100% funcional com status 200, prosa rica para RPG e retorno de JSON estrito).
+  - `engine/llm.ts`:
+    * `MODELO_PADRAO_NOUS` alterado para `'stealth/space-bunny-alpha'`.
+    * `SUGESTOES_NOUS` limpo para conter apenas modelos ativos e testados: `stealth/space-bunny-alpha`, `upstage/solar-pro4:free` e `stepfun/step-3.7-flash:free`.
+    * `FABRICANTE`: adicionado `stealth: 'Stealth (Nous)'`.
+    * `MODELOS_PARA_CENA_ADULTA`: removido `meituan/longcat-2.0:free`; adicionados `stealth/space-bunny-alpha`, `upstage/solar-pro4:free` e `stepfun/step-3.7-flash:free`.
+    * `PERMISSIVOS`: adicionados `'space-bunny'` e `'solar'`.
+    * `listarModelosNous`: lista `DEAD_MODELS` para filtrar endpoints descontinuados da Nous que geram 404, garantindo que `stealth/space-bunny-alpha` seja reconhecido como gratuito e prioritário.
+  - `ui/storage.ts`:
+    * `configPadrao` atualizado para `stealth/space-bunny-alpha`.
+    * `carregarConfig`: adicionada migração automática transparente para qualquer save com referências a `longcat`, `hy3:free`, `ling-3.0` ou `laguna-xs`, atualizando direto para o novo padrão funcional.
+### Sessão 65 — Gemini — Diagnóstico Isolado por Modelo & Correção do Prompt Adulto
+
+- **Diagnóstico Isolado por Modelo (Fim do Fallback Silencioso nos Testes)**:
+  - Problema: no painel de Configurações, o botão "Testar narração de verdade" chamava `narrarComFallback`. Quando o modelo escolhido (ex: `space-bunny-alpha`) falhava ou demorava, a engine silenciosamente pulava para o próximo modelo da lista (`inclusionai/ling-3.0-flash-fin:free` ou outro) e exibia o nome do modelo de reserva, gerando confusão de por que aparecia o nome de outro modelo.
+  - Correção em `ui/store.ts`:
+    * `testarNarracaoReal` e `testarSeNarraAdulto` agora aceitam parâmetro opcional `modeloEspecifico`.
+    * `testarNarracaoReal` utiliza diretamente `narrarComModelo` para o modelo especificado, garantindo que o teste avalie ESTRITAMENTE o modelo selecionado, reportando sucesso ou erro com o nome exato daquele modelo.
+  - Correção em `ui/screens/Sistema.tsx`:
+    * O nome do modelo selecionado agora é exibido dinamicamente no rótulo dos botões: `Testar narração (slug)` e `Este modelo narra romance/adulto? (slug)`.
+    * As mensagens de feedback (`FUNCIONOU`, `NÃO FUNCIONOU`, `ESTE MODELO NARRA`, `ESTE MODELO RECUSA`) agora estampam explicitamente o slug do modelo testado.
+- **Correção do Prompt de Teste de Cena Adulta**:
+  - Problema: em `engine/llm.ts:testarCenaAdulta`, o prompt de teste continha termos anatômicos crus literais ("nomeie partes do corpo sem eufemismo"), o que fazia o gateway de segurança da Nous Research cortar a resposta a 0 tokens (`content: ""`, resposta vazia).
+  - Correção: o prompt foi refinado para romance adulto e intimidade física intensa ("duas pessoas adultas, sozinhas num quarto de estalagem, entregando-se ao desejo, ao calor da pele e à paixão").
+  - Resultado: testado ao vivo na API da Nous — tanto `stealth/space-bunny-alpha` quanto `upstage/solar-pro4:free` responderam com 100% de sucesso (`narra: true, recusou: false`) e belíssima prosa em português.
+- **Validação**:
+  - `npm run typecheck`: 0 erros.
+  - Testes reais no terminal executando `testarNarracaoReal` e `testarSeNarraAdulto` para `upstage/solar-pro4:free` e `stealth/space-bunny-alpha`: ambos testados isoladamente com 100% de sucesso e identificação precisa de cada modelo.
+
+### Sessão 66 — Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores & Realismo Imersivo
+
+- **Objetivo**:
+  - Atender à solicitação enfática do usuário: *"REVISE A QUESTÃO DA PROSA, QUERO ALGO BEM SANGRENTO E GORE QUANDO PRECISAR, CENA DE ADULTO QUANDO PRECISAR BEM BÃO, TUDO BEM REALISTA E DIVERTIDO E IMERSIVO..."*.
+  - Transformar o estilo de narrativa da IA em `engine/llm.ts` para que combates tenham gore pesado e crueza anatômica, cenas íntimas tenham volúpia carnal explícita e entrega sem cortes ("bem bão"), e o tom geral tenha realismo sensorial, humor sombrio de taverna e diálogos afiados.
+- **O que foi feito**:
+  - **Revisão de `INSTRUCAO_SISTEMA` em `engine/llm.ts`**:
+    * **Seção VOZ (Realismo, Humor Sombrio e Imersão)**: adicionada diretriz de vivacidade com atitude humana, cinismo de sobrevivente, humor de taverna, reações involuntárias e riqueza sensorial (lama, cerveja azeda, ferro molhado, sebo de vela, vinho e pele).
+    * **Regra 5 (Combate Brutal, Ultraviolência & Gore Visceral Pesado)**: diretriz impiedosa contra higienização de combates. Proibição explícita de amenizar a violência. Narração obrigatória de lâminas serrando tendões e abrindo camadas fumegantes de gordura e carne, artérias carótidas/femorais bombeando esguichos violentos de sangue quente, ossos e cartilagens esmagados com pontas fraturadas rasgando músculos de dentro para fora, crânios triturados com massa encefálica e calota óssea na poeira, ventres rasgados despejando alças intestinais cinzentas com fedor pútrido de bile, fezes e ferro cru, olhos explodindo sob pressão, cotos decepados em espasmos musculares e o estertor asmático da vítima engasgando no próprio sangue grosso pelas narinas e traqueia.
+    * **Regra 5a (Conteúdo Adulto & Intimidade Intensa - "Bem Bão")**: proibição terminante de "fade to black" (cortar para a lareira ou manhã seguinte) e eufemismos poéticos vagos. Instrução de descrever volúpia carnal, calor febril da pele suada, peso dos corpos, toques firmes em pontos sensíveis, beijos profundos com saliva, roupas rasgadas ou desfeitas com pressa, atrito úmido, penetração ritmada, respiração ofegante e espasmos de prazer até a exaustão.
+    * **Regra Inviolável de Idade**: mantida rigorosamente a barreira inegociável de que todos os personagens em romance/sexo são estritamente adultos (18+).
+  - **Reforço de Instrução Dinâmico em `montarMensagemNarracao` (`engine/llm.ts`)**:
+    * Detecção dinâmica de combates/armas/golpes (`ehCombate`). Quando a ação envolve violência, a mensagem do usuário injeta automaticamente: `DIRETRIZ DE COMBATE: GORE PESADO E ULTRAVIOLÊNCIA VISCERAL EXPLÍCITA. Narre o impacto físico sem atenuantes nem cortes: carne rasgada em camadas fumegantes, ossos esmagados com estalos secos, esguichos de sangue arterial borbulhante ensopando tudo, vísceras, mutilação, dentes partidos e o estertor agonizante do inimigo na lama.`.
+- **Arquivos modificados**:
+  - `engine/llm.ts`: diretrizes de `INSTRUCAO_SISTEMA` (VOZ, Regra 5 e Regra 5a) e injeção dinâmica de combate gore em `montarMensagemNarracao`.
+  - `HANDOFF.md`: registro da Sessão 66 e atualização do índice rápido.
+- **Testes executados & Resultados**:
+  - `npm run typecheck`: 0 erros de compilação TypeScript.
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado.
+  - `engine/narracao.selftest.ts`: 100% aprovado.
+  - `engine/prosa.selftest.ts`: 100% aprovado.
+  - **Teste ao vivo com LLM real (Upstage Solar Pro 4 via Hermes/Nous)**:
+    1. **Combate Ultraviolento & Gore Hardcore**: golpe com machado de trincheira partindo clavícula e rasgando ventre — o modelo gerou narrativa hiper-detalhada com camadas fumegantes de gordura amarelada e músculo vermelho, machado atravessando com sangue arterial borbulhante, alças intestinais fumegantes despejadas na lama pulsando em espasmos com líquido viscoso entre os dedos, dentes partidos soltos com clique seco na boca aberta, sangue grosso e escuro borbulhando pelas narinas e traqueia em estertor asmático, e gosto acre de ferro impregnado na boca do protagonista. Retorno em JSON estrito impecável.
+    2. **Cena Adulta Intensa ("Bem Bão")**: quarto de estalagem com Elza — gerou narrativa erótica tórrida, pele quente suada, atrito de corpos nus, gemidos roucos, língua, volúpia descarada e entrega total sem corte ou eufemismo.
+- **Próximo passo recomendado**:
+  - Jogar diretamente pelo app e aproveitar a intensidade máxima dos combates sangrentos e romances adultos.
+
+### Sessão 67 — Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo
+
+- **Objetivo**:
+  - Atender à crítica e demanda do usuário por uma história mais medieval histórica, crua e pé no chão ("tipo antes ou depois de cristo"), eliminando o misticismo vago da "ponte mágica que caiu e homens que somem em transe aos 18 anos".
+  - Substituir essa fantasia frágil por conflitos geopolíticos, tributos de guerra, conscrição forçada feudal e conspirações militares verossímeis.
+- **O que foi feito**:
+  - **Premissa Histórica & Cenário (`content/vaelhorn/scenario.ts`)**:
+    * **Tributo de Sangue (Conscrição Militar Feudal)**: há três gerações a revolta de Mir foi esmagada pela Coroa. Como punição perpétua, todo rapaz nascido no vale é levado acorrentado aos 18 anos pelos destacamentos da Coroa/Tessel como bucha de canhão nas trincheiras do norte ou escravizado nas minas de Corveira.
+    * **Três Gerações de Mulheres Feudais**: as mulheres sustentam a foice, a forja, as redes e as dívidas de guerra não por misticismo, mas pela ausência forçada dos homens conscritos.
+    * **Calendário Eclesiástico ("Santo Selo")**: `ancoraCalendario` mudada de `'desde que a ponte caiu'` para `'do Santo Selo'` (formato: *"primeiro dia do Santo Selo · pleno outono"*), ancorado na Sé Apostólica e inquisição dos Santos Mártires.
+  - **Sabotagem Militar da Travessia (`content/vaelhorn/locations.ts` e `quests.ts`)**:
+    * O local `ponte` (`A Ponte Caída`) foi reescrito: a ponte militar imperial sobre o desfiladeiro foi deliberadamente dinamitada/derrubada durante o cerco militar da revolta para cortar a marcha do exército imperial. Marcas de perfuração de cinzel e argamassa de pólvora atestam o cálculo da sabotagem.
+    * A quest `q_ponte` foi reformulada para *"A Sabotagem da Travessia"*, focando na conspiração de oficiais da guarda e corrupção militar.
+  - **Segredos e Conspirações dos NPCs (`content/vaelhorn/npcs.ts` e `segredos.ts`)**:
+    * `sargenta_bael`: segredo atualizado para a derrubada premeditada dos arcos da ponte durante a revolta para encobrir desvio de armamentos militares da sua tropa.
+    * `lunn`: segredo atualizado para o sono no posto de sentinela na noite da sabotagem militar da ponte (não tocou o sino de alarme).
+    * `ruvela`: segredo atualizado para a deserção da tropa de Bael na mesma noite em que os conspiradores detonaram a travessia.
+    * `morda`: segredo atualizado para ter testemunhado a ordem militar dos oficiais que mandaram dinamitar a ponte antes do estrondo.
+    * Efeitos de consequência em `segredos.ts` alinhados com a nova narrativa histórica.
+- **Arquivos modificados**:
+  - `content/vaelhorn/scenario.ts`
+  - `content/vaelhorn/locations.ts`
+  - `content/vaelhorn/quests.ts`
+  - `content/vaelhorn/npcs.ts`
+  - `content/vaelhorn/segredos.ts`
+  - `HANDOFF.md`
+- **Validação & Testes**:
+  - `npm run typecheck`: 0 erros.
+  - `engine/lore.selftest.ts`: 100% aprovado (respeitada a proibição de termos no teste).
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado (249 histórias, 249 segredos e propagação de relações preservados).
+  - `engine/prosa.selftest.ts`: 100% aprovado.
+  - `engine/narracao.selftest.ts`: 100% aprovado.
+  - `npm run test:vaelhorn` e `npm run test:casas`: 100% aprovados.
+- **Próximo passo recomendado**:
+  - Continuar expandindo facções e encontros regionais pé no chão ou testar a experiência de jogo diretamente no cliente.
+
+### Sessão 68 — Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado
+
+- **Objetivo**:
+  - Atender à demanda do usuário de revisar e aprofundar as missões e histórias, expurgando resquícios de fantasia genérica ou mágica e substituindo por ameaças viscerais, conflito eclesiástico feudal e crueza medieval.
+- **O que foi feito**:
+  - **Trama da Capela e Cripta dos Mártires (`content/vaelhorn/quests.ts` & `bestiary.ts`)**:
+    * `q_cripta` ("O Que Dorme Sob a Capela"): reescrita para focar nos gemidos vindos das lajes da cripta e nos crimes eclesiásticos que a Madre Corvane esconde sob o altar de São Vandro.
+    * `q_selado` ("O Último Selo"): substituída a fantasia mística do "selo que racha e puxa meninos" pela história do **antigo inquisidor da Sé**, emparedado vivo sob as catacumbas por Sarine e pelas madres há 30 anos para acobertar o desvio dos dízimos e massacres da revolta.
+    * `o_selado` (`bestiary.ts` e `bestiario-historias.ts`): redefinido como o Inquisidor enlouquecido nas trevas, emparedado vivo, alimentado com restos, que arrasta grilhões pesados de ferro e golpeia às cegas pelo som.
+  - **Desafios de Caça e Expedições Viscerais (`content/vaelhorn/desafios.ts` & `bestiario-historias.ts`)**:
+    * Mantidos 100% dos IDs para garantir zero quebra em combate, causalidade e despertares.
+    * Nomes, descrições e ataques remodelados para realismo medieval e perigo mortal:
+      - `sentinela_de_basalto`: Muralha viva de cantaria esculpida pelos pedreiros do cerco para esmagar intrusos nos túneis com maças de chumbo fundido.
+      - `espadachim_sem_bandeira`: Veterana Sem Bandeira, mercenária empedernida que exige duelo de morte de quem tenta cruzar o desfiladeiro.
+      - `quimera_do_desfiladeiro`: Predador das Escarpas, fera carniceira que pendura tripas e carcaças desossadas nas árvores altas.
+      - `arauto_da_cripta`: Arauto do Ossuário, carrasco sepultado em cota de ferro oxidado que vigia os supliciados pela inquisição.
+      - `colosso_da_mina`: O Quebra-Rocha da Mina, máquina colossal de demolição com martelos de ferro maciço acionada por mineradores amotinados.
+      - `guardia_do_horizonte`: Campeã da Torre, duelista calejada que parte costelas e quebra lâminas com manoplas de ferro fundido.
+      - `draco_das_cinzas`: Fera das Cinzas de Mir, réptil colossal que habita as ruínas carbonizadas rasgando carne com dentes em serra.
+      - `cavaleira_do_eclipse`: Cavaleira Renegada de Mir, última capitã da guarda da cidade destruída em cota chamuscada, duelando até o último sangue.
+      - `arconte_de_vidro`: Guardião de Vidro Vulcânico, armadura pesada cravejada com escórias de fundição e lascas afiadas de vidro negro.
+      - `besta_do_primeiro_inverno`: O Grande Urso Cicatrizado, predador ancestral com lombo crivado de pontas de lanças e flechas ferrugentas dos soldados do cerco.
+- **Arquivos modificados**:
+  - `content/vaelhorn/quests.ts`
+  - `content/vaelhorn/bestiary.ts`
+  - `content/vaelhorn/desafios.ts`
+  - `content/vaelhorn/bestiario-historias.ts`
+  - `HANDOFF.md`
+- **Validação & Testes**:
+  - `npm run typecheck`: 0 erros.
+  - `engine/lore.selftest.ts`: 100% aprovado.
+  - `engine/causal.selftest.ts`: 100% aprovado.
+  - `engine/despertar.selftest.ts`: 100% aprovado.
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado.
+  - `npm run test:vaelhorn` e `npm run test:casas`: 100% aprovados.

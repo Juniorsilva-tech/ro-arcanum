@@ -234,3 +234,6 @@ const styles = StyleSheet.create({
   },
   seloTexto: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 10, letterSpacing: 1 },
 });
+
+export { BannerIlustrado, type BannerIlustradoProps, ILUMINACAO_POR_PERIODO } from './BannerIlustrado';
+

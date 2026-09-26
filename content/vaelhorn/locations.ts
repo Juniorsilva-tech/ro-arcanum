@@ -169,29 +169,29 @@ export const locaisVaelhorn: Local[] = [
     ],
   },
 
-  // ─────────────────────────── A PONTE (o evento que ancora o calendário)
+  // ─────────────────────────── A PONTE (antiga artéria militar sabotada)
   {
     id: 'ponte',
     nome: 'A Ponte Caída',
     regiao: 'Vale de Halvet',
     tipo: 'ruina',
     descricaoBase:
-      'Dois cotos de pedra de cada lado do rio e, no meio, nada. O que uniu o vale por trezentos anos agora é entulho na água.',
+      'Dois cotos gigantescos de alvenaria militar de cada lado da garganta do rio, e no meio o vazio. Os arcos imperiais foram dinamitados durante a revolta, transformando a principal artéria do vale em escombros na água.',
     atmosferaPorPeriodo: {
-      madrugada: 'A neblina sobe do rio e engole os cotos. Só se ouve a água passando por onde havia arco.',
-      manha: 'Homens medem a ruína com cordas e desistem antes do meio-dia. Ninguém sabe por onde começar.',
-      tarde: 'Crianças atiram pedras no vão. Os pais as puxam pelo braço sem explicar por quê.',
-      entardecer: 'A luz baixa mostra o que a pressa esconde: as pedras não caíram — foram derrubadas.',
-      anoitecer: 'O vau improvisado rio abaixo cobra pedágio. Aqui não passa mais ninguém.',
-      noite: 'A água conversa sozinha entre os escombros.',
+      madrugada: 'A neblina sobe do rio e engole os cotos de pedra. Só se ouve a água passando veloz por onde havia a calçada militar.',
+      manha: 'Carroceiros avaliam os escombros e xingam a distância. Sem a ponte, são obrigados a descer a lama até o Vau de Pedra.',
+      tarde: 'Restos de carretas queimadas e correntes enferrujadas ainda jazem entre as pedras caídas, lembrança dos comboios barrados.',
+      entardecer: 'A luz baixa mostra o que a pressa esconde: as marcas de picaretas e perfurações nas vigas provam que foram derrubadas de propósito.',
+      anoitecer: 'O vau improvisado rio abaixo cobra pedágio abusivo. Aqui na ruína não passa mais ninguém.',
+      noite: 'Escuridão fria sobre o abismo. O rio corre furioso contra os blocos de pedra submersos.',
     },
     privacidadeBase: { madrugada: 3, manha: 1, tarde: 0, entardecer: 1, anoitecer: 2, noite: 3 },
     perigo: 3,
     ganchos: [
-      'As marcas de ferramenta nas pedras não combinam com um desabamento',
-      'Um saco encharcado preso entre as vigas submersas',
+      'Marcas de cinzel e perfuração militar nas bases dos arcos comprovam a sabotagem interna',
+      'Correntes de ferro com grilhões de prisioneiros ainda presas nas vigas tombadas na água',
     ],
-    pontos: ['coto norte', 'entulho na água', 'vau improvisado'],
+    pontos: ['coto norte da fortificação', 'entulho no leito do rio', 'posto abandonado da alfândega'],
     rotas: [
       { destino: 'praca', periodos: 0, perigo: 1 },
       { destino: 'estrada', periodos: 1, perigo: 3 },

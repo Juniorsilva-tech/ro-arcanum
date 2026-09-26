@@ -38,14 +38,14 @@ const MOTIVOS_TRAGEDIA = [
 // Vaelhorn aqui, é por isso que mora na engine e não em content/.
 export const MARCAS_INFANCIA: { id: MarcaInfancia; titulo: string; descricao: string }[] = [
   {
+    id: 'genio',
+    titulo: 'Gênio (Talento Precoce)',
+    descricao: 'Desde criança, você entendia tudo antes de precisarem explicar. Concede +1 em todos os atributos base e reconhecimento familiar.',
+  },
+  {
     id: 'tragedia',
     titulo: 'Uma perda',
     descricao: 'Algo levou os seus pais cedo demais. Você cresceu sem o teto que devia ter.',
-  },
-  {
-    id: 'genio',
-    titulo: 'Um talento precoce',
-    descricao: 'Desde criança, você entendia as coisas antes de precisarem ser explicadas.',
   },
   {
     id: 'indigno',

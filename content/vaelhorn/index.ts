@@ -21,6 +21,7 @@ import { edificiosRegionaisVaelhorn, tetoEdificiosVaelhorn } from './edificiosRe
 import { LENDAS_ITENS, GUARDIOES_LENDARIOS, RELIQUIAS_DAS_CASAS } from './lendas';
 import { HISTORIAS_CRIATURAS } from './bestiario-historias';
 import { HISTORIAS_LOCAIS, DESCRICOES_CORRIGIDAS } from './historias-locais';
+import { CRONICAS_MAPA, DEUSES_PRIMORDIAIS, BRUXAS_DOS_PECADOS, FACCOES_ANTIGAS, MITO_ORIGEM_MAGIA } from './cosmologia';
 import { HISTORIAS_CASAS } from './historias-casas';
 import { SITIOS_COLONIA } from './sitios';
 import { ARQUETIPOS_COLONO, GRUPOS_CHEGADA, NOMES_COLONAS, NOMES_COLONOS } from './colonos';
@@ -144,4 +145,12 @@ export const conteudoVaelhorn: ContentBundle = {
   npcs: enriquecerElenco(baseVaelhorn.npcs),
   locais: comHistoriaDosLugares(baseVaelhorn.locais),
   criaturas: comBestiario(baseVaelhorn.criaturas),
+};
+
+export {
+  CRONICAS_MAPA,
+  DEUSES_PRIMORDIAIS,
+  BRUXAS_DOS_PECADOS,
+  FACCOES_ANTIGAS,
+  MITO_ORIGEM_MAGIA,
 };

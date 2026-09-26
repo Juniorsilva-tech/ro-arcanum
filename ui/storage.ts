@@ -175,8 +175,8 @@ export type ConfigApp = {
 };
 
 export const configPadrao: ConfigApp = {
-  provider: 'openrouter',
-  modelo: 'thedrummer/rocinante-12b',
+  provider: 'nous',
+  modelo: 'upstage/solar-pro4:free',
   usarModelo: true,
   avisoAceito: false,
 };
@@ -192,7 +192,19 @@ export async function salvarConfig(cfg: ConfigApp): Promise<void> {
 export async function carregarConfig(): Promise<ConfigApp> {
   try {
     const raw = await AsyncStorage.getItem(K_CONFIG);
-    return raw ? { ...configPadrao, ...(JSON.parse(raw) as ConfigApp) } : configPadrao;
+    if (!raw) return configPadrao;
+    const cfg = { ...configPadrao, ...(JSON.parse(raw) as ConfigApp) };
+    // Migração automática para modelos descontinuados pela Nous
+    if (
+      cfg.modelo?.includes('longcat') ||
+      cfg.modelo?.includes('hy3:free') ||
+      cfg.modelo?.includes('ling-3.0') ||
+      cfg.modelo?.includes('laguna-xs')
+    ) {
+      cfg.modelo = configPadrao.modelo;
+      await salvarConfig(cfg);
+    }
+    return cfg;
   } catch {
     return configPadrao;
   }
