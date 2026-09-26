@@ -171,6 +171,23 @@ export type Item = {
   tipoArma?: 'espada' | 'espada_dupla' | 'machado' | 'lanca' | 'adaga' | 'arco' | 'desarmado' | 'outro';
   // Concede chance de partir e inutilizar lâminas adversárias (manoplas de Mestre Marcial)
   quebraArmas?: boolean;
+  // Bônus adicional na janela de acerto crítico (ex: +0.08 a +0.20)
+  bonusCritico?: number;
+  // Multiplicador de dano no golpe crítico (padrão 1.75; adagas/armas lendárias 1.95 a 2.4)
+  multiplicadorCritico?: number;
+  // Efeito passivo de combate de armas lendárias ou relíquias nobres
+  efeitoPassivo?:
+    | 'chamas_solares'
+    | 'contra_ataque_rocha'
+    | 'rachar_armadura'
+    | 'sangramento_abissal'
+    | 'disparo_perfurante'
+    | 'execucao_sombria'
+    | 'peso_imperial';
+  // Sistema de Cor de Lâmina Nichirin (Kimetsu no Yaiba: transmutação cromática ao empunhar)
+  corNichirin?: 'preta' | 'azul' | 'vermelha' | 'amarela' | 'verde' | 'cinza' | 'branca' | 'lavanda' | 'rosa' | 'indigo';
+  corNichirinNome?: string;
+  corNichirinAfinidade?: string;
 };
 
 export type Equipado = {
@@ -196,6 +213,7 @@ export type ModoKai =
 // ── Personagem.
 export type Personagem = {
   nome: string;
+  genero: 'm';
   classeId: string;
   origemId: string;
   nivel: number;
@@ -215,6 +233,8 @@ export type Personagem = {
    * na campanha. `itemPorId` procura aqui quando recebe o personagem.
    */
   itensForjados?: Item[];
+  // Cor inata da Lâmina Nichirin despertada pela alma do espadachim (Kimetsu)
+  corNichirinInata?: 'preta' | 'azul' | 'vermelha' | 'amarela' | 'verde' | 'cinza' | 'branca' | 'lavanda' | 'rosa' | 'indigo';
   // Fusões de estilo já criadas nesta vida — limite de 3 (ver engine/fusao.ts).
   fusoesFeitas?: number;
   alcunhas: string[];
@@ -573,6 +593,13 @@ export type CombatActor = {
   focoAcertos?: number;
   // Fracao dos acertos que sai como critico. Ausente = 0,25 (regra base).
   janelaCritica?: number;
+  // Multiplicador de dano em caso de acerto crítico (ausente = 1.75)
+  multiplicadorCritico?: number;
+  // Efeito passivo da arma empunhada em combate
+  efeitoPassivoArma?: string;
+  // Cor da lâmina Nichirin desperta em combate
+  corNichirin?: 'preta' | 'azul' | 'vermelha' | 'amarela' | 'verde' | 'cinza' | 'branca' | 'lavanda' | 'rosa' | 'indigo';
+  nomeCorNichirin?: string;
   posicao?: 'frente' | 'flanco' | 'cobertura';
   retirado?: boolean;
   capturado?: boolean;

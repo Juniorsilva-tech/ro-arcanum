@@ -26,19 +26,19 @@ const MAT_METAIS_NOBRES = ['mercado', 'tessel', 'corveira', 'porto_sal', 'mareu'
 export const itensVaelhorn: Item[] = [
   // ───────────────────────────── ARMAS corpo a corpo
   it({ id: 'punho_de_ferro', nome: 'Punho de ferro', descricao: 'Manoplas cravejadas para quem prefere o próprio braço.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 8, dano: { base: 5, dispersao: 0.4, tipo: 'contusão' }, lojas: MERC }),
-  it({ id: 'adaga', nome: 'Adaga', descricao: 'Curta, rápida, fácil de esconder.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 10, dano: { base: 7, dispersao: 0.35, tipo: 'perfurante' }, lojas: MERC }),
-  it({ id: 'faca_do_acougueiro', nome: 'Faca do açougueiro', descricao: 'Larga e cega o bastante para doer mais.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 9, dano: { base: 8, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
+  it({ id: 'adaga', nome: 'Adaga', descricao: 'Curta, rápida, fácil de esconder.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 10, bonusCritico: 0.08, multiplicadorCritico: 2.0, dano: { base: 7, dispersao: 0.35, tipo: 'perfurante' }, lojas: MERC }),
+  it({ id: 'faca_do_acougueiro', nome: 'Faca do açougueiro', descricao: 'Larga e cega o bastante para doer mais.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 9, multiplicadorCritico: 1.85, dano: { base: 8, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'espada_curta', nome: 'Espada curta', descricao: 'Confiável na mão de quem sabe medir a distância.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 22, dano: { base: 9, dispersao: 0.3, tipo: 'cortante' }, lojas: MERC }),
-  it({ id: 'rapieira', nome: 'Rapieira', descricao: 'Lâmina fina que busca as frestas da guarda.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 30, atributoAtaque: 'precisao', dano: { base: 10, dispersao: 0.25, tipo: 'perfurante' }, lojas: MERC }),
+  it({ id: 'rapieira', nome: 'Rapieira', descricao: 'Lâmina fina que busca as frestas da guarda.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 30, atributoAtaque: 'precisao', bonusCritico: 0.06, multiplicadorCritico: 1.95, dano: { base: 10, dispersao: 0.25, tipo: 'perfurante' }, lojas: MERC }),
   it({ id: 'espada_longa', nome: 'Espada longa', descricao: 'O peso certo entre alcance e controle.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 45, dano: { base: 12, dispersao: 0.3, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'cimitarra', nome: 'Cimitarra', descricao: 'Curva, feita para o corte que continua.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 34, dano: { base: 11, dispersao: 0.35, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'maca', nome: 'Maça', descricao: 'Quando a malha não deixa a lâmina entrar, o osso ainda quebra.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 26, dano: { base: 13, dispersao: 0.4, tipo: 'contusão' }, lojas: MERC }),
-  it({ id: 'machado_de_guerra', nome: 'Machado de guerra', descricao: 'Cai pesado; perdoa pouco de quem erra o tempo.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 40, dano: { base: 14, dispersao: 0.5, tipo: 'cortante' }, lojas: MERC }),
+  it({ id: 'machado_de_guerra', nome: 'Machado de guerra', descricao: 'Cai pesado; perdoa pouco de quem erra o tempo.', slot: 'arma', alcance: 'corpo', peso: 4, valor: 40, multiplicadorCritico: 1.85, dano: { base: 14, dispersao: 0.5, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'lanca', nome: 'Lança', descricao: 'Alcança antes de ser alcançada.', slot: 'arma', alcance: 'corpo', peso: 3, valor: 24, dano: { base: 11, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
-  it({ id: 'martelo_de_guerra', nome: 'Martelo de guerra', descricao: 'Duas mãos, uma intenção só.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 55, dano: { base: 16, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),
-  it({ id: 'montante', nome: 'Montante', descricao: 'Espada enorme; abre espaço onde havia gente.', slot: 'arma', alcance: 'corpo', peso: 6, valor: 70, dano: { base: 18, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
+  it({ id: 'martelo_de_guerra', nome: 'Martelo de guerra', descricao: 'Duas mãos, uma intenção só.', slot: 'arma', alcance: 'corpo', peso: 5, valor: 55, multiplicadorCritico: 1.85, dano: { base: 16, dispersao: 0.5, tipo: 'contusão' }, lojas: MERC }),
+  it({ id: 'montante', nome: 'Montante', descricao: 'Espada enorme; abre espaço onde havia gente.', slot: 'arma', alcance: 'corpo', peso: 6, valor: 70, multiplicadorCritico: 1.9, dano: { base: 18, dispersao: 0.45, tipo: 'cortante' }, lojas: MERC }),
   it({ id: 'cajado_de_carvalho', nome: 'Cajado de carvalho', descricao: 'Apoio na estrada, arma no aperto — e foco para a arte.', slot: 'arma', alcance: 'corpo', peso: 2, valor: 14, dano: { base: 7, dispersao: 0.3, tipo: 'contusão' }, lojas: MERC }),
-  it({ id: 'adaga_de_prata', nome: 'Adaga de prata', descricao: 'A prata morde o que a noite cospe.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 60, raridade: 'notavel', dano: { base: 9, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
+  it({ id: 'adaga_de_prata', nome: 'Adaga de prata', descricao: 'A prata morde o que a noite cospe.', slot: 'arma', alcance: 'corpo', peso: 1, valor: 60, raridade: 'notavel', bonusCritico: 0.10, multiplicadorCritico: 2.05, dano: { base: 9, dispersao: 0.3, tipo: 'perfurante' }, lojas: MERC }),
   // Antes só saía de saque de chefe oni — agora também se forja de verdade,
   // na Vila que Ninguém Encontra Duas Vezes (content/vaelhorn/locations.ts,
   // vila_ferreiros), pela mão de Hotaru Haganezuka. O preço alto continua
@@ -223,6 +223,8 @@ export const itensVaelhorn: Item[] = [
     valor: 650,
     raridade: 'mitica',
     defesa: 2,
+    multiplicadorCritico: 1.85,
+    efeitoPassivo: 'contra_ataque_rocha',
     dano: { base: 19, dispersao: 0.25, tipo: 'cortante' },
   }),
   it({
@@ -247,6 +249,8 @@ export const itensVaelhorn: Item[] = [
     peso: 3,
     valor: 620,
     raridade: 'mitica',
+    multiplicadorCritico: 1.9,
+    efeitoPassivo: 'sangramento_abissal',
     dano: { base: 18, dispersao: 0.3, tipo: 'perfurante' },
   }),
   it({
@@ -271,6 +275,8 @@ export const itensVaelhorn: Item[] = [
     peso: 5,
     valor: 680,
     raridade: 'mitica',
+    multiplicadorCritico: 1.85,
+    efeitoPassivo: 'rachar_armadura',
     dano: { base: 20, dispersao: 0.35, tipo: 'cortante' },
   }),
   it({
@@ -295,6 +301,8 @@ export const itensVaelhorn: Item[] = [
     peso: 3,
     valor: 610,
     raridade: 'mitica',
+    bonusCritico: 0.06,
+    multiplicadorCritico: 1.85,
     dano: { base: 18, dispersao: 0.25, tipo: 'cortante' },
   }),
   it({
@@ -319,6 +327,8 @@ export const itensVaelhorn: Item[] = [
     peso: 2,
     valor: 630,
     raridade: 'mitica',
+    bonusCritico: 0.08,
+    multiplicadorCritico: 1.9,
     dano: { base: 18, dispersao: 0.3, tipo: 'cortante' },
   }),
   it({
@@ -332,6 +342,9 @@ export const itensVaelhorn: Item[] = [
     peso: 4,
     valor: 1200,
     raridade: 'proibida',
+    bonusCritico: 0.12,
+    multiplicadorCritico: 2.0,
+    efeitoPassivo: 'peso_imperial',
     dano: { base: 22, dispersao: 0.2, tipo: 'cortante' },
     defesa: 2,
   }),
@@ -350,8 +363,8 @@ export const itensVaelhorn: Item[] = [
   // ───────────────────────────── ARMAS LENDÁRIAS E DIVINAS PERDIDAS
   it({
     id: 'lamina_da_origem_solar',
-    nome: 'Hinokami Primordial (A Lâmina da Criação)',
-    descricao: 'Uma katana primordial cuja lâmina arde em calor solar permanente. Dizem as lendas ter pertencido ao primeiro espadachim que desafiou o progenitor das trevas.',
+    nome: 'Lâmina de Yoriichi',
+    descricao: 'Lâmina curva e negra que nunca esfria, empunhada por Yoriichi Tsugikuni para canalizar a respiração solar primordial. Contra carne de oni, o corte em brasa não cicatriza.',
     slot: 'arma',
     alcance: 'corpo',
     tipoArma: 'espada',
@@ -359,6 +372,9 @@ export const itensVaelhorn: Item[] = [
     valor: 1500,
     raridade: 'proibida',
     contraOni: true,
+    bonusCritico: 0.15,
+    multiplicadorCritico: 2.2,
+    efeitoPassivo: 'chamas_solares',
     dano: { base: 24, dispersao: 0.15, tipo: 'cortante' },
   }),
   it({
@@ -371,6 +387,9 @@ export const itensVaelhorn: Item[] = [
     peso: 3,
     valor: 950,
     raridade: 'mitica',
+    bonusCritico: 0.12,
+    multiplicadorCritico: 2.1,
+    efeitoPassivo: 'disparo_perfurante',
     dano: { base: 20, dispersao: 0.2, tipo: 'perfurante' },
   }),
   it({
@@ -383,6 +402,8 @@ export const itensVaelhorn: Item[] = [
     peso: 3,
     valor: 850,
     raridade: 'mitica',
+    bonusCritico: 0.08,
+    multiplicadorCritico: 1.95,
     dano: { base: 19, dispersao: 0.25, tipo: 'perfurante' },
   }),
   it({
@@ -396,6 +417,9 @@ export const itensVaelhorn: Item[] = [
     peso: 1,
     valor: 800,
     raridade: 'mitica',
+    bonusCritico: 0.20,
+    multiplicadorCritico: 2.3,
+    efeitoPassivo: 'execucao_sombria',
     dano: { base: 16, dispersao: 0.2, tipo: 'perfurante' },
   }),
 
@@ -424,6 +448,7 @@ export const itensVaelhorn: Item[] = [
     valor: 180,
     raridade: 'rara',
     quebraArmas: true,
+    multiplicadorCritico: 1.85,
     dano: { base: 14, dispersao: 0.25, tipo: 'contusão' },
     lojas: MAT_FORJA,
   }),
@@ -438,6 +463,8 @@ export const itensVaelhorn: Item[] = [
     valor: 850,
     raridade: 'mitica',
     quebraArmas: true,
+    bonusCritico: 0.12,
+    multiplicadorCritico: 2.1,
     dano: { base: 19, dispersao: 0.2, tipo: 'contusão' },
   }),
 

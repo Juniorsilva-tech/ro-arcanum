@@ -118,3 +118,16 @@ console.log(`✓ ${C.criaturas.length * 4} combates de catálogo com compra, gru
   ok(c.personagem.recursos.vida > 0, 'CHIM impede morte por velhice');
   console.log('✓ Requisitos, unicidade e efeito real da ascensão');
 }
+{
+  const c = nova('troca-arma');
+  c.personagem.inventario['espada_curta'] = 1;
+  c.personagem.inventario['lanca'] = 1;
+  iniciarCombate(C, c, ['rato_gigante']);
+  ok(c.combate && !c.combate.terminado, 'Combate iniciado para teste de troca');
+  ok(c.personagem.equipado.arma === 'espada_longa', 'Arma inicial equipada');
+  jogadorAcaoTatica(C, c, 'trocar_arma', 'lanca');
+  ok(c.personagem.equipado.arma === 'lanca', 'Arma trocada para lanca em combate');
+  ok(c.combate!.log.some(l => l.includes('Lança')), 'Log registra a troca da arma');
+  console.log('✓ Troca tática de arma durante o combate com recálculo');
+}
+

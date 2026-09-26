@@ -5,6 +5,7 @@ import { clampRecursos } from './character';
 import { multiplicadorDePreco } from './mundo';
 import { cidadeDoLocal, cidadeIdDoLocal } from './historiaViva';
 import { descontoDeCompra, multiplicadorDeVenda } from './classe';
+import { verificarDespertarNichirin } from './nichirin';
 
 export function estoqueNaLoja(content: ContentBundle, camp: Campaign, itemId: string): number {
   const item = itemPorId(content, itemId);
@@ -64,6 +65,9 @@ export function equipar(content: ContentBundle, camp: Campaign, itemId: string):
   if (!item) return { ok: false, motivo: 'item desconhecido' };
   if (!ehEquipavel(item)) return { ok: false, motivo: 'não é equipável' };
   p.equipado[item.slot as 'arma' | 'armadura' | 'escudo' | 'acessorio'] = itemId;
+  if (item.slot === 'arma') {
+    verificarDespertarNichirin(content, camp, item);
+  }
   return { ok: true };
 }
 

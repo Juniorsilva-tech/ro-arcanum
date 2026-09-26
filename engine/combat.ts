@@ -20,6 +20,7 @@ import { bonusDefesaEquip, armaEquipada, itemPorId } from './items';
 import { periodoAtual, avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
 import { aplicarFerimentoOni, haAbrigoSolar, obterRival, registrarConfronto, VERSAO_COMBATE } from './kimetsu';
+import { verificarDespertarNichirin } from './nichirin';
 import type { RivalPersistente } from './kimetsuTypes';
 import { atualizarAmeacas } from './continuidade';
 import { npcPorId } from './elenco';
@@ -191,8 +192,16 @@ export function defesaJogador(content: ContentBundle, camp: Campaign): number {
 
 // Janela de critico: a fatia dos acertos que sai limpa. Aproveitar a abertura
 // e' tecnica, entao quem cresce aqui e' a maestria, nao o nivel.
-export function janelaCriticaJogador(camp: Campaign): number {
-  return Math.min(0.45, 0.25 + maestriaDe(camp, 'espada') / 500);
+// Janela de critico: a fatia dos acertos que sai limpa. Aproveitar a abertura
+// e' tecnica, somando maestria e propriedades criticas da arma empunhada.
+export function janelaCriticaJogador(camp: Campaign, content?: ContentBundle): number {
+  const p = camp.personagem;
+  let bonusArma = 0;
+  if (content) {
+    const arma = armaEquipada(content, p);
+    bonusArma = arma?.bonusCritico ?? 0;
+  }
+  return Math.min(0.60, 0.25 + bonusArma + maestriaDe(camp, 'espada') / 500);
 }
 
 export function acertoJogador(content: ContentBundle, camp: Campaign): number {
@@ -226,10 +235,9 @@ export function acertoJogador(content: ContentBundle, camp: Campaign): number {
   return base + sakaiBonus + bonusCenarioAcerto;
 }
 
-// Dano do jogador. Antes era so' a arma — dois personagens com a mesma espada
-// batiam igual, viesse um do nivel 1 e o outro do 25. Agora a arma continua
-// sendo a maior parcela, mas quem a segura entra na conta em tres frentes:
-// eficiencia tecnica multiplica o gume, atributo e nivel somam por cima.
+// Dano do jogador. A arma define o molde básico, mas o guerreiro a potencializa:
+// cada ponto de modificador do atributo amplia o rendimento da arma em +10% e
+// estabiliza a dispersão para evitar golpes acidentalmente fracos.
 export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano {
   const p = camp.personagem;
   const arma = armaEquipada(content, p);
@@ -265,10 +273,16 @@ export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano 
 
   const attr: AttrKey = arma?.atributoAtaque ?? (ehLutador ? 'precisao' : 'fisico');
   const bonusAfiacao = (arma?.afiacao && arma.afiacao.cargas > 0) ? arma.afiacao.bonusDano : 0;
-  const eficiencia = 1 + maestriaDe(camp, 'espada') / 200;
+  const modAttr = modificador(p.atributos[attr]);
+  // Cada ponto de modificador do atributo escala o rendimento da lâmina em +10%
+  const escalaAttr = Math.max(0, modAttr) * 0.10;
+  const eficiencia = 1 + maestriaDe(camp, 'espada') / 200 + escalaAttr;
   const base = (perfil.base + bonusAfiacao) * eficiencia
-    + Math.max(0, modificador(p.atributos[attr]))
+    + Math.max(0, modAttr)
     + Math.floor(p.nivel / 3);
+
+  // Atributo elevado estabiliza a pegada e reduz a dispersão negativa (piso mais firme)
+  const dispersaoEstabilizada = Math.max(0.12, perfil.dispersao - Math.max(0, modAttr) * 0.025);
 
   // Bônus de impacto muscular / compressão do Kai (Sakai)
   const sakai = p.sakai;
@@ -284,7 +298,11 @@ export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano 
   }
 
   const bonusCenarioDano = camp.cenarioId === 'tsukimichi' ? 28 : 0;
-  return { ...perfil, base: (base + bonusDanoSakai + bonusCenarioDano) * multiplicadoresDeIdentidade(camp).dano };
+  return {
+    ...perfil,
+    dispersao: dispersaoEstabilizada,
+    base: (base + bonusDanoSakai + bonusCenarioDano) * multiplicadoresDeIdentidade(camp).dano,
+  };
 }
 
 function gerarBarkReencontro(r: RivalPersistente): string {
@@ -320,6 +338,11 @@ export function iniciarCombate(
   // Amputações de combates anteriores são permanentes: o jogador entra na
   // luta seguinte já com a penalidade, não só nesta.
   const penMembros = penalidadePorMembros(p.membrosPerdidos, chimAlcancado(camp));
+  const arma = armaEquipada(content, p);
+  if (arma) {
+    verificarDespertarNichirin(content, camp, arma);
+  }
+  const armaFinal = armaEquipada(content, p) ?? arma;
   const jogador: CombatActor = {
     id: 'jogador',
     nome: p.nome,
@@ -327,7 +350,11 @@ export function iniciarCombate(
     vida: p.recursos.vida,
     vidaMax: p.recursosMax.vida,
     defesa: defesaJogador(content, camp) + penMembros.defesa + bonusCombateMarca(camp).defesa,
-    janelaCritica: janelaCriticaJogador(camp),
+    janelaCritica: janelaCriticaJogador(camp, content),
+    multiplicadorCritico: armaFinal?.multiplicadorCritico ?? 1.75,
+    efeitoPassivoArma: armaFinal?.efeitoPassivo,
+    corNichirin: armaFinal?.corNichirin,
+    nomeCorNichirin: armaFinal?.corNichirinNome,
     acerto: acertoJogador(content, camp) + penMembros.acerto + bonusCombateMarca(camp).acerto,
     dano: danoJogador(content, camp),
     condicoes: [],
@@ -511,7 +538,8 @@ function resolverAtaque(
   const evasao = (alvo.tatico?.esquiva ?? 0) > 0;
   const kyudo = bonusArqueiroAzusa(camp, atacante, alvo);
   const niten = bonificacaoNitenMusashi(camp, atacante);
-  const defCobertura = kyudo.anulaCobertura ? 0 : alvo.posicao === 'cobertura' ? 3 : 0;
+  const anulaCobertura = kyudo.anulaCobertura || atacante.efeitoPassivoArma === 'disparo_perfurante';
+  const defCobertura = anulaCobertura ? 0 : alvo.posicao === 'cobertura' ? 3 : 0;
   const defEfetiva =
     alvo.defesa +
     (alvo.defendendo ? 4 : 0) +
@@ -522,23 +550,33 @@ function resolverAtaque(
   const posicao =
     atacante.posicao === 'flanco'
       ? 3
-      : kyudo.anulaCobertura
+      : anulaCobertura
         ? 0
         : atacante.posicao === 'cobertura'
           ? -2
           : 0;
   const foco = bonusDeFoco(camp, atacante, alvo.id);
-  const defAposPenetracao = Math.max(0, Math.round(defEfetiva * (1 - niten.penetracaoArmadura)));
+  let defPenetracao = niten.penetracaoArmadura;
+  if (atacante.efeitoPassivoArma === 'rachar_armadura') {
+    defPenetracao = Math.max(defPenetracao, 0.5);
+  }
+  const defAposPenetracao = Math.max(0, Math.round(defEfetiva * (1 - defPenetracao)));
   const p = probabilidade(atacante.acerto + posicao + foco + kyudo.bonusAcerto + niten.bonusAcerto, defAposPenetracao, 4);
   const r = nextFloat(camp.rng);
   if (r >= p) {
     registrarFoco(camp, atacante, alvo.id, false);
-    return `${atacante.nome} ataca ${alvo.nome} e erra.${notaQuebra}`;
+    let notaContraAtaque = '';
+    if (alvo.efeitoPassivoArma === 'contra_ataque_rocha' && atacante.vida > 0) {
+      atacante.vida = Math.max(0, atacante.vida - 7);
+      notaContraAtaque = ' [Bastião de Halvet: o escudo de pedra repele o golpe e contra-ataca (7 dano contundente no agressor)!]';
+    }
+    return `${atacante.nome} ataca ${alvo.nome} e erra.${notaQuebra}${notaContraAtaque}`;
   }
   registrarFoco(camp, atacante, alvo.id, true);
   const efeitoAsora = efeitoEspadachimAsora(camp, atacante, alvo.id);
   const crit = r < p * ((atacante.janelaCritica ?? 0.25) + niten.bonusCritico) || efeitoAsora.ruptura;
-  const dano = calcularDano(camp.rng, perfil, crit);
+  const multCrit = atacante.multiplicadorCritico ?? 1.75;
+  const dano = calcularDano(camp.rng, perfil, crit, multCrit);
   dano.valor += efeitoAsora.bonusDano;
 
   let notaOleo = '';
@@ -606,6 +644,71 @@ function resolverAtaque(
     }
   }
 
+  // Efeitos passivos das armas aplicados ao causar dano
+  let notaPassiva = '';
+  if (atacante.efeitoPassivoArma === 'chamas_solares' && dano.valor > 0) {
+    (alvo.tatico ??= {}).queimadura = Math.max(alvo.tatico?.queimadura ?? 0, 3);
+    notaPassiva += ' [Chamas Solares: fogo primordial queima a carne oponente!]';
+  } else if (atacante.efeitoPassivoArma === 'sangramento_abissal' && dano.valor > 0) {
+    (alvo.tatico ??= {}).sangramento = Math.max(alvo.tatico?.sangramento ?? 0, 3);
+    notaPassiva += ' [Presa da Maré: barbelas dilaceram a carne profunda!]';
+  } else if (atacante.efeitoPassivoArma === 'rachar_armadura' && dano.valor > 0) {
+    if ((alvo.tatico?.guarda ?? 0) > 0) alvo.tatico!.guarda = 0;
+    notaPassiva += ' [Quebra-Rocha: lâmina maciça racha a blindagem do inimigo!]';
+  } else if (atacante.efeitoPassivoArma === 'peso_imperial' && dano.valor > 0) {
+    if ((alvo.tatico?.guarda ?? 0) > 0) alvo.tatico!.guarda = 0;
+    alvo.acerto = Math.max(2, alvo.acerto - 2);
+    notaPassiva += ' [Presença Imperial: peso ancestral abala o espírito do inimigo (-2 acerto)!]';
+  } else if (atacante.efeitoPassivoArma === 'execucao_sombria' && dano.valor > 0) {
+    if (alvo.vidaMax > 0 && alvo.vida / alvo.vidaMax <= 0.35) {
+      dano.valor = Math.round(dano.valor * 1.5);
+      notaPassiva += ' [Execução Sombria: golpe fulminante em ponto vital vulnerável (+50% dano)!]';
+    }
+  } else if (atacante.efeitoPassivoArma === 'disparo_perfurante' && crit && dano.valor > 0) {
+    (alvo.tatico ??= {}).frio = Math.max(alvo.tatico?.frio ?? 0, 1);
+    notaPassiva += ' [Trovão Celestial: disparo abala a postura do alvo!]';
+  }
+
+  // Efeitos e Afinidades Cromáticas das Lâminas Nichirin (Kimetsu no Yaiba)
+  if (atacante.corNichirin && dano.valor > 0) {
+    if (atacante.corNichirin === 'preta') {
+      if (alvo.oni) {
+        dano.valor = Math.round(dano.valor * 1.15);
+        (alvo.tatico ??= {}).queimadura = Math.max(alvo.tatico?.queimadura ?? 0, 3);
+        notaPassiva += ' [Nichirin Negra: brasa solar pura incinera a regeneração das trevas (+15% dano)!]';
+      }
+    } else if (atacante.corNichirin === 'azul') {
+      if (atacante.ehJogador && camp.personagem.recursos.vigor !== undefined) {
+        const vMax = camp.personagem.recursosMax.vigor ?? 20;
+        camp.personagem.recursos.vigor = Math.min(vMax, camp.personagem.recursos.vigor + 1);
+        notaPassiva += ' [Nichirin Azul: fluidez da maré restaura 1 de vigor!]';
+      }
+    } else if (atacante.corNichirin === 'vermelha') {
+      (alvo.tatico ??= {}).queimadura = Math.max(alvo.tatico?.queimadura ?? 0, 2);
+      notaPassiva += ' [Nichirin Carmesim: calor da forja abrasa o oponente!]';
+    } else if (atacante.corNichirin === 'verde') {
+      const guardaAtual = alvo.tatico?.guarda ?? 0;
+      if (guardaAtual > 0) {
+        (alvo.tatico ??= {}).guarda = Math.max(0, guardaAtual - 6);
+        notaPassiva += ' [Nichirin Verde: vendaval tempestuoso fatia a guarda!]';
+      }
+    } else if (atacante.corNichirin === 'amarela' && crit) {
+      notaPassiva += ' [Nichirin Dourada: centelha do trovão estala com violência no ponto vital!]';
+    } else if (atacante.corNichirin === 'lavanda') {
+      notaPassiva += ' [Nichirin Lavanda: estocada precisa transpassa a blindagem!]';
+    }
+  }
+
+  if (alvo.corNichirin === 'cinza' && dano.valor > 0) {
+    dano.valor = Math.max(1, dano.valor - 2);
+    notaPassiva += ' [Nichirin de Pedra: solidez da rocha dissipa o impacto (-2 dano)!]';
+  }
+
+  if (alvo.efeitoPassivoArma === 'contra_ataque_rocha' && (alvo.defendendo || (alvo.tatico?.guarda ?? 0) > 0) && atacante.vida > 0) {
+    atacante.vida = Math.max(0, atacante.vida - 7);
+    notaPassiva += ' [Bastião de Halvet: absorve impacto com contra-golpe contundente (7 dano no agressor)!]';
+  }
+
   alvo.vida = Math.max(0, alvo.vida - dano.valor);
   aplicarFerimentoOni(camp, alvo, contraOni);
   const submissaoTsukimichi = camp.cenarioId === 'tsukimichi' && alvo.criaturaId && alvo.criaturaId in ENTIDADES_CONTRATAVEIS;
@@ -640,7 +743,12 @@ function resolverAtaque(
   if (alvo.vida > 0 && alvo.oni && contraOni) {
     notaOni = ` Nichirin pode finalizar esse oni quando sua postura ceder.`;
   }
-  return `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''} — ${dano.valor} de dano ${dano.tipo}.${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
+  const tagCrit = crit ? ' 💥 [GOLPE CRÍTICO!]' : '';
+  const verboAcerto = crit
+    ? `${atacante.nome} desfere um GOLPE CRÍTICO devastador em ${alvo.nome}`
+    : `${atacante.nome} acerta ${alvo.nome}`;
+
+  return `${verboAcerto} — ${dano.valor} de dano ${dano.tipo}.${tagCrit}${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaPassiva}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
 }
 
 // ── Ações do jogador ────────────────────────────────────────────────
@@ -825,11 +933,24 @@ function podeAgir(camp: Campaign): boolean {
   return true;
 }
 
-function processarVeneno(camp: Campaign, a: CombatActor): void {
-  if ((a.tatico?.veneno ?? 0) <= 0) return;
-  a.tatico!.veneno!--;
-  a.vida = Math.max(a.oni ? 1 : 0, a.vida - Math.max(2, Math.ceil(a.vidaMax * .04)));
-  camp.combate!.log.push(`${a.nome} sofre com o veneno.`);
+function processarEfeitosContinuos(camp: Campaign, a: CombatActor): void {
+  if ((a.tatico?.veneno ?? 0) > 0) {
+    a.tatico!.veneno!--;
+    a.vida = Math.max(a.oni ? 1 : 0, a.vida - Math.max(2, Math.ceil(a.vidaMax * .04)));
+    camp.combate!.log.push(`${a.nome} sofre com o veneno.`);
+  }
+  if ((a.tatico?.queimadura ?? 0) > 0) {
+    a.tatico!.queimadura!--;
+    const danoChama = 4;
+    a.vida = Math.max(0, a.vida - danoChama);
+    camp.combate!.log.push(`🔥 [Chamas Solares]: ${a.nome} queima no fogo purificador (-${danoChama} PV)!`);
+  }
+  if ((a.tatico?.sangramento ?? 0) > 0) {
+    a.tatico!.sangramento!--;
+    const danoSangue = 3;
+    a.vida = Math.max(0, a.vida - danoSangue);
+    camp.combate!.log.push(`🩸 [Sangramento]: ${a.nome} perde sangue das feridas abertas (-${danoSangue} PV)!`);
+  }
 }
 
 function executarTurnoAliado(content: ContentBundle, camp: Campaign, aliado: CombatActor): void {
@@ -945,7 +1066,7 @@ function executarArteOni(camp: Campaign, a: CombatActor, jog: CombatActor): bool
   return false;
 }
 
-export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar' | 'humilhar';
+export type AcaoTatica = 'despertar' | 'libertar' | 'observar' | 'decapitar' | 'expor_sol' | 'romper_castelo' | 'flanquear' | 'cobertura' | 'avancar' | 'proteger_grupo' | 'focar_grupo' | 'retirar_aliado' | 'capturar' | 'humilhar' | 'trocar_arma';
 export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: AcaoTatica, alvoId?: string): void {
   const s = camp.combate;
   if (!s || s.terminado || s.ordem[s.turno] !== 'jogador') return;
@@ -955,6 +1076,39 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
     if (!jog.tatico.sono) { s.log.push('Você já está desperto.'); return; }
     jog.tatico.sono = 0;
     s.log.push('Você reconhece a indução e desperta, retomando a atenção.');
+  } else if (acao === 'trocar_arma') {
+    if (!podeAgir(camp)) return;
+    if ((jog.tatico.preso ?? 0) > 0) {
+      s.log.push('Liberte-se antes de trocar de arma.');
+      return;
+    }
+    const novaArmaId = alvoId;
+    const temNaMochila = novaArmaId ? (camp.personagem.inventario[novaArmaId] ?? 0) > 0 : false;
+    const itemNovo = novaArmaId ? itemPorId(content, novaArmaId, camp.personagem) : undefined;
+    if (!novaArmaId || !temNaMochila || !itemNovo || itemNovo.slot !== 'arma') {
+      s.log.push('Arma não encontrada na mochila para empunhar.');
+      return;
+    }
+    if (camp.personagem.equipado.arma === novaArmaId) {
+      s.log.push(`Você já está empunhando ${itemNovo.nome}.`);
+      return;
+    }
+    const armaAnteriorId = camp.personagem.equipado.arma;
+    const itemAnterior = armaAnteriorId ? itemPorId(content, armaAnteriorId, camp.personagem) : undefined;
+    camp.personagem.equipado.arma = novaArmaId;
+    verificarDespertarNichirin(content, camp, itemNovo);
+    const armaEfetiva = itemPorId(content, camp.personagem.equipado.arma, camp.personagem) ?? itemNovo;
+    jog.dano = danoJogador(content, camp);
+    jog.acerto = acertoJogador(content, camp);
+    jog.janelaCritica = janelaCriticaJogador(camp, content);
+    jog.multiplicadorCritico = armaEfetiva.multiplicadorCritico ?? 1.75;
+    jog.efeitoPassivoArma = armaEfetiva.efeitoPassivo;
+    jog.corNichirin = armaEfetiva.corNichirin;
+    jog.nomeCorNichirin = armaEfetiva.corNichirinNome;
+    const transicao = itemAnterior
+      ? `Você embainha ${itemAnterior.nome} e saca ${armaEfetiva.nome} em postura de combate!`
+      : `Você saca ${armaEfetiva.nome} em postura de combate!`;
+    s.log.push(transicao);
   } else {
     if (!podeAgir(camp)) return;
     const alvo = s.atores.find(a => a.id === alvoId && !a.ehJogador && !a.ehAliado && vivo(a));
@@ -1107,7 +1261,7 @@ function avancarAteJogador(content: ContentBundle, camp: Campaign): void {
       continue;
     }
     if (ator.ehJogador) {
-      processarVeneno(camp, ator);
+      processarEfeitosContinuos(camp, ator);
       if ((ator.tatico?.frio ?? 0) > 0) ator.tatico!.frio!--;
       camp.personagem.recursos.vida = ator.vida;
       if (ator.vida <= 0) encerrar(camp, 'derrota', content);
@@ -1138,7 +1292,16 @@ function avancarAteJogador(content: ContentBundle, camp: Campaign): void {
     // Regeneration has a finite rate; poison can temporarily suppress it.
     if (ator.decapitadoAte && ator.decapitadoAte >= s.rodada) { avancaTurno(s, camp); continue; }
     ator.decapitadoAte = undefined;
-    processarVeneno(camp, ator);
+    processarEfeitosContinuos(camp, ator);
+    if (ator.vida <= 0) {
+      s.log.push(`${ator.nome} sucumbe às feridas.`);
+      if (inimigosVivos(s).length === 0) {
+        encerrar(camp, 'vitoria', content);
+        return;
+      }
+      avancaTurno(s, camp);
+      continue;
+    }
     if (ator.oni) {
       if ((ator.imuneRegenTurnos ?? 0) > 0) {
         ator.imuneRegenTurnos! -= 1;

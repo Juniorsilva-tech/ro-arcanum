@@ -17,6 +17,7 @@ import {
   agruparPorFabricante,
   todosNpcs,
   obterTokenNousAtual,
+  renovarTokenNous,
 } from '@/engine';
 import { COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
 import {
@@ -166,7 +167,16 @@ export function Config() {
     await setConfig({ apiKey: chave.trim() || undefined, modelo: modelo.trim() });
     setResultado(chave.trim() ? 'Chave salva.' : 'Chave removida.');
   }
+
   async function testarChave() {
+    if (ehNous && !chave.trim()) {
+      setTestando(true);
+      setResultado(null);
+      const r = await testar();
+      setTestando(false);
+      setResultado(r.ok ? 'Conexão com Hermes (Nous) válida — narração ao vivo pronta.' : `Falhou: ${r.erro}`);
+      return;
+    }
     await salvarChave();
     setTestando(true);
     setResultado(null);
@@ -177,14 +187,20 @@ export function Config() {
 
   async function renovarHermes() {
     setTestando(true);
-    setResultado(null);
-    const { renovarTokenNous } = await import('@/engine');
-    const novo = await renovarTokenNous(true);
-    setTestando(false);
-    if (novo) {
-      setResultado('✓ Conexão com Hermes renovada com sucesso! Agora você pode testar ou jogar.');
-    } else {
-      setResultado('Não foi possível renovar via Hermes local. Execute "hermes auth login nous" no terminal ou use uma chave permanente.');
+    setResultado('Conectando ao Hermes local e validando novo token...');
+    try {
+      const r = await useGame.getState().renovarHermes();
+      setTestando(false);
+      if (r.ok) {
+        setChave('');
+        setResultado('✓ Conexão com Hermes (Nous) renovada e validada com sucesso! Narração pronta.');
+      } else {
+        setResultado(`Falha ao renovar: ${r.erro}`);
+      }
+    } catch (e: unknown) {
+      setTestando(false);
+      const msg = e instanceof Error ? e.message : String(e);
+      setResultado(`Erro inesperado: ${msg}`);
     }
   }
 

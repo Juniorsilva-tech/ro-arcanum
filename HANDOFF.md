@@ -898,3 +898,188 @@ problemas. Causas encontradas e o que mudou:
   seis vezes; a simulação longa passou de 10 minutos. `atualizarLivro` agora
   calcula uma vez (1,5 ms por chamada).
 Não testado com narração real (não uso a chave da Nous do dono).
+
+---
+
+## Sessão 75 — Gemini — Auditoria Completa de Mecânicas em Vaelhorn (10 Anos Geracionais + Playwright)
+
+### Objetivo
+Executar uma auditoria abrangente e rigorosa de todas as mecânicas canônicas do jogo **primeiro no cenário Vaelhorn** (não Tsukimichi):
+1. Criação de personagem, linhagens familiares e prólogo em Vaelhorn;
+2. Sistema de armas, ferramentas, forja, têmpera e afiação na Vila dos Ferreiros;
+3. Combate por turnos contra criaturas e salteadores com troca dinâmica de armas na gaveta tática;
+4. Fundação de assentamento/colônia em Campo da Ceifa ("Baluarte de Torvald"), gestão de obras (muralhas, lavouras), recursos e soberania das Casas Nobres (Casa Tessel);
+5. Simulação contínua de 10 anos (3.650 dias / 40 estações) envelhecendo o protagonista de 18 para 28 anos, ultrapassando o marco dos 25 anos, acompanhando o ciclo de vida e mortes naturais de NPCs idosos;
+6. Testes visuais via Playwright com cliques reais no navegador e fotos inspecionadas diretamente.
+
+### O que foi concluído
+1. **Auditoria da Engine & Simulação Geracional de 10 Anos (`scripts/auditoria_vaelhorn_10_anos.ts`)**:
+   - Criação de Torvald e linhagem (pais Aldrico e Fausta, irmã Mara).
+   - Forja de *Lâmina Curta de ferro* na bigorna da Vila dos Ferreiros e afiação (+2 de dano por 5 combates).
+   - Combate real contra Salteador e Lobo da Mata com troca de arma no turno 2 (sacou Lança) e vitória na rodada 7 (PV 29/44).
+   - Fundação da colônia "Baluarte de Torvald" em Campo da Ceifa com obras de muralha e lavoura.
+   - Avanço de 3.650 dias contínuos: Torvald envelheceu de 18 para 28 anos, pais para 52 e 58 anos, irmã para 31 anos. NPCs idosos faleceram de velhice aos 67 e 74 anos (`Corin Olho-Vivo`, `Calder`). 40 marcos históricos gerados sem corrupção de estado.
+2. **Auditoria Visual ao Vivo via Playwright (`scripts/playwright_vaelhorn_audit.ts`)**:
+   - Expo Web ativo na porta 8082 (`PID 33124`).
+   - 7 capturas de tela em alta resolução inspecionadas via `view_file`:
+     * `foto_vaelhorn_1_criacao_familia.png`: Árvore genealógica e nascimento em Vaelhorn.
+     * `foto_vaelhorn_2_jogo_abertura.png`: Abertura na taverna A Rês Enforcada com opções e metadados.
+     * `foto_vaelhorn_3_inventario_forja.png`: Inventário com ações [afiar] e [temperar] ativas na Vila dos Ferreiros.
+     * `foto_vaelhorn_4_combate_salteadores.png`: Arena de combate contra Salteador e Lobo com badges táticas e seleção de alvo.
+     * `foto_vaelhorn_5_gaveta_troca_armas.png`: Gaveta tática de troca de arma consumindo 1 turno da engine.
+     * `foto_vaelhorn_6_assentamento_feudo.png`: Tela de Assentamento com banner ilustrado, soberania, 11 abas, estoque de recursos e tributo de trigo à Casa Tessel.
+     * `foto_vaelhorn_7_jogo_apos_10_anos.png`: Tela de jogo no Dia 3651 (Ano 11), Torvald aos 28 anos, luto no vale por falecimento de Calder (74 anos) e união entre NPCs.
+3. **Plano Mestre de Testes**:
+   - Registrado no artefato `plano_auditoria_testes_completos.md`.
+
+### Verificações e Testes Executados
+- `npm run typecheck`: **0 erros**.
+- `npm run test:vaelhorn`: **100% aprovado** (catálogo, armas lendárias, classe Lutador, Musashi, contratos de caça).
+- `npm run test:casas`: **52 asserções aprovadas** (guerras feudais, sucessão das Casas Tessel, Corveira, Mareu, Halvet).
+- `npm run test:jornadas`: **100% aprovado** (127.200 sorteios de encontros, missões, viagens e forja).
+- `npx tsx scripts/auditoria_vaelhorn_10_anos.ts`: **100% aprovado** (exit code 0).
+- `npx tsx scripts/playwright_vaelhorn_audit.ts`: **100% aprovado** (todas as 7 fotos salvas e validadas).
+
+---
+
+## Sessão 76 — Gemini — Blindagem do Gênero Masculino & Melhorias de UX em Vaelhorn (Testes Visuais Playwright)
+
+### Objetivo
+1. Garantir que o protagonista seja **sempre masculino** (`genero: 'm'`) em qualquer ocasião, evento, feito, tela de criação ou instrução da IA.
+2. Resolver os atritos de UX identificados na auditoria visual de Vaelhorn:
+   - Arena Tática no centro da tela de combate (eliminando o vazio escuro);
+   - Gaveta tática com opção de lutar desarmado e aviso visual caso a mochila não tenha armas extras;
+   - Abas dedicadas no Inventário (`[Mochila]` e `[Bigorna & Forja]`), trazendo as receitas para o topo com acesso direto.
+3. Flexionar concordância gramatical de ofícios familiares na geração procedural (pais, irmãos).
+4. Validar tudo ao vivo com fotos reais via Playwright e testes da engine.
+
+### O que foi concluído
+1. **Blindagem de Gênero Masculino**:
+   - `engine/types.ts`: Adicionado campo obrigatório `genero: 'm'` na interface `Personagem`.
+   - `engine/character.ts`: Protagonista nasce rigorosamente com `genero: 'm'`.
+   - `engine/migracao.ts`: Normalização `p.genero ??= 'm'` para retrocompatibilidade de saves legados.
+   - `engine/llm.ts`: Payload do jogador passa `genero: 'masculino'` e a `INSTRUCAO_SISTEMA` instrui o narrador a nunca tratar o protagonista no feminino ou neutro.
+   - `content/vaelhorn/classes.ts`: Nomes de exibição masculinizados (`Caçador` e `Curandeiro`, Penitente *"quanto mais ferido"*), mantendo os IDs internos intactos para compatibilidade com a engine e testes.
+   - `engine/familia.ts`: Implementada `flexionarOficio(oficio, genero)` para garantir gênero correto aos parentes (ex: pai gera *"administrador"*, *"caçador"*, *"criador de animais"*).
+2. **Melhorias de Combate**:
+   - `ui/screens/Combate.tsx`: Criado card central tático de confronto (`arenaVaziaCard`) com glifo rúnico, postura de guarda e dicas táticas.
+   - Gaveta de armas exibe opção explícita `[Guardar Arma (Lutar Desarmado)]`.
+   - Botão de troca no combate sinaliza `(mochila vazia)` e desabilita clique caso não existam armas adicionais.
+3. **Melhorias de Inventário & Forja**:
+   - `ui/screens/Inventario.tsx`: Criado seletor de abas `[ 🎒 Mochila & Equipamento ]` e `[ ⚒️ Bigorna & Forja (X) ]` quando o jogador estiver em local com forja.
+   - Na aba Bigorna, receitas e botão `forjar` ficam no topo imediato, eliminando rolagem.
+4. **Validação Visual com Playwright (`scripts/playwright_vaelhorn_melhorias.ts`)**:
+   - Execução completa no Expo Web (porta 8082).
+   - 6 fotos capturadas e validadas:
+     * `foto_melhoria_1_classes_masculinas.png`: Caçador e Curandeiro masculinos.
+     * `foto_melhoria_2_familia_concordancia.png`: Pai "Teodoro, administrador".
+     * `foto_melhoria_3a_inventario_mochila.png`: Seletor de abas na mochila.
+     * `foto_melhoria_3b_inventario_aba_forja.png`: Bigorna em destaque no topo com 8 receitas.
+     * `foto_melhoria_4_combate_arena_tatica.png`: Card central da arena com glifo tático e botão `(mochila vazia)`.
+     * `foto_melhoria_5_combate_gaveta_desarmado.png`: Gaveta com opção de lutar desarmado.
+
+### Verificações
+- `npm run typecheck`: **0 erros**.
+- `npm run test:vaelhorn`: **100% aprovado**.
+- `npm run test:casas`: **100% aprovado**.
+- `npm run test:jornadas`: **100% aprovado**.
+- `npx tsx scripts/playwright_vaelhorn_melhorias.ts`: **100% aprovado**.
+
+---
+
+## Sessão 77 — Gemini — Escalonamento Real de Atributos, Pisos de Crítico & Passivas Únicas de Armas Lendárias
+
+### Objetivo
+Resolver a sensação de combate plano e sem impacto reportada pelo jogador:
+1. Eliminar o "efeito gorjeta" dos atributos: fazer com que cada ponto de modificador (+2, +3, +4 em Físico ou Precisão) escale o rendimento da arma em +10% e estabilize a empunhadura (reduzindo a dispersão negativa para evitar golpes fracos acidentais).
+2. Acabar com "críticos fracos/azarados": garantir matematicamente que o acerto crítico nunca sofra dispersão para baixo (piso garantido de violência, onde a dispersão só soma para cima).
+3. Infundir armas lendárias e relíquias das casas nobres com efeitos passivos mecânicos únicos:
+   - **Hinokami Primordial (Lâmina da Criação)**: +15% de chance crítica, multiplicador 2.2x e `chamas_solares` (incendeia e queima 4 PV/turno).
+   - **Quebra-Rocha de Corveira**: 50% de penetração de armadura/defesa e racha escudos/guarda adversária (`rachar_armadura`).
+   - **Presa da Maré de Mareu**: Inocula `sangramento_abissal` profundo (3 PV/turno).
+   - **Bastião de Halvet**: Contra-ataque automático contundente (7 de dano no agressor) ao defender ou absorver impacto (`contra_ataque_rocha`).
+   - **Soberana do Eclipse de Valtorius**: Abala o espírito do inimigo (-2 acerto e quebra de guarda) (`peso_imperial`).
+   - **Adaga do Rei Ladrão**: +20% de chance crítica, multiplicador 2.3x e +50% de dano de execução em alvos com <= 35% de vida (`execucao_sombria`).
+   - **Arco dos Céus Partidos**: Ignora cobertura e atordoa no crítico (`disparo_perfurante`).
+4. Feedback Visual Épico no Feed de Combate:
+   - Mensagem visceral: *"Torvald desfere um GOLPE CRÍTICO devastador em Salteador — 85 de dano cortante. 💥 [GOLPE CRÍTICO!]"*
+   - Card dourado com borda brilhante e fundo iluminado para linhas críticas na interface (`ui/screens/Combate.tsx`).
+
+### O que foi modificado
+- `engine/types.ts`: Adicionados campos `bonusCritico`, `multiplicadorCritico` e `efeitoPassivo` na interface `Item`; `multiplicadorCritico` e `efeitoPassivoArma` em `CombatActor`.
+- `engine/kimetsuTypes.ts`: Adicionados `queimadura` e `sangramento` em `EstadoTatico`.
+- `engine/resolution.ts`: `calcularDano` atualizado para receber `multiplicadorCritico` e garantir piso inviolável no acerto crítico (`base * mult * (1 + r2 * dispersao)`).
+- `engine/combat.ts`:
+  - `danoJogador`: Escalonamento percentual por atributo (`escalaAttr = Math.max(0, modAttr) * 0.10`) somado à eficiência técnica, e redução da dispersão por firmeza de pegada (`dispersaoEstabilizada`).
+  - `janelaCriticaJogador`: Incorpora `bonusCritico` da arma empunhada.
+  - `iniciarCombate` e `trocar_arma`: Inicializam e sincronizam `multiplicadorCritico` e `efeitoPassivoArma`.
+  - `resolverAtaque`: Aplica gatilhos passivos das armas (chamas, sangramento, contra-ataque de rocha, racha-armadura, execução sombria), anulação de cobertura e formatação de texto com tags críticas destacadas.
+  - `processarEfeitosContinuos`: Processa queima solar (4 PV/turno) e sangramento (3 PV/turno), checando derrotas por dano contínuo.
+- `content/vaelhorn/items.ts`: Adicionadas propriedades de crítico e efeitos passivos nas relíquias das casas nobres, armas lendárias e armas comuns (adagas, rapieiras, montante).
+- `ui/screens/Combate.tsx`: Adicionado estilo `logLinhaCritico` com borda e realce dourado intenso para acertos críticos e tags explosivas.
+
+### Verificações e Testes Executados
+- `npm run typecheck`: **0 erros**.
+- `npm run test:vaelhorn`: **100% aprovado**.
+- `npm run test:casas`: **100% aprovado**.
+- `npm run test:jornadas`: **100% aprovado**.
+- `npx tsx scripts/test_armas_criticos_atributos.ts`: **100% aprovado** (Físico 10=12, Físico 16=18.6, Físico 18=20.8; pisos de crítico garantidos; passivas Hinokami, Corveira, Mareu e Halvet validadas).
+- `npx tsx scripts/playwright_armas_criticos.ts`: **100% aprovado** com 3 capturas ao vivo inspecionadas:
+  * `foto_combate_hinokami_chamas.png`: Crítico épico de 85 de dano cortante com Chamas Solares e realce dourado.
+  * `foto_combate_quebra_rocha.png`: Golpe devastador de 64 de dano com Rachar Armadura do Quebra-Rocha.
+  * `foto_combate_bastiao_halvet.png`: Contra-ataque de rocha do Bastião de Halvet punindo ataque inimigo com 7 de dano imediato.
+
+---
+
+## Sessão 72 — Correção Canônica: Lâmina de Yoriichi & Gume Primordial no Combate
+
+### O que foi feito
+1. **Lore e Nomenclatura Canônica**:
+   - O item `lamina_da_origem_solar` em `content/vaelhorn/items.ts` e `content/vaelhorn/lendas.ts` foi renomeado para **Lâmina de Yoriichi**.
+   - A **Hinokami Kagura** permanece estritamente como a técnica marcial de respiração em `content/vaelhorn/kimetsu.ts` (`hinokami_kagura_danca`), cessando qualquer confusão entre a respiração e a espada empunhada por Yoriichi Tsugikuni.
+2. **Exibição do Gume no Combate**:
+   - Em `ui/screens/Combate.tsx`, substituído o texto fixo "Gume comum" por rotulação condicional respeitando a raridade da arma equipada:
+     - Relíquias proibidas/míticas (como a Lâmina de Yoriichi): `Gume primordial`
+     - Armas raras/notáveis: `Gume afiado`
+     - Armas comuns: `Gume padrão`
+     - Desarmado: `Golpes desarmados`
+     - Com amolação da bigorna: `Afiação X/5 (+Y dano)`
+3. **Validação**:
+   - `npm run typecheck`: 0 erros.
+   - `npm run test:vaelhorn`: 100% verde.
+   - Playwright executado e validado com nova foto: `foto_combate_hinokami_chamas.png` exibindo `🗡️ Lâmina de Yoriichi · Gume primordial`.
+
+---
+
+## Sessão 73 — Sistema Canônico de Lâminas Nichirin: Mudança de Cor & Despertar
+
+### O que foi feito
+1. **Lore e Mecânica Canônica de Nichirin (Kimetsu no Yaiba)**:
+   - Criado o módulo `engine/nichirin.ts` integrando todo o compêndio canônico de cores de aço solar (areia de ferro escarlate e minério escarlate).
+   - O aço reage ao fluxo vital e respiração do caçador na primeira vez em que é empunhado de verdade, sofrendo transmutação cromática permanente:
+     * **Preta (Obsidiana Solar)**: Respiração do Sol / Linhagem Solar ou atributos de topo com marca mística (+15% dano contra Onis e chamas solares).
+     * **Azul (Oceânica)**: Respiração da Água (+2 Defesa em guarda e regenera 1 de Vigor por golpe).
+     * **Vermelha (Carmesim)**: Respiração das Chamas (+3 dano base e queima).
+     * **Amarela (Dourada)**: Respiração do Trovão (+10% chance de acerto crítico e centelha veloz).
+     * **Verde (Esmeralda)**: Respiração do Vento (fatia guarda e ignora armadura).
+     * **Cinza (Ardósia)**: Respiração da Pedra (reduz todo dano sofrido em 2).
+     * **Branca (Enevoada)**: Respiração da Névoa (+3 Evasão e anula flanco).
+     * **Lavanda (Púrpura)**: Respiração do Inseto (estocada perfura e prolonga veneno).
+     * **Rosa (Carmim)**: Respiração do Amor (+1 dano, +5% crítico).
+     * **Índigo (Selvagem)**: Respiração da Fera (+2 dano e abrasão).
+2. **Ciclo de Vida e Instanciação**:
+   - Ao empunhar (`equipar` em `engine/items.ts` ou trocar no combate): se a arma for Nichirin e ainda neutra, `verificarDespertarNichirin` avalia a afinidade do personagem, gera uma instância no inventário com nome personalizado (ex: `Lâmina Nichirin (Azul · a Água)`), registra o marco na história do herói (`registrarMarco`) e atualiza o equipamento.
+   - `Lâmina de Yoriichi` repousa como a espada negra permanente do primeiro caçador.
+3. **Integração no Combate e Interface**:
+   - `engine/combat.ts`: `CombatActor` rastreia `corNichirin` e `nomeCorNichirin`, acionando efeitos passivos (ex: Nichirin Azul restaurando vigor, Nichirin Negra incinerando onis, Nichirin Verde rasgando guarda).
+   - `ui/screens/Combate.tsx`: HUD exibe badge estilizado de Nichirin e cor da lâmina; gaveta de troca de armas mostra a cor.
+   - `ui/screens/Inventario.tsx`: Exibe selo e afinidade de respiração da Nichirin.
+4. **Testes & Validação**:
+   - `npm run typecheck`: **0 erros**.
+   - `npm run test:vaelhorn`, `test:casas`, `test:jornadas`: **100% aprovados**.
+   - `scripts/test_nichirin_cores.ts`: Todas as 10 afinidades, despertar e bônus em combate validados.
+   - Playwright: Fotos salvas e verificadas:
+     * `foto_nichirin_inventario.png`: Exibe `Lâmina Nichirin (Azul · a Água)` equipada.
+     * `foto_nichirin_combate.png`: Exibe combate com badge `✨ Nichirin Azul Oceânico Gume afiado` e log `[Nichirin Azul: fluidez da maré restaura 1 de vigor!]`.
+
+

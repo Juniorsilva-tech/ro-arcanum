@@ -169,7 +169,10 @@ export function registrarMarco(camp: Campaign, texto: string): void {
 }
 
 export function marcosRecentes(camp: Campaign, quantos = 8): string[] {
-  return (camp.marcos ?? []).slice(-quantos).map((m) => `dia ${m.dia}: ${m.texto}`);
+  return (camp.marcos ?? []).slice(-quantos).map((m) => {
+    const textoLimpo = m.texto.replace(/^dia\s+\d+:\s*/i, '');
+    return `dia ${m.dia}: ${textoLimpo}`;
+  });
 }
 
 // ── Como ela está com você, em uma frase ───────────────────────────────────

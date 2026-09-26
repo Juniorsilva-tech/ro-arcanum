@@ -73,3 +73,4 @@ export * from './renome';
 export * from './segredos';
 export * from './intimidadeNpc';
 export * from './livro';
+export * from './nichirin';

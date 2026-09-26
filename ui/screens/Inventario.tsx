@@ -57,6 +57,7 @@ export function Inventario() {
   const p = camp.personagem;
   const [ultimaForja, setUltimaForja] = useState<string | null>(null);
   const [catalisadorSel, setCatalisadorSel] = useState<string | undefined>(undefined);
+  const [aba, setAba] = useState<'mochila' | 'forja'>('mochila');
 
   // A forja só aparece onde se pode forjar (engine/forja.ts decide o lugar).
   const onde = ondeForjar(content, camp);
@@ -95,7 +96,30 @@ export function Inventario() {
         </Text>
       </View>
 
-      <Divisor label="Equipado" />
+      {onde.pode && (
+        <View style={styles.seletorAbas}>
+          <Pressable
+            style={[styles.abaBtn, aba === 'mochila' && styles.abaBtnAtiva]}
+            onPress={() => setAba('mochila')}
+          >
+            <Text style={[styles.abaBtnTxt, aba === 'mochila' && styles.abaBtnTxtAtiva]}>
+              🎒 Mochila & Equipamento
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.abaBtn, aba === 'forja' && styles.abaBtnAtiva]}
+            onPress={() => setAba('forja')}
+          >
+            <Text style={[styles.abaBtnTxt, aba === 'forja' && styles.abaBtnTxtAtiva]}>
+              ⚒️ Bigorna & Forja ({receitas.length})
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {(!onde.pode || aba === 'mochila') && (
+        <>
+          <Divisor label="Equipado" />
       {slots.map((s) => {
         const id = p.equipado[s];
         const item = id ? itemPorId(content, id, camp.personagem) : undefined;
@@ -164,6 +188,11 @@ export function Inventario() {
               {item.propriedadesEspeciais && item.propriedadesEspeciais.length > 0 && (
                 <TextoMono style={{ color: cores.violeta }}>· [{item.propriedadesEspeciais.join(', ')}]</TextoMono>
               )}
+              {item.corNichirin && (
+                <TextoMono style={{ color: '#f59e0b', fontWeight: 'bold' }}>
+                  · Nichirin [{item.corNichirinNome ?? item.corNichirin}]
+                </TextoMono>
+              )}
               {item.raridade !== 'comum' && <Selo texto={item.raridade} cor={corRaridade(item.raridade)} />}
             </View>
             <TextoMono style={{ color: cores.mudo }}>{item.descricao}</TextoMono>
@@ -172,6 +201,7 @@ export function Inventario() {
               {rotuloSlot(item.slot)} · peso {item.peso} · vale {item.valor}
               {item.dano ? ` · dano ${item.dano.base}` : ''}
               {item.defesa ? ` · +${item.defesa} def` : ''}
+              {item.corNichirinAfinidade ? ` · ${item.corNichirinAfinidade}` : ''}
               {item.concedeVerbo ? ` · permite "${item.concedeVerbo}"` : ''}
             </TextoMono>
           </View>
@@ -197,10 +227,12 @@ export function Inventario() {
           </View>
         </View>
       ))}
+        </>
+      )}
 
-      {onde.pode && (
+      {onde.pode && aba === 'forja' && (
         <>
-          <Divisor label="Forja" />
+          <Divisor label="Bigorna & Forja" />
           <TextoMono style={{ color: cores.mudo }}>
             {onde.ferreira ? `${onde.ferreira.nome} empresta a bigorna e olha o seu trabalho.` : fundicao ? `${fundicao.nome}: a bigorna do pátio usa o fogo da cidade.` : 'Há uma forja acesa aqui.'}
             {semCarvao ? ' Aqui a peça não gasta carvão; leva quatro períodos do dia.' : ` Carvão: ${carvao}. Cada peça gasta um carvão e quatro períodos do dia.`}
@@ -309,4 +341,32 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   miniBtnTxt: { fontFamily: fontes.mono, color: cores.ouro, fontSize: 12 },
+  seletorAbas: {
+    flexDirection: 'row',
+    gap: esp.sm,
+    marginVertical: esp.md,
+    borderBottomWidth: 1,
+    borderBottomColor: cores.linha,
+    paddingBottom: esp.xs,
+  },
+  abaBtn: {
+    paddingVertical: esp.xs,
+    paddingHorizontal: esp.sm,
+    borderRadius: raio.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  abaBtnAtiva: {
+    borderColor: cores.ouro,
+    backgroundColor: 'rgba(207, 168, 45, 0.08)',
+  },
+  abaBtnTxt: {
+    fontFamily: fontes.serifMedium,
+    fontSize: 14,
+    color: cores.mudo,
+  },
+  abaBtnTxtAtiva: {
+    color: cores.ouro,
+    fontWeight: '600',
+  },
 });

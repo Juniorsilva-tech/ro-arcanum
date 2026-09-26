@@ -440,6 +440,7 @@ export function montarPacote(
     },
     personagem: {
       nome: p.nome,
+      genero: 'masculino',
       classe: p.classeId,
       origem: p.origemId,
       nivel: p.nivel,

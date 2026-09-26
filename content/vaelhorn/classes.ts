@@ -53,7 +53,7 @@ export const classesVaelhorn: Classe[] = [
   },
   {
     id: 'cacadora',
-    nome: 'Caçadora',
+    nome: 'Caçador',
     recursoPrincipal: 'vigor',
     mecanicaUnica: 'O corpo obedece ao fôlego: descansar recupera metade a mais.',
     descricao:
@@ -66,11 +66,11 @@ export const classesVaelhorn: Classe[] = [
   },
   {
     id: 'curandeira',
-    nome: 'Curandeira',
+    nome: 'Curandeiro',
     recursoPrincipal: 'mana',
     mecanicaUnica: 'Descansar também trata veneno, doença e infecção.',
     descricao:
-      'Sabe o nome de cada erva e o preço de cada uma. Foi chamada em toda casa da vila pelo menos uma vez, e por isso sabe o que cada família esconde.',
+      'Sabe o nome de cada erva e o preço de cada uma. Foi chamado em toda casa da vila pelo menos uma vez, e por isso sabe o que cada família esconde.',
     bonusAtributos: { raciocinio: 2, percepcao: 2 },
     periciasIniciais: { oficio: 2, perceber: 1, persuadir: 1 },
     itensIniciais: { adaga: 1, ervas_secas: 3, compressa_de_ervas: 2, habito_de_la: 1, antidoto: 1, racao: 2 },
@@ -93,7 +93,7 @@ export const classesVaelhorn: Classe[] = [
     id: 'penitente',
     nome: 'Penitente',
     recursoPrincipal: 'mana',
-    mecanicaUnica: 'Carrega o peso de propósito: quanto mais ferida, mais forte a arte que invoca.',
+    mecanicaUnica: 'Carrega o peso de propósito: quanto mais ferido, mais forte a arte que invoca.',
     descricao:
       'Fez uma promessa que ninguém ouviu e cumpre desde então. Reza pouco e em voz baixa, mas alguma coisa do outro lado atende.',
     bonusAtributos: { resiliencia: 3, social: 1 },

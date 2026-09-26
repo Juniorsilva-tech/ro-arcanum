@@ -56,23 +56,6 @@ if not exist "node_modules" (
 
 echo   [1/2] Sincronizando token da IA Narrativa (Hermes / Nous)...
 call npx tsx scripts/sync_hermes.ts
-if errorlevel 1 (
-  echo.
-  echo   [AVISO] A autenticacao com a Nous Research expirou ou precisa ser reconectada.
-  echo   Deseja abrir o navegador agora para conectar sua conta? (S/N)
-  set /p RECONECTAR="> "
-  if /i "!RECONECTAR!"=="S" (
-    where hermes >nul 2>nul
-    if not errorlevel 1 (
-      echo   Abrindo login do Hermes no navegador...
-      call hermes auth add nous
-      echo   Sincronizando novo token...
-      call npx tsx scripts/sync_hermes.ts
-    ) else (
-      echo   [AVISO] Hermes CLI nao encontrado no PATH do sistema.
-    )
-  )
-)
 
 echo.
 echo   [2/2] Ligando servidor local do jogo...
@@ -85,7 +68,7 @@ echo   ------------------------------------------------
 echo.
 
 REM Abre o navegador na porta 8081 apos breve intervalo
-start "" /b cmd /c "timeout /t 6 /nobreak >nul && start http://localhost:8081"
+start "" cmd /c "ping 127.0.0.1 -n 6 >nul && start http://localhost:8081"
 
 call npx expo start --web
 

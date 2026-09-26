@@ -127,7 +127,7 @@ export const LENDAS_ITENS: Record<string, Lenda> = {
   },
   // ─────────────────────────────────────────── As armas perdidas
   lamina_da_origem_solar: {
-    nome: 'Lâmina do Primeiro Sol',
+    nome: 'Lâmina de Yoriichi',
     descricao: 'Lâmina curva, fina, que nunca esfria: segurá-la por muito tempo queima a palma. Contra carne de oni, o corte não fecha.',
     historia: [
       'A Casa Sem Nome na Névoa conta que o primeiro caçador a enfrentar o progenitor dos onis usava uma lâmina assim, e que ela era quente porque guardava o sol dentro. É uma história da casa deles, não do vale, e ninguém em Halvet a conhecia.',

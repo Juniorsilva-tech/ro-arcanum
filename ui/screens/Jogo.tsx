@@ -1,5 +1,5 @@
 // ARCANUM · A tela de jogo. As três portas: a cena, as ações, a ação livre (GDD §4, §31).
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CabecalhoJogo } from './_layout';
@@ -59,6 +60,7 @@ export function Jogo() {
   const acaoLivre = useGame((s) => s.acaoLivre);
 
   const [texto, setTexto] = useState('');
+  const [inputFocado, setInputFocado] = useState(false);
   const [catAberta, setCatAberta] = useState<CategoriaVerbo | null>(null);
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
   const iaStatus = useGame((s) => s.iaStatus);
@@ -72,6 +74,51 @@ export function Jogo() {
   // Turno resolvido esperando prosa: enquanto existir, ninguém age.
   const pendente = useGame((s) => s.pendente);
   const irPara = useGame((s) => s.irPara);
+
+  // Referência do ScrollView para autoscroll suave
+  const scrollRef = useRef<ScrollView>(null);
+  const cursorAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulso contínuo do cursor durante a geração
+  useEffect(() => {
+    if (ocupado) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cursorAnim, { toValue: 0.2, duration: 400, useNativeDriver: false }),
+          Animated.timing(cursorAnim, { toValue: 1, duration: 400, useNativeDriver: false }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    }
+  }, [ocupado, cursorAnim]);
+
+  // Autoscroll suave ao iniciar ação, ao atualizar streaming ou ao terminar turno
+  useEffect(() => {
+    if (ocupado) {
+      const t = setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [ocupado]);
+
+  useEffect(() => {
+    if (textoStreaming) {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [textoStreaming]);
+
+  const tamanhoFeedAnterior = useRef(feed.length);
+  useEffect(() => {
+    if (feed.length > tamanhoFeedAnterior.current) {
+      tamanhoFeedAnterior.current = feed.length;
+      const t = setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [feed.length]);
 
   const ctx = cena?.contexto;
 
@@ -157,6 +204,13 @@ export function Jogo() {
     setCatAberta(null);
   }
 
+  const submeterAcaoLivre = () => {
+    const t = texto.trim();
+    if (!t || ocupado || !podeAgir) return;
+    setTexto('');
+    acaoLivre(t);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.wrap}>
@@ -178,18 +232,25 @@ export function Jogo() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={styles.rolagem}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => {
+            if (ocupado || !!textoStreaming) {
+              scrollRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
         >
           {feed.map((e, i) => (
-            <EntradaNarrativa
+            <EntradaNarrativaAnimada
               key={e.id}
               entrada={e}
               primeira={i === 0}
               nomes={nomesConhecidos}
               nomeJogador={camp?.personagem.nome}
+              ehUltima={i === feed.length - 1}
             />
           ))}
 
@@ -204,10 +265,23 @@ export function Jogo() {
           )}
           {ocupado ? (
             <View style={styles.gerandoBox}>
+              <View style={styles.gerandoCab}>
+                <View style={styles.gerandoPontoPulso} />
+                <Text style={styles.gerandoTitulo}>O narrador escreve a crônica…</Text>
+              </View>
               {textoStreaming ? (
-                <Text style={styles.streamingTexto}>{textoStreaming}<Text style={styles.streamingCursor}>▌</Text></Text>
-              ) : <ActivityIndicator color={cores.ouro} size="large" />}
-              <Text style={styles.gerandoTitulo}>{textoStreaming ? 'O narrador está escrevendo…' : 'O narrador está escrevendo…'}</Text>
+                <View style={styles.streamingArea}>
+                  <Text style={styles.streamingTexto}>
+                    {textoStreaming}
+                    <Animated.Text style={[styles.streamingCursor, { opacity: cursorAnim }]}>▌</Animated.Text>
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.esperandoArea}>
+                  <ActivityIndicator color={cores.ouro} size="small" />
+                  <Text style={styles.esperandoTexto}>O mundo reage às suas decisões…</Text>
+                </View>
+              )}
               <Text style={styles.gerandoSub}>as novas opções aparecem em instantes</Text>
             </View>
           ) : pendente ? (
@@ -246,26 +320,47 @@ export function Jogo() {
                   {/* A ação livre é a última porta, e mora na mesma vitrine:
                       para o jogador é tudo um sistema só. */}
                   <View style={styles.livreCartao}>
-                    <Text style={styles.opcaoEixo}>escrever a sua</Text>
+                    <View style={styles.livreCabecalho}>
+                      <Text style={styles.opcaoEixo}>sua própria ação (texto livre)</Text>
+                      <Text style={styles.livreAtalhoDica}>Enter envia · Shift+Enter quebra</Text>
+                    </View>
                     <View style={styles.livreWrap}>
                       <TextInput
-                        style={styles.livreInput}
+                        style={[styles.livreInput, inputFocado && styles.livreInputFocado]}
                         value={texto}
                         onChangeText={setTexto}
-                        placeholder="descreva o que você faz…"
-                        placeholderTextColor={cores.linha}
+                        onFocus={() => setInputFocado(true)}
+                        onBlur={() => setInputFocado(false)}
+                        placeholder="descreva o que você faz no mundo…"
+                        placeholderTextColor={cores.mudo}
                         multiline
-                      />
-                      <Pressable
-                        style={styles.livreBtn}
-                        onPress={() => {
-                          if (texto.trim()) {
-                            acaoLivre(texto);
-                            setTexto('');
+                        blurOnSubmit={false}
+                        onKeyPress={(e) => {
+                          const ev = e.nativeEvent as unknown as { key?: string; shiftKey?: boolean };
+                          if (ev?.key === 'Enter' && !ev?.shiftKey) {
+                            if ('preventDefault' in e && typeof (e as { preventDefault: () => void }).preventDefault === 'function') {
+                              (e as { preventDefault: () => void }).preventDefault();
+                            }
+                            submeterAcaoLivre();
                           }
                         }}
+                        onSubmitEditing={submeterAcaoLivre}
+                      />
+                      {texto.length > 0 && (
+                        <Pressable style={styles.btnLimpar} onPress={() => setTexto('')} hitSlop={6}>
+                          <Text style={styles.btnLimparTxt}>✕</Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.livreBtn,
+                          !texto.trim() || ocupado || !podeAgir ? styles.livreBtnDesativado : null,
+                          pressed && texto.trim() && !ocupado && podeAgir ? { opacity: 0.8, transform: [{ scale: 0.97 }] } : null,
+                        ]}
+                        disabled={!texto.trim() || ocupado || !podeAgir}
+                        onPress={submeterAcaoLivre}
                       >
-                        <Text style={styles.livreBtnTxt}>Agir</Text>
+                        <Text style={styles.livreBtnTxt}>Agir ✦</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -399,6 +494,43 @@ function FaixaContexto(props: {
         <Text style={styles.hudPuxador}>{aberto ? '— recolher' : '+ o que está aberto'}</Text>
       </Pressable>
     </View>
+  );
+}
+
+function EntradaNarrativaAnimada({
+  entrada,
+  primeira,
+  nomes,
+  nomeJogador,
+  ehUltima,
+}: {
+  entrada: EntradaFeed;
+  primeira: boolean;
+  nomes: string[];
+  nomeJogador?: string;
+  ehUltima: boolean;
+}) {
+  const fadeAnim = useRef(new Animated.Value(ehUltima ? 0 : 1)).current;
+  const slideAnim = useRef(new Animated.Value(ehUltima ? 8 : 0)).current;
+
+  useEffect(() => {
+    if (ehUltima) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 380, useNativeDriver: false }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 380, useNativeDriver: false }),
+      ]).start();
+    }
+  }, [ehUltima, fadeAnim, slideAnim]);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <EntradaNarrativa
+        entrada={entrada}
+        primeira={primeira}
+        nomes={nomes}
+        nomeJogador={nomeJogador}
+      />
+    </Animated.View>
   );
 }
 
@@ -724,19 +856,35 @@ const styles = StyleSheet.create({
   opcaoRotulo: { fontFamily: fontes.serifMedium, color: cores.vellum, fontSize: 18 },
   gerandoBox: {
     marginTop: esp.lg,
-    paddingVertical: esp.xl,
+    paddingVertical: esp.lg,
     paddingHorizontal: esp.lg,
     borderWidth: 1,
     borderColor: cores.ouro,
     borderRadius: raio.md,
-    backgroundColor: cores.fundo2,
-    alignItems: 'center',
+    backgroundColor: 'rgba(28, 24, 21, 0.85)',
     gap: esp.sm,
   },
-  gerandoTitulo: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 22, marginTop: esp.sm },
-  gerandoSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 12 },
-  streamingTexto: { fontFamily: fontes.serif, color: cores.vellum, fontSize: 18, lineHeight: 27, alignSelf: 'stretch' },
-  streamingCursor: { color: cores.ouro },
+  gerandoCab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: esp.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(62, 51, 42, 0.5)',
+    paddingBottom: esp.xs,
+  },
+  gerandoPontoPulso: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: cores.ouro,
+  },
+  gerandoTitulo: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 18, letterSpacing: 0.5 },
+  gerandoSub: { fontFamily: fontes.mono, color: cores.mudo, fontSize: 11, fontStyle: 'italic', marginTop: 2 },
+  streamingArea: { paddingVertical: esp.xs },
+  streamingTexto: { fontFamily: fontes.serif, color: cores.vellum, fontSize: 19, lineHeight: 29 },
+  streamingCursor: { color: cores.ouro, fontSize: 18 },
+  esperandoArea: { flexDirection: 'row', alignItems: 'center', gap: esp.md, paddingVertical: esp.md },
+  esperandoTexto: { fontFamily: fontes.serif, color: cores.mudo, fontSize: 16, fontStyle: 'italic' },
   travado: { fontFamily: fontes.mono, color: cores.linha, fontSize: 11, paddingVertical: esp.md },
   semNarradorBox: {
     marginTop: esp.lg,
@@ -836,24 +984,51 @@ const styles = StyleSheet.create({
   livreCartao: {
     borderWidth: 1,
     borderColor: cores.linha,
-    borderStyle: 'dashed',
     borderRadius: raio.md,
     padding: esp.md,
     marginBottom: esp.sm,
     backgroundColor: cores.fundo2,
+    borderLeftWidth: 3,
+    borderLeftColor: cores.ouro,
   },
-  livreWrap: { flexDirection: 'row', gap: esp.sm, alignItems: 'flex-end' },
+  livreCabecalho: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: esp.xs,
+  },
+  livreAtalhoDica: {
+    fontFamily: fontes.mono,
+    color: cores.linha,
+    fontSize: 9,
+  },
+  livreWrap: { flexDirection: 'row', gap: esp.sm, alignItems: 'center' },
   livreInput: {
     flex: 1,
     fontFamily: fontes.serif,
     color: cores.vellum,
-    fontSize: 18,
+    fontSize: 17,
     borderWidth: 1,
     borderColor: cores.linha,
     borderRadius: raio.md,
-    padding: esp.md,
-    minHeight: 48,
+    paddingHorizontal: esp.md,
+    paddingVertical: esp.sm,
+    minHeight: 46,
     maxHeight: 120,
+    backgroundColor: cores.fundo3,
+  },
+  livreInputFocado: {
+    borderColor: cores.ouro,
+    backgroundColor: 'rgba(28, 24, 21, 0.95)',
+  },
+  btnLimpar: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  btnLimparTxt: {
+    fontFamily: fontes.mono,
+    color: cores.mudo,
+    fontSize: 12,
   },
   livreBtn: {
     backgroundColor: cores.couro,
@@ -861,11 +1036,16 @@ const styles = StyleSheet.create({
     borderColor: cores.ouro,
     borderRadius: raio.md,
     paddingHorizontal: esp.lg,
-    paddingVertical: esp.md,
-    height: 48,
+    paddingVertical: esp.sm,
+    height: 46,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  livreBtnTxt: { fontFamily: fontes.serifMedium, color: cores.ouro, fontSize: 18 },
+  livreBtnDesativado: {
+    opacity: 0.45,
+    borderColor: cores.linha,
+  },
+  livreBtnTxt: { fontFamily: fontes.serifSemi, color: cores.ouro, fontSize: 16, letterSpacing: 0.5 },
   modalFundo: {
     position: 'absolute',
     top: 0,

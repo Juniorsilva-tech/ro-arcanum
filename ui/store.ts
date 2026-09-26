@@ -34,6 +34,7 @@ import {
   conjurarLivre,
   fundirEscolas,
   tentarAscender,
+  processarEnvelhecimentoJogador,
   fatoDeAbertura,
   artePorId,
   viajar,
@@ -348,6 +349,7 @@ interface GameState {
   setConfig: (patch: Partial<ConfigApp>) => Promise<void>;
   proximoCapitulo: () => Promise<void>;
   testarChaveApi: () => Promise<{ ok: boolean; erro?: string }>;
+  renovarHermes: () => Promise<{ ok: boolean; token?: string; erro?: string }>;
   buscarModelosGratis: () => Promise<ModeloOR[]>;
   testarSeNarraAdulto: (modeloEspecifico?: string) => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string; modelo?: string }>;
   testarNarracaoReal: (modeloEspecifico?: string) => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
@@ -374,12 +376,15 @@ function recomputarCena(get: () => GameState, set: (p: Partial<GameState>) => vo
 
 function chaveEfetiva(cfg: ConfigApp): string | undefined {
   const manual = cfg.apiKey?.trim();
-  if (manual) return manual;
   if (cfg.provider === 'nous') {
+    // Para o provedor Nous, prioriza o token dinâmico atualizado pelo Hermes
     const bridgeToken = obterTokenNousAtual();
     if (bridgeToken) return bridgeToken;
+    if (manual) return manual;
     const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
     if (envKey.trim()) return envKey.trim();
+  } else if (manual) {
+    return manual;
   }
   return undefined;
 }
@@ -1452,9 +1457,38 @@ export const useGame = create<GameState>((set, get) => ({
       const nova = await renovarTokenNous(true);
       if (nova && nova !== chave) {
         res = await testarChave({ provider: config.provider, apiKey: nova, modelo: config.modelo });
+        if (res.ok && config.apiKey) {
+          await get().setConfig({ apiKey: undefined });
+        }
       }
     }
     return res;
+  },
+
+  async renovarHermes() {
+    const { renovarTokenNous, testarChave } = await import('@/engine');
+    const novo = await renovarTokenNous(true);
+    if (!novo) {
+      return {
+        ok: false,
+        erro: 'Não foi possível renovar via Hermes local. O servidor do jogo (porta 8081) não respondeu ou a conta Nous precisa de reconexão no terminal (hermes auth login nous).',
+      };
+    }
+    // Remove qualquer chave manual antiga do store para usar o token dinâmico
+    const cfgAtual = get().config;
+    if (cfgAtual.apiKey) {
+      await get().setConfig({ apiKey: undefined, provider: 'nous' });
+    }
+    // Valida imediatamente com a API Nous
+    const teste = await testarChave({ provider: 'nous', apiKey: novo, modelo: cfgAtual.modelo });
+    if (!teste.ok) {
+      return {
+        ok: false,
+        token: novo,
+        erro: teste.erro || 'Token obtido do Hermes, mas a Nous recusou a autenticação (401).',
+      };
+    }
+    return { ok: true, token: novo };
   },
 
   async buscarModelosGratis() {
@@ -1816,3 +1850,111 @@ function checarCapitulo(get: () => GameState, set: (p: Partial<GameState>) => vo
     set({ tela: 'fimcapitulo' });
   }
 }
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { __GAME_STORE__?: typeof useGame }).__GAME_STORE__ = useGame;
+  (window as unknown as { __ABRIR_COMBATE__?: (inimigos?: string[]) => void }).__ABRIR_COMBATE__ = (inimigos = ['salteador', 'lobo']) => {
+    const store = useGame.getState();
+    const { content, camp } = store;
+    if (!content || !camp) return;
+    iniciarCombate(content, camp, inimigos);
+    useGame.setState({ camp: { ...camp }, tela: 'combate' });
+  };
+  (window as unknown as { __FUNDAR_COLONIA__?: (nome?: string) => { ok: boolean; mensagem: string } }).__FUNDAR_COLONIA__ = (nome = 'Baluarte de Torvald') => {
+    const store = useGame.getState();
+    const { content, camp } = store;
+    if (!content || !camp) return { ok: false, mensagem: 'Sem campanha ativa' };
+    camp.localAtual = 'campo_ceifa';
+    const r = fundarColonia(content, camp, nome);
+    const f = camp.feudo;
+    if (f) {
+      iniciarObraFeudo(camp, 'muralha_baluarte');
+      iniciarObraFeudo(camp, 'lavoura_silos');
+    }
+    const feed = [...store.feed, {
+      id: 'fundacao_colonia_' + Date.now(),
+      tipo: 'sistema' as const,
+      texto: r.mensagem,
+      timestamp: Date.now(),
+      abreTurno: true,
+      cabecalho: `Baluarte Fundado · Dia ${camp.calendario.dia}`,
+    }];
+    useGame.setState({
+      camp: { ...camp },
+      tela: 'assentamento',
+      feed,
+    });
+    return r;
+  };
+  (window as unknown as { __PREPARAR_VAELHORN_FORJA__?: () => void }).__PREPARAR_VAELHORN_FORJA__ = () => {
+    const store = useGame.getState();
+    const { camp } = store;
+    if (!camp) return;
+    camp.localAtual = 'vila_ferreiros';
+    camp.personagem.inventario = {
+      ...(camp.personagem.inventario ?? {}),
+      minerio_de_ferro: 15,
+      carvao: 10,
+      lingote_ferro: 6,
+      lamina_curta: 1,
+      lanca_caca: 1,
+      escudo_madeira: 1,
+    };
+    useGame.setState({ camp: { ...camp }, tela: 'inventario' });
+  };
+  (window as unknown as { __AVANCAR_TEMPO_2_ANOS__?: () => { idade: number; dia: number; ano: number } }).__AVANCAR_TEMPO_2_ANOS__ = () => {
+    const store = useGame.getState();
+    const { content, camp } = store;
+    if (!content || !camp) return { idade: 0, dia: 0, ano: 0 };
+    camp.calendario = avancarPeriodos(camp.calendario, 730 * PERIODOS.length);
+    avancarMundo(content, camp);
+    const idade = camp.personagem.idade ?? 20;
+    const ano = Math.floor(camp.calendario.dia / 365) + 1;
+    const novaCena = montarCena(content, camp);
+    const feed = [...store.feed, {
+      id: 'marcador_2_anos_' + Date.now(),
+      tipo: 'sistema' as const,
+      texto: `DOIS ANOS SE PASSARAM NO VALE. Você agora tem ${idade} anos. As quatro estações sucederam-se, rumores envelheceram e novas linhagens emergiram.`,
+      timestamp: Date.now(),
+      abreTurno: true,
+      cabecalho: `Ano ${ano} · Dia ${camp.calendario.dia} · ${idade} anos`,
+    }];
+    useGame.setState({
+      camp: { ...camp },
+      cena: novaCena,
+      tela: 'jogo',
+      feed,
+    });
+    return { idade, dia: camp.calendario.dia, ano };
+  };
+  (window as unknown as { __AVANCAR_TEMPO_10_ANOS__?: () => { idade: number; dia: number; ano: number } }).__AVANCAR_TEMPO_10_ANOS__ = () => {
+    const store = useGame.getState();
+    const { content, camp } = store;
+    if (!content || !camp) return { idade: 0, dia: 0, ano: 0 };
+    const DIAS_10_ANOS = 3650;
+    for (let i = 0; i < DIAS_10_ANOS; i++) {
+      camp.calendario = avancarPeriodos(camp.calendario, PERIODOS.length);
+      avancarMundo(content, camp);
+    }
+    const idade = camp.personagem.idade ?? 28;
+    const ano = Math.floor(camp.calendario.dia / 365) + 1;
+    const novaCena = montarCena(content, camp);
+    const feed = [...store.feed, {
+      id: 'marcador_10_anos_' + Date.now(),
+      tipo: 'sistema' as const,
+      texto: `DEZ ANOS SE PASSARAM NO VALE DE VAELHORN. Você agora tem ${idade} anos. Casas senhoriais guerrearam, alianças foram refeitas, safras alimentaram o feudo e novas linhagens ascenderam.`,
+      timestamp: Date.now(),
+      abreTurno: true,
+      cabecalho: `Ano ${ano} · Dia ${camp.calendario.dia} · ${idade} anos`,
+    }];
+    useGame.setState({
+      camp: { ...camp },
+      cena: novaCena,
+      tela: 'jogo',
+      feed,
+    });
+    return { idade, dia: camp.calendario.dia, ano };
+  };
+}
+
+

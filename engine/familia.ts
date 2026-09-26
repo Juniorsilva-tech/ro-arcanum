@@ -52,6 +52,30 @@ function oficio(camp: Campaign, talento: AttrKey): string {
   return pick(camp.rng, porTalento[talento] ?? OFICIOS_COMUNS);
 }
 
+export function flexionarOficio(of: string, genero: 'm' | 'f'): string {
+  if (genero === 'm') {
+    return of
+      .replace(/\bcriadora de animais\b/g, 'criador de animais')
+      .replace(/\bcurandeira\b/g, 'curandeiro')
+      .replace(/\bcaçadora\b/g, 'caçador')
+      .replace(/\bartesã\b/g, 'artesão')
+      .replace(/\bmaga de corte\b/g, 'mago de corte')
+      .replace(/\badministradora\b/g, 'administrador');
+  } else {
+    return of
+      .replace(/\bcriador de animais\b/g, 'criadora de animais')
+      .replace(/\bferreiro\b/g, 'ferreira')
+      .replace(/\blavrador\b/g, 'lavradora')
+      .replace(/\bmineiro\b/g, 'mineira')
+      .replace(/\bmago itinerante\b/g, 'maga itinerante')
+      .replace(/\bbatedor\b/g, 'batedora')
+      .replace(/\bherói aposentado\b/g, 'heroína aposentada')
+      .replace(/\bmestre da espada\b/g, 'mestra da espada')
+      .replace(/\bnobre fugitivo\b/g, 'nobre fugitiva')
+      .replace(/\brei exilado\b/g, 'rainha exilada');
+  }
+}
+
 function estadoNpc(content: ContentBundle, idade: number): NpcDinamico {
   return { vivo: true, idade, tensao: 0, memoria: [],
     eixos: Object.fromEntries(content.cenario.eixosRelacao.map(e => [e.id, e.id === 'confianca' ? 8 : 0])) };
@@ -306,8 +330,8 @@ export function iniciarFamilia(content: ContentBundle, camp: Campaign): void {
   const paiTalento = maiorTalento(g.paiAtributos);
   const maeTalento = maiorTalento(g.maeAtributos);
   const membros: ParenteCampanha[] = [
-    { id: 'familia_pai', nome: g.paiNome, parentesco: 'pai', idadeNoNascimento: nextInt(camp.rng, 19, 41), ocupacao: oficio(camp, paiTalento), talento: paiTalento, prestigio: nextInt(camp.rng, 0, 8), condicao: 'livre', prodigio: nextFloat(camp.rng) < .08 },
-    { id: 'familia_mae', nome: g.maeNome, parentesco: 'mae', idadeNoNascimento: nextInt(camp.rng, 18, 39), ocupacao: oficio(camp, maeTalento), talento: maeTalento, prestigio: nextInt(camp.rng, 0, 8), condicao: 'livre', prodigio: nextFloat(camp.rng) < .08 },
+    { id: 'familia_pai', nome: g.paiNome, parentesco: 'pai', idadeNoNascimento: nextInt(camp.rng, 19, 41), ocupacao: flexionarOficio(oficio(camp, paiTalento), 'm'), talento: paiTalento, prestigio: nextInt(camp.rng, 0, 8), condicao: 'livre', prodigio: nextFloat(camp.rng) < .08 },
+    { id: 'familia_mae', nome: g.maeNome, parentesco: 'mae', idadeNoNascimento: nextInt(camp.rng, 18, 39), ocupacao: flexionarOficio(oficio(camp, maeTalento), 'f'), talento: maeTalento, prestigio: nextInt(camp.rng, 0, 8), condicao: 'livre', prodigio: nextFloat(camp.rng) < .08 },
   ];
   for (let i = 0; i < g.irmaos; i++) {
     const irma = nextFloat(camp.rng) < .5;

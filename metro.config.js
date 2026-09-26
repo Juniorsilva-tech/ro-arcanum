@@ -6,6 +6,15 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+function getHermesCommand() {
+  const localAppData = process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local';
+  const hermesCmd = path.join(localAppData, 'hermes', 'bin', 'hermes.cmd');
+  const hermesExe = path.join(localAppData, 'hermes', 'bin', 'hermes.exe');
+  if (fs.existsSync(hermesCmd)) return `"${hermesCmd}"`;
+  if (fs.existsSync(hermesExe)) return `"${hermesExe}"`;
+  return 'hermes';
+}
+
 function getHermesTokenInfo(forceRefresh = false) {
   const authPath = path.join(
     process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local',
@@ -15,7 +24,8 @@ function getHermesTokenInfo(forceRefresh = false) {
 
   if (forceRefresh) {
     try {
-      execSync('hermes auth refresh nous', {
+      const hermesBin = getHermesCommand();
+      execSync(`${hermesBin} auth refresh nous`, {
         stdio: 'pipe',
         encoding: 'utf-8',
         timeout: 15000,

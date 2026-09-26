@@ -82,6 +82,7 @@ export function criarPersonagem(
 
   return {
     nome,
+    genero: 'm',
     classeId: classe.id,
     origemId: origem.id,
     nivel: 1,

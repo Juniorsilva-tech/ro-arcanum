@@ -106,28 +106,35 @@ export async function renovarTokenNous(forcar = true): Promise<string | null> {
   refreshEmAndamento = (async () => {
     try {
       const endpoint = forcar ? '/api/hermes/refresh' : '/api/hermes/token';
-      const method = forcar ? 'POST' : 'GET';
 
-      // 1. Tenta no navegador / ambiente com fetch
-      if (typeof fetch !== 'undefined') {
+      // 1. No navegador (React Native Web / DOM)
+      if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+        const origin = window.location?.origin || 'http://localhost:8081';
         const urlsParaTentar = [
-          endpoint,
+          `${origin}${endpoint}`,
           `http://localhost:8081${endpoint}`,
           `http://127.0.0.1:8081${endpoint}`,
         ];
 
         for (const url of urlsParaTentar) {
           try {
-            const resp = await fetch(url, {
-              method,
-              headers: { 'Accept': 'application/json' },
-            });
-            if (resp.ok) {
-              const data = (await resp.json()) as InfoTokenHermes;
-              if (data.ok && data.apiKey) {
-                definirTokenNous(data.apiKey, data.expiresAt);
-                return data.apiKey;
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 8000);
+            try {
+              const resp = await fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: ctrl.signal,
+              });
+              if (resp.ok) {
+                const data = (await resp.json()) as InfoTokenHermes;
+                if (data.ok && data.apiKey) {
+                  definirTokenNous(data.apiKey, data.expiresAt);
+                  return data.apiKey;
+                }
               }
+            } finally {
+              clearTimeout(timer);
             }
           } catch {
             // Tenta próxima URL se houver falha de rede/porta
@@ -147,7 +154,11 @@ export async function renovarTokenNous(forcar = true): Promise<string | null> {
 
           if (forcar) {
             try {
-              childProcess.execSync('hermes auth refresh nous', {
+              const localAppData = process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local';
+              const hermesCmd = path.join(localAppData, 'hermes', 'bin', 'hermes.cmd');
+              const hermesExe = path.join(localAppData, 'hermes', 'bin', 'hermes.exe');
+              const cmd = fs.existsSync(hermesCmd) ? `"${hermesCmd}"` : fs.existsSync(hermesExe) ? `"${hermesExe}"` : 'hermes';
+              childProcess.execSync(`${cmd} auth refresh nous`, {
                 stdio: 'pipe',
                 encoding: 'utf-8',
                 timeout: 15000,

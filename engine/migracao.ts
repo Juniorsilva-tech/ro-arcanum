@@ -67,6 +67,7 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
   p.pressoes ??= {};
   for (const pr of content.cenario.pressoes) p.pressoes[pr.id] ??= 0;
   p.idade ??= 20;
+  p.genero ??= 'm';
   camp.almasSeladas ??= [];
 
   // Save de antes da infância virar escolha do jogador guardava

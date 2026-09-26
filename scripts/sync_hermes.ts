@@ -4,14 +4,24 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+function getHermesCommand(): string {
+  const localAppData = process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local';
+  const hermesCmd = path.join(localAppData, 'hermes', 'bin', 'hermes.cmd');
+  const hermesExe = path.join(localAppData, 'hermes', 'bin', 'hermes.exe');
+  if (fs.existsSync(hermesCmd)) return `"${hermesCmd}"`;
+  if (fs.existsSync(hermesExe)) return `"${hermesExe}"`;
+  return 'hermes';
+}
+
 function syncHermes() {
   console.log('--- Sincronizando credenciais do Hermes (Nous Research) ---');
+  const hermesBin = getHermesCommand();
   try {
     console.log('Tentando renovar token via hermes auth refresh nous...');
-    execSync('hermes auth refresh nous', { stdio: 'pipe' });
+    execSync(`${hermesBin} auth refresh nous`, { stdio: 'pipe' });
     console.log('✓ Token renovado com sucesso via Hermes CLI.');
   } catch (err) {
-    console.log('Hermes CLI refresh pulado ou não disponível:', String(err).slice(0, 100));
+    console.log('Hermes CLI refresh pulado ou indisponível:', String(err).slice(0, 100));
   }
 
   const authPath = path.join(

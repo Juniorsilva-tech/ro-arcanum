@@ -86,10 +86,17 @@ export function calcularDano(
   rng: RngState,
   perfil: PerfilDano,
   critico = false,
+  multiplicadorCritico?: number,
 ): { valor: number; tipo: string } {
   const r2 = nextFloat(rng);
   let base = perfil.base;
-  if (critico) base *= 1.75;
+  const mult = multiplicadorCritico ?? 1.75;
+  if (critico) {
+    base *= mult;
+    // Crítico tem piso garantido de violência: dispersão só adiciona dano extra para cima (0 a +dispersão)
+    const valorCrit = base * (1 + r2 * perfil.dispersao);
+    return { valor: Math.max(1, Math.round(valorCrit)), tipo: perfil.tipo };
+  }
   const valor = base * (1 + (r2 - 0.5) * 2 * perfil.dispersao);
   return { valor: Math.max(1, Math.round(valor)), tipo: perfil.tipo };
 }

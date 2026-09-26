@@ -77,4 +77,6 @@ export type EstadoTatico = {
   frio?: number;
   revelado?: boolean;
   emFuria?: number;
+  queimadura?: number;
+  sangramento?: number;
 };
