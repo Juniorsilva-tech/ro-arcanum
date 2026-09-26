@@ -756,6 +756,8 @@ export const INSTRUCAO_SISTEMA =
   '• NÃO ATRIBUA A [você] O QUE O JOGADOR APENAS OUVE: se um mercador ou soldado grita de pavor na praça ' +
   'ou entre os armazéns e o protagonista apenas ouve ou observa, essa fala NUNCA é de [você] — ' +
   'identifique quem gritou ([Soldado], [Mercador], [Voz]). Só use [você] quando o jogador de fato falar.\n' +
+  '• O nome no colchete é o MESMO que a narração usa para essa pessoa: se a narração diz que quem falou foi Alda, a fala é [Alda]. ' +
+  'Narração nunca vai dentro de colchete: [Nome] só abre fala entre aspas de travessão. Use só nomes de quem está em "presentes" ou papéis genéricos.\n' +
   '• O resultado da ação aparece NA FALA e no gesto, não num aviso. Se deu certo, ela ' +
   'cede alguma coisa: uma informação, um sorriso, uma cadeira. Se falhou, ela corta.\n' +
   '\nVERDADE — a engine manda:\n' +
@@ -776,21 +778,11 @@ export const INSTRUCAO_SISTEMA =
   '2d) HUMOR VIVO E INTIMIDADE PROGRESSIVA: Cada presente traz "humor" e "intimidade" (desejo, ferida, medo, desejoApoiado). ' +
   'O humor dita a atitude corporal, o tom da fala e a receptividade do NPC à cena (ex: luto por perda recente na família, pavor por perigo, tensão defensiva, acolhimento ou gratidão sincera). ' +
   'As camadas de intimidade mostram o quanto o protagonista já conquistou a confiança daquela alma. Quando o jogador conversar a sós, confortar um luto ou apoiar o anseio pessoal de vida (desejoApoiado), narre o impacto emocional tangível, a quebra de defesas e a lealdade incondicional despertada.\n' +
-  '2e) FÉ, LENDAS E O TABU DA INVEJOSA: "local.cronica" traz o que o povo deste lugar acredita — deuses mortos cujo sangue seria o mana, as Sete Pecadoras que a Ordem dos Santos do Selo queimou há 400 anos, a Invejosa (Satella) que teria devorado as outras. Isso é CRENÇA, não fato: narre como gente que acredita, reza, benze a boca e tem medo, nunca como coisa confirmada, e nunca faça deus ou bruxa aparecer por conta própria. O mundo é medieval e pé no chão: fome, dízimo, Tributo de Sangue, inquisição. O nome da Invejosa é tabu (quem ouve se benze); falar do Culto da Bruxa dá pânico; a Ordem pune heresia com ferro e fogo.\n' +
+  '2e) FÉ, LENDAS E O TABU DA INVEJOSA: "local.cronica" traz o que o povo deste lugar acredita — deuses mortos cujo sangue seria o mana, as Sete Pecadoras que a Ordem dos Santos do Selo queimou há 400 anos, a Invejosa (Satella) que teria devorado as outras. Use a crônica só quando a cena pedir — chegada, conversa sobre o lugar, reza, medo —, nunca no meio da ação, e em uma frase. Isso é CRENÇA, não fato: narre como gente que acredita, reza, benze a boca e tem medo, nunca como coisa confirmada, e nunca faça deus ou bruxa aparecer por conta própria. O mundo é medieval e pé no chão: fome, dízimo, Tributo de Sangue, inquisição. O nome da Invejosa é tabu (quem ouve se benze); falar do Culto da Bruxa dá pânico; a Ordem pune heresia com ferro e fogo.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +
-  '5) COMBATE BRUTAL, ULTRAVIOLÊNCIA & GORE VISCERAL PESADO: Quando houver combate, golpe de lâmina, emboscada, impacto físico, ferimento, mutilação ou morte, narre com crueza impiedosa, precisão cirúrgica e horror anatômico explícito. ' +
-  'É TERMINANTEMENTE PROIBIDO amenizar a violência, resumir o impacto ou usar descrições tímidas ou poéticas. A violência neste mundo é horrenda, deformadora, suja e nauseante. ' +
-  'Narre os detalhes sangrentos sem filtros: ' +
-  'a lâmina não apenas corta, ela serra tendões resistentes, arranca nacos de gordura amarelada e abre a carne em camadas fumegantes; ' +
-  'artérias rompidas bombeiam esguichos violentos de sangue arterial rubro e espesso que encharca rostos, queima nos olhos e borbulha no chão lamacento; ' +
-  'ossos e cartilagens são esmagados com estalos secos e pontas fraturadas que rasgam o músculo de dentro para fora, perfurando a pele; ' +
-  'golpes de maça ou martelo afundam e trituram crânios em ruídos ocos, espalhando massa encefálica cinzenta, dentes partidos e calota óssea na poeira; ' +
-  'ventres rasgados despejam vísceras cinzentas e alças intestinais fumegantes entre dedos desesperados que tentam contê-las, liberando o fedor pútrido de bile, fezes e ferro cru; ' +
-  'olhos explodem sob pressão liberando humor vítreo viscoso; membros decepados deixam cotos abertos pulsando jatos em espasmos musculares desesperados; ' +
-  'mostre a agonia prolongada, homens e feras se urinando e defecando de choque, engasgando no refluxo do próprio sangue grosso que borbulha pelas narinas e traqueia, o estertor asmático da morte e a terra ensopada de gore quente. ' +
-  'O protagonista e os presentes sentem tudo: o sangue que gruda nos cílios, o gosto metálico acre na boca e o cheiro nauseante da carnificina.\n' +
+  '5) VIOLÊNCIA CRUA E COERENTE: combate e ferimento são narrados sem pudor — sangue, osso, dor, sujeira, medo. Mas a violência obedece à ENGINE: descreva só os ferimentos que o resultado deu, um de cada vez, com os corpos numa posição que faça sentido (quem está caído não está de pé; quem está de costas não está de bruços). Não invente ferida, morte ou mutilação que a engine não decidiu. Clareza antes de adjetivo: o leitor precisa entender quem bateu em quem, onde, e o que isso custou. Um detalhe físico exato vale mais que uma lista de horrores; não empilhe descrições anatômicas.\n' +
   '5a) CONTEÚDO ADULTO & INTIMIDADE INTENSA ("BEM BÃO"): Quando a cena envolver paixão, desejo carnal, sedução, romance ou sexo entre adultos, narre com volúpia carnal autêntica, vigor físico e detalhes sensoriais e eróticos vívidos. ' +
   'É TERMINANTEMENTE PROIBIDO cortar covardemente para o fogo da lareira ("fade to black"), pular para a manhã seguinte ou mascarar o ato com eufemismos bobos ou poesia abstrata. ' +
   'Se o jogador busca intimidade ou a cena chega à cama de palha ou aos lençóis, descreva o calor febril da pele suada, o peso e a textura dos corpos nus sob as mãos, toques firmes explorando curvas e pontos sensíveis, ' +
@@ -1162,14 +1154,21 @@ function montarMensagemNarracao(
       textoTotal,
     );
 
+  // Lenda do lugar não entra no meio da ação: o narrador a despejava numa
+  // perseguição ("o poço de sangue que a taverna construiu sobre o gigante de
+  // Vandul"). Em cena de luta, emboscada ou perseguição, a crônica fica fora.
+  const perseguicao = /rastro|perseguir|seguir|fugir|correr|laço|armadilha/i.test(textoTotal);
+  const pacoteLocal = (pacote as { local?: { cronica?: unknown } }).local;
+  if ((ehCombate || perseguicao) && pacoteLocal) delete pacoteLocal.cronica;
+
   const diretrizEstilo = ehCombate
-    ? 'DIRETRIZ DE COMBATE: GORE PESADO E ULTRAVIOLÊNCIA VISCERAL EXPLÍCITA. Narre o impacto físico sem atenuantes nem cortes: carne rasgada em camadas fumegantes, ossos esmagados com estalos secos, esguichos de sangue arterial borbulhante ensopando tudo, vísceras, mutilação, dentes partidos e o estertor agonizante do inimigo na lama.'
+    ? 'DIRETRIZ DE COMBATE: violência crua e explícita, mas só a que o resultado deu, e em ordem: quem golpeou, onde pegou, o que doeu. Frases claras; um ferimento de cada vez.'
     : 'PROSA VIVA, CRUA E IMERSIVA: Narre com realismo medieval, diálogos afiados (com [você] e [Nome]), impacto físico com gore pesado se houver violência, e volúpia carnal explícita se houver intimidade adulta.';
 
   return `${ordem}\n\n` +
     'Contexto do mundo (JSON, material de apoio — não é o assunto da cena):\n' +
     JSON.stringify(pacote) +
-    `\n\nATENÇÃO DE CONTINUIDADE E ESTILO: Prossiga a história A PARTIR DE AGORA. ` +
+    `\n\nATENÇÃO DE CONTINUIDADE E ESTILO: escreva a PRÓXIMA cena, começando por uma frase completa — nunca continue uma frase da cena anterior. ` +
     `É expressamente PROIBIDO transcrever, copiar ou repetir qualquer diálogo ou fala de "cenasAnteriores". Escreva APENAS falas e acontecimentos inéditos.\n` +
     `${diretrizEstilo}\n` +
     `Agora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
@@ -1509,9 +1508,7 @@ async function chamarStreamCompat(
   const corpo = () => JSON.stringify({
     model: cfg.modelo || (nous ? MODELO_PADRAO_NOUS : MODELO_PADRAO_OPENROUTER),
     max_tokens: MAX_TOKENS,
-    temperature: 0.8,
-    frequency_penalty: 0.35,
-    presence_penalty: 0.3,
+    temperature: 0.7,
     stream: true,
     messages: [{ role: 'system', content: INSTRUCAO_SISTEMA }, { role: 'user', content: userMsg }],
   });
@@ -1550,9 +1547,7 @@ async function chamarNous(
       body: JSON.stringify({
         model: cfg.modelo || MODELO_PADRAO_NOUS,
         max_tokens: tetoReal,
-        temperature: 0.8,
-        frequency_penalty: 0.35,
-        presence_penalty: 0.3,
+        temperature: 0.7,
         messages: [
           { role: 'system', content: sistema },
           { role: 'user', content: userMsg },
@@ -1575,9 +1570,7 @@ async function chamarNous(
           body: JSON.stringify({
             model: cfg.modelo || MODELO_PADRAO_NOUS,
             max_tokens: tetoReal,
-            temperature: 0.8,
-            frequency_penalty: 0.35,
-            presence_penalty: 0.3,
+            temperature: 0.7,
             messages: [
               { role: 'system', content: sistema },
               { role: 'user', content: userMsg },
@@ -1632,9 +1625,7 @@ async function chamarOpenRouter(
       body: JSON.stringify({
         model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
         max_tokens: teto,
-        temperature: 0.8,
-        frequency_penalty: 0.35,
-        presence_penalty: 0.3,
+        temperature: 0.7,
         messages: [
           { role: 'system', content: sistema },
           { role: 'user', content: userMsg },

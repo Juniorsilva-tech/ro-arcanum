@@ -751,3 +751,150 @@ obra de terceiros impedem publicar o jogo em loja.
   caminho" mostra fé e provérbio, e a inteira só depois de estar lá. Antes o
   mapa mostrava os 53 lugares, inclusive os escondidos, com crônica completa.
 - Teste: `livro.selftest.ts` com os casos de lugares e itens.
+
+### Sessão 70 — Correção de inicialização no script batch e resolução de caminho do Hermes
+- Identificada causa do script inicializador (`RO ARCANUM.bat`) parar na linha com prompt `> `:
+  - Havia um bloco `if errorlevel 1 (...)` contendo `echo ... (S/N)`. No interpretador CMD do Windows, o fecha-parênteses `)` de `(S/N)` encerrava prematuramente o bloco `if`.
+  - Consequentemente, o comando seguinte `set /p RECONECTAR="> "` era executado incondicionalmente em toda inicialização, bloqueando o processo à espera de input de teclado.
+  - O bloco interativo quebrado foi removido de `scripts/RO ARCANUM.bat` e replicado no atalho da Área de Trabalho (`C:\Users\Junior\Desktop\RO ARCANUM.bat`).
+  - Substituído `timeout` por `ping 127.0.0.1 -n 6` para eliminar erro de redirecionamento de entrada.
+- `scripts/sync_hermes.ts` e `metro.config.js`:
+  - Implementada função `getHermesCommand()` apontando diretamente para `C:\Users\Junior\AppData\Local\hermes\bin\hermes.cmd` caso o CLI não esteja no `PATH` global de shells secundárias.
+  - Sincronização via Hermes CLI validada com sucesso (`✓ Token renovado com sucesso via Hermes CLI`).
+- Validação:
+  - `npm run typecheck`: 0 erros.
+  - `curl http://localhost:8081/api/hermes/refresh`: 200 OK com token renovado.
+
+### Sessão 71 — Correção completa do botão de renovação e sincronização com a Nous
+- Identificada causa do botão "Renovar conexão com Hermes" falhar para o usuário:
+  - O estado da tela (`Sistema.tsx`) mantinha uma chave manual antiga no input (`chave`) e no store (`config.apiKey`).
+  - A função de renovação anterior chamava a ponte mas não limpava a chave manual nem a sobrescrevia no store.
+  - `chaveEfetiva()` priorizava a chave manual antiga (já expirada) sobre o token dinâmico atualizado do Hermes, fazendo com que qualquer teste posterior reutilizasse o token inválido com 401.
+  - No `engine/hermesBridge.ts`, faltava guard `typeof window !== 'undefined'` para chamadas de navegador e uso de `window.location.origin` prioritário com timeout.
+- Correções aplicadas:
+  - `ui/store.ts`: adicionada action `renovarHermes()` que renova o token, limpa chaves manuais conflitantes do store (`apiKey: undefined`) e faz validação imediata com a API Nous.
+  - `ui/store.ts`: `chaveEfetiva()` para `provider: 'nous'` agora prioriza o token dinâmico ativo do Hermes sobre chaves manuais estáticas.
+  - `ui/screens/Sistema.tsx`: `renovarHermes()` agora invoca a action do store, limpa o campo de texto local (`setChave('')`), trata exceções em bloco try/catch e exibe status em tempo real.
+  - `engine/hermesBridge.ts`: refinada detecção de ambiente e requisições HTTP seguras.
+- Validação:
+  - `npm run typecheck`: 0 erros.
+  - Testes de ponta a ponta com endpoint local e renovação via Hermes CLI confirmados.
+
+### Sessão 72 — Evolução do Sistema de Combate e UI Animada com Feedback Físico e Desgaste
+- **Ação Tática de Troca de Armas em Batalha (`'trocar_arma'`)**:
+  - `engine/combat.ts`: adicionado `'trocar_arma'` ao tipo `AcaoTatica` e implementada na função `jogadorAcaoTatica`.
+  - Permite ao combatente sacar outra arma da mochila em pleno combate.
+  - Consome o turno do jogador, recalcula dinamicamente `jog.dano = danoJogador(content, camp)` e `jog.acerto = acertoJogador(content, camp)` e registra narração canônica da troca no log.
+  - Teste de integração adicionado em `engine/sistemas.selftest.ts` cobrindo o fluxo completo.
+- **UI Animada e Feedback Físico de Dano (`ui/screens/Combate.tsx`)**:
+  - Implementado sistema de animação física via `Animated.Value`:
+    - Trepidação de impacto (screen shake sutil com sequência de deslocamentos `[-8, 8, -5, 5, 0]`) disparada imediatamente ao sofrer dano.
+    - Pulso de flash avermelhado (`cores.cinabrio`) interpolando a borda e o fundo do card do combatente ao sofrer dano.
+    - Badge flutuante de dano / cura (`-X PV` em cinábrio ou `+X PV` em verdigris) com interpolação de subida (`translateY`) e esmaecimento (`opacity`).
+- **Escrita e Log Dramático Estilizado**:
+  - Log remodelado com renderização semântica por tipo de evento (`LinhaLogDramatica`):
+    - Alertas graves (mutilação/amputação, quebra de espada, decapitações e golpes mortais) com borda cinábrio, fundo escuro e ícone `⚠️`.
+    - Dano sofrido pelo jogador destacado com recuo, tom cinábrio e ícone `🔻`.
+    - Críticos e rupturas com destaque dourado (`cores.ouro`) e ícone `⚡`.
+    - Defesas, esquivas e desvios com destaque em jade (`cores.verdigris`) e ícone `🛡️`.
+    - Artes marciais, técnicas, respirações e Kai em violeta (`cores.violeta`) com ícone `🌀`.
+    - Trocas de armas e manobras táticas com ícone `🔄`.
+    - Quedas e mortes com `†`.
+    - A linha mais recente entra com suave animação de fade-in (`Animated.View`).
+- **Painel Visual de "Coisas Gastas" (Durabilidade, Cargas e Consumíveis)**:
+  - Badges visuais destacados no painel do jogador informando o desgaste de seus recursos:
+    - **Arma empunhada**: nome da arma equipada e badge de afiação ativa com contador de cargas (`🗡️ Afiação: X/5 (+Y dano)`) ou `Gume comum`.
+    - **Armadura e Escudo**: badge de blindagem temperada (`🛡️ Têmpera: X/5 (+Y def)`).
+    - **Óleos Alquímicos**: tipo de monstro vulnerável, bônus de dano e lutas restantes (`💧 Óleo vs [TIPO]`).
+    - **Condições Corporais**: peçonha/veneno acumulado com gravidade, sono induzido, imobilização no terreno, frio intenso e posição tática.
+    - **Bolsa de Combate (Consumíveis de Emergência)**: contadores visíveis de quantidade na mochila (`x2`, `x1`).
+  - Gaveta retrátil de armas permitindo inspecionar armas da mochila (com dano base, peso e bônus de gume) e sacar imediatamente com 1 clique.
+- **Validação**:
+  - `npm run typecheck`: 0 erros.
+  - `npx tsx engine/sistemas.selftest.ts`: passou (incluindo o teste de troca de arma).
+  - `npx tsx engine/selftest.ts`: todos os testes passaram ("TODOS OS TESTES PASSARAM").
+  - `npx tsx engine/kimetsu.selftest.ts`: 23 testes passaram.
+  - `npx tsx engine/tsukimichi.selftest.ts`: 70 testes passaram.
+
+### Sessão 73 — Autoscroll Reativo, Correção de Texto Livre e Design Dinâmico no Jogo Todo
+- **Limpeza e Submissão Ágil de Ação Livre (`ui/screens/Jogo.tsx`)**:
+  - Resolvido o problema onde o texto livre digitado continuava na caixa após envio.
+  - Agora o campo é limpo de forma imediata (`setTexto('')`) e segura com função centralizada `submeterAcaoLivre()`.
+  - Adicionado atalho direto de teclado: pressionar `Enter` envia a ação diretamente e limpa o campo (evitando quebras de linha acidentais `\n`), enquanto `Shift+Enter` insere quebras de linha se desejado.
+  - Adicionado botão de atalho `✕` para limpar o campo rapidamente.
+  - O botão `Agir ✦` possui feedback tátil e fica desativado visualmente enquanto vazio ou enquanto o narrador estiver gerando.
+- **Autoscroll Inteligente e Reativo na Narração e Combate**:
+  - **Na tela de Jogo (`ui/screens/Jogo.tsx`)**:
+    - Conectado `scrollRef = useRef<ScrollView>(null)` com observadores de ciclo de vida para `ocupado`, `textoStreaming` e `feed.length`.
+    - Ao escolher uma opção ou enviar ação livre, o scroll acompanha suavemente até o bloco onde a nova narração está nascendo, eliminando a necessidade de o jogador ter que "subir de novo".
+    - Durante o streaming de tokens da IA, o scroll desce suavemente e acompanha as palavras em tempo real sem saltos bruscos.
+  - **Na tela de Combate (`ui/screens/Combate.tsx`)**:
+    - Conectado `logScrollRef = useRef<ScrollView>(null)` e `onContentSizeChange` ao `ScrollView` do log de combate.
+    - Toda vez que uma rodada é resolvida, um golpe é desferido ou um dano é sofrido, o log rola automaticamente para o final, mantendo o resultado dramático da última troca sempre visível.
+- **Design Dinâmico e Refinado (Frontend Design & Motion)**:
+  - Implementado `EntradaNarrativaAnimada` com animação de fade-in e leve translação vertical, fazendo com que cada novo parágrafo e fala surja suavemente como tinta fresca no pergaminho.
+  - Reestilizado o `gerandoBox`: tipografia de manuscrito, cursor dourado vivo com pulso ritmado (`Animated.loop`), cabeçalho temático e área de streaming imersiva.
+- **Validação**:
+  - `npm run typecheck`: 0 erros.
+  - `npx tsx engine/selftest.ts`: todos os testes passaram ("TODOS OS TESTES PASSARAM").
+  - `npx tsx engine/sistemas.selftest.ts`: passou com sucesso.
+
+### Sessão 74 — Testes Visuais com Playwright, Batalhas Reais e Simulação Geracional de 2 Anos
+- **Execução Real de Gameplay e Playwright Headless**:
+  - Servidor Expo/Metro iniciado e mantido ativo na porta 8081 (`task-11506`).
+  - Desenvolvido script de automação e inspeção profunda `scripts/playwright_live_session.ts` operando via Playwright Chromium.
+  - O script simula a experiência física real de um jogador clicando na interface, digitando com teclado, enviando ações livres e lutando na arena de combate.
+- **Evidências Visuais e Análise de Screenshots (capturadas e inspecionadas via `view_file`)**:
+  - `foto1_menu_inicial.png`: Menu principal com estética dourada gótica em fundo obsidiana ("ARCANUM - A engine é dona da verdade. O modelo é dono da voz."), botões nítidos de "Nova campanha", "Escolher mundo" e "Configurações".
+  - `foto2_jogo_principal.png`: Tela de jogo ativa no mundo vivo de Vaelhorn na taverna "A Rês Enforcada" (primeiro dia do Santo Selo, outono adiantado, manhã com chuva fina). Narrativa inicial, indicadores de vida `♥ 44/44` e grade de opções com custos de período.
+  - `foto3a_texto_digitado.png`: Demonstração do campo de texto livre com borda dourada ativa quando focado, contendo a ação livre digitada: *"Subo na torre da paliçada e observo as fogueiras no horizonte."*, botão `✕` para limpar e botão `Agir ✦`.
+  - `foto3b_texto_enviado_limpo.png`: Comprovação imediata de que ao pressionar a tecla `Enter`, o campo foi esvaziado instantaneamente, a ação livre foi adicionada ao feed com destaque verde-esmeralda para o jogador, a caixa de narração animada com cursor pulsante entrou em ação e o autoscroll suave acompanhou o novo conteúdo.
+  - `foto4_combate_inicio.png`: Tela de combate aberta contra Salteador e Lobo da Mata. Badges de armas e afiação exibidos com clareza, barras de Vida (35), Vigor (10) e Mana (8), barra de vida vermelha dos inimigos com seleção de alvo `★ ALVO`.
+  - `foto5_combate_gaveta.png`: Gaveta de armas expandida exibindo armas disponíveis na mochila (`Lança - Dano base 11 (perfurante) · Peso 3`), com botão dourado `SACAR`.
+  - `foto6_combate_arma_sacada.png`: Manobra tática de troca de arma consumindo 1 turno da engine e registrando a substituição no log de combate.
+  - `foto7_combate_em_andamento.png`: Batalha intensa com 5 turnos sucessivos de ataque e defesa. Dano real sofrido (PV reduzido de 44 para 11), inimigos derrotados e retorno à taverna com `Combate vencido · +22 xp`.
+  - `foto8_jogo_apos_2_anos.png`: Salto geracional de 2 anos (730 dias = 8 estações completas = 2920 períodos de tempo da engine). O calendário avançou para o `731º dia do Santo Selo · outono tardio · Manhã · neblina · Ano 3`, Torvald completou 20 anos de idade, e novos marcos históricos da vida emergente dos NPCs e guerras de fundo foram devidamente registrados sem duplicações.
+- **Auditoria de UX e Correção Sistêmica**:
+  - Identificada duplicação de prefixo de dia na seção "FICOU PARA TRÁS" do HUD (`dia 723: dia 723: ...`).
+  - Corrigido em `engine/memoria.ts` (`marcosRecentes`) com higienização por regex (`m.texto.replace(/^dia\s+\d+:\s*/i, '')`), eliminando a redundância tanto para novos marcos quanto para dados herdados.
+- **Validação Completa**:
+  - `npm run typecheck`: 0 erros.
+  - `npm run test:engine`: todos os 43 arquivos de testes da engine executados com sucesso absoluto, incluindo a simulação de 6 campanhas de 10 anos cada ("Nenhuma violação de invariante. OK em 365.5s").
+
+
+
+
+
+### Sessão 69 (continuação) — cena ilegível do narrador
+O dono colou uma cena inteira ("Seguir o rastro sem avisar ninguém") cheia de
+problemas. Causas encontradas e o que mudou:
+- **Penalidades de repetição** (`frequency_penalty` 0,35, `presence_penalty`
+  0,3, sessão 63) com temperatura 0,8: o modelo evitava repetir nomes e
+  palavras, inventava termos ("bodeira", "murras", "chão humano") e trocava
+  quem é quem. Removidas; temperatura 0,7.
+- **Regra 5 de gore** era um catálogo ("arranca nacos de gordura", vísceras…)
+  que o modelo copiava em qualquer cena com "sangue"/"golpe" — daí o "naco de
+  carne" e o "de costas, de bruços". Reescrita: violência crua e explícita, mas
+  só a que a engine decidiu, um ferimento por vez, corpos em posição coerente,
+  clareza antes de adjetivo. A diretriz dinâmica de combate idem.
+- **"Prossiga a história A PARTIR DE AGORA"** podia fazer o modelo continuar a
+  frase anterior pela metade. Agora: próxima cena, começando por frase
+  completa.
+- **Diálogo**: o nome no colchete tem de ser o que a narração usa; narração
+  nunca vai dentro de colchete; só nomes de "presentes" ou papéis genéricos.
+  (Na cena, o modelo inventou "Alda, a costureira", que não existe no
+  elenco — a tag de nome desconhecido é descartada pela tela e a fala caía na
+  Elza por alternância.)
+- **Tela (`engine/prosa.ts`)**: a alternância dava ao jogador falas que
+  começam em "Você…" ("Você quer sair da lama, fale o nome…" saiu como fala do
+  Junior). Agora fala dirigida ao jogador nunca é dele (`dirigidaAoJogador`,
+  com regex que entende acento — `\b` não reconhece "ê"). Caso real no
+  `prosa.selftest.ts`.
+- **Crônica do lugar** (sessão 62) ia ao narrador em toda cena, e ele a
+  despejava na ação ("o poço de sangue que a taverna construiu sobre o gigante
+  de Vandul"). Fica fora de cena de luta, emboscada ou perseguição, e a regra
+  2e manda usá-la só quando a cena pedir, em uma frase.
+- **Desempenho**: o Livro gravado no fim de cada turno recalculava o contexto
+  seis vezes; a simulação longa passou de 10 minutos. `atualizarLivro` agora
+  calcula uma vez (1,5 ms por chamada).
+Não testado com narração real (não uso a chave da Nous do dono).

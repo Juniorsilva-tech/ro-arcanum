@@ -577,10 +577,23 @@ export function emBlocos(
           continue;
         }
 
+        // Fala que começa em "Você…" é dita PARA o jogador ("Você quer sair da
+        // lama, fale o nome"): o jogador fala de si em primeira pessoa. Dar
+        // essa linha a ele punha na boca dele a ameaça que recebeu.
+        if (dirigidaAoJogador(falas[i].texto)) {
+          if (outro) falas[i].quem = outro;
+          continue;
+        }
         falas[i].quem = nomeJogador;
       }
     }
   }
 
   return out;
+}
+
+/** A fala se dirige ao jogador na segunda pessoa, logo não é dele. */
+export function dirigidaAoJogador(texto: string): boolean {
+  // Sem : no JavaScript o "ê" não conta como letra e  nunca casaria.
+  return /^\s*(?:vocês|você|voce)(?!\p{L})/iu.test(texto);
 }

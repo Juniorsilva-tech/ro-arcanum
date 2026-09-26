@@ -134,15 +134,25 @@ export function estadoNoLivro(content: ContentBundle, camp: Campaign, secao: Sec
 }
 
 /** Todas as camadas de uma seção de uma vez (a tela usa esta: o contexto é caro). */
-export function estadosDaSecao(content: ContentBundle, camp: Campaign, secao: SecaoLivro, ids: string[]): Record<string, EstadoEntrada> {
-  const k = conhecimento(content, camp);
-  const presentes = new Set(calcularContexto(content, camp).presentes.map((n) => n.id));
+export function estadosDaSecao(content: ContentBundle, camp: Campaign, secao: SecaoLivro, ids: string[], base?: Base): Record<string, EstadoEntrada> {
+  const { k, presentes } = base ?? baseDoLivro(content, camp);
   return Object.fromEntries(ids.map((id) => [id, combinar(camp.livro?.[secao]?.[id], derivar(content, camp, secao, id, k, presentes))]));
 }
 
-/** Grava as camadas atuais em camp.livro. Chamado no dia do mundo. */
+type Base = { k: Conhecimento; presentes: Set<string> };
+/** O que o Livro precisa saber da cena, calculado uma vez (o contexto é caro). */
+function baseDoLivro(content: ContentBundle, camp: Campaign): Base {
+  return { k: conhecimento(content, camp), presentes: new Set(calcularContexto(content, camp).presentes.map((n) => n.id)) };
+}
+
+/**
+ * Grava as camadas atuais em camp.livro. Roda no fim de cada turno e de cada
+ * dia do mundo, então calcula o contexto da cena uma vez só para as seis
+ * seções — seis contextos por turno deixavam a simulação longa lenta demais.
+ */
 export function atualizarLivro(content: ContentBundle, camp: Campaign): void {
   if (!camp.livro) return;
+  const base = baseDoLivro(content, camp);
   const secoes: [SecaoLivro, string[]][] = [
     ['mestres', content.mestres.map((x) => x.id)],
     ['trabalhos', content.trabalhos.map((x) => x.id)],
@@ -152,7 +162,7 @@ export function atualizarLivro(content: ContentBundle, camp: Campaign): void {
     ['lugares', content.locais.map((x) => x.id)],
   ];
   for (const [secao, ids] of secoes) {
-    const agora = estadosDaSecao(content, camp, secao, ids);
+    const agora = estadosDaSecao(content, camp, secao, ids, base);
     const destino = (camp.livro[secao] ??= {});
     for (const id of ids) destino[id] = agora[id];
   }

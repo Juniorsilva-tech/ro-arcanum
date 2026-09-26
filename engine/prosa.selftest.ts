@@ -153,4 +153,17 @@ const CENA_DA_TAVERNA = [
   ok(emBlocos('', [], 'X').length === 0, 'Texto vazio não produz bloco');
 }
 
+// ── Fala dirigida ao jogador não é do jogador (cena real, sessão 69) ──────
+{
+  const cena =
+    '— [você] A corda é de quem?\n\n' +
+    'Elza cospe na terra.\n\n' +
+    '— [Elza] De quem ensinou o homem a andar na lama.\n\n' +
+    'A corda aperta de novo.\n\n' +
+    '— Você quer sair da lama, fale o nome de quem te ensinou.';
+  const falas = emBlocos(cena, ['Elza'], 'Junior').filter(b => b.tipo === 'fala');
+  const ultima = falas[falas.length - 1];
+  ok(ultima && ultima.quem !== 'Junior', `"Você quer sair da lama…" não vai para a boca do jogador (foi para ${ultima?.quem ?? 'ninguém'})`);
+}
+
 console.log('\nProsa: a tela não mente sobre quem falou.');
