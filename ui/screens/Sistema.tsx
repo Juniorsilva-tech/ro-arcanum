@@ -250,14 +250,14 @@ export function Config() {
       const deuses = DEUSES_PRIMORDIAIS.length;
       const bruxas = BRUXAS_DOS_PECADOS.length;
       const faccoes = FACCOES_ANTIGAS.length;
-      const satella = BRUXAS_DOS_PECADOS.find((b) => b.id === 'inveja');
+      const invejosa = BRUXAS_DOS_PECADOS.find((b) => b.id === 'inveja');
 
       if (pontos !== cronicas) {
         setResultadoDiagnostico(`⚠️ Alerta: Coordenadas (${pontos}) difere de Crônicas (${cronicas}).`);
         return;
       }
-      if (!satella) {
-        setResultadoDiagnostico('⚠️ Erro: Satella não encontrada no panteão.');
+      if (!invejosa) {
+        setResultadoDiagnostico('⚠️ Erro: a Invejosa não está entre as Pecadoras.');
         return;
       }
 
@@ -265,7 +265,7 @@ export function Config() {
         `✓ DIAGNÓSTICO DO JOGO EXECUTADO COM SUCESSO!\n\n` +
         `• ${pontos} pontos do mapa com crônicas vivas, deuses e marcas de bruxas mapeadas.\n` +
         `• ${deuses} Deuses Primordiais (Sol-Voraz, Vandul, Yrmara, Vintrath).\n` +
-        `• ${bruxas} Bruxas dos Pecados Capitais, Melancolia, Vã-Glória e Satella (Inveja).\n` +
+        `• ${bruxas} Pecadoras queimadas pela Ordem, com a Invejosa (Ysmera).\n` +
         `• ${faccoes} Facções e Ordens Antigas integradas.\n` +
         `• Sistema cognitivo de NPCs e Intimidade em conformidade.\n` +
         `• Todos os sistemas ativos e sem falhas!`

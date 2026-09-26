@@ -39,7 +39,8 @@ console.log('--- TESTES DE COSMOLOGIA, DEUSES, BRUXAS E CRÔNICAS DO MAPA ---');
 // 1. Mito da Criação & Sangue do Mana
 {
   ok(MITO_ORIGEM_MAGIA.titulo.length > 5, 'Título do mito de origem deve existir');
-  ok(MITO_ORIGEM_MAGIA.texto.includes('Mana'), 'Mito deve explicar o Mana');
+  ok(/mana/i.test(MITO_ORIGEM_MAGIA.texto), 'Mito deve explicar o mana');
+  ok(/ensinam|doutrina|acredita/i.test(MITO_ORIGEM_MAGIA.texto), 'E dizer que é o que a Igreja ensina, não fato confirmado');
   ok(MITO_ORIGEM_MAGIA.texto.includes('sangue') || MITO_ORIGEM_MAGIA.texto.includes('Deuses'), 'Mana deve ser sangue de deuses tombados');
   console.log('✓ 1. Mito da Origem da Magia e Guerra dos Deuses validado');
 }
@@ -60,47 +61,28 @@ console.log('--- TESTES DE COSMOLOGIA, DEUSES, BRUXAS E CRÔNICAS DO MAPA ---');
   console.log('✓ 2. Panteão dos Deuses Primordiais validado (Sol-Voraz, Vandul, Yrmara, Vintrath)');
 }
 
-// 3. As 7 Bruxas dos Pecados Capitais + Tristeza + Vã-Glória + Satella (Inveja)
+// 3. As Sete Pecadoras (inspiradas nas bruxas de Re:Zero, mas originais)
 {
-  ok(BRUXAS_DOS_PECADOS.length >= 9, 'Devem existir pelo menos as 7 bruxas capitais + 2 bruxos/bruxas adicionais');
-
-  // Verifica a presença de cada pecado capital
-  const pecadosObrigatorios = [
-    'soberba',
-    'ira',
-    'preguica',
-    'gula',
-    'luxuria',
-    'ganancia',
-    'inveja',
-  ];
+  ok(BRUXAS_DOS_PECADOS.length >= 9, 'Devem existir as 7 pecadoras capitais e as 2 que a Ordem acrescentou');
+  const pecadosObrigatorios = ['soberba', 'ira', 'preguica', 'gula', 'luxuria', 'ganancia', 'inveja'];
   for (const pecado of pecadosObrigatorios) {
     const b = BRUXAS_DOS_PECADOS.find((x) => x.id === pecado);
-    ok(b, `Bruxa do pecado ${pecado} deve existir`);
-    ok(b.nome.length > 0, `Nome da bruxa de ${pecado} deve existir`);
-    ok(b.autoridade.length > 0, `Autoridade da bruxa de ${pecado} deve estar descrita`);
-    ok(b.naturezaPoder.length > 0, `Natureza do poder de ${pecado} deve estar descrita`);
-    ok(b.desfecho.length > 0, `Desfecho de ${pecado} deve estar descrito`);
+    ok(b, `Pecadora de ${pecado} deve existir`);
+    ok(b.nome.length > 0 && b.autoridade.length > 0 && b.naturezaPoder.length > 0 && b.desfecho.length > 0, `Pecadora de ${pecado} tem lenda e desfecho`);
   }
-
-  // Verifica os pecados adicionais inspirados no universo arcaico (Tristeza e Vã-Glória)
-  const hector = BRUXAS_DOS_PECADOS.find((x) => x.id === 'tristeza');
-  ok(hector, 'Bruxo da Tristeza/Melancolia (Hector) deve existir');
-  ok(hector.pecado.toLowerCase().includes('tristeza') || hector.pecado.toLowerCase().includes('melancolia'), 'Pecado da tristeza');
-
-  const pandora = BRUXAS_DOS_PECADOS.find((x) => x.id === 'va_gloria');
-  ok(pandora, 'Bruxa da Vã-Glória (Pandora) deve existir');
-
-  // Verifica Satella (Bruxa da Inveja) e a devoração das outras bruxas (estilo Re:Zero)
-  const satella = BRUXAS_DOS_PECADOS.find((x) => x.id === 'inveja');
-  ok(satella, 'Satella deve estar registrada');
-  ok(
-    satella.desfecho.includes('devorou') || satella.desfecho.includes('consumiu') || satella.desfecho.includes('selada'),
-    'Desfecho de Satella deve registrar a devoração das outras bruxas e o selamento além do véu'
-  );
-
-  console.log('✓ 3. As 7 Bruxas dos Pecados Capitais, Hector, Pandora e Satella validadas');
+  ok(BRUXAS_DOS_PECADOS.find((x) => x.id === 'tristeza'), 'O Enlutado (tristeza) existe');
+  ok(BRUXAS_DOS_PECADOS.find((x) => x.id === 'va_gloria'), 'A Vaidosa (vã-glória) existe');
+  const invejosa = BRUXAS_DOS_PECADOS.find((x) => x.id === 'inveja')!;
+  ok(/engol|devor/.test(invejosa.naturezaPoder), 'A lenda da Invejosa conta que ela devorou as outras');
+  ok(/autos|queimad|fogueira/.test(invejosa.desfecho), 'E o desfecho diz o que os autos da Ordem registram');
+  // Nenhum nome, termo ou personagem copiado de Re:Zero.
+  const texto = JSON.stringify(BRUXAS_DOS_PECADOS) + JSON.stringify(CRONICAS_MAPA) + JSON.stringify(FACCOES_ANTIGAS);
+  const copiados = ['Satella', 'Echidna', 'Typhon', 'Minerva', 'Sekhmet', 'Daphne', 'Carmilla', 'Pandora', 'Hector', 'Autoridade', 'Evangelho', 'Bispos do Pecado', 'Santo da Espada', 'Dragão Divino', 'Grande Sábio'];
+  const achados = copiados.filter((n) => texto.includes(n));
+  ok(achados.length === 0, `Nenhum nome ou termo copiado de Re:Zero (${achados.join(', ') || 'nenhum'})`);
+  console.log('✓ 3. As Sete Pecadoras validadas, sem nada copiado de Re:Zero');
 }
+
 
 // 4. Facções Antigas e Religiosas
 {

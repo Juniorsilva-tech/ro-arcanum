@@ -1639,25 +1639,25 @@ export function Livro() {
         </Card>
       ))}
 
-      <Divisor label="VI · As Bruxas dos Pecados & O Tabu da Inveja" />
+      <Divisor label="VI · As Sete Pecadoras & O Tabu da Invejosa" />
       <TextoMono style={{ color: cores.mudo, marginBottom: esp.sm }}>
-        As 7 Bruxas dos Pecados Capitais e os antigos hereges devorados há 400 anos por Satella.
+        As nove que a Ordem dos Santos do Selo queimou há 400 anos: o que a lenda conta e o que os autos registram.
       </TextoMono>
       {BRUXAS_DOS_PECADOS.map((b) => {
-        const ehSatella = b.id === 'inveja';
+        const ehInvejosa = b.id === 'inveja';
         return (
-          <Card key={b.id} acento={ehSatella ? cores.cinabrio : cores.verdigris}>
+          <Card key={b.id} acento={ehInvejosa ? cores.cinabrio : cores.verdigris}>
             <View style={styles.linhaTitulo}>
-              <TextoSerif style={{ fontSize: 18, color: ehSatella ? cores.cinabrio : cores.ouro }}>
+              <TextoSerif style={{ fontSize: 18, color: ehInvejosa ? cores.cinabrio : cores.ouro }}>
                 {b.nome}
               </TextoSerif>
               <Selo
                 texto={b.pecado.toUpperCase()}
-                cor={ehSatella ? cores.cinabrio : cores.verdigris}
+                cor={ehInvejosa ? cores.cinabrio : cores.verdigris}
               />
             </View>
-            <TextoMono style={{ color: ehSatella ? cores.cinabrio : cores.ouro, marginTop: 2 }}>
-              Autoridade: {b.autoridade}
+            <TextoMono style={{ color: ehInvejosa ? cores.cinabrio : cores.ouro, marginTop: 2 }}>
+              O dom, segundo a lenda: {b.autoridade}
             </TextoMono>
             <TextoSerif style={{ fontSize: 14, color: '#cbd5d1', marginTop: 4, lineHeight: 20 }}>
               {b.naturezaPoder}

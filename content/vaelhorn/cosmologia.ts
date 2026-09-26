@@ -1,9 +1,19 @@
-// ARCANUM · Cosmologia, Religião, Guerra dos Deuses & As Bruxas dos Pecados.
+// ARCANUM · Cosmologia, religião e as Sete Pecadoras.
 //
-// A magia deste mundo não é uma força harmoniosa: é o sangue pisado e as cinzas
-// de uma guerra primordial entre Deuses. Abaixo deles ergueram-se as Bruxas dos
-// Pecados e os Bruxos esquecidos, cujas Autoridades rasgaram nações até que uma
-// só — a Bruxa da Inveja — devorou suas irmãs e engoliu metade do mundo.
+// Tudo neste arquivo é CRENÇA: o que a Igreja ensina, o que as avós contam e o
+// que os cultos juram. A engine não confirma deus nenhum. O mundo do vale é
+// medieval e pé no chão (sessão 67: conscrição, dízimo, inquisição, ponte
+// sabotada numa revolta); a fé é o modo como essa gente explica o que sofre.
+//
+// As "Sete Pecadoras" são o caso mais claro. Há quatrocentos anos a Ordem dos
+// Santos do Selo queimou nove pessoas — curandeiras, uma escrivã, uma
+// parteira, um viúvo que pregava — e as chamou de bruxas dos pecados. O povo
+// guardou as lendas dos poderes; os autos da Ordem guardam outra história. O
+// narrador conta as duas como coisas que se dizem, nunca como fato.
+//
+// (Sessão 69: as bruxas vinham de Re:Zero com nome, poder e termos copiados.
+// A inspiração ficou — a Invejosa que devora as irmãs, a juíza da culpa, a cura
+// pela fúria, o chá da que quer saber tudo —, mas as figuras agora são do vale.)
 
 export type Divindade = {
   id: string;
@@ -44,16 +54,16 @@ export type CronicaLocalMapa = {
   supersticaoPopular: string;
 };
 
-// ── 1. A GUERRA PRIMORDIAL DOS DEUSES & O SANGUE DO MANA ────────────────────
+// ── 1. O QUE A IGREJA ENSINA SOBRE A ORIGEM DO MUNDO ────────────────────────
 export const MITO_ORIGEM_MAGIA = {
-  titulo: 'A Guerra do Firmamento & A Queda dos Deuses',
+  titulo: 'A Guerra do Firmamento (o que se ensina na capela)',
   texto:
-    'Antes de haver reis, muros ou calendários, os Deuses Maiores digladiaram-se sobre o continente ' +
-    'numa carnificina que partiu as montanhas e ferveu os oceanos. Não houve vencedores: as divindades ' +
-    'tombaram trespassadas por lanças celestes e suas carcaças afundaram na crosta terrestre. ' +
-    'O que os homens chamam de "Mana" nada mais é do que o sangue estelar e o miasma incandescente ' +
-    'desses cadáveres divinos escorrendo pelas veias da terra. Toda conjuração mágica é uma profanação: ' +
-    'um sussurro que acorda a dor de um deus sepultado sob as pedras.',
+    'Os padres ensinam que, antes dos reis e dos calendários, os Deuses Maiores guerrearam sobre o continente ' +
+    'até partir as montanhas, e que caíram mortos na terra. O que os letrados chamam de mana seria o sangue ' +
+    'deles ainda correndo debaixo das pedras, e por isso toda conjuração é pecado: mexe na ferida de um deus. ' +
+    'É a doutrina da Ordem dos Santos do Selo, dita do púlpito todo domingo. Ninguém viu deus nenhum cair. ' +
+    'Os mineiros de Corveira acham ferro negro fundo na rocha e chamam de costela de Vandul; os pescadores ' +
+    'de Mareu jogam cobre no mar para Yrmara. Acreditar é o que o vale faz com o medo.',
 };
 
 export const DEUSES_PRIMORDIAIS: Divindade[] = [
@@ -103,109 +113,130 @@ export const DEUSES_PRIMORDIAIS: Divindade[] = [
   },
 ];
 
-// ── 2. AS BRUXAS DOS PECADOS & A BRUXA DA INVEJA ────────────────────────────
+// ── 2. AS SETE PECADORAS (E AS DUAS QUE A ORDEM ACRESCENTOU) ────────────────
+// Cada uma tem a lenda (o que o povo conta) e o que os autos da Ordem
+// registram. Os campos seguem o tipo BruxaPecado: `autoridade` é o dom que a
+// lenda atribui; `naturezaPoder`, a lenda; `desfecho`, o que se sabe do fim;
+// `reliquiaOuMarca`, o que sobrou no mundo.
 export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
   {
     id: 'inveja',
     pecado: 'Inveja',
-    nome: 'Satella · A Bruxa da Inveja',
-    autoridade: 'A Sombra Infinita & O Devoramento do Destino',
+    nome: 'Ysmera · A Invejosa',
+    autoridade: 'A sombra que come o que os outros têm',
     naturezaPoder:
-      'Manifesta mares de mãos negras espectrais capazes de engolir montanhas, rasgar a causalidade e ' +
-      'apagar cidades inteiras da existência. Seu amor é doentio, possessivo e absoluto.',
+      'A lenda diz que ela cobiçou tudo o que as outras tinham — o dom, o amor, o nome — e as engoliu uma a uma ' +
+      'com mãos de sombra que saíam do chão, e que metade do vale morreu no inverno em que ela foi presa. ' +
+      'Contam que ela amava alguém com um amor que não deixava espaço para mais ninguém no mundo, e que repetia ' +
+      '"eu te amo" até a voz virar outra coisa. O povo não diz o nome dela em voz alta.',
     desfecho:
-      'Há 400 anos consumiu e massacrou todas as outras Bruxas dos Pecados, engoliu metade de todo o mundo ' +
-      'e só pôde ser confinada num Santuário Selado pela aliança sacrifical do Santo da Espada, do Dragão Divino e do Grande Sábio.',
+      'Foi a última queimada, no Ano do Selo. Os autos dizem que era a irmã mais nova de uma das outras e que ' +
+      'testemunhou contra todas para salvar a própria pele; a fogueira veio mesmo assim. O "inverno da Invejosa" ' +
+      'foi uma peste que chegou pelo rio no mesmo ano.',
     reliquiaOuMarca:
-      'O Manto das Sombras Vivas e o terror milenar. Dizer seu nome atrai desgraça imediata; é o maior tabu do continente.',
+      'O nome proibido. Dizer "Ysmera" dentro de casa é chamar desgraça; as mães benzem a boca da criança que diz.',
   },
   {
     id: 'soberba',
     pecado: 'Soberba',
-    nome: 'Typhon · A Bruxa do Orgulho',
-    autoridade: 'Juízo da Consciência Inexorável',
+    nome: 'Aldonsa · A Juíza',
+    autoridade: 'Fazer a culpa pesar no corpo',
     naturezaPoder:
-      'Uma criança de olhar cândido cujo toque não fere a carne, mas quebra os ossos e decepa membros ' +
-      'na proporção exata da culpa que o próprio indivíduo abriga no fundo da própria alma.',
-    desfecho: 'Devorada e desfeita pelo turbilhão sombrio da Bruxa da Inveja.',
-    reliquiaOuMarca: 'A Balança de Vidro Negro e os ossos de julgadores antigos.',
+      'Conta-se que era uma menina de olhar manso, e que quem mentia diante dela caía com os ossos quebrados ' +
+      'na medida exata da culpa que carregava. Quem não devia nada saía sem um arranhão — e isso dava mais medo.',
+    desfecho:
+      'Era juíza de aldeia numa terra sem juiz, e julgou contra um cônego. Os autos a acusam de "usurpar o foro da Igreja".',
+    reliquiaOuMarca: 'A pedra da Praça da Forca onde ela julgava, que ninguém usa para sentar.',
   },
   {
     id: 'ira',
     pecado: 'Ira',
-    nome: 'Minerva · A Bruxa da Cólera',
-    autoridade: 'Cura Destrutiva por Impacto Sísmico',
+    nome: 'Brunhe · A Colérica',
+    autoridade: 'Curar com raiva',
     naturezaPoder:
-      'Odiava a dor alheia com uma fúria incontrolável. Seus socos estrondosos fecham qualquer ferida e curam qualquer ' +
-      'enfermidade instantaneamente, mas a força do golpe arrebenta a terra e derruba vilas ao redor.',
-    desfecho: 'Engolida pelas sombras famintas da Inveja ao tentar curar uma terra que já morria.',
-    reliquiaOuMarca: 'Fitas escarlates de guerra e o punho de ferro estilhaçado.',
+      'Dizem que odiava a dor dos outros com tanta raiva que curava aos socos: cada golpe fechava uma ferida, ' +
+      'e a força dele derrubava a casa em volta. A febre saía do doente com medo dela.',
+    desfecho:
+      'Curandeira de Corveira que ameaçou o mosteiro quando os monges deixaram morrer os mineiros de uma galeria. ' +
+      'Os autos registram "blasfêmia e ameaça ao abade".',
+    reliquiaOuMarca: 'As fitas vermelhas que as curandeiras ainda amarram no pulso de quem tem febre.',
   },
   {
     id: 'preguica',
     pecado: 'Preguiça',
-    nome: 'Sekhmet · A Bruxa do Torpor',
-    autoridade: 'As Mãos Ocultas & O Peso do Fim',
+    nome: 'Morgelle · A Adormecida',
+    autoridade: 'O sono que não acaba',
     naturezaPoder:
-      'A mais forte das irmãs em combate físico puro. Respirar já lhe causava tédio e dor; movimentava centenas ' +
-      'de braços invisíveis que partiam exércitos e quebravam dragões enquanto ela permanecia deitada.',
-    desfecho: 'Arrastada para o abismo pela Bruxa da Inveja sem sequer abrir os olhos para resistir.',
-    reliquiaOuMarca: 'O Alento da Inércia: fendas onde o vento para e as criaturas adormecem para sempre.',
+      'A lenda diz que respirar já a cansava, que passava os dias deitada, e que ainda assim nenhum exército ' +
+      'passava pela terra dela: mãos que ninguém via derrubavam os homens do cavalo. Quem dormia ali não acordava.',
+    desfecho:
+      'Os autos falam de uma fiandeira que deu papoula aos filhos das vizinhas no inverno da fome, para que ' +
+      'dormissem em vez de chorar. Algumas crianças não acordaram.',
+    reliquiaOuMarca: 'As clareiras onde as avós proíbem cochilar, e a papoula que ninguém planta perto de casa.',
   },
   {
     id: 'gula',
     pecado: 'Gula',
-    nome: 'Daphne · A Bruxa da Fome',
-    autoridade: 'Criação das Bestas do Ermo & Voracidade Sem Fim',
+    nome: 'Dagra · A Faminta',
+    autoridade: 'Parir as feras do ermo',
     naturezaPoder:
-      'Acorrentada num caixão flutuante com os olhos vendados para não enlouquecer o mundo com sua fome. ' +
-      'Para tentar alimentar a terra e a si mesma, pariu as monstruosidades e quimeras que assolam as florestas.',
-    desfecho: 'Devorada pela boca sem fim da Bruxa da Inveja nas dunas do deserto primitivo.',
-    reliquiaOuMarca: 'O Chifre das Quimeras e as Bestas da Calamidade que ainda vagam pelas fronteiras.',
+      'Conta-se que andava de olhos vendados para não ver o mundo como comida, e que tinha tanta fome — dela e ' +
+      'do mundo — que pariu as feras para que ninguém mais passasse fome: os lobos grandes, as sanguessugas do ' +
+      'charco, as bestas da fronteira. Deu errado, como tudo o que se faz com fome.',
+    desfecho:
+      'Os autos a descrevem como uma mulher de Solgar que roubou grão do celeiro da Ordem num ano de seca e o deu aos pobres.',
+    reliquiaOuMarca: 'Toda fera grande demais para o tamanho do mato ainda é "cria da Faminta".',
   },
   {
     id: 'luxuria',
     pecado: 'Luxúria',
-    nome: 'Carmilla · A Bruxa do Fascínio',
-    autoridade: 'Miragem da Devoção Cega',
+    nome: 'Liessa · A Encantadora',
+    autoridade: 'Ser amada até a morte',
     naturezaPoder:
-      'Sem traços de guerreira, tímida e vacilante, sua simples presença fazia qualquer criatura viva enxergar nela ' +
-      'a pessoa mais amada de sua vida, esquecendo de comer, fugir ou respirar até o coração parar de bater por êxtase.',
-    desfecho: 'Consumida pela Inveja que não suportou ver outro afeto além do seu próprio.',
-    reliquiaOuMarca: 'O Véu dos Olhos Cegos e as fontes de águas perfumadas que enlouquecem os viandantes.',
+      'Dizem que era tímida e não tinha rosto que se lembrasse: quem a olhava via nela quem mais amou na vida, ' +
+      'e esquecia de comer, de fugir e de respirar, feliz, até o coração parar.',
+    desfecho:
+      'Os autos registram uma viúva que recusou casar de novo com um capitão da Ordem. A acusação de feitiço veio depois da recusa.',
+    reliquiaOuMarca: 'As fontes do caminho que os viajantes evitam beber sozinhos.',
   },
   {
     id: 'ganancia',
     pecado: 'Ganância',
-    nome: 'Echidna · A Bruxa do Arquivo',
-    autoridade: 'Santuário da Onisciência & Curiosidade Eterna',
+    nome: 'Otília · A Escrivã',
+    autoridade: 'Querer saber tudo',
     naturezaPoder:
-      'Desejava conhecer tudo o que existiu, existe e existirá. Capaz de calcular infinitos futuros e guardar ' +
-      'as almas dos homens em livros vivos de memória eterna.',
-    desfecho: 'Morta e aprisionada no Santuário de Pedra quando as sombras da Inveja cobriram suas bibliotecas.',
-    reliquiaOuMarca: 'O Evangelho da Sabedoria e o chá das almas nos túmulos do vale.',
+      'A lenda diz que queria saber tudo o que foi e o que será, que guardava as almas dos mortos em livros e ' +
+      'que servia chá a quem a visitasse em sonho — e que o chá tinha gosto do que a pessoa mais queria esquecer. ' +
+      'Daí vem o "chá das bruxas" que as avós ainda juram ter visto no sonho de algum doente.',
+    desfecho:
+      'Escrivã leiga que copiava os registros de dízimo e descobriu o desvio. Os livros dela foram queimados junto.',
+    reliquiaOuMarca: 'As páginas soltas que ainda circulam escondidas, e o costume de enterrar um papel com os mortos.',
   },
   {
     id: 'tristeza',
     pecado: 'Tristeza (Melancolia)',
-    nome: 'Hector · O Bruxo da Tristeza',
-    autoridade: 'O Colapso do Pesar & Gravidade Abissal',
+    nome: 'Anselmo · O Enlutado',
+    autoridade: 'O peso do luto',
     naturezaPoder:
-      'Vestia negro e falava com a voz quebrada de um viúvo. Sua autoridade não usava mana: era o puro peso do luto ' +
-      'que fazia a gravidade aumentar dez mil vezes, achatando palácios, magia e fortalezas contra a lama.',
-    desfecho: 'Engolido pelas sombras da Inveja no Grande Cerco do Santuário.',
-    reliquiaOuMarca: 'O Marco Esmagado nas colinas de Mir, onde nem o capim consegue crescer ereto.',
+      'Conta-se que onde ele chorava o ar ficava pesado como chumbo, que as casas afundavam na lama e os homens ' +
+      'caíam de joelhos sem saber por quê, e que nada cresce ereto onde ele pregou.',
+    desfecho:
+      'Viúvo que pregava nas estradas contra o Tributo de Sangue, depois que a Coroa levou os três filhos dele. ' +
+      'O único homem da lista. Os autos o chamam de "pregador sem licença".',
+    reliquiaOuMarca: 'O Marco Esmagado nas colinas de Mir, onde as mães dos conscritos ainda deixam pedras.',
   },
   {
     id: 'va_gloria',
     pecado: 'Vã-Glória',
-    nome: 'Pandora · A Bruxa da Desdita',
-    autoridade: 'Reescrita do Fenômeno Existente',
+    nome: 'Rosamunda · A Vaidosa',
+    autoridade: 'Desfazer o que aconteceu',
     naturezaPoder:
-      'Uma garota imaculada de cabelos prateados que nega a causalidade. Se executada, diz simplesmente ' +
-      '"seus olhos devem tê-lo enganado" e o golpe desfaz-se no ar como se nunca houvesse ocorrido.',
-    desfecho: 'Sua presença foi engolida pela Inveja, mas sussurra-se que ela espreita por trás de cada heresia.',
-    reliquiaOuMarca: 'O Espelho Vazio que não reflete a pessoa que olha para ele.',
+      'Uma moça de cabelos de prata e vestido branco. A lenda diz que, se a ferissem, ela sorria e dizia ' +
+      '"isso não aconteceu", e a ferida, a espada e até a lembrança de quem golpeou sumiam.',
+    desfecho:
+      'Os autos não dizem quem era. Há um nome, uma data e uma nota de outro punho: "não encontrada". ' +
+      'Por isso se diz que ela nunca queimou.',
+    reliquiaOuMarca: 'O costume de dizer "não aconteceu" três vezes depois de um agouro.',
   },
 ];
 
@@ -214,34 +245,34 @@ export const FACCOES_ANTIGAS: FaccaoAntiga[] = [
   {
     id: 'igreja_santos_selo',
     nome: 'A Ordem dos Santos do Selo',
-    crenca: 'A salvação reside em manter as fendas fechadas e as bruxas esquecidas sob a rocha sagrada.',
+    crenca: 'A salvação reside em manter as pecadoras esquecidas e o povo longe do que elas sabiam.',
     sede: 'Catedral de Granito da Casa Senhorial e Mosteiro do Alto',
-    dogma: 'Todo sangue mágico é mácula; toda evocação da Inveja deve ser punida com o fogo e o ferro frio.',
-    relacaoComBruxas: 'Inimigos mortais. Caçam qualquer indivíduo com aroma do pecado ou relíquia de bruxa.',
+    dogma: 'Todo saber fora da Igreja é mácula; quem diz o nome da Invejosa responde ao tribunal da Ordem.',
+    relacaoComBruxas: 'Foram eles que as queimaram. Ainda caçam quem guarda páginas da Escrivã ou fitas da Colérica.',
   },
   {
     id: 'culto_da_bruxa',
-    nome: 'O Culto da Bruxa (Apóstolos do Véu Negro)',
-    crenca: 'A Bruxa da Inveja é a verdadeira mãe do mundo e retornará para acolher seus filhos no manto da noite perpétua.',
+    nome: 'Os Filhos do Véu Negro',
+    crenca: 'A Invejosa não morreu na fogueira e vai voltar para cobrar da Ordem cada uma das nove.',
     sede: 'Criptas secretas sob as Ruínas de Mir e cavernas de Solgar',
-    dogma: 'Seguir à risca as instruções reveladas nos Evangelhos Negros deixados por seus Bispos do Pecado.',
-    relacaoComBruxas: 'Fanáticos devotos da Inveja; consideram as outras bruxas como oferendas consumidas pela sua rainha.',
+    dogma: 'Guardar as páginas que sobraram da fogueira e os nomes que a Ordem mandou esquecer.',
+    relacaoComBruxas: 'Devotos da Invejosa; as outras oito são para eles as mártires que ela vingará.',
   },
   {
     id: 'conclave_magos_mir',
     nome: 'O Conclave Arruinado de Mir',
-    crenca: 'O mana dos deuses mortos e as autoridades das bruxas podem ser catalogados e dominados pela razão.',
+    crenca: 'O que a Igreja chama de milagre e de feitiço pode ser explicado, anotado e ensinado.',
     sede: 'As Cinzas do Grande Templo de Mir',
     dogma: 'Nenhum conhecimento é proibido para quem possui mente de aço e instrumentos de precisão.',
-    relacaoComBruxas: 'Eruditos obcecados por desenterrar os caixões e relíquias das bruxas devoradas.',
+    relacaoComBruxas: 'Estudiosos que procuram os livros da Escrivã e os autos verdadeiros dos julgamentos.',
   },
   {
     id: 'casa_sem_nome',
     nome: 'A Fraternidade da Lâmina Escura',
     crenca: 'O mundo sobrevive porque alguns homens e mulheres aceitam morrer no escuro sem glória nem epitáfio.',
     sede: 'A Mansão Oculta na Névoa e Vilas dos Ferreiros',
-    dogma: 'Aço temperado com sangue de demônio corta qualquer autoridade, por mais soberba que seja.',
-    relacaoComBruxas: 'Exterminadores pragmáticos que enfrentam os frutos da Gula e as seitas da Inveja.',
+    dogma: 'Aço bem temperado e boca fechada resolvem mais que reza.',
+    relacaoComBruxas: 'Caçam as feras grandes que o povo chama de cria da Faminta, e desconfiam dos Filhos do Véu.',
   },
 ];
 
@@ -308,8 +339,8 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     nome: 'Coto da Ponte Caída',
     regiao: 'Vale de Halvet',
     divindadeOuCrenca: 'Preces aos Afogados do Rio-Verde.',
-    passadoGuerraDeuses: 'As fundações de pedra branca foram unidas por magia solar que resistiu por trezentos anos.',
-    marcaDasBruxas: 'Rachou ao meio na noite em que a Bruxa da Inveja tentou arrancar o selo de Sarine debaixo do rio.',
+    passadoGuerraDeuses: 'Os padres diziam que as fundações de pedra branca foram abençoadas para durar para sempre. Duraram trezentos anos.',
+    marcaDasBruxas: 'Caiu na noite da revolta, com cinzel e pólvora nos arcos. Quem não quer saber de sabotagem diz que foi a Invejosa.',
     supersticaoPopular: 'À meia-noite ainda se ouve os passos da Leva marchando no vazio sobre as águas.',
   },
   moinho: {
@@ -327,7 +358,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Vale de Halvet',
     divindadeOuCrenca: 'Culto às Cava-Fundo e aos Mortos sem Nome.',
     passadoGuerraDeuses: 'Encosta de solo instável saturada por resíduos divinos que empurram as covas colina abaixo.',
-    marcaDasBruxas: 'Muitas lápides não cobrem corpos, mas roupas de meninos levados pelas sombras da Inveja.',
+    marcaDasBruxas: 'Muitas lápides não cobrem corpos, mas roupas de rapazes levados pelo Tributo de Sangue aos dezoito anos.',
     supersticaoPopular: 'Cova que amanhece aberta não foi desenterrada por homens: a terra cuspiu o que rejeitou.',
   },
   lago: {
@@ -363,7 +394,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Vale de Halvet',
     divindadeOuCrenca: 'Antigo Templo Ecumênico do Conclave.',
     passadoGuerraDeuses: 'Local onde os deuses e os primeiros magos sentaram-se em tratado antes da quebra cósmica.',
-    marcaDasBruxas: 'Epicentro do massacre: a Bruxa da Inveja incendiou Mir com chamas pretas que a chuva não apaga até hoje.',
+    marcaDasBruxas: 'Arrasada pela Coroa quando esmagou a revolta. O povo diz que as cinzas são da Invejosa, porque é mais fácil culpar uma bruxa do que um rei.',
     supersticaoPopular: 'Nunca diga a palavra "Mir" perto de um recém-nascido; o cheiro de cinzas atrai a sombra devoradora.',
   },
   estrada: {
@@ -428,7 +459,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Marca de Tessel',
     divindadeOuCrenca: 'Bastião dos Cavaleiros do Selo e Altares de Sol-Voraz.',
     passadoGuerraDeuses: 'A grande muralha foi erguida sobre a espinha dorsal petrificada de um leviatã celeste.',
-    marcaDasBruxas: 'Primeira linha de defesa contra os bandos heréticos e bestas criadas pela fome de Daphne.',
+    marcaDasBruxas: 'Primeira linha de defesa contra os bandos heréticos e feras que o povo chama de cria da Faminta.',
     supersticaoPopular: 'Cão que uiva para o norte em noite sem lua viu a sombra da Inveja caminhando sobre o gelo.',
   },
   forte_agulha: {
@@ -512,7 +543,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     divindadeOuCrenca: 'Alinhamento Druídico Ancestral.',
     passadoGuerraDeuses: 'Monólitos erguidos para canalizar o mana das veias rompidas da terra.',
     marcaDasBruxas: 'Sete menires que representam as Sete Bruxas dos Pecados antes de serem aniquiladas pela Inveja.',
-    supersticaoPopular: 'Quem senta na pedra do centro na lua nova ouve sussurros da biblioteca de Echidna.',
+    supersticaoPopular: 'Quem senta na pedra do centro na lua nova ouve sussurros da biblioteca da Escrivã.',
   },
   pantano_lodo: {
     id: 'pantano_lodo',
@@ -520,7 +551,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Bosque de Vintra',
     divindadeOuCrenca: 'Os Deuses da Podridão e da Renovação.',
     passadoGuerraDeuses: 'Depressão lodosa onde apodreceram os restos de armaduras dos exércitos celestes.',
-    marcaDasBruxas: 'Infestado pelos vermes e sanguessugas gigantes paridos pela gula de Daphne.',
+    marcaDasBruxas: 'Infestado pelos vermes e sanguessugas gigantes que o povo diz serem cria da Faminta.',
     supersticaoPopular: 'Fogo-fátuo que pula duas vezes no charco é riso de bruxa morta chamando para o fundo.',
   },
   aldeia_lenha: {
@@ -529,7 +560,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Bosque de Vintra',
     divindadeOuCrenca: 'Respeito ao Machado e aos Juramentos de Madeira.',
     passadoGuerraDeuses: 'Trilhas de transporte de troncos para os navios de guerra dos tempos primordiais.',
-    marcaDasBruxas: 'Árvores com nós que parecem rostos chorando: dizem ser os que olharam para Carmilla e esqueceram de piscar.',
+    marcaDasBruxas: 'Árvores com nós que parecem rostos chorando: dizem ser os que olharam para a Encantadora e esqueceram de piscar.',
     supersticaoPopular: 'Machado que escorrega e corta o pé do lenhador foi enfeitiçado pela preguiça.',
   },
 
@@ -567,7 +598,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Planalto de Corveira',
     divindadeOuCrenca: 'O Julgamento da Soberba e o Medo da Lei.',
     passadoGuerraDeuses: 'Ponto alto onde os generais do firmamento empalavam os rebeldes.',
-    marcaDasBruxas: 'Inspirada no tribunal implacável da Bruxa Typhon: quem mente diante da forca tem os membros partidos pela própria consciência.',
+    marcaDasBruxas: 'Inspirada no tribunal da Juíza Aldonsa: quem mente diante da forca tem os membros partidos pela própria consciência.',
     supersticaoPopular: 'Corvo pousado em corda vazia aponta o próximo condenado com o bico.',
   },
   mosteiro_alto: {
@@ -585,7 +616,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Planalto de Corveira',
     divindadeOuCrenca: 'Culto aos Degraus da Rocha.',
     passadoGuerraDeuses: 'Escadarias gigantescas esculpidas para os pés dos titãs de ferro.',
-    marcaDasBruxas: 'Muralhas construídas para conter as quimeras famintas da Bruxa Daphne.',
+    marcaDasBruxas: 'Muralhas construídas para conter as feras que o povo chama de cria da Faminta.',
     supersticaoPopular: 'Pedra que rola sozinha do terraço de cima foi empurrada por mão invisível.',
   },
   forja_afundada: {
@@ -594,7 +625,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Planalto de Corveira',
     divindadeOuCrenca: 'A Centelha Sagrada Primordial.',
     passadoGuerraDeuses: 'Fosso de magma que nunca esfria, remanescente do impacto do martelo de Vandul.',
-    marcaDasBruxas: 'Aqui Minerva golpeou o solo com sua fúria, criando um bolsão de cura cercado por lava.',
+    marcaDasBruxas: 'Diz-se que aqui Brunhe, a Colérica, curou uma aldeia inteira de febre gritando uma noite inteira.',
     supersticaoPopular: 'Água lançada no poço de lava ferve em vapor que profetiza desgraças da guerra.',
   },
 
@@ -623,7 +654,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Ermo de Solgar',
     divindadeOuCrenca: 'Os Santos Guias dos Viajantes do Deserto.',
     passadoGuerraDeuses: 'Pátio fortificado que repousa sobre as ruínas de um mercado celeste.',
-    marcaDasBruxas: 'Mercadores vendem cópias clandestinas de páginas do Livro da Sabedoria de Echidna.',
+    marcaDasBruxas: 'Mercadores vendem cópias clandestinas de páginas do livro da Escrivã.',
     supersticaoPopular: 'Camelo que empaca diante do portão farejou apóstolo do culto da bruxa na estalagem.',
   },
   ruina_areia: {
@@ -633,7 +664,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     divindadeOuCrenca: 'Templos Perdidos dos Deuses Esquecidos.',
     passadoGuerraDeuses: 'Cúpulas de arenito dourado soterradas pela tempestade que encerrou a Guerra dos Deuses.',
     marcaDasBruxas: 'Suposto túmulo da Bruxa da Gula, onde bestas de duas cabeças ainda guardam os sarcófagos.',
-    supersticaoPopular: 'Areia que canta ao vento à noite repete os segredos que Echidna deixou enterrados.',
+    supersticaoPopular: 'Areia que canta ao vento à noite repete os segredos que a Escrivã deixou enterrados.',
   },
 
   // ── Costa de Mareu (Portos e Marés a Sudeste) ──
@@ -643,7 +674,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Costa de Mareu',
     divindadeOuCrenca: 'A Catedral dos Navegantes de Yrmara.',
     passadoGuerraDeuses: 'As falésias brancas foram erguidas pelas mãos marinhas de Yrmara para frear as chamas de Sol-Voraz.',
-    marcaDasBruxas: 'As águas do ancoradouro guardam a lenda de Carmilla: marinheiros juram ouvir cantos de fascínio da névoa.',
+    marcaDasBruxas: 'As águas do ancoradouro guardam a lenda da Encantadora: marinheiros juram ouvir cantos de fascínio da névoa.',
     supersticaoPopular: 'Barco que zarpa sem amarrar fita azul no mastro atrai o abraço sufocante das águas.',
   },
   porto_sal: {
@@ -679,7 +710,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Costa de Mareu',
     divindadeOuCrenca: 'Marcos de Pedra dos Naufrágios.',
     passadoGuerraDeuses: 'Caminho cortado a machado nas falésias pelos primeiros colonizadores celestes.',
-    marcaDasBruxas: 'Fendas onde o vento produz sons de luto, herança do peso opressor do Bruxo Hector.',
+    marcaDasBruxas: 'Fendas onde o vento produz sons de luto, herança do luto de Anselmo, o Enlutado.',
     supersticaoPopular: 'Caminhar na beirada do abismo ao entardecer convida a mão invisível da Preguiça a empurrá-lo.',
   },
   mercado_peixe: {
@@ -688,7 +719,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Costa de Mareu',
     divindadeOuCrenca: 'A Bênção das Redes Cheias.',
     passadoGuerraDeuses: 'Antiga rampa de desembarque de tributos marítimos dos reinos antigos.',
-    marcaDasBruxas: 'Balcões de pedra onde monges inspecionam o pescado em busca de mutações provocadas pela Gula de Daphne.',
+    marcaDasBruxas: 'Balcões de pedra onde monges inspecionam o pescado em busca de mutações que atribuem à Faminta.',
     supersticaoPopular: 'Pagar peixe com moeda suja de ferrugem atrai calmaria sem vento no mar.',
   },
 
@@ -717,7 +748,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Baixios de Halvern',
     divindadeOuCrenca: 'A Senhora das Águas Paradas e dos Juncos.',
     passadoGuerraDeuses: 'Bacia de água estagnada formada pela pegada de um titã celeste abatido.',
-    marcaDasBruxas: 'Ninhos de sanguessugas negras e quimeras aquáticas que sobreviveram à queda de Daphne.',
+    marcaDasBruxas: 'Ninhos de sanguessugas negras e quimeras aquáticas que o povo diz serem cria da Faminta.',
     supersticaoPopular: 'Quem colhe junco com as duas mãos amaldiçoa o parto da filha mais velha.',
   },
   vila_juncal: {
@@ -764,7 +795,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Tsige',
     divindadeOuCrenca: 'A soberania mútua e a confiança inabalável entre mestre e servas.',
     passadoGuerraDeuses: 'Erguida na interseção dimensional entre o mundo dos homens e as terras de além-fronteira.',
-    marcaDasBruxas: 'Suas receitas medicinais curam maldições profundas que nem mesmo a autoridade de Minerva sanou.',
+    marcaDasBruxas: 'Suas receitas medicinais curam maldições profundas que nem mesmo a Colérica sanou.',
     supersticaoPopular: 'Quem entra na Kuzunoha com respeito sai curado; quem entra com traição não sai.',
   },
   tsige_portao_ermo: {
@@ -827,7 +858,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Academia de Rotsgard',
     divindadeOuCrenca: 'O Culto da Teoria Mágica e dos Tomos Selados.',
     passadoGuerraDeuses: 'Cripta de manuscritos resgatados das chamas da Guerra Primordial.',
-    marcaDasBruxas: 'O setor restrito contém cópias censuradas dos Evangelhos da Ganância de Echidna.',
+    marcaDasBruxas: 'O setor restrito contém cópias censuradas dos páginas da Escrivã Otília.',
     supersticaoPopular: 'Tomo com capa de pele que sangra quando aberto nunca deve ser lido sem três amuletos de chumbo.',
   },
   asora_vila_central: {
