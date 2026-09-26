@@ -9,9 +9,11 @@
 //
 // Duas regras do cenário pesam em tudo abaixo:
 // - O vale é das mulheres. Os homens da família existem, mas estão AUSENTES:
-//   foram à ponte aos dezoito, morreram no desabamento, vieram de fora e não
-//   ficaram. Por isso `ausentes`, e não NPC novo.
-// - Em Tessel, "leva" é o recrutamento da marca, não o chamado da ponte.
+//   foram levados aos dezoito pelo Tributo de Sangue da Coroa (sessão 67),
+//   morreram no desabamento, vieram de fora e não ficaram. Por isso
+//   `ausentes`, e não NPC novo.
+// - "Leva" é o recrutamento: no vale, o Tributo de Sangue; em Tessel, a
+//   leva da marca.
 //
 // `tensao` é o que a vizinhança conta. Segredo de NPC não entra aqui — o
 // narrador recebe este texto antes de o jogador descobrir qualquer coisa.
@@ -37,7 +39,7 @@ export const familiasVaelhorn: FamiliaNpc[] = [
       { tipo: 'primas', a: 'dama_valda', b: 'maelis' },
       { tipo: 'mae', a: 'maelis', b: 'ilse' },
     ],
-    ausentes: [{ nome: 'Aldren de Halvet', laco: 'filho de Valda, irmão de Ysolde', destino: 'foi à ponte no inverno em que fez dezoito anos' }],
+    ausentes: [{ nome: 'Aldren de Halvet', laco: 'filho de Valda, irmão de Ysolde', destino: 'levado pelo Tributo de Sangue no inverno em que fez dezoito anos' }],
   },
   {
     id: 'gente_da_taverna',

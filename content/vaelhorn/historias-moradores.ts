@@ -368,7 +368,7 @@ export const HISTORIAS_MORADORES: Record<string, HistoriaNpc> = {
     origem: 'Nascida em Juncal de Baixo, surda desde uma febre de criança. Some por dias pelo charco, sempre com um saco nas costas.',
     ferida: 'Perdeu o filho no inverno dos dezoito dele, como tantas, e nunca chorou onde a vila pudesse ver.',
     desejo: 'Que o filho possa sair da Toca um dia, e morar em algum lugar com o nome dele.',
-    medo: 'Que o filho vá à ponte, como os outros três.',
+    medo: 'Que levem o filho aos dezoito, como levaram os outros três.',
   },
   morador_vila_juncal_4: {
     origem: 'Pastora de Juncal de Baixo, conhece o charco como a palma da mão. Dorme fora desde que ficou viúva.',

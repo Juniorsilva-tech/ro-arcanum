@@ -114,7 +114,7 @@ export const HISTORIAS_VALE: Record<string, HistoriaNpc> = {
   },
   ysolde: {
     origem: 'A filha caçula da casa de Halvet, criada no quarto dos fundos enquanto o irmão aprendia a ser herdeiro.',
-    ferida: 'Tinha quinze anos quando Aldren foi à ponte. A mãe olhou para ela no jantar seguinte como quem olha uma cadeira errada.',
+    ferida: 'Tinha quinze anos quando levaram Aldren. A mãe olhou para ela no jantar seguinte como quem olha uma cadeira errada.',
     desejo: 'Uma vida que não caiba na Casa de Pedra.',
     medo: 'Virar a mãe: pôr um lugar vazio à mesa e esperar por quem não volta.',
   },
@@ -242,7 +242,7 @@ export const HISTORIAS_VALE: Record<string, HistoriaNpc> = {
   },
   morador_mercado_7: {
     origem: 'Escrivã do registro da feira, filha de outra escrivã. Anota nascimento, morte e dívida de quem compra e vende no vale.',
-    ferida: 'Anotou o nome de todos os meninos que foram à ponte nos últimos dez invernos, com a data. Sabe todos de cor.',
+    ferida: 'Anotou o nome de todos os rapazes que a Coroa levou nos últimos dez invernos, com a data. Sabe todos de cor.',
     desejo: 'Um inverno sem nenhum nome novo na lista.',
     medo: 'Um inverno em que a lista cresça mais depressa do que ela consegue escrever.',
   },

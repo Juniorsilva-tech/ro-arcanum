@@ -540,7 +540,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar pela carga da noite a quem tem idade para lembrar',
   },
   morador_vila_juncal_2: {
-    conteudo: 'Cera Mão-Curta benze cada menino que Orla leva à Toca e anota o nome num junco trançado. Tem quarenta e um juncos pendurados na viga. Três desses meninos voltaram para o vale e foram à ponte assim mesmo.',
+    conteudo: 'Cera Mão-Curta benze cada menino que Orla leva à Toca e anota o nome num junco trançado. Tem quarenta e um juncos pendurados na viga. Três desses meninos voltaram para o vale e foram levados pela Coroa assim mesmo.',
     comoDescobrir: 'contar os juncos trançados na viga da benzedeira',
   },
   morador_vila_juncal_3: {

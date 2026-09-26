@@ -670,7 +670,7 @@ export type FamiliaNpc = {
   tensao: string;
   membros: MembroFamilia[];
   lacos: LacoFamiliar[];
-  /** Quem é da família e não está no elenco: o filho que foi à ponte, a mãe afogada. */
+  /** Quem é da família e não está no elenco: o filho levado pelo Tributo de Sangue, a mãe afogada. */
   ausentes?: { nome: string; laco: string; destino: string }[];
   /** Membro que não é humano precisa de justificativa escrita (oni, espírito). */
   naoHumanos?: Record<string, string>;
