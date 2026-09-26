@@ -76,15 +76,16 @@ console.log('--- TESTES DE COSMOLOGIA, DEUSES, BRUXAS E CRÔNICAS DO MAPA ---');
   ok(/engol|devor/.test(invejosa.naturezaPoder), 'A lenda da Invejosa conta que ela devorou as outras');
   ok(/autos|queimad|fogueira/.test(invejosa.desfecho), 'E o desfecho diz o que os autos da Ordem registram');
   // Nenhum nome, termo ou personagem copiado de Re:Zero.
-  const texto = JSON.stringify(BRUXAS_DOS_PECADOS) + JSON.stringify(CRONICAS_MAPA) + JSON.stringify(FACCOES_ANTIGAS);
   // Os nomes vêm de Re:Zero (pedido do dono); os termos da obra, não.
   for (const nome of ['Satella', 'Echidna', 'Typhon', 'Minerva', 'Sekhmet', 'Daphne', 'Carmilla', 'Pandora', 'Hector']) {
     ok(BRUXAS_DOS_PECADOS.some((b) => b.nome.startsWith(nome)), `${nome} está entre as Pecadoras`);
   }
-  const copiados = ['Autoridade', 'Evangelho', 'Bispos do Pecado', 'Santo da Espada', 'Dragão Divino', 'Grande Sábio'];
-  const achados = copiados.filter((n) => texto.includes(n));
-  ok(achados.length === 0, `Nenhum termo da obra copiado (${achados.join(', ') || 'nenhum'})`);
-  console.log('✓ 3. As Sete Pecadoras validadas, com os nomes de Re:Zero e lendas do vale');
+  // Termos da obra também, a pedido do dono (jogo local).
+  const texto = JSON.stringify(BRUXAS_DOS_PECADOS) + JSON.stringify(FACCOES_ANTIGAS);
+  for (const termo of ['Santo da Espada', 'Dragão Divino', 'Grande Sábio', 'Culto da Bruxa', 'Evangelho', 'Bispos do Pecado']) {
+    ok(texto.includes(termo), `O termo "${termo}" está no lore`);
+  }
+  console.log('✓ 3. As Sete Pecadoras validadas, com os nomes e termos de Re:Zero e lendas do vale');
 }
 
 

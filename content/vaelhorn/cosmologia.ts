@@ -11,10 +11,10 @@
 // guardou as lendas dos poderes; os autos da Ordem guardam outra história. O
 // narrador conta as duas como coisas que se dizem, nunca como fato.
 //
-// (Sessão 69: as bruxas usam os nomes das bruxas de Re:Zero, a pedido do
-// dono, com lendas próprias do vale: o que o povo conta e o que os autos da
-// Ordem registram. Termos da obra — "Autoridade", "Evangelho", "Santo da
-// Espada" — ficaram de fora.)
+// (Sessão 69: as bruxas usam os nomes e os termos de Re:Zero — Autoridade,
+// Evangelho, Culto da Bruxa, Bispos do Pecado, o Santo da Espada, o Dragão
+// Divino e o Grande Sábio —, a pedido do dono: o jogo é local e não será
+// vendido. As lendas e os autos da Ordem são do vale.)
 
 export type Divindade = {
   id: string;
@@ -129,7 +129,8 @@ export const BRUXAS_DOS_PECADOS: BruxaPecado[] = [
       'A lenda diz que ela cobiçou tudo o que as outras tinham — o dom, o amor, o nome — e as engoliu uma a uma ' +
       'com mãos de sombra que saíam do chão, e que metade do vale morreu no inverno em que ela foi presa. ' +
       'Contam que ela amava alguém com um amor que não deixava espaço para mais ninguém no mundo, e que repetia ' +
-      '"eu te amo" até a voz virar outra coisa. O povo não diz o nome dela em voz alta.',
+      '"eu te amo" até a voz virar outra coisa, e que só o Santo da Espada, o Dragão Divino e o Grande Sábio, ' +
+      'juntos, conseguiram selá-la além do véu. O povo não diz o nome dela em voz alta.',
     desfecho:
       'Foi a última queimada, no Ano do Selo. Os autos dizem que era a irmã mais nova de uma das outras e que ' +
       'testemunhou contra todas para salvar a própria pele; a fogueira veio mesmo assim. O "inverno da Invejosa" ' +
@@ -253,10 +254,10 @@ export const FACCOES_ANTIGAS: FaccaoAntiga[] = [
   },
   {
     id: 'culto_da_bruxa',
-    nome: 'Os Filhos do Véu Negro',
+    nome: 'O Culto da Bruxa (Filhos do Véu Negro)',
     crenca: 'A Invejosa não morreu na fogueira e vai voltar para cobrar da Ordem cada uma das nove.',
     sede: 'Criptas secretas sob as Ruínas de Mir e cavernas de Solgar',
-    dogma: 'Guardar as páginas que sobraram da fogueira e os nomes que a Ordem mandou esquecer.',
+    dogma: 'Seguir o Evangelho que cada fiel carrega e obedecer aos Bispos do Pecado, que falam em nome da Bruxa.',
     relacaoComBruxas: 'Devotos da Invejosa; as outras oito são para eles as mártires que ela vingará.',
   },
   {

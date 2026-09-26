@@ -1657,7 +1657,7 @@ export function Livro() {
               />
             </View>
             <TextoMono style={{ color: ehInvejosa ? cores.cinabrio : cores.ouro, marginTop: 2 }}>
-              O dom, segundo a lenda: {b.autoridade}
+              Autoridade: {b.autoridade}
             </TextoMono>
             <TextoSerif style={{ fontSize: 14, color: '#cbd5d1', marginTop: 4, lineHeight: 20 }}>
               {b.naturezaPoder}
