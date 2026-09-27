@@ -92,9 +92,9 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     },
     chaveEm: 'console.mistral.ai (plano Experiment)',
     linkChave: 'https://console.mistral.ai/api-keys',
-    passos: 'crie a conta → escolha o plano Experiment (grátis, confirma o celular) → API Keys → Create new key',
-    limite: '1 pedido/s e ~1 bilhão de tokens/mês; sem cartão',
-    aviso: 'o plano grátis pede aceitar que os dados treinem os modelos deles',
+    passos: 'plano Gratuito ativo → console.mistral.ai → API Keys → Create new key (pode levar alguns minutos para ativar)',
+    limite: 'plano Gratuito dá US$ 10/mês em créditos de API (dá umas centenas de cenas no Large, mais no Small); sem cartão',
+    aviso: 'em 2026 a Mistral trocou o plano Experiment por créditos mensais; o Small gasta bem menos crédito que o Large',
   },
   gemini: {
     nome: 'Google Gemini',
@@ -180,7 +180,7 @@ function explicarErro(p: LlmProvider, status: number, corpo: string): string {
   } catch { /* texto cru */ }
   const resposta = ` Resposta da ${nome}: "${String(original).slice(0, 180)}"`;
   const dicaMistral = p === 'mistral'
-    ? ' Na Mistral, a chave só funciona depois de escolher o plano grátis: console.mistral.ai → Billing/Plano → "Experiment" (confirma o celular). Chave nova pode levar alguns minutos para ativar.'
+    ? ' Na Mistral, a chave precisa ser criada em console.mistral.ai → API Keys (não é a do Le Chat/Vibe), e chave nova leva alguns minutos para ativar. Se os créditos grátis do mês acabaram, só volta no mês seguinte.'
     : '';
   if (status === 401 || status === 403 || /api key|api_key/i.test(String(original))) return `chave da ${nome} recusada (${status}).${dicaMistral}${resposta}`;
   if (status === 429 || /rate.?limit|quota|exceeded|capacity/i.test(corpo)) return `limite da ${nome} atingido agora (${status}).${dicaMistral}${resposta}`;

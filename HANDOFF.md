@@ -871,3 +871,9 @@ Mistral, lembra que a chave só funciona depois de escolher o plano grátis
 Experiment (e que chave nova leva minutos para ativar). Se a lista de modelos
 da conta não vier, o cartão diz para tocar em Testar e ver o motivo. Falta a
 mensagem real do aparelho do dono para fechar o diagnóstico.
+
+Print do dono (admin.mistral.ai): em 2026 o plano "Gratuito" da Mistral dá
+US$ 10/mês em créditos de API; o "Experiment" de 1 bilhão de tokens não existe
+mais. Textos do cartão da Mistral atualizados (limite, passos e dica de erro:
+a chave vem de console.mistral.ai → API Keys, não do Le Chat/Vibe). Ainda sem a
+mensagem de erro real do aparelho.
