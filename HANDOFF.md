@@ -862,3 +862,12 @@ topo. "Testar cena adulta" grava o veredito em `config.testesAdulto`
 ("provedor:modelo"), e o botão do modelo passa a mostrar "✓ narra adulto" ou
 "✗ recusa adulto". As notas são expectativa, não teste: o veredito que vale é o
 do botão.
+
+O dono colou as chaves da Groq e da Mistral e "não roda"; a Mistral dizia
+"travado". CORS e endpoints conferidos (preflight de `/models` e de chat OK nos
+três). O erro resumido escondia o motivo: `explicarErro` agora mostra a frase
+do próprio provedor (lê `{error}`, `{detail}` e o `[{error}]` do Gemini) e, na
+Mistral, lembra que a chave só funciona depois de escolher o plano grátis
+Experiment (e que chave nova leva minutos para ativar). Se a lista de modelos
+da conta não vier, o cartão diz para tocar em Testar e ver o motivo. Falta a
+mensagem real do aparelho do dono para fechar o diagnóstico.

@@ -33,6 +33,7 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
     const peso = (id: string) =>
       notaDoModelo(p, id).startsWith('★') ? -1 : info.sugestoes.includes(id) ? info.sugestoes.indexOf(id) : 100;
     setModelosConta(ids.length ? ids.sort((a, b) => peso(a) - peso(b)) : null);
+    if (!ids.length) setEstado('não consegui buscar os modelos da sua conta — toque em Testar para ver o motivo');
   }
 
   useEffect(() => {

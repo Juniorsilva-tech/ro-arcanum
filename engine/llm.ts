@@ -168,10 +168,24 @@ function cabecalhos(p: LlmProvider, chave: string): Record<string, string> {
 function explicarErro(p: LlmProvider, status: number, corpo: string): string {
   if (!ehProvedorCompat(p)) return explicarErroOpenRouter(status, corpo);
   const nome = PROVEDORES_GRATIS[p].nome;
-  if (status === 429 || /rate.?limit|quota|exceeded/i.test(corpo)) return `limite grátis da ${nome} atingido agora (429).`;
-  if (status === 401 || status === 403) return `chave da ${nome} inválida ou sem permissão (${status}).`;
-  if (status === 404) return `modelo não encontrado na ${nome} (404). Toque em "Buscar modelos".`;
-  return `${nome}: HTTP ${status}: ${corpo.slice(0, 160)}`;
+  // A frase do próprio provedor vai junto: resumir demais escondia o motivo
+  // real ("travado" sem dizer por quê).
+  let original = corpo;
+  try {
+    const cru = JSON.parse(corpo) as unknown;
+    // O Gemini devolve [{ error }]; os outros, { error } ou { detail }.
+    const j = (Array.isArray(cru) ? cru[0] : cru) as { error?: { message?: string } | string; message?: string; detail?: unknown };
+    const e = j.error;
+    original = (typeof e === 'string' ? e : e?.message) ?? j.message ?? (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail ?? j));
+  } catch { /* texto cru */ }
+  const resposta = ` Resposta da ${nome}: "${String(original).slice(0, 180)}"`;
+  const dicaMistral = p === 'mistral'
+    ? ' Na Mistral, a chave só funciona depois de escolher o plano grátis: console.mistral.ai → Billing/Plano → "Experiment" (confirma o celular). Chave nova pode levar alguns minutos para ativar.'
+    : '';
+  if (status === 401 || status === 403 || /api key|api_key/i.test(String(original))) return `chave da ${nome} recusada (${status}).${dicaMistral}${resposta}`;
+  if (status === 429 || /rate.?limit|quota|exceeded|capacity/i.test(corpo)) return `limite da ${nome} atingido agora (${status}).${dicaMistral}${resposta}`;
+  if (status === 404 || /model.*(not found|decommission|does not exist)/i.test(corpo)) return `modelo indisponível na ${nome} (${status}): escolha outro na lista.${resposta}`;
+  return `${nome}: HTTP ${status}.${dicaMistral}${resposta}`;
 }
 
 export type LlmConfig = {
