@@ -52,6 +52,8 @@ export type InfoProvedorGratis = {
   base: string;
   modeloPadrao: string;
   sugestoes: string[];
+  /** O que dizer de cada modelo conhecido na lista (★ = recomendado). */
+  notas: Record<string, string>;
   chaveEm: string;
   /** Página onde se cria a chave, e o caminho até o botão. */
   linkChave: string;
@@ -65,6 +67,13 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     base: 'https://api.groq.com/openai/v1',
     modeloPadrao: 'llama-3.3-70b-versatile',
     sugestoes: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3-32b', 'llama-3.1-8b-instant'],
+    notas: {
+      'llama-3.3-70b-versatile': '★ recomendado aqui · melhor prosa da Groq',
+      'openai/gpt-oss-120b': 'grande e obediente · costuma recusar sexo',
+      'openai/gpt-oss-20b': 'muito rápido · costuma recusar sexo',
+      'qwen/qwen3-32b': 'bom em ficção · pensa antes, mais lento',
+      'llama-3.1-8b-instant': 'reserva leve · prosa fraca',
+    },
     chaveEm: 'console.groq.com/keys',
     linkChave: 'https://console.groq.com/keys',
     passos: 'entre com o Google → API Keys → Create API Key (começa com gsk_)',
@@ -76,6 +85,11 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     base: 'https://api.mistral.ai/v1',
     modeloPadrao: 'mistral-large-latest',
     sugestoes: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest'],
+    notas: {
+      'mistral-large-latest': '★ recomendado · o melhor grátis para o jogo',
+      'mistral-medium-latest': 'bom e mais leve',
+      'mistral-small-latest': 'rápido · prosa simples',
+    },
     chaveEm: 'console.mistral.ai (plano Experiment)',
     linkChave: 'https://console.mistral.ai/api-keys',
     passos: 'crie a conta → escolha o plano Experiment (grátis, confirma o celular) → API Keys → Create new key',
@@ -87,6 +101,10 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     base: 'https://generativelanguage.googleapis.com/v1beta/openai',
     modeloPadrao: 'gemini-flash-latest',
     sugestoes: ['gemini-flash-latest', 'gemini-flash-lite-latest'],
+    notas: {
+      'gemini-flash-latest': '★ melhor prosa · bloqueia sexo',
+      'gemini-flash-lite-latest': 'leve · bloqueia sexo',
+    },
     chaveEm: 'aistudio.google.com/apikey',
     linkChave: 'https://aistudio.google.com/apikey',
     passos: 'entre com a conta Google → Create API key (começa com AIza)',
@@ -98,6 +116,10 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     base: 'https://api.cerebras.ai/v1',
     modeloPadrao: 'gpt-oss-120b',
     sugestoes: ['gpt-oss-120b', 'zai-glm-4.7'],
+    notas: {
+      'zai-glm-4.7': '★ bom em ficção',
+      'gpt-oss-120b': 'grande · costuma recusar sexo',
+    },
     chaveEm: 'cloud.cerebras.ai',
     linkChave: 'https://cloud.cerebras.ai',
     passos: 'crie a conta → API Keys; se pedir cartão, pule esta',
@@ -105,6 +127,20 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     aviso: 'relatos de 2026 dizem que a camada grátis passou a pedir cartão',
   },
 };
+
+/** Uma linha sobre o modelo: a nota conhecida ou, na falta dela, o que o nome diz. */
+export function notaDoModelo(p: ProvedorCompat, id: string): string {
+  const conhecida = PROVEDORES_GRATIS[p].notas[id];
+  if (conhecida) return conhecida;
+  const n = id.toLowerCase();
+  const partes: string[] = [];
+  if (/(405b|235b|120b|72b|70b|large|ultra|pro)/.test(n)) partes.push('grande');
+  else if (/(|-)(1b|3b|8b|9b|mini|lite|small|instant|nano|tiny)/.test(n)) partes.push('leve e rápido');
+  if (/(preview|exp|beta)/.test(n)) partes.push('experimental');
+  if (/(coder|code|math)/.test(n)) partes.push('feito para código, não para prosa');
+  if (/(gpt-oss|gemini|gemma)/.test(n)) partes.push('costuma recusar sexo');
+  return partes.join(' · ') || 'sem avaliação — teste a cena adulta';
+}
 
 export function ehProvedorCompat(p: LlmProvider): p is ProvedorCompat {
   return p in PROVEDORES_GRATIS;

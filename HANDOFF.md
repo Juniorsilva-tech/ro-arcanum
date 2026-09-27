@@ -853,3 +853,12 @@ Com a chave salva, o cartão da reserva busca os modelos da própria conta
 recomendados primeiro; sem chave, mostra as sugestões fixas. A busca roda ao
 abrir o cartão (se já há chave) e a cada Salvar/Testar. Não testado com chave
 real; com chave falsa a lista fica nas sugestões, como esperado.
+
+Lista de modelos com avaliação: `PROVEDORES_GRATIS[*].notas` diz o que se sabe
+de cada modelo conhecido (★ = recomendado; "costuma recusar sexo"; "prosa
+fraca"), e `notaDoModelo` dá uma leitura pelo nome para os desconhecidos
+(grande, leve, experimental, feito para código). Recomendados sobem para o
+topo. "Testar cena adulta" grava o veredito em `config.testesAdulto`
+("provedor:modelo"), e o botão do modelo passa a mostrar "✓ narra adulto" ou
+"✗ recusa adulto". As notas são expectativa, não teste: o veredito que vale é o
+do botão.

@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, TextInput, Pressable, Linking } from 'react-nat
 import { TextoMono, Divisor } from '../components';
 import { cores, fontes, esp } from '../theme';
 import { useGame } from '../store';
-import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, listarModelos, type ProvedorCompat } from '@/engine/llm';
+import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, listarModelos, notaDoModelo, type ProvedorCompat } from '@/engine/llm';
 
 // Ordem do rodízio: quem costuma aceitar ficção adulta primeiro; o Gemini,
 // com filtro mais duro, por último.
@@ -30,7 +30,8 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
     const lista = await listarModelos(p, k.trim(), true);
     // Os recomendados, se a conta tiver, vêm primeiro.
     const ids = [...new Set(lista.map((m) => m.id))];
-    const peso = (id: string) => (info.sugestoes.includes(id) ? info.sugestoes.indexOf(id) : 100);
+    const peso = (id: string) =>
+      notaDoModelo(p, id).startsWith('★') ? -1 : info.sugestoes.includes(id) ? info.sugestoes.indexOf(id) : 100;
     setModelosConta(ids.length ? ids.sort((a, b) => peso(a) - peso(b)) : null);
   }
 
@@ -67,7 +68,13 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
     if (!chave.trim()) return;
     setEstado('testando cena adulta…');
     await salvar();
-    const r = await testarCenaAdulta({ provider: p, apiKey: chave.trim(), modelo: modelo.trim() || info.modeloPadrao });
+    const alvo = modelo.trim() || info.modeloPadrao;
+    const r = await testarCenaAdulta({ provider: p, apiKey: chave.trim(), modelo: alvo });
+    // Guarda o veredito: o botão do modelo passa a mostrar ✓ ou ✗.
+    if (!r.erro) {
+      const cfgAtual = useGame.getState().config;
+      await setConfig({ testesAdulto: { ...(cfgAtual.testesAdulto ?? {}), [`${p}:${alvo}`]: r.narra } });
+    }
     setEstado(
       r.erro
         ? `falhou: ${r.erro}`
@@ -111,12 +118,24 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
       <TextoMono style={{ color: cores.mudo, marginTop: esp.sm }}>
         {modelosConta ? `${modelosConta.length} modelos da sua conta (toque para usar):` : 'sugestões (com a chave salva, aparecem os modelos da sua conta):'}
       </TextoMono>
-      <View style={styles.chips}>
-        {(modelosConta ?? info.sugestoes).slice(0, 40).map((m) => (
-          <Pressable key={m} onPress={() => setModelo(m)} style={[styles.chip, modelo === m && styles.chipAtivo]}>
-            <Text style={[styles.chipTxt, modelo === m && styles.chipTxtAtivo]}>{m}</Text>
-          </Pressable>
-        ))}
+      <View style={{ marginTop: esp.sm, gap: esp.sm }}>
+        {(modelosConta ?? info.sugestoes).slice(0, 40).map((m) => {
+          const nota = notaDoModelo(p, m);
+          const adulto = config.testesAdulto?.[`${p}:${m}`];
+          return (
+            <Pressable key={m} onPress={() => setModelo(m)} style={[styles.modeloLinha, modelo === m && styles.chipAtivo]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.chipTxt, nota.startsWith('★') && { color: cores.ouro }, modelo === m && styles.chipTxtAtivo]}>{m}</Text>
+                <Text style={styles.nota}>{nota}</Text>
+              </View>
+              {adulto !== undefined && (
+                <Text style={[styles.selo, { color: adulto ? cores.verdigris : cores.cinabrio }]}>
+                  {adulto ? '✓ narra adulto' : '✗ recusa adulto'}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
       <View style={styles.acoes}>
         <Pressable style={styles.botao} onPress={() => void salvar()}>
@@ -168,6 +187,9 @@ const styles = StyleSheet.create({
   chipAtivo: { borderColor: cores.ouro },
   chipTxt: { fontFamily: fontes.mono, fontSize: 10, color: cores.mudo },
   chipTxtAtivo: { color: cores.ouro },
+  modeloLinha: { flexDirection: 'row', alignItems: 'center', gap: esp.sm, paddingVertical: 6, paddingHorizontal: esp.sm, borderWidth: 1, borderColor: cores.linha },
+  nota: { fontFamily: fontes.mono, fontSize: 10, color: cores.mudo, marginTop: 2 },
+  selo: { fontFamily: fontes.mono, fontSize: 10 },
   acoes: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm, marginTop: esp.sm },
   botao: { paddingVertical: 6, paddingHorizontal: esp.md, borderWidth: 1, borderColor: cores.linha },
   botaoTxt: { fontFamily: fontes.mono, fontSize: 11, color: cores.vellum },
