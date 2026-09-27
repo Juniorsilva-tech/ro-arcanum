@@ -10,9 +10,9 @@ import { cores, fontes, esp } from '../theme';
 import { useGame } from '../store';
 import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, listarModelos, notaDoModelo, type ProvedorCompat } from '@/engine/llm';
 
-// Ordem do rodízio: quem costuma aceitar ficção adulta primeiro; o Gemini,
-// com filtro mais duro, por último.
-const ORDEM: ProvedorCompat[] = ['mistral', 'groq', 'cerebras', 'gemini'];
+// Ordem do rodízio: Groq primeiro (grátis e rápido); Gemini, de filtro duro,
+// depois; Mistral por último, porque a API dela deixou de ser grátis em 2026.
+const ORDEM: ProvedorCompat[] = ['groq', 'cerebras', 'gemini', 'mistral'];
 
 function CartaoReserva({ p }: { p: ProvedorCompat }) {
   const config = useGame((s) => s.config);

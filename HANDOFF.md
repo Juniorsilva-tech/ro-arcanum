@@ -877,3 +877,9 @@ US$ 10/mês em créditos de API; o "Experiment" de 1 bilhão de tokens não exis
 mais. Textos do cartão da Mistral atualizados (limite, passos e dica de erro:
 a chave vem de console.mistral.ai → API Keys, não do Le Chat/Vibe). Ainda sem a
 mensagem de erro real do aparelho.
+
+Confirmado pelo console da Mistral (26/09/2026): "Sua organização está no plano
+Free. Atualize para Pro para ativar suas chaves de API." A API da Mistral não é
+mais grátis. O cartão diz isso, a nota do Large perdeu a ★ e a Mistral foi para
+o fim do rodízio (ordem agora: Groq, Cerebras, Gemini, Mistral). O dono colou a
+chave da Mistral no chat; não a usei, e recomendei apagar.

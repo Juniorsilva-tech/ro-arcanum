@@ -86,15 +86,15 @@ export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
     modeloPadrao: 'mistral-large-latest',
     sugestoes: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest'],
     notas: {
-      'mistral-large-latest': '★ recomendado · o melhor grátis para o jogo',
+      'mistral-large-latest': 'bom para o jogo · exige plano Pro',
       'mistral-medium-latest': 'bom e mais leve',
       'mistral-small-latest': 'rápido · prosa simples',
     },
     chaveEm: 'console.mistral.ai (plano Experiment)',
     linkChave: 'https://console.mistral.ai/api-keys',
     passos: 'plano Gratuito ativo → console.mistral.ai → API Keys → Create new key (pode levar alguns minutos para ativar)',
-    limite: 'plano Gratuito dá US$ 10/mês em créditos de API (dá umas centenas de cenas no Large, mais no Small); sem cartão',
-    aviso: 'em 2026 a Mistral trocou o plano Experiment por créditos mensais; o Small gasta bem menos crédito que o Large',
+    limite: 'NÃO é grátis para API: no plano Free a chave fica desativada; só funciona no Pro (US$ 11,99/mês)',
+    aviso: 'visto no console da Mistral em 26/09/2026: "Atualize para Pro para usar suas chaves de API"',
   },
   gemini: {
     nome: 'Google Gemini',
