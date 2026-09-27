@@ -70,6 +70,12 @@ export type ResultadoTurno = {
   // Quando o jogador escreveu a ação com as próprias palavras, o texto CRU vem
   // aqui. É ordem literal para o narrador, não material de apoio.
   acaoLivre?: string;
+  // "dizer": acaoLivre é fala do jogador, palavra por palavra.
+  tipoAcaoLivre?: 'fazer' | 'dizer';
+  // Fim de combate: o log da engine, na ordem, vira as batidas da cena.
+  batidasCombate?: string[];
+  // Abertura, chegada, capítulo novo: cena longa com estrutura de capítulo.
+  modoCena?: 'capitulo';
   custoPeriodos: number;
   efeitosAplicados: Efeito[];
 };

@@ -5,6 +5,8 @@ import { Pagina, BarraVoltar } from './_layout';
 import { Titulo, TextoSerif, TextoMono, Botao, Card, Divisor, Rotulo, Carregando } from '../components';
 import { cores, fontes, esp, raio } from '../theme';
 import { useGame } from '../store';
+import { EstiloNarradorPainel } from './EstiloNarrador';
+import { ReservasGratisPainel } from './ReservasGratis';
 import type { ModeloOR } from '@/engine';
 import {
   SUGESTOES_OPENROUTER,
@@ -534,6 +536,10 @@ export function Config() {
           na sua conta.
         </TextoMono>
       </View>
+
+      <ReservasGratisPainel />
+
+      <EstiloNarradorPainel />
 
       <Divisor label="Testes do Sistema & Diagnóstico" />
       <Botao

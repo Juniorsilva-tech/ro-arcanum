@@ -38,18 +38,134 @@ import {
   avaliarReacaoHumanosPresenca,
 } from './tsukimichi';
 import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
+import { menoresNaCena, restricaoDeMenores } from './protecao';
 
-export type LlmProvider = 'openrouter' | 'anthropic' | 'nous';
+export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
+export type LlmProvider = 'openrouter' | 'anthropic' | 'nous' | ProvedorCompat;
+
+// Provedores com camada grátis e API compatível com a da OpenAI (chamada direto
+// do aparelho; os quatro aceitam CORS, então funcionam também na versão web).
+// Limites da camada grátis mudam sem aviso; os números abaixo são os
+// publicados em 2026 e servem de orientação, não de garantia.
+export type InfoProvedorGratis = {
+  nome: string;
+  base: string;
+  modeloPadrao: string;
+  sugestoes: string[];
+  chaveEm: string;
+  /** Página onde se cria a chave, e o caminho até o botão. */
+  linkChave: string;
+  passos: string;
+  limite: string;
+  aviso?: string;
+};
+export const PROVEDORES_GRATIS: Record<ProvedorCompat, InfoProvedorGratis> = {
+  groq: {
+    nome: 'Groq',
+    base: 'https://api.groq.com/openai/v1',
+    modeloPadrao: 'llama-3.3-70b-versatile',
+    sugestoes: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3-32b', 'llama-3.1-8b-instant'],
+    chaveEm: 'console.groq.com/keys',
+    linkChave: 'https://console.groq.com/keys',
+    passos: 'entre com o Google → API Keys → Create API Key (começa com gsk_)',
+    limite: '~30 pedidos/min e ~1.000 por dia no 70B (14.400/dia no 8B); sem cartão',
+    aviso: 'muito rápido; pode recusar cena adulta',
+  },
+  mistral: {
+    nome: 'Mistral',
+    base: 'https://api.mistral.ai/v1',
+    modeloPadrao: 'mistral-large-latest',
+    sugestoes: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest'],
+    chaveEm: 'console.mistral.ai (plano Experiment)',
+    linkChave: 'https://console.mistral.ai/api-keys',
+    passos: 'crie a conta → escolha o plano Experiment (grátis, confirma o celular) → API Keys → Create new key',
+    limite: '1 pedido/s e ~1 bilhão de tokens/mês; sem cartão',
+    aviso: 'o plano grátis pede aceitar que os dados treinem os modelos deles',
+  },
+  gemini: {
+    nome: 'Google Gemini',
+    base: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    modeloPadrao: 'gemini-flash-latest',
+    sugestoes: ['gemini-flash-latest', 'gemini-flash-lite-latest'],
+    chaveEm: 'aistudio.google.com/apikey',
+    linkChave: 'https://aistudio.google.com/apikey',
+    passos: 'entre com a conta Google → Create API key (começa com AIza)',
+    limite: 'Flash grátis com cota diária por modelo; sem cartão',
+    aviso: 'o Google usa o conteúdo grátis para melhorar produtos; filtro bloqueia cena adulta',
+  },
+  cerebras: {
+    nome: 'Cerebras',
+    base: 'https://api.cerebras.ai/v1',
+    modeloPadrao: 'gpt-oss-120b',
+    sugestoes: ['gpt-oss-120b', 'zai-glm-4.7'],
+    chaveEm: 'cloud.cerebras.ai',
+    linkChave: 'https://cloud.cerebras.ai',
+    passos: 'crie a conta → API Keys; se pedir cartão, pule esta',
+    limite: 'alto volume de tokens por minuto; catálogo muda sem aviso',
+    aviso: 'relatos de 2026 dizem que a camada grátis passou a pedir cartão',
+  },
+};
+
+export function ehProvedorCompat(p: LlmProvider): p is ProvedorCompat {
+  return p in PROVEDORES_GRATIS;
+}
+
+/** Endpoint de chat e modelo padrão de cada provedor que fala o formato OpenAI. */
+function urlChat(p: LlmProvider): string {
+  if (p === 'nous') return 'https://inference-api.nousresearch.com/v1/chat/completions';
+  if (ehProvedorCompat(p)) return `${PROVEDORES_GRATIS[p].base}/chat/completions`;
+  return 'https://openrouter.ai/api/v1/chat/completions';
+}
+function modeloPadraoDe(p: LlmProvider): string {
+  if (p === 'nous') return MODELO_PADRAO_NOUS;
+  if (ehProvedorCompat(p)) return PROVEDORES_GRATIS[p].modeloPadrao;
+  return MODELO_PADRAO_OPENROUTER;
+}
+function cabecalhos(p: LlmProvider, chave: string): Record<string, string> {
+  const h: Record<string, string> = { 'content-type': 'application/json', authorization: `Bearer ${chave}` };
+  if (p === 'openrouter') {
+    h['HTTP-Referer'] = 'https://github.com/Rogualdi/Ro';
+    h['X-Title'] = 'ARCANUM';
+  }
+  return h;
+}
+function explicarErro(p: LlmProvider, status: number, corpo: string): string {
+  if (!ehProvedorCompat(p)) return explicarErroOpenRouter(status, corpo);
+  const nome = PROVEDORES_GRATIS[p].nome;
+  if (status === 429 || /rate.?limit|quota|exceeded/i.test(corpo)) return `limite grátis da ${nome} atingido agora (429).`;
+  if (status === 401 || status === 403) return `chave da ${nome} inválida ou sem permissão (${status}).`;
+  if (status === 404) return `modelo não encontrado na ${nome} (404). Toque em "Buscar modelos".`;
+  return `${nome}: HTTP ${status}: ${corpo.slice(0, 160)}`;
+}
 
 export type LlmConfig = {
   provider: LlmProvider;
   apiKey: string;
   modelo: string;
+  estilo?: EstiloNarrador;
 };
+
+// Preferências de estilo do jogador (Configurações). Mexem só na voz: tamanho,
+// ritmo e se a ação dele é recontada. Nenhuma delas muda o que a engine decide.
+export type ExtensaoCena = 'curta' | 'media' | 'longa';
+export type RitmoCena = 'atmosfera' | 'equilibrado' | 'trama';
+export type MencaoDecisao = 'incorporar' | 'direto';
+export type EstiloNarrador = { extensao: ExtensaoCena; ritmo: RitmoCena; mencao: MencaoDecisao };
+export const ESTILO_PADRAO: EstiloNarrador = { extensao: 'media', ritmo: 'equilibrado', mencao: 'incorporar' };
+
+const PARAGRAFOS: Record<ExtensaoCena, [number, number]> = { curta: [3, 5], media: [4, 7], longa: [8, 12] };
+
+/** Linha do log de combate como batida de cena: sem emoji nem ruído de sistema. */
+export function batidaDeCombate(linha: string): string | null {
+  const t = linha.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/\s+/g, ' ').trim();
+  if (!t || /^(Você subiu para o nível|Vitória\.|Derrota\.|O combate começa)/.test(t)) return null;
+  if (/experiência\.?$/.test(t)) return null;
+  return t;
+}
 
 // Padrões. Slugs variam com o tempo — use o botão "Buscar modelos" nas
 // Configurações para pegar a lista atual e grátis direto da OpenRouter.
-export const MODELO_PADRAO_OPENROUTER = 'thedrummer/rocinante-12b';
+export const MODELO_PADRAO_OPENROUTER = 'google/gemma-4-31b-it:free';
 export const MODELO_PADRAO_ANTHROPIC = 'claude-haiku-4-5-20251001';
 export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
 
@@ -63,15 +179,14 @@ export const SUGESTOES_NOUS = [
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
 // substitui esta lista pela lista viva da sua conta.
 export const SUGESTOES_OPENROUTER = [
-  'nousresearch/hermes-3-llama-3.1-405b:free', // Nous gratis, primeira escolha
-  'nousresearch/deephermes-3-mistral-24b-preview:free',
-  'nousresearch/deephermes-3-llama-3-8b-preview:free',
-  'deepseek/deepseek-chat-v3-0324:free', // qualidade alta, pouco filtro em ficção
-  'cognitivecomputations/dolphin3.0-mistral-24b:free', // linhagem sem filtro
-  'nousresearch/hermes-3-llama-3.1-405b', // permissivo, bom em prosa
-  'deepseek/deepseek-r1:free',
-  'mistralai/mistral-nemo:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
+  // Grátis na OpenRouter em setembro de 2026 (a lista muda sem aviso; use
+  // "Buscar modelos"). Sem créditos na conta, o teto é ~50 pedidos por dia.
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'qwen/qwen3.8-27b:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'thinkingmachines/inkling:free',
+  'google/gemma-4-26b-a4b-it:free',
 ];
 
 // Atalho para quem quer cena adulta e não quer caçar slug.
@@ -390,7 +505,23 @@ export async function listarModelos(
 ): Promise<ModeloOR[]> {
   if (provider === 'nous') return listarModelosNous(apiKey, apenasGratis);
   if (provider === 'openrouter') return listarModelosOpenRouter(apiKey, apenasGratis);
+  if (ehProvedorCompat(provider) && apiKey) return listarModelosCompat(provider, apiKey);
   return [];
+}
+
+// Provedor grátis: a conta inteira é grátis, então todo modelo de texto serve.
+async function listarModelosCompat(p: ProvedorCompat, apiKey: string): Promise<ModeloOR[]> {
+  try {
+    const resp = await fetch(`${PROVEDORES_GRATIS[p].base}/models`, { headers: { authorization: `Bearer ${apiKey}` } });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as { data?: { id: string }[] };
+    return (data.data ?? [])
+      .map((m) => m.id.replace(/^models\//, ''))
+      .filter((id) => !/whisper|tts|embed|guard|moderation|vision-only|image|audio|ocr/i.test(id))
+      .map(comoModeloOR);
+  } catch {
+    return [];
+  }
 }
 
 // Pacote de contexto de tamanho ~constante (GDD §18.1).
@@ -703,7 +834,12 @@ export const INSTRUCAO_SISTEMA =
   '\nVOZ — escreva como um conto medieval, não como um relatório:\n' +
   '• Registro de fábula sombria: frases de fôlego, imagens concretas, o mundo antigo e ' +
   'cansado. Diga "a lâmina", "o pão preto", "a lama do pátio" — nunca abstrações vagas.\n' +
-  '• De 4 a 7 parágrafos, SEPARADOS POR LINHA EM BRANCO. Nunca um bloco só.\n' +
+  '• Tamanho: o que a mensagem pedir em "EXTENSÃO" (sem pedido, de 4 a 7 parágrafos), SEPARADOS POR LINHA EM BRANCO. Nunca um bloco só.\n' +
+  '• RITMO: um parágrafo, uma ideia. Depois de um trecho longo, uma frase curta sozinha, que dá o golpe. ' +
+  'Abra pelo corpo (o que se sente, se ouve, se vê de perto) antes do cenário largo. ' +
+  'Fuja do clichê gasto ("silêncio carregado de tensão", "de tirar o fôlego", "o tempo pareceu parar").\n' +
+  '• FIM DA CENA: termine numa situação que peça decisão do jogador: uma pergunta feita a ele, uma ameaça no ar, ' +
+  'uma porta aberta, alguém esperando resposta. Nunca feche com resumo, moral ou "o que você fará?".\n' +
   '• Fale com o jogador em segunda pessoa ("você"). Os outros, pelo nome.\n' +
   '• O JOGADOR É HOMEM. Todo termo que se refira a ele — como substantivo/adjetivo de ' +
   'tratamento ("forasteiro", "freguês", "viajante", "estranho") ou descrição do corpo — ' +
@@ -1115,7 +1251,7 @@ export async function narrarComModelo(
   ctx: Contexto,
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao> {
-  const userMsg = montarMensagemNarracao(content, camp, ctx, r);
+  const userMsg = montarMensagemNarracao(content, camp, ctx, r, cfg.estilo);
   try {
     const bruto =
       cfg.provider === 'anthropic'
@@ -1130,11 +1266,12 @@ export async function narrarComModelo(
   }
 }
 
-function montarMensagemNarracao(
+export function montarMensagemNarracao(
   content: ContentBundle,
   camp: Campaign,
   ctx: Contexto,
   r: ResultadoTurno,
+  estilo: EstiloNarrador = ESTILO_PADRAO,
 ): string {
   const pacote = montarPacote(content, camp, ctx, r.fato, {
     verbo: r.verbo?.nome,
@@ -1143,14 +1280,25 @@ function montarMensagemNarracao(
     grau: r.grau,
     livre: r.acaoLivre,
   });
-  const ordem = r.acaoLivre
-    ? `O JOGADOR ESCREVEU, COM AS PALAVRAS DELE: "${r.acaoLivre}"\n` +
-      `Isto é a intenção, não uma alteração do estado. Resultado canônico: ${r.fato}. ` +
-      'A cena responde à intenção respeitando esse resultado, inclusive quando falha.'
-    : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
-      'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.';
+  const direto = estilo.mencao === 'direto';
+  const ordem = r.acaoLivre && r.tipoAcaoLivre === 'dizer'
+    ? `O JOGADOR DISSE, com estas palavras: "${r.acaoLivre}"\n` +
+      'É a fala dele. Ela entra na cena como fala [você], sem mudar o sentido (só a pontuação pode ser acertada)' +
+      (direto ? ', logo na primeira linha; depois, a reação e a resposta de quem ouviu. ' : '; mostre também o gesto de quem fala e a reação de quem ouviu. ') +
+      `Resultado canônico: ${r.fato}.`
+    : r.acaoLivre
+      ? `O JOGADOR ESCREVEU, COM AS PALAVRAS DELE: "${r.acaoLivre}"\n` +
+        `Isto é a intenção, não uma alteração do estado. Resultado canônico: ${r.fato}. ` +
+        'A cena responde à intenção respeitando esse resultado, inclusive quando falha.' +
+        (direto ? ' Não reconte a ação: o jogador sabe o que fez. Comece pela consequência.' : '')
+      : `O JOGADOR FEZ ISTO: ${r.fato}\n` +
+        (direto
+          ? 'A cena é sobre ISTO, mas não reconte a ação: comece pela consequência e pela reação de quem estava lá.'
+          : 'A cena é sobre ISTO. Mostre a ação acontecendo e a reação de quem estava lá.');
   const textoTotal = `${r.fato} ${r.acaoLivre ?? ''} ${r.verbo?.nome ?? ''}`.toLowerCase();
+  const batidas = (r.batidasCombate ?? []).map(batidaDeCombate).filter((b): b is string => !!b).slice(-20);
   const ehCombate =
+    batidas.length > 0 ||
     /luta|combate|espada|lâmina|lamina|adaga|golpe|matar|degolar|atacar|cortar|flecha|sangue|esfaquear|oni|ferir|emboscada|derrubar|perfurar|estraçalhar|machado|bater|sangrent/i.test(
       textoTotal,
     );
@@ -1162,9 +1310,52 @@ function montarMensagemNarracao(
   const pacoteLocal = (pacote as { local?: { cronica?: unknown } }).local;
   if ((ehCombate || perseguicao) && pacoteLocal) delete pacoteLocal.cronica;
 
+  // Menores em cena: a engine tira a descrição do corpo deles do pacote e
+  // proíbe qualquer teor sexual, independente do que o modelo faria.
+  const menores = menoresNaCena(camp, ctx);
+  if (menores.length) {
+    for (const pr of (pacote as { presentes?: { idade?: number; corpo?: unknown }[] }).presentes ?? []) {
+      if (typeof pr.idade === 'number' && pr.idade < 18) delete pr.corpo;
+    }
+  }
+
   const diretrizEstilo = ehCombate
     ? 'DIRETRIZ DE COMBATE: violência crua e explícita, mas só a que o resultado deu, e em ordem: quem golpeou, onde pegou, o que doeu. Frases claras; um ferimento de cada vez.'
-    : 'PROSA VIVA, CRUA E IMERSIVA: Narre com realismo medieval, diálogos afiados (com [você] e [Nome]), impacto físico com gore pesado se houver violência, e volúpia carnal explícita se houver intimidade adulta.';
+    : menores.length
+      ? 'PROSA VIVA, CRUA E IMERSIVA: realismo medieval, diálogos afiados (com [você] e [Nome]) e impacto físico se houver violência.'
+      : 'PROSA VIVA, CRUA E IMERSIVA: Narre com realismo medieval, diálogos afiados (com [você] e [Nome]), impacto físico com gore pesado se houver violência, e volúpia carnal explícita se houver intimidade adulta.';
+
+  // Tamanho: a preferência do jogador; capítulo e luta pedem mais fôlego.
+  let [minP, maxP] = PARAGRAFOS[estilo.extensao];
+  if (r.modoCena === 'capitulo') [minP, maxP] = estilo.extensao === 'curta' ? [6, 8] : [8, 12];
+  if (batidas.length) [minP, maxP] = [Math.min(14, batidas.length + 2), Math.min(16, batidas.length + 4)];
+  const partes: string[] = [`EXTENSÃO: de ${minP} a ${maxP} parágrafos.`];
+  if (estilo.ritmo === 'atmosfera') partes.push('RITMO: dê tempo à atmosfera: sentidos, pausas, o lugar respirando entre as falas.');
+  if (estilo.ritmo === 'trama') partes.push('RITMO: ande a trama: pouca descrição, mais acontecimento e fala; cada parágrafo move alguma coisa.');
+  if (r.modoCena === 'capitulo') {
+    partes.push(
+      'MODO CAPÍTULO: cena de abertura ou de chegada, com fôlego. Estrutura: o corpo do jogador (o que ele sente primeiro); ' +
+      'o lugar de perto e depois de longe, só com o que está em "local", no clima e na hora do pacote; quem está ali (só "presentes"); ' +
+      'uma tensão concreta tirada do pacote ("arcosAtivos", "boatosDoVale", "mundoLembra"); e o gancho. ' +
+      'Nenhum fato novo sobre o mundo: a liberdade é da voz, não dos fatos.',
+    );
+  }
+  if (batidas.length) {
+    partes.push(
+      'A LUTA, NA ORDEM EM QUE A ENGINE A RESOLVEU. Narre batida por batida, um parágrafo curto por batida, nesta ordem e com estes nomes. ' +
+      'Não invente golpe, ferida, morte ou fuga fora desta lista; quem caiu continua caído. Entre batidas, pode usar uma frase curta de transição. ' +
+      'Depois da última, um parágrafo do que ficou (corpos, respiração, o lugar) e o gancho.\n' +
+      batidas.map((b, k) => `${k + 1}. ${b}`).join('\n'),
+    );
+  }
+  const lembretes = (camp.lembretesNarrador ?? []).filter((l) => l.trim()).slice(-8);
+  if (lembretes.length) {
+    partes.push(
+      'O JOGADOR PEDIU QUE VOCÊ LEMBRE (memória da história, não regra do mundo; se contradisser o pacote, o pacote vence; ' +
+      'não muda dinheiro, itens, feridas nem relações):\n' + lembretes.map((l) => `- ${l}`).join('\n'),
+    );
+  }
+  if (menores.length) partes.push(restricaoDeMenores(menores));
 
   return `${ordem}\n\n` +
     'Contexto do mundo (JSON, material de apoio — não é o assunto da cena):\n' +
@@ -1172,8 +1363,9 @@ function montarMensagemNarracao(
     `\n\nATENÇÃO DE CONTINUIDADE E ESTILO: escreva a PRÓXIMA cena, começando por uma frase completa — nunca continue uma frase da cena anterior. ` +
     `É expressamente PROIBIDO transcrever, copiar ou repetir qualquer diálogo ou fala de "cenasAnteriores". Escreva APENAS falas e acontecimentos inéditos.\n` +
     `${diretrizEstilo}\n` +
+    partes.join('\n') + '\n' +
     `Agora escreva a cena que responde a: ${r.acaoLivre ?? r.fato}\n` +
-    'Comece pela ação e pela reação. Só o JSON de resposta.';
+    (direto ? 'Comece pela consequência. Só o JSON de resposta.' : 'Comece pela ação e pela reação. Só o JSON de resposta.');
 }
 
 /**
@@ -1189,7 +1381,7 @@ export async function narrarComModeloStream(
   r: ResultadoTurno,
   onChunk: (textoParcial: string) => void,
 ): Promise<ResultadoNarracao> {
-  const userMsg = montarMensagemNarracao(content, camp, ctx, r);
+  const userMsg = montarMensagemNarracao(content, camp, ctx, r, cfg.estilo);
   try {
     let bruto: ResultadoNarracao;
     if (cfg.provider === 'anthropic') {
@@ -1495,19 +1687,10 @@ async function chamarStreamCompat(
 ): Promise<ResultadoNarracao> {
   const nous = cfg.provider === 'nous';
   let chave = resolverApiKey(cfg);
-  const url = nous
-    ? 'https://inference-api.nousresearch.com/v1/chat/completions'
-    : 'https://openrouter.ai/api/v1/chat/completions';
-  const headers: Record<string, string> = {
-    'content-type': 'application/json',
-    authorization: `Bearer ${chave}`,
-  };
-  if (!nous) {
-    headers['HTTP-Referer'] = 'https://github.com/Rogualdi/Ro';
-    headers['X-Title'] = 'ARCANUM';
-  }
+  const url = urlChat(cfg.provider);
+  const headers = cabecalhos(cfg.provider, chave);
   const corpo = () => JSON.stringify({
-    model: cfg.modelo || (nous ? MODELO_PADRAO_NOUS : MODELO_PADRAO_OPENROUTER),
+    model: cfg.modelo || modeloPadraoDe(cfg.provider),
     max_tokens: MAX_TOKENS,
     temperature: 0.7,
     stream: true,
@@ -1582,7 +1765,7 @@ async function chamarNous(
     }
 
     const bruto = await resp.text();
-    if (!resp.ok) return { erro: explicarErroOpenRouter(resp.status, bruto) };
+    if (!resp.ok) return { erro: explicarErro(cfg.provider, resp.status, bruto) };
     let data: {
       choices?: { message?: { content?: string }; finish_reason?: string }[];
       error?: { message?: string };
@@ -1614,17 +1797,12 @@ async function chamarOpenRouter(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const resp = await fetch(urlChat(cfg.provider), {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${cfg.apiKey}`,
-        'HTTP-Referer': 'https://github.com/Rogualdi/Ro',
-        'X-Title': 'ARCANUM',
-      },
+      headers: cabecalhos(cfg.provider, cfg.apiKey),
       signal: ctrl.signal,
       body: JSON.stringify({
-        model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
+        model: cfg.modelo || modeloPadraoDe(cfg.provider),
         max_tokens: teto,
         temperature: 0.7,
         messages: [
@@ -1645,7 +1823,7 @@ async function chamarOpenRouter(
       return { erro: 'resposta inválida da OpenRouter' };
     }
     // Erro embutido num 200 (a OpenRouter faz isso com limite/roteamento).
-    if (data.error?.message) return { erro: explicarErroOpenRouter(200, data.error.message) };
+    if (data.error?.message) return { erro: explicarErro(cfg.provider, 200, data.error.message) };
     const texto = data.choices?.[0]?.message?.content?.trim() ?? '';
     return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
   } catch (err: unknown) {
@@ -1751,23 +1929,18 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
         ? { ok: true }
         : { ok: false, erro: explicarErroOpenRouter(resp.status, await resp.text()) };
     }
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const resp = await fetch(urlChat(cfg.provider), {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${cfg.apiKey}`,
-        'HTTP-Referer': 'https://github.com/Rogualdi/Ro',
-        'X-Title': 'ARCANUM',
-      },
+      headers: cabecalhos(cfg.provider, cfg.apiKey),
       body: JSON.stringify({
-        model: cfg.modelo || MODELO_PADRAO_OPENROUTER,
+        model: cfg.modelo || modeloPadraoDe(cfg.provider),
         max_tokens: 8,
         messages: [{ role: 'user', content: 'ok' }],
       }),
     });
     return resp.ok
       ? { ok: true }
-      : { ok: false, erro: explicarErroOpenRouter(resp.status, await resp.text()) };
+      : { ok: false, erro: explicarErro(cfg.provider, resp.status, await resp.text()) };
   } catch (e) {
     return { ok: false, erro: String(e) };
   }
@@ -1813,7 +1986,7 @@ export async function narrarComFallback(
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao & { modeloUsado?: string }> {
   const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
-  if (primeira.texto || (cfg.provider !== 'openrouter' && cfg.provider !== 'nous')) return primeira;
+  if (primeira.texto || cfg.provider === 'anthropic') return primeira;
 
   // Se a chave for comprovadamente inválida (401), nenhum modelo vai responder
   const chaveInvalida = /chave inválida|sem permissão|401/i.test(primeira.erro ?? '');

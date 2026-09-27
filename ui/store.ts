@@ -192,6 +192,13 @@ const ATTR_MAX = 16;
 const PONTOS_TOTAIS = 66; // 6×10 + 6 de distribuição
 
 let feedSeq = 0;
+// O feed volta do save com ids f0, f1…; sem renumerar, as entradas novas
+// repetiam esses ids (e saves antigos já vinham repetidos) e o React
+// misturava as linhas.
+function renumerarFeed<T extends { id: string }>(feed: T[]): T[] {
+  feedSeq = 0;
+  return feed.map((e) => ({ ...e, id: `f${feedSeq++}` }));
+}
 const nf = (
   texto: string,
   tipo: EntradaFeed['tipo'],
@@ -253,7 +260,9 @@ interface GameState {
   iaErro?: string;
   // Turno já resolvido pela engine, esperando o narrador. Guardar isso é o que
   // permite tentar de novo sem repetir a ação nem gastar tempo do mundo.
-  pendente?: { fato: string; acaoLivre?: string };
+  pendente?: { fato: string; acaoLivre?: string; extra?: ExtraNarracao };
+  // Texto da aba Dizer: a próxima narração o trata como fala do jogador.
+  falaJogador?: string;
 
   init: () => Promise<void>;
   irPara: (t: Tela) => void;
@@ -343,7 +352,9 @@ interface GameState {
   fundirEstilos: (escolaA: string, escolaB: string, nome: string) => Promise<void>;
   ascender: () => Promise<void>;
   jogarCartaMemoria: (id: string) => Promise<void>;
-  acaoLivre: (texto: string) => Promise<void>;
+  acaoLivre: (texto: string, tipo?: 'fazer' | 'dizer') => Promise<void>;
+  lembrarNarrador: (texto: string) => Promise<void>;
+  esquecerLembrete: (indice: number) => Promise<void>;
   viajar: (destino: string) => Promise<void>;
 
   setConfig: (patch: Partial<ConfigApp>) => Promise<void>;
@@ -472,7 +483,7 @@ export const useGame = create<GameState>((set, get) => ({
     }
     if (camp.combate) {
       const sessaoCombate = await carregarSessao<SessaoSalva>();
-      set({ camp, content, feed: sessaoCombate?.feed ?? [], cena: undefined, tela: 'combate', ocupado: false });
+      set({ camp, content, feed: renumerarFeed(sessaoCombate?.feed ?? []), cena: undefined, tela: 'combate', ocupado: false });
       return;
     }
 
@@ -483,7 +494,7 @@ export const useGame = create<GameState>((set, get) => ({
     const sessao = await carregarSessao<SessaoSalva>();
     if (sessao?.feed?.length) {
       const cena = sessao.cena ?? montarCena(content, camp);
-      set({ camp, content, feed: sessao.feed, cena, tela: 'jogo', ocupado: false });
+      set({ camp, content, feed: renumerarFeed(sessao.feed), cena, tela: 'jogo', ocupado: false });
       return;
     }
 
@@ -599,7 +610,7 @@ export const useGame = create<GameState>((set, get) => ({
     const chave = chaveEfetiva(get().config);
     if (chave) {
       try {
-        await narrar(get, set, textoAbertura);
+        await narrar(get, set, textoAbertura, undefined, { modoCena: 'capitulo' });
       } catch {
         set({ ocupado: false });
       }
@@ -1183,6 +1194,7 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     const resultado = camp.combate?.resultado;
     const rec = camp.combate?.recompensa;
+    const batidasCombate = [...(camp.combate?.log ?? [])];
     fecharCombate(camp);
     avancarMundo(content, camp);
     const saque = rec?.loot?.length
@@ -1211,8 +1223,8 @@ export const useGame = create<GameState>((set, get) => ({
     await persistir(camp, set);
     const concl = verificarQuests(content, camp);
     if (concl.length) set({ feed: [...get().feed, ...concl.map((t) => nf(`Missão concluída: ${t}.`, 'sistema'))] });
-    // Até o fim de um combate é narrado pelo modelo.
-    await narrar(get, set, fato);
+    // Até o fim de um combate é narrado pelo modelo, batida por batida.
+    await narrar(get, set, fato, undefined, { batidasCombate });
   },
 
   // ── Magia ────────────────────────────────────────────────
@@ -1329,11 +1341,30 @@ export const useGame = create<GameState>((set, get) => ({
     await executar(get, set, { tipo: 'opcao', opcao: op, alvoId }, 'acao');
   },
 
-  async acaoLivre(texto) {
+  async lembrarNarrador(texto) {
+    const camp = get().camp;
+    const t = texto.trim().slice(0, 200);
+    if (!camp || !t) return;
+    camp.lembretesNarrador = [...(camp.lembretesNarrador ?? []), t].slice(-8);
+    set({ camp: { ...camp } });
+    await persistir(camp, set);
+  },
+
+  async esquecerLembrete(indice) {
+    const camp = get().camp;
+    if (!camp?.lembretesNarrador) return;
+    camp.lembretesNarrador = camp.lembretesNarrador.filter((_, k) => k !== indice);
+    set({ camp: { ...camp } });
+    await persistir(camp, set);
+  },
+
+  async acaoLivre(texto, tipo = 'fazer') {
     const { content, camp } = get();
     if (!content || !camp) return;
     const t = texto.trim();
     if (!t) return;
+    const dizer = tipo === 'dizer';
+    set({ falaJogador: dizer ? t : undefined });
 
     // Domínio do Kai (Sakai): intercepta e resolve comandos livres do Kai diretamente na engine
     const resKai = processarAcaoLivreKai(t, camp);
@@ -1358,19 +1389,24 @@ export const useGame = create<GameState>((set, get) => ({
       // Chamar executar() direto aqui pulava essa checagem: a acao livre
       // ('matar os bandidos') nunca abria o combate real, so a narracao
       // livre, que nao tem vida nem fim — o combate parecia nao terminar.
-      if (cls.verboId === 'cacar' || CHEFES_POR_VERBO[cls.verboId]) {
+      const abreCombate = cls.verboId === 'cacar' || !!CHEFES_POR_VERBO[cls.verboId];
+      // Fala não abre combate: "vou te matar" dito é ameaça, não ataque; cai
+      // na narração livre abaixo.
+      if (abreCombate && !dizer) {
         await get().agirVerbo(cls.verboId, cls.alvoId);
         return;
       }
-      await executar(get, set, { tipo: 'verbo', verboId: cls.verboId, alvoId: cls.alvoId }, undefined);
-      return;
+      if (!abreCombate) {
+        await executar(get, set, { tipo: 'verbo', verboId: cls.verboId, alvoId: cls.alvoId }, undefined);
+        return;
+      }
     }
     // Não casou com nenhum verbo? A ação livre não pode morrer no ar: o
     // narrador assume e escreve o que aconteceu, com opções novas depois.
     set({
-      feed: [...get().feed, nf(t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
+      feed: [...get().feed, nf(dizer ? `“${t}”` : t, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
-    await narrar(get, set, `Você tenta o seguinte: ${t}`, t);
+    await narrar(get, set, dizer ? `Você diz: “${t}”` : `Você tenta o seguinte: ${t}`, t, { tipoAcaoLivre: tipo });
   },
 
   async viajar(destino) {
@@ -1414,7 +1450,7 @@ export const useGame = create<GameState>((set, get) => ({
       return;
     }
 
-    await narrar(get, set, `Você chegou a ${alvo?.nome ?? destino}.`);
+    await narrar(get, set, `Você chegou a ${alvo?.nome ?? destino}.`, undefined, { modoCena: 'capitulo' });
     checarCapitulo(get, set);
   },
 
@@ -1439,7 +1475,7 @@ export const useGame = create<GameState>((set, get) => ({
       feed: [nf(`— ${camp.capitulo.titulo} —`, 'sistema', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })],
     });
     await persistir(camp, set);
-    await narrar(get, set, `Começa o ${camp.capitulo.titulo}.`);
+    await narrar(get, set, `Começa o ${camp.capitulo.titulo}.`, undefined, { modoCena: 'capitulo' });
   },
 
   async testarChaveApi() {
@@ -1585,7 +1621,7 @@ export const useGame = create<GameState>((set, get) => ({
   async tentarNarrarDeNovo() {
     const pend = get().pendente;
     if (!pend || get().ocupado) return;
-    await narrar(get, set, pend.fato, pend.acaoLivre);
+    await narrar(get, set, pend.fato, pend.acaoLivre, pend.extra);
   },
 
   async desistirIaEUsarLocal() {
@@ -1754,11 +1790,18 @@ function montarOpcoesIA(
 // pedido: sem modelo não há prosa). A engine resolve o que aconteceu; o
 // narrador escreve. Se ele não escrever, o turno fica pendente e o jogador
 // manda tentar de novo — o jogo NUNCA inventa um texto de reserva.
+type ExtraNarracao = {
+  tipoAcaoLivre?: 'fazer' | 'dizer';
+  batidasCombate?: string[];
+  modoCena?: 'capitulo';
+};
+
 async function narrar(
   get: () => GameState,
   set: (p: Partial<GameState>) => void,
   fato: string,
   acaoLivre?: string,
+  extra: ExtraNarracao = {},
 ) {
   const { content, camp, config } = get();
   if (!content || !camp) return;
@@ -1768,11 +1811,20 @@ async function narrar(
   if (avisos.length) set({ feed: [...get().feed, ...avisos.map(a => nf(a.texto, 'eco'))] });
 
   const cena = montarCena(content, { ...camp });
-  set({ cena, pendente: { fato } });
+  // Fala do jogador (aba Dizer): vale para esta narração, qualquer que tenha
+  // sido o caminho da engine até aqui.
+  const fala = get().falaJogador;
+  if (fala) {
+    set({ falaJogador: undefined });
+    acaoLivre = fala;
+    extra = { ...extra, tipoAcaoLivre: 'dizer' };
+  }
+  set({ cena, pendente: { fato, acaoLivre, extra } });
 
   const chave = chaveEfetiva(config);
+  const reservas = (config.reservas ?? []).filter((r) => r.apiKey?.trim());
 
-  if (!chave) {
+  if (!chave && !reservas.length) {
     // Narrador canônico local (GDD §20, P0: o jogo tem que rodar sem rede e
     // sem modelo). As peças já existiam — 'fato' é a frase que a própria
     // engine escreve reagindo ao grau do teste (construirFato em turn.ts), e
@@ -1797,17 +1849,32 @@ async function narrar(
 
   set({ ocupado: true, iaStatus: 'pensando', iaErro: undefined });
 
-  const pedido = { fato, acaoLivre, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
+  const pedido = { fato, acaoLivre, ...extra, custoPeriodos: 0, efeitosAplicados: [] } as unknown as Parameters<
     typeof narrarComFallback
   >[4];
-  const cfg = { provider: config.provider, apiKey: chave, modelo: config.modelo };
+  // Principal primeiro; depois as reservas grátis, em rodízio. Somar as
+  // camadas grátis de vários provedores é o que dá fôlego sem pagar.
+  const cfgs = [
+    ...(chave ? [{ provider: config.provider, apiKey: chave, modelo: config.modelo, estilo: config.estilo }] : []),
+    ...reservas.map((r) => ({ provider: r.provider, apiKey: r.apiKey.trim(), modelo: r.modelo ?? '', estilo: config.estilo })),
+  ];
 
-  // Uma segunda tentativa automática: falha de rede não deve virar impasse.
   set({ textoStreaming: '' });
-  let res = await narrarComModeloStream(cfg, content, camp, cena.contexto, pedido, (parcial) => {
-    set({ textoStreaming: parcial });
-  });
-  if (!res.texto) res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
+  let res: Awaited<ReturnType<typeof narrarComFallback>> = { erro: 'sem narrador' };
+  const erros: string[] = [];
+  for (const [k, cfg] of cfgs.entries()) {
+    // Só o primeiro vai em streaming; a segunda tentativa automática cobre
+    // falha de rede antes de passar para a reserva seguinte.
+    if (k === 0) {
+      res = await narrarComModeloStream(cfg, content, camp, cena.contexto, pedido, (parcial) => {
+        set({ textoStreaming: parcial });
+      });
+    }
+    if (!res.texto) res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
+    if (res.texto) break;
+    erros.push(`${cfg.provider}: ${res.erro ?? 'sem resposta'}`);
+  }
+  if (!res.texto && erros.length > 1) res = { erro: erros.join(' · ') };
 
   const cenaAtual = get().cena;
   if (res.texto) {

@@ -5723,3 +5723,97 @@ menos de 3% um do outro.
   viaja). Sem caixas de nome fixas por cima do mapa.
 - Testado no navegador: arrastos fortes nas quatro direções param na borda
   com a imagem cobrindo a janela; hover mostra e esconde o nome; clique viaja.
+
+---
+
+## Sessão 60 — Gemini — Vivedez do Mundo, Cidades do Continente e Ciclo Dia/Tarde/Noite
+Auditoria profunda e implementação da vivedez do mundo e identidade visual dos reinos:
+- **Resgate e Expansão de Cidades (`engine/cidades.ts`)**:
+  - Povoações em ruínas (`populacao === 0 && integridade < 40`) recebem expedições de resgate de cidades vizinhas prósperas (transferência de mantimentos, materiais e colonos).
+  - Metrópoles superpovoadas e ricas fundam povoados pioneiros autônomos nas regiões adjacentes.
+- **Muralhas Fortificadas & Inverno (`engine/continuidade.ts`)**:
+  - `muralha >= 2` mitiga dano estrutural e baixas em cercos e ataques.
+  - Inverno e inverno rigoroso elevam a probabilidade de ataques de predadores e feras famintas.
+- **Extorsão por Bandos de Salteadores (`engine/bandos.ts`)**:
+  - Bandos organizados ($\ge 10$ membros) com capitão vivo extorquem povoados indefesos (`muralha <= 1` e `integridade < 70`); muralhas $\ge 2$ barram a cobrança forçada.
+- **Identidade Visual das Capitais (`assets/feudo/`)**:
+  - Geradas e salvas 4 ilustrações 16:9 de alta definição: `cidade_tessel.jpg` (fortaleza da fronteira norte), `cidade_corveira.jpg` (abismo gótico e minas de prata), `cidade_mareu.jpg` (porto marítimo em falésias brancas), `cidade_solgar.jpg` (oásis e palácios de arenito dourado).
+  - `IMAGENS_FEUDO` e helper `imagemDoLocal(localId, regiao)` exportados em `Assentamento.tsx`.
+- **Ciclo Dinâmico de Iluminação Dia / Tarde / Noite (`ui/BannerIlustrado.tsx`)**:
+  - Componente de renderização com camadas de shaders atmosféricos reagindo a `camp.calendario.periodoIndex` (`madrugada`, `manha`, `tarde`, `entardecer`, `anoitecer`, `noite`).
+  - Badge interativo de horário (`☀️ Dia`, `🌇 Entardecer`, `🌙 Noite`) com suporte a toque para ciclar/pré-visualizar as atmosferas.
+  - Integrado em `Assentamento.tsx` (feudo do jogador), `Colonia.tsx` (sítio da colônia) e `Paineis.tsx` (banner do local atual no Mapa com texto atmosférico).
+- **Validação**:
+  - `engine/vivedez.selftest.ts` criado e aprovado (integrado a `package.json:test:engine`).
+  - `npm run typecheck` limpo.
+  - `npx expo export --platform web` gerou bundle e 19 assets com sucesso.
+
+## Sessão 61 — Gemini — Profundidade dos NPCs, Humor Vivo, Desejos Pessoais & Intimidade Progressiva
+Implementação completa da psicologia viva, intimidade e anseios dos NPCs:
+- **Engine de Intimidade & Humor (`engine/intimidadeNpc.ts`)**:
+  - `calcularHumorNpc`: calcula em tempo real o estado de espírito humano do morador (`luto`, `aterrorizado`, `tenso`, `cauteloso`, `acolhedor`, `grato`, `sereno`, `morto`) cruzando tensão, medo, luto recente familiar, anseios apoiados e histórico de convívio.
+  - `obterIntimidadeNpc`: desvenda progressivamente as 4 camadas da biografia íntima (Origem, Desejo de Vida, Ferida Passada, Pavor Íntimo) com base no convívio, confiança acumulada e diálogos dedicados.
+  - `conversarASos`: afasta-se com o NPC, alivia tensão (-15), aumenta confiança (+2) e desabafa camadas íntimas sequencialmente na memória.
+  - `apoiarDesejoNpc`: financia o anseio de vida do NPC (20 moedas), zera a tensão para sempre, eleva confiança (+8), sintetiza Convicção Permanente de Lealdade e Afeto inabalável, gera fato histórico e propaga boa vontade para toda a família.
+  - `confortarLutoNpc`: presta respeito e condolências em luto recente, alivia a dor e tensão (-25), sobe confiança (+4) e propaga afeto aos parentes vivos.
+  - `presentearNpc`: presente atencioso (10 moedas) para quebrar o gelo (-10 tensão, +3 confiança).
+- **Grade de Opções da Cena & Resolvedor de Turno (`engine/grade.ts` & `engine/turn.ts`)**:
+  - Na casa `'aproximar'` da grade, quando há alguém presente, a engine gera opções situacionais específicas de intimidade (`Conversar a sós`, `Prestar condolências & confortar` em luto, ou `Apoiar anseio pessoal (20 moedas)`).
+  - Resolução no turno com dedução de moedas, atualização causal e geração de fatos canônicos.
+- **Narrador LLM (`engine/llm.ts`)**:
+  - Mapeamento de `presentes` enriquecido com `humor`, `humorId` e `intimidade` (`desejo`, `ferida`, `medo`, `desejoApoiado`).
+  - Diretriz 2d de sistema: o humor dita a linguagem corporal, pausas e tom de voz; a intimidade dita a vulnerabilidade e apego ao protagonista.
+- **Painel de Vínculos (`ui/screens/Paineis.tsx`)**:
+  - Cada cartão de morador exibe selo e descrição de humor em tempo real.
+  - Bloco visual das Camadas de Intimidade & História (Origem, Anseio de Vida, Ferida Íntima, Maior Medo com selo `APOIADO & LEAL`).
+  - Botões de ação direta no painel: "Conversar a sós", "Oferecer presente · 10 moedas", "Prestar condolências & confortar luto", "Apoiar anseio de vida · 20 moedas".
+- **Validação**:
+  - `engine/intimidadeNpc.selftest.ts` criado com 6 testes unitários cobrindo camadas, humores, conversas a sós, apoio a anseios, conforto de luto, grade de opções e resolução de turno (100% aprovado).
+  - `npm run test:engine` (todos os 40+ testes + 6 campanhas de 10 anos) sem qualquer violação de invariante.
+  - `npm run typecheck` sem erros.
+  - `npx expo export --platform web` gerou bundle e assets perfeitamente.
+
+## Sessão 62 — Gemini — Cosmologia, As 7 Bruxas dos Pecados Capitais (Re:Zero), Religião & 67 Pontos do Mapa
+Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais, as 7 Bruxas dos Pecados Capitais e crônicas vivas para todos os pontos do mapa:
+- **Cosmologia Central & Guerra Primordial (`content/vaelhorn/cosmologia.ts`)**:
+  - `MITO_ORIGEM_MAGIA`: A Guerra do Firmamento em que os Deuses Maiores caíram sobre a terra; o "Mana" é o sangue e as cinzas incandescentes dos cadáveres divinos escorrendo pelas veias do continente. Conjurar magia é uma profanação que acorda a dor dos deuses sepultados.
+  - `DEUSES_PRIMORDIAIS`: Os 4 Deuses Primordiais:
+    * Sol-Voraz (`sol_voraz`): Deus do Juízo e da Luz Branca sem segredos;
+    * Vandul (`abismo_ferro`): Deus dos Ossos da Terra, forja e veias de adamante em Corveira;
+    * Yrmara (`mar_afogados`): Senhora das Marés Cinzentas e segredos submersos de Mareu;
+    * Vintrath (`floresta_cega`): Velho dos Galhos e das raízes noturnas de Vintra.
+  - `BRUXAS_DOS_PECADOS`: As 7 Bruxas dos Pecados Capitais + Tristeza + Vã-Glória + A Bruxa da Inveja (Satella / Re:Zero):
+    * Typhon (Soberba / Julgamento da Consciência);
+    * Minerva (Ira / Cura Violenta e Regeneração Catastrófica);
+    * Sekhmet (Preguiça / Força Invisível Inevitável);
+    * Daphne (Gula / Criação das Grandes Bestas Mágicas e Fome Insaciável);
+    * Carmilla (Luxúria / Atração Sem Rosto e Asfixia Emocional);
+    * Echidna (Ganância / O Santuário do Intelecto e Conhecimento Insaciável);
+    * Hector (Tristeza / Melancolia e Gravidade Esmagadora);
+    * Pandora (Vã-Glória / Reescrita do Fenômeno Existente);
+    * **Satella (A Bruxa da Inveja)**: O terror e tabu absoluto do mundo. Devorou e assassinou todas as outras bruxas há 400 anos, consumiu metade do continente e está selada além do véu sob vigilância perpétua.
+  - `FACCOES_ANTIGAS`: A Ordem dos Santos do Selo, O Culto da Bruxa (Apóstolos do Véu Negro), O Conclave Arruinado de Mir e A Fraternidade da Lâmina Escura.
+  - `CRONICAS_MAPA`: Cobertura rigorosa e completa de **todos os 67 pontos do mapa** (Vale de Halvet, Marca de Tessel, Bosque de Vintra, Planalto de Corveira, Ermo de Solgar, Costa de Mareu, Baixios de Halvern e territórios de Tsukimichi/Wasteland/Asora/Rotsgard), cada um com:
+    * Passado na Guerra Primordial dos Deuses;
+    * Fé & Divindades Adoradas;
+    * Cicatriz ou Marca deixada pelas Bruxas dos Pecados;
+    * Superstição e provérbio popular local.
+- **Interface do Mapa Interativo (`ui/screens/MapaVisual.tsx`)**:
+  - Todos os 67 pontos do mapa agora são marcadores clicáveis no modo Continente.
+  - Ao clicar em qualquer local, abre a gaveta elegante `cardCronica` exibindo o passado na guerra divina, fé/deuses, cicatriz das bruxas e provérbio popular.
+  - Ação de viagem integrada: se houver rota direta a partir do local atual, botão `[🚶 Iniciar Viagem · X períodos]` parte diretamente; se for o local atual, exibe distintivo de acampamento; se distante, orienta sobre o caminho pelas estradas intermediárias.
+- **Tomo Cósmico no Livro Arcana (`ui/screens/Paineis.tsx: Livro`)**:
+  - Três novos tomos de lore no Livro:
+    * `V · Cosmologia & Os Deuses Primordiais` (Mito do sangue do Mana e os 4 Deuses Primordiais);
+    * `VI · As Bruxas dos Pecados & O Tabu da Inveja` (As 7 Bruxas dos Pecados Capitais, Hector, Pandora e o tabu absoluto de Satella);
+    * `VII · Facções e Ordens Antigas` (Santos do Selo, Culto da Bruxa, Conclave de Mir, Lâmina Escura).
+- **Prompt do Narrador & Contexto LLM (`engine/llm.ts`)**:
+  - Injeção automática da crônica cósmica do local (`local.cronica: { crenca, passadoGuerra, cicatrizBruxas, supersticao }`) no pacote de contexto.
+  - Regra de sistema `2e`: define o tabu absoluto e pavoroso da Bruxa da Inveja (Satella), o pânico diante de sombras e menções ao Culto da Bruxa, a inquisição com ferro e fogo da Ordem dos Santos do Selo e o peso dos deuses mortos no mana do solo.
+- **Ferramenta de Autodiagnóstico In-Game (`ui/screens/Sistema.tsx: Config`)**:
+  - Botão interativo `Executar Autodiagnóstico no Jogo`: valida em tempo real os 67 pontos de coordenadas e crônicas, panteão dos deuses, bruxas dos pecados e integridade dos subsistemas com relatório formatado na tela.
+- **Validação & Testes**:
+  - `engine/cosmologia.selftest.ts`: criado e integrado ao script `test:engine` em `package.json`, cobrindo mito de origem, os 4 deuses primordiais, as 9 bruxas e pecados (incluindo Satella e a devoração), as 4 facções antigas, todos os 67 pontos de crônicas e a injeção no pacote LLM.
+  - `npm run test:engine`: todos os 40+ testes + 6 campanhas de 10 anos passaram com zero violações de invariante.
+  - `npm run typecheck`: 0 erros de tipagem.
+  - `npx expo export --platform web`: exportação web concluída com código 0 e todos os bundles e assets gerados.

@@ -15,6 +15,7 @@ import { CabecalhoJogo } from './_layout';
 import { TextoSerif, TextoMono, Divisor, Rotulo } from '../components';
 import { cores, fontes, esp, raio, corGrau } from '../theme';
 import { useGame, type EntradaFeed } from '../store';
+import { lerEmVoz, pararVoz } from '../voz';
 import {
   disponibilidadeVerbo,
   custoComoChegada,
@@ -60,6 +61,7 @@ export function Jogo() {
   const acaoLivre = useGame((s) => s.acaoLivre);
 
   const [texto, setTexto] = useState('');
+  const [modoLivre, setModoLivre] = useState<'fazer' | 'dizer'>('fazer');
   const [inputFocado, setInputFocado] = useState(false);
   const [catAberta, setCatAberta] = useState<CategoriaVerbo | null>(null);
   const [verboAlvo, setVerboAlvo] = useState<Verbo | null>(null);
@@ -208,7 +210,7 @@ export function Jogo() {
     const t = texto.trim();
     if (!t || ocupado || !podeAgir) return;
     setTexto('');
-    acaoLivre(t);
+    acaoLivre(t, modoLivre);
   };
 
   return (
@@ -324,6 +326,21 @@ export function Jogo() {
                       <Text style={styles.opcaoEixo}>sua própria ação (texto livre)</Text>
                       <Text style={styles.livreAtalhoDica}>Enter envia · Shift+Enter quebra</Text>
                     </View>
+                    {/* Fazer: o que você faz. Dizer: suas palavras exatas, que
+                        entram na cena como fala sua. */}
+                    <View style={styles.livreAbas}>
+                      {(['fazer', 'dizer'] as const).map((m) => (
+                        <Pressable
+                          key={m}
+                          onPress={() => setModoLivre(m)}
+                          style={[styles.livreAba, modoLivre === m && styles.livreAbaAtiva]}
+                        >
+                          <Text style={[styles.livreAbaTxt, modoLivre === m && styles.livreAbaTxtAtiva]}>
+                            {m === 'fazer' ? 'Fazer' : 'Dizer'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
                     <View style={styles.livreWrap}>
                       <TextInput
                         style={[styles.livreInput, inputFocado && styles.livreInputFocado]}
@@ -331,7 +348,7 @@ export function Jogo() {
                         onChangeText={setTexto}
                         onFocus={() => setInputFocado(true)}
                         onBlur={() => setInputFocado(false)}
-                        placeholder="descreva o que você faz no mundo…"
+                        placeholder={modoLivre === 'dizer' ? 'o que você diz, com suas palavras…' : 'descreva o que você faz no mundo…'}
                         placeholderTextColor={cores.mudo}
                         multiline
                         blurOnSubmit={false}
@@ -360,7 +377,7 @@ export function Jogo() {
                         disabled={!texto.trim() || ocupado || !podeAgir}
                         onPress={submeterAcaoLivre}
                       >
-                        <Text style={styles.livreBtnTxt}>Agir ✦</Text>
+                        <Text style={styles.livreBtnTxt}>{modoLivre === 'dizer' ? 'Dizer ✦' : 'Agir ✦'}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -590,6 +607,7 @@ function EntradaNarrativa({
   return (
     <>
       {marca}
+      <BotaoOuvir texto={entrada.texto} />
       <View style={styles.narrBloco}>
         {blocos.map((b, i) =>
           b.tipo === 'fala' ? (
@@ -608,6 +626,27 @@ function EntradaNarrativa({
         )}
       </View>
     </>
+  );
+}
+
+function BotaoOuvir({ texto }: { texto: string }) {
+  const [tocando, setTocando] = useState(false);
+  return (
+    <Pressable
+      hitSlop={8}
+      style={styles.ouvir}
+      onPress={() => {
+        if (tocando) {
+          pararVoz();
+          setTocando(false);
+        } else {
+          setTocando(true);
+          lerEmVoz(texto, () => setTocando(false));
+        }
+      }}
+    >
+      <Text style={styles.ouvirTxt}>{tocando ? '■ parar' : '▶ ouvir'}</Text>
+    </Pressable>
   );
 }
 
@@ -997,6 +1036,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: esp.xs,
   },
+  livreAbas: { flexDirection: 'row', gap: esp.sm, marginBottom: esp.sm },
+  livreAba: { paddingVertical: 4, paddingHorizontal: esp.md, borderWidth: 1, borderColor: cores.linha, borderRadius: 3 },
+  livreAbaAtiva: { borderColor: cores.ouro, backgroundColor: 'rgba(212,175,55,0.12)' },
+  livreAbaTxt: { fontFamily: fontes.mono, fontSize: 11, color: cores.mudo, letterSpacing: 1 },
+  livreAbaTxtAtiva: { color: cores.ouro },
+  ouvir: { alignSelf: 'flex-end', paddingVertical: 2, paddingHorizontal: 6, marginBottom: 2 },
+  ouvirTxt: { fontFamily: fontes.mono, fontSize: 10, color: cores.mudo, letterSpacing: 1 },
   livreAtalhoDica: {
     fontFamily: fontes.mono,
     color: cores.linha,

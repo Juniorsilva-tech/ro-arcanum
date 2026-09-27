@@ -902,6 +902,9 @@ export type Campaign = {
   // Os grandes acontecimentos da campanha, para o narrador poder citar o que
   // ficou para trás em vez de tratar cada turno como um episódio solto.
   marcos?: { turno: number; dia: number; texto: string }[];
+  // "Lembre o narrador": detalhes da história que o jogador pediu para o
+  // narrador não esquecer. Só memória de voz; não mudam o estado do mundo.
+  lembretesNarrador?: string[];
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.

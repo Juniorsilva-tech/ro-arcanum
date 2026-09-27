@@ -165,6 +165,8 @@ export async function apagarSessao(): Promise<void> {
 
 // ── Configuração ──────────────────────────────────────────────────────────
 
+import type { EstiloNarrador, ProvedorCompat } from '@/engine/llm';
+
 export type ConfigApp = {
   provider: 'openrouter' | 'anthropic' | 'nous';
   apiKey?: string;
@@ -172,6 +174,13 @@ export type ConfigApp = {
   /** @deprecated o narrador é obrigatório; mantido só para saves antigos. */
   usarModelo: boolean;
   avisoAceito: boolean;
+  /** Estilo do narrador: extensão, ritmo e menção à decisão (engine/llm.ts). */
+  estilo?: EstiloNarrador;
+  /**
+   * Reservas grátis em rodízio: quando o narrador principal falha (limite,
+   * rede, recusa), a cena tenta estas, na ordem. Cada chave fica só aqui.
+   */
+  reservas?: { provider: ProvedorCompat; apiKey: string; modelo?: string }[];
 };
 
 export const configPadrao: ConfigApp = {
