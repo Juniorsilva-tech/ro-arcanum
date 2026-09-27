@@ -847,3 +847,9 @@ Cada cartão de reserva tem o link para criar a chave (abre no navegador com
 `Linking.openURL`) e o caminho até o botão, em `PROVEDORES_GRATIS[*].linkChave`
 e `.passos`. As quatro páginas responderam (a da Mistral redireciona para o
 login).
+
+Com a chave salva, o cartão da reserva busca os modelos da própria conta
+(`listarModelos` → `/models` do provedor) e mostra até 40 como botões, com os
+recomendados primeiro; sem chave, mostra as sugestões fixas. A busca roda ao
+abrir o cartão (se já há chave) e a cada Salvar/Testar. Não testado com chave
+real; com chave falsa a lista fica nas sugestões, como esperado.

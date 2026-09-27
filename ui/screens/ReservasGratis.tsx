@@ -3,12 +3,12 @@
 // de uso, rede, recusa —, a cena tenta estas, na ordem da lista. Sem narrador
 // principal, elas viram o narrador. Cada chave fica só neste aparelho.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Linking } from 'react-native';
 import { TextoMono, Divisor } from '../components';
 import { cores, fontes, esp } from '../theme';
 import { useGame } from '../store';
-import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, type ProvedorCompat } from '@/engine/llm';
+import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, listarModelos, type ProvedorCompat } from '@/engine/llm';
 
 // Ordem do rodízio: quem costuma aceitar ficção adulta primeiro; o Gemini,
 // com filtro mais duro, por último.
@@ -22,6 +22,23 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
   const [chave, setChave] = useState(atual?.apiKey ?? '');
   const [modelo, setModelo] = useState(atual?.modelo ?? '');
   const [estado, setEstado] = useState<string | null>(null);
+  // Com a chave, a lista vem da própria conta: são os modelos que ela pode usar hoje.
+  const [modelosConta, setModelosConta] = useState<string[] | null>(null);
+
+  async function buscarModelos(k = chave) {
+    if (!k.trim()) return;
+    const lista = await listarModelos(p, k.trim(), true);
+    // Os recomendados, se a conta tiver, vêm primeiro.
+    const ids = [...new Set(lista.map((m) => m.id))];
+    const peso = (id: string) => (info.sugestoes.includes(id) ? info.sugestoes.indexOf(id) : 100);
+    setModelosConta(ids.length ? ids.sort((a, b) => peso(a) - peso(b)) : null);
+  }
+
+  useEffect(() => {
+    if (atual?.apiKey) void buscarModelos(atual.apiKey);
+    // Só ao abrir o cartão; depois, a busca acompanha Salvar e Testar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function salvar(novaChave = chave, novoModelo = modelo) {
     const outras = (config.reservas ?? []).filter((r) => r.provider !== p);
@@ -32,6 +49,8 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
       : outras;
     await setConfig({ reservas });
     setEstado(k ? 'salva' : 'removida');
+    if (k) void buscarModelos(k);
+    else setModelosConta(null);
   }
 
   async function testar() {
@@ -89,8 +108,11 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
         autoCapitalize="none"
         autoCorrect={false}
       />
+      <TextoMono style={{ color: cores.mudo, marginTop: esp.sm }}>
+        {modelosConta ? `${modelosConta.length} modelos da sua conta (toque para usar):` : 'sugestões (com a chave salva, aparecem os modelos da sua conta):'}
+      </TextoMono>
       <View style={styles.chips}>
-        {info.sugestoes.map((m) => (
+        {(modelosConta ?? info.sugestoes).slice(0, 40).map((m) => (
           <Pressable key={m} onPress={() => setModelo(m)} style={[styles.chip, modelo === m && styles.chipAtivo]}>
             <Text style={[styles.chipTxt, modelo === m && styles.chipTxtAtivo]}>{m}</Text>
           </Pressable>
