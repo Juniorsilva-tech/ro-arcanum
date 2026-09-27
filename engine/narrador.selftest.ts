@@ -10,7 +10,7 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { calcularContexto } from './availability';
-import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO } from './llm';
+import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento } from './llm';
 import { menoresNaCena } from './protecao';
 import type { ResultadoTurno } from './turn';
 import type { Campaign } from './types';
@@ -90,4 +90,13 @@ const pedido = (extra: Partial<ResultadoTurno> = {}): ResultadoTurno =>
     console.log('· sem presentes no começo; teste de NPC menor pulado');
   }
 }
+{
+  // Caso real (Groq, gpt-oss-120b): recusa curta em inglês, com apóstrofo curvo,
+  // era lida como "narra cena adulta ✓".
+  const recusa = 'I’m sorry, but I can’t help with that.';
+  ok(detectarRecusa(recusa) && foraDeContexto(recusa), 'recusa em inglês com apóstrofo curvo é recusa');
+  const cena = 'O machado desce e abre o ventre do salteador. O sangue esguicha na lama, e ele cai de joelhos, as mãos tentando segurar o que escapa. Você puxa a lâmina de volta com um estalo úmido.';
+  ok(!detectarRecusa(cena) && !foraDeContexto(cena), 'cena em português não é recusa');
+}
+ok(semPensamento('<think>devo narrar {isto}?</think>\n{"narracao":"x"}') ==='{"narracao":"x"}', 'raciocínio <think> sai antes de ler a cena');
 console.log('\nNarrador: OK.');

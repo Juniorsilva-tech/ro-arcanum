@@ -883,3 +883,19 @@ Free. Atualize para Pro para ativar suas chaves de API." A API da Mistral não �
 mais grátis. O cartão diz isso, a nota do Large perdeu a ★ e a Mistral foi para
 o fim do rodízio (ordem agora: Groq, Cerebras, Gemini, Mistral). O dono colou a
 chave da Mistral no chat; não a usei, e recomendei apagar.
+
+A Groq funcionou no aparelho do dono, e o print mostrou dois defeitos:
+- "Testar cena adulta" marcou ✓ com a amostra "I’m sorry, but I can’t help with
+  that." O apóstrofo curvo não casava com a lista de recusa. `detectarRecusa`
+  normaliza apóstrofos e ganhou "can't help with that" e afins; o teste de
+  conteúdo agora só dá ✓ se não for recusa, estiver em português
+  (`foraDeContexto`) e tiver corpo de parágrafo (≥160 caracteres). Os vereditos
+  antigos (`config.testesAdulto`) são ignorados; os novos vivem em
+  `config.vereditos` por "provedor:modelo", com `adulto` e `gore`.
+- Novo "Testar gore" (`testarConteudo(cfg, 'gore')`, cena de machado no ventre);
+  a linha do modelo mostra ✓/✗ para adulto e para gore.
+- A conta Groq do dono lista só gpt-oss-120b/20b, qwen3.8-27b e modelos de voz
+  (orpheus) e árabe (allam): o Llama 70B saiu do catálogo. Padrão da Groq virou
+  `qwen/qwen3.8-27b`; voz/árabe/compound saem da lista.
+- `semPensamento` tira `<think>…</think>` (Qwen 3.x e R1 mandam o raciocínio
+  junto) antes de interpretar a cena e antes do teste de conteúdo.

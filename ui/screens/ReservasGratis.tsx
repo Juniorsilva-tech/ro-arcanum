@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, TextInput, Pressable, Linking } from 'react-nat
 import { TextoMono, Divisor } from '../components';
 import { cores, fontes, esp } from '../theme';
 import { useGame } from '../store';
-import { PROVEDORES_GRATIS, testarChave, testarCenaAdulta, listarModelos, notaDoModelo, type ProvedorCompat } from '@/engine/llm';
+import { PROVEDORES_GRATIS, testarChave, testarConteudo, listarModelos, notaDoModelo, type ProvedorCompat } from '@/engine/llm';
 
 // Ordem do rodízio: Groq primeiro (grátis e rápido); Gemini, de filtro duro,
 // depois; Mistral por último, porque a API dela deixou de ser grátis em 2026.
@@ -63,25 +63,27 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
     setEstado(r.ok ? 'funciona ✓' : `falhou: ${r.erro ?? 'sem resposta'}`);
   }
 
-  // Sexo é parte do jogo: o jogador precisa saber, antes da história, se este
-  // modelo narra cena adulta ou recusa. Uma chamada curta responde.
-  async function testarAdulto() {
+  // Sexo e violência crua são parte do jogo: o jogador precisa saber, antes da
+  // história, se este modelo narra ou recusa. Uma chamada curta responde.
+  async function testarTipo(tipo: 'adulto' | 'gore') {
     if (!chave.trim()) return;
-    setEstado('testando cena adulta…');
+    const rotulo = tipo === 'adulto' ? 'cena adulta' : 'gore';
+    setEstado(`testando ${rotulo}…`);
     await salvar();
     const alvo = modelo.trim() || info.modeloPadrao;
-    const r = await testarCenaAdulta({ provider: p, apiKey: chave.trim(), modelo: alvo });
-    // Guarda o veredito: o botão do modelo passa a mostrar ✓ ou ✗.
+    const r = await testarConteudo({ provider: p, apiKey: chave.trim(), modelo: alvo }, tipo);
+    // Guarda o veredito: a linha do modelo passa a mostrar ✓ ou ✗.
     if (!r.erro) {
-      const cfgAtual = useGame.getState().config;
-      await setConfig({ testesAdulto: { ...(cfgAtual.testesAdulto ?? {}), [`${p}:${alvo}`]: r.narra } });
+      const v = useGame.getState().config.vereditos ?? {};
+      const k = `${p}:${alvo}`;
+      await setConfig({ vereditos: { ...v, [k]: { ...(v[k] ?? {}), [tipo]: r.narra } } });
     }
     setEstado(
       r.erro
         ? `falhou: ${r.erro}`
         : r.narra
-          ? `narra cena adulta ✓ — "${(r.amostra ?? '').slice(0, 110)}…"`
-          : 'falhou: recusou a cena adulta (filtro). Tente outro modelo desta lista.',
+          ? `narra ${rotulo} ✓ — "${(r.amostra ?? '').slice(0, 110)}…"`
+          : `recusou ${rotulo} ✗ — "${(r.amostra ?? '').slice(0, 90)}". Tente outro modelo desta lista.`,
     );
   }
 
@@ -122,18 +124,25 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
       <View style={{ marginTop: esp.sm, gap: esp.sm }}>
         {(modelosConta ?? info.sugestoes).slice(0, 40).map((m) => {
           const nota = notaDoModelo(p, m);
-          const adulto = config.testesAdulto?.[`${p}:${m}`];
+          const v = config.vereditos?.[`${p}:${m}`] ?? {};
           return (
             <Pressable key={m} onPress={() => setModelo(m)} style={[styles.modeloLinha, modelo === m && styles.chipAtivo]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.chipTxt, nota.startsWith('★') && { color: cores.ouro }, modelo === m && styles.chipTxtAtivo]}>{m}</Text>
                 <Text style={styles.nota}>{nota}</Text>
               </View>
-              {adulto !== undefined && (
-                <Text style={[styles.selo, { color: adulto ? cores.verdigris : cores.cinabrio }]}>
-                  {adulto ? '✓ narra adulto' : '✗ recusa adulto'}
-                </Text>
-              )}
+              <View style={{ alignItems: 'flex-end' }}>
+                {v.adulto !== undefined && (
+                  <Text style={[styles.selo, { color: v.adulto ? cores.verdigris : cores.cinabrio }]}>
+                    {v.adulto ? '✓ narra adulto' : '✗ recusa adulto'}
+                  </Text>
+                )}
+                {v.gore !== undefined && (
+                  <Text style={[styles.selo, { color: v.gore ? cores.verdigris : cores.cinabrio }]}>
+                    {v.gore ? '✓ narra gore' : '✗ recusa gore'}
+                  </Text>
+                )}
+              </View>
             </Pressable>
           );
         })}
@@ -145,8 +154,11 @@ function CartaoReserva({ p }: { p: ProvedorCompat }) {
         <Pressable style={[styles.botao, !chave.trim() && { opacity: 0.4 }]} disabled={!chave.trim()} onPress={() => void testar()}>
           <Text style={styles.botaoTxt}>Testar</Text>
         </Pressable>
-        <Pressable style={[styles.botao, !chave.trim() && { opacity: 0.4 }]} disabled={!chave.trim()} onPress={() => void testarAdulto()}>
+        <Pressable style={[styles.botao, !chave.trim() && { opacity: 0.4 }]} disabled={!chave.trim()} onPress={() => void testarTipo('adulto')}>
           <Text style={styles.botaoTxt}>Testar cena adulta</Text>
+        </Pressable>
+        <Pressable style={[styles.botao, !chave.trim() && { opacity: 0.4 }]} disabled={!chave.trim()} onPress={() => void testarTipo('gore')}>
+          <Text style={styles.botaoTxt}>Testar gore</Text>
         </Pressable>
         {!!atual && (
           <Pressable style={styles.botao} onPress={() => { setChave(''); void salvar('', ''); }}>

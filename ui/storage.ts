@@ -181,8 +181,10 @@ export type ConfigApp = {
    * rede, recusa), a cena tenta estas, na ordem. Cada chave fica só aqui.
    */
   reservas?: { provider: ProvedorCompat; apiKey: string; modelo?: string }[];
-  /** Resultado de "Testar cena adulta" por "provedor:modelo" (true = narra). */
+  /** @deprecated vereditos do teste antigo, que confundia recusa em inglês com "narra". */
   testesAdulto?: Record<string, boolean>;
+  /** Vereditos por "provedor:modelo": narra cena adulta? narra gore? */
+  vereditos?: Record<string, { adulto?: boolean; gore?: boolean }>;
 };
 
 export const configPadrao: ConfigApp = {
