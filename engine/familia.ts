@@ -1,6 +1,7 @@
 import type { AttrKey, Campaign, ContentBundle, NPC, NpcDinamico } from './types';
 import { nextFloat, nextInt, pick } from './rng';
 import { concederDespertar, recalcularRecursosMaximos } from './progresso';
+import { registrarLembranca } from './memoria';
 
 export type CondicaoParente = 'livre' | 'cativo' | 'desaparecido' | 'morto';
 export type ParenteCampanha = {
@@ -120,7 +121,8 @@ function eventoAosSeis(camp: Campaign, familia: FamiliaState): EventoInfancia {
       { id: 'ajudar_familia', rotulo: 'Aplicar intelecto nas finanças e na casa', descricao: 'Aumenta social e o patrimônio da família; todos reconhecem seu valor.' },
     ],
   };
-  const tipo = pick(camp.rng, ['peste', 'cobradores', 'fome', 'talento'] as const);
+  if (camp.genese?.marca === 'indigno') return eventoIndigno(6);
+  const tipo = pick(camp.rng, ['peste', 'cobradores', 'fome', 'talento', 'ruinas_descoberta', 'inverno_rigoroso'] as const);
   if (tipo === 'peste') return { id: 'peste', idade: 6, titulo: 'A febre entrou em casa', descricao: 'Um dos seus pais adoeceu e os remédios custam mais do que a família possui.', opcoes: [
     { id: 'buscar_cura', rotulo: 'Procurar a curandeira', descricao: 'Consome patrimônio, com a melhor chance de salvar quem adoeceu.' },
     { id: 'cuidar', rotulo: 'Cuidar com as próprias mãos', descricao: 'Aprende resistência e cura; o risco continua real.' },
@@ -132,7 +134,185 @@ function eventoAosSeis(camp: Campaign, familia: FamiliaState): EventoInfancia {
     { id: 'furtar', rotulo: 'Roubar comida no mercado', descricao: 'Pode alimentar a casa, mas cria uma dívida com a lei.' },
     { id: 'migrar', rotulo: 'Convencer a família a partir', descricao: 'A família perde o que construiu e evita a fome imediata.' },
   ] };
+  if (tipo === 'ruinas_descoberta') return eventoRuinasDescoberta(6);
+  if (tipo === 'inverno_rigoroso') return eventoInvernoRigoroso(6);
   return eventoTalento(6);
+}
+
+function eventoIndigno(idade: number, familia?: FamiliaState): EventoInfancia {
+  const pai = familia?.membros.find(m => m.parentesco === 'pai');
+  const irmao = familia?.membros.find(m => m.parentesco === 'irma' || m.parentesco === 'irmao');
+  return {
+    id: 'indigno_provacao',
+    idade,
+    titulo: 'O Olhar de Desdém',
+    descricao:
+      `Ninguém na casa de ${pai ? pai.nome : 'sua família'} esperava grande coisa de você. Os elogios sempre iam para ${irmao ? irmao.nome : 'outros garotos'}, e suas tentativas eram julgadas antes mesmo de você terminar.`,
+    opcoes: [
+      { id: 'provar_no_trabalho', rotulo: 'Trabalhar em silêncio até calar os mais velhos', descricao: 'Aumenta físico e resiliência, gerando sustento para a casa.' },
+      { id: 'astucia_silenciosa', rotulo: 'Observar tudo pelas sombras sem ser notado', descricao: 'Aumenta precisão e percepção; ganha perícia em furtividade.' },
+      { id: 'desprezar_opinioes', rotulo: 'Focar na própria força e ignorar o desdém alheio', descricao: 'Aumenta resiliência e forja um espírito indomável.' },
+    ],
+  };
+}
+
+function eventoRuinasDescoberta(idade: number, familia?: FamiliaState): EventoInfancia {
+  const irmao = familia?.membros.find(m => m.parentesco === 'irma' || m.parentesco === 'irmao');
+  return {
+    id: 'ruinas_descoberta',
+    idade,
+    titulo: 'O Buraco sob a Capela Velha',
+    descricao:
+      `Brincando com ${irmao ? irmao.nome : 'outras crianças'} entre as lajes desabadas da capela antiga, você encontrou uma abertura estreita que descia para as catacumbas do vilarejo, onde o ar cheirava a poeira e metal esquecido.`,
+    opcoes: [
+      { id: 'descer_catacumbas', rotulo: 'Descer pela fresta e explorar o passado sob a pedra', descricao: 'Aumenta raciocínio e percepção; resgata uma moeda antiga do império.' },
+      { id: 'marcar_segredo', rotulo: 'Guardar o segredo do buraco e voltar para casa', descricao: 'Aumenta percepção e resiliência; mantém o segredo inviolado.' },
+      { id: 'avisar_adultos', rotulo: 'Chamar os adultos da vila para inspecionar a abertura', descricao: 'Aumenta social e prestígio com a comunidade do vale.' },
+    ],
+  };
+}
+
+function eventoInvernoRigoroso(idade: number, familia?: FamiliaState): EventoInfancia {
+  const mae = familia?.membros.find(m => m.parentesco === 'mae');
+  return {
+    id: 'inverno_rigoroso',
+    idade,
+    titulo: 'O Inverno da Geada Vermelha',
+    descricao:
+      `A nevasca daquele ano cobriu os telhados e trancou as portas da casa de ${mae ? mae.nome : 'sua família'}. O vento uivava como bicho faminto e a lenha acabou antes da primeira lua nova.`,
+    opcoes: [
+      { id: 'manter_fogueira', rotulo: 'Racionar a madeira e cuidar dos mais fracos dia e noite', descricao: 'Aumenta resiliência e social, conquistando a união da família.' },
+      { id: 'buscar_lenha_gelo', rotulo: 'Arrastar troncos secos da floresta sob vento cortante', descricao: 'Aumenta físico ao limite; ganha resistência às intempéries.' },
+      { id: 'armadilhas_na_neve', rotulo: 'Montar laços e arapucas para caçar na neve', descricao: 'Aumenta precisão e percepção, garantindo alimento e patrimônio.' },
+    ],
+  };
+}
+
+function eventoIncendioForja(idade: number, familia?: FamiliaState): EventoInfancia {
+  const pai = familia?.membros.find(m => m.parentesco === 'pai');
+  const forjaPai = pai?.ocupacao.toLowerCase().includes('ferreiro');
+  return {
+    id: 'incendio_forja',
+    idade,
+    titulo: forjaPai ? `O Fogo na Oficina de ${pai?.nome}` : 'O Fogo na Rua da Ferraria',
+    descricao: forjaPai
+      ? `Um estalo na calha de carvão transformou a oficina de seu pai, ${pai?.nome}, num inferno de fumaça preta e labaredas. As faíscas ameaçavam devorar as casas de madeira vizinhas.`
+      : 'Um estalo na calha de carvão transformou a oficina do ferreiro num inferno de fumaça preta e labaredas. As faíscas ameaçavam devorar as casas de madeira vizinhas.',
+    opcoes: [
+      { id: 'salvar_ferreiro', rotulo: forjaPai ? `Arrancar ${pai?.nome} e as ferramentas do fogo` : 'Invadir a oficina em chamas para puxar o mestre ferreiro', descricao: 'Aumenta físico e resiliência, ganha prestígio e a gratidão da forja com uma pedra de amolar.' },
+      { id: 'linha_de_baldes', rotulo: 'Comandar a linha de baldes com vizinhos para barrar o fogo', descricao: 'Aumenta raciocínio e social; eleva a perícia persuadir e o prestígio familiar.' },
+      { id: 'arrombar_deposito', rotulo: 'Resgatar ferramentas e peças antes do desabamento', descricao: 'Aumenta precisão e salva patrimônio valioso da destruição.' },
+    ],
+  };
+}
+
+function eventoSombraNaMata(idade: number, familia?: FamiliaState): EventoInfancia {
+  const irmao = familia?.membros.find(m => m.parentesco === 'irma' || m.parentesco === 'irmao');
+  return {
+    id: 'sombra_na_mata',
+    idade,
+    titulo: 'A Coisa Que Não Tinha Sombra',
+    descricao:
+      `Ao entardecer na orla da Mata dos Sussurros, voltando com ${irmao ? irmao.nome : 'um amigo de infância'}, o ar esfriou de repente. Entre as samambaias, uma criatura esguia de olhos em brasa rasgava uma corça sem fazer som algum.`,
+    opcoes: [
+      { id: 'sustentar_respiracao', rotulo: 'Controlar o pânico, prender o fôlego e recuar passo a passo', descricao: 'Aumenta percepção e precisão; aprende a técnica de Passo Leve para não ser ouvido.' },
+      { id: 'proteger_amigo', rotulo: 'Ficar entre a criatura e seu companheiro empunhando uma estaca', descricao: 'Aumenta físico e resiliência; ganha a alcunha "Olhar Férreo" e lealdade do companheiro.' },
+      { id: 'estudar_padroes', rotulo: 'Gravar os movimentos inumanos e pontos cegos da fera', descricao: 'Aumenta raciocínio e percepção; ganha perícia em perceber e notas do bestiário.' },
+    ],
+  };
+}
+
+function eventoInquisicaoSelo(idade: number, familia?: FamiliaState): EventoInfancia {
+  const pai = familia?.membros.find(m => m.parentesco === 'pai');
+  return {
+    id: 'inquisicao_selo',
+    idade,
+    titulo: 'A Comitiva da Ordem do Santo Selo',
+    descricao:
+      `Cavaleiros de armadura prateada e inquisidores da Ordem entraram na vila exigindo o dízimo da casa de ${pai ? pai.nome : 'sua família'} e interrogando moradores sobre feitiçaria e manuscritos proibidos. O olhar do inquisidor pousou em você.`,
+    opcoes: [
+      { id: 'responder_com_firmeza', rotulo: 'Recitar as preces e manter respeito impecável diante dos clérigos', descricao: 'Aumenta social e raciocínio; livra a família de suspeitas e eleva prestígio.' },
+      { id: 'ocultar_reliquias', rotulo: 'Esconder no forro da casa relíquias e manuscritos antes da revista', descricao: 'Aumenta precisão e percepção; ganha perícia em furtividade.' },
+      { id: 'desafiar_inquisidor', rotulo: 'Sustentar o olhar frio sem abaixar a cabeça nem tremer', descricao: 'Aumenta resiliência e físico; ganha a alcunha "Indomável" e respeito dos foragidos.' },
+    ],
+  };
+}
+
+function eventoTorneioJuventude(idade: number, familia?: FamiliaState): EventoInfancia {
+  const pai = familia?.membros.find(m => m.parentesco === 'pai');
+  return {
+    id: 'torneio_juventude',
+    idade,
+    titulo: 'A Disputa do Meio-Verão',
+    descricao:
+      `A festa da colheita reuniu os povoados do vale numa arena de terra batida. Entre a torcida da família de ${pai ? pai.nome : 'sua casa'}, disputas tradicionais de força, pontaria e cantoria de lendas desafiavam os jovens.`,
+    opcoes: [
+      { id: 'vencer_na_arena', rotulo: 'Derrubar os rivais no círculo de terra batida', descricao: 'Aumenta físico e precisão; ganha luvas de couro e prestígio na vila.' },
+      { id: 'prova_de_arquearia', rotulo: 'Acertar o centro do alvo com arco de junco', descricao: 'Aumenta precisão e percepção; ganha perícia perceber e fama de arqueiro.' },
+      { id: 'cantar_as_cronicas', rotulo: 'Recitar as antigas lendas do vale ao redor da fogueira', descricao: 'Aumenta social e raciocínio; eleva a perícia persuadir e o prestígio familiar.' },
+    ],
+  };
+}
+
+function eventoEmboscadaEstrada(idade: number, familia?: FamiliaState): EventoInfancia {
+  const pai = familia?.membros.find(m => m.parentesco === 'pai');
+  return {
+    id: 'emboscada_estrada',
+    idade,
+    titulo: 'O Batismo de Sangue na Estrada do Sal',
+    descricao:
+      `Aos 14 anos, na primeira viagem como condutor da carroça de carga de ${pai ? pai.nome : 'sua família'} pela Estrada do Sal, salteadores armados saltaram das ravinas de armas em punho exigindo o sangue e o ouro.`,
+    opcoes: [
+      { id: 'lutar_com_furia', rotulo: 'Puxar a lâmina curta e liderar a defesa da carga a sangue', descricao: 'Aumenta físico e precisão, ganha perícia atletismo, a alcunha "Batizado em Sangue" e uma espada curta.' },
+      { id: 'manobrar_fuga', rotulo: 'Arrancar a carroça pela ravina perigosa salvando carga e vidas', descricao: 'Aumenta precisão e raciocínio; ganha perícia perceber e salva patrimônio valioso.' },
+      { id: 'emboscar_salteadores', rotulo: 'Cercar os bandidos na curva estreita e forçá-los a fugir', descricao: 'Aumenta raciocínio e percepção; ganha perícia furtividade e saqueia moedas.' },
+    ],
+  };
+}
+
+function eventoRitoDaVigia(idade: number, _familia?: FamiliaState): EventoInfancia {
+  return {
+    id: 'rito_da_vigia',
+    idade,
+    titulo: 'A Vigília Solitária na Torre da Fronteira',
+    descricao:
+      'A tradição do vale exige que todo jovem que atinge os quatorze anos passe uma noite inteira sozinho no parapeito alto da Torre de Vigia, vigiando a linha de névoa onde o vale termina.',
+    opcoes: [
+      { id: 'olhos_na_escuridao', rotulo: 'Vigiar o nevoeiro na torre alta a noite inteira sob chuva', descricao: 'Aumenta percepção e resiliência; ganha perícia perceber e aprende a arte Ler Aura.' },
+      { id: 'disciplina_de_ferro', rotulo: 'Praticar posturas e equilíbrio marcial na balaustrada de pedra', descricao: 'Aumenta físico e precisão; aprende a técnica Segundo Fôlego.' },
+      { id: 'mapear_o_vale', rotulo: 'Registrar as trilhas secretas, fogueiras e rotas do vale', descricao: 'Aumenta raciocínio e social; ganha um mapa do vale e perícia decifrar.' },
+    ],
+  };
+}
+
+function eventoEncruzilhadaOficio(idade: number, familia?: FamiliaState): EventoInfancia {
+  const mae = familia?.membros.find(m => m.parentesco === 'mae');
+  return {
+    id: 'encruzilhada_oficio',
+    idade,
+    titulo: 'A Oferta na Encruzilhada',
+    descricao:
+      `Antes de completar catorze anos, enquanto ${mae ? mae.nome : 'sua família'} arrumava as provisões de inverno, uma figura misteriosa te abordou em segredo na taverna oferecendo um rumo sem volta.`,
+    opcoes: [
+      { id: 'seguir_batedores', rotulo: 'Aprender as rotas contrabandistas e trilhas não mapeadas', descricao: 'Aumenta precisão e raciocínio; ganha perícia furtividade e desvenda trilhas secretas.' },
+      { id: 'aprender_cura_e_ervas', rotulo: 'Dedicar-se aos saberes de torniquetes, ervas e poções', descricao: 'Aumenta raciocínio e resiliência; ganha perícia ofício e poções de cura.' },
+      { id: 'firmar_raizes_na_casa', rotulo: 'Permanecer como pilar de sustento e honra da própria família', descricao: 'Aumenta resiliência e social; eleva o prestígio familiar e lealdade da casa.' },
+    ],
+  };
+}
+
+function eventoPartida(idade: number): EventoInfancia {
+  return {
+    id: 'partida',
+    idade,
+    titulo: 'A vida adulta se aproxima',
+    descricao: 'O mundo oferece um caminho, enquanto sua família ainda cobra presença.',
+    opcoes: [
+      { id: 'aprendizado', rotulo: 'Partir para aprender um ofício', descricao: 'Ganha técnica e deixa a família conduzir a própria vida.' },
+      { id: 'defender', rotulo: 'Ficar para defender a casa', descricao: 'Fortalece corpo e vínculos; inimigos passam a conhecer seu nome.' },
+      { id: 'fugir', rotulo: 'Ir embora sem promessa de volta', descricao: 'Ganha liberdade, perde confiança e começa com recursos próprios.' },
+    ],
+  };
 }
 
 function eventoCativeiro(idade: number): EventoInfancia {
@@ -145,7 +325,7 @@ function eventoCativeiro(idade: number): EventoInfancia {
 
 function eventoTalento(idade: number): EventoInfancia {
   return { id: 'talento', idade, titulo: 'Algo despertou cedo', descricao: 'Um mestre percebe talento incomum em você e em alguém da família.', opcoes: [
-    { id: 'treinar', rotulo: 'Aceitar o treinamento', descricao: 'Aumenta seu maior talento e o prestígio familiar.' },
+    { id: 'treinar', rotulo: 'Aceitar o treinamento do mestre', descricao: 'Dedica-se à disciplina de um discípulo formal: eleva seus atributos, aprende uma Arte de Mestre, ganha perícia e herda um item de treino.' },
     { id: 'dividir', rotulo: 'Dividir a oportunidade com seu irmão', descricao: 'Fortalece o vínculo e pode fazer dele um prodígio.' },
     { id: 'recusar', rotulo: 'Permanecer com a família', descricao: 'Preserva a união e deixa a oportunidade passar.' },
   ] };
@@ -217,6 +397,37 @@ function eventoAosQuatorzeTsukimichi(_camp: Campaign, _familia: FamiliaState): E
   };
 }
 
+function eventoAosDez(camp: Campaign, _familia: FamiliaState): EventoInfancia {
+  if (camp.genese?.marca === 'genio') return eventoTalento(10);
+  const tipo = pick(camp.rng, [
+    'talento',
+    'cativeiro',
+    'incendio_forja',
+    'sombra_na_mata',
+    'inquisicao_selo',
+    'torneio_juventude',
+  ] as const);
+  if (tipo === 'cativeiro') return eventoCativeiro(10);
+  if (tipo === 'incendio_forja') return eventoIncendioForja(10);
+  if (tipo === 'sombra_na_mata') return eventoSombraNaMata(10);
+  if (tipo === 'inquisicao_selo') return eventoInquisicaoSelo(10);
+  if (tipo === 'torneio_juventude') return eventoTorneioJuventude(10);
+  return eventoTalento(10);
+}
+
+function eventoAosQuatorze(camp: Campaign, _familia: FamiliaState): EventoInfancia {
+  const tipo = pick(camp.rng, [
+    'partida',
+    'emboscada_estrada',
+    'rito_da_vigia',
+    'encruzilhada_oficio',
+  ] as const);
+  if (tipo === 'emboscada_estrada') return eventoEmboscadaEstrada(14);
+  if (tipo === 'rito_da_vigia') return eventoRitoDaVigia(14);
+  if (tipo === 'encruzilhada_oficio') return eventoEncruzilhadaOficio(14);
+  return eventoPartida(14);
+}
+
 function proximoEvento(camp: Campaign, familia: FamiliaState, idade: number): EventoInfancia {
   if (camp.cenarioId === 'tsukimichi') {
     if (idade === 6) return eventoAosSeisTsukimichi(camp, familia);
@@ -224,12 +435,8 @@ function proximoEvento(camp: Campaign, familia: FamiliaState, idade: number): Ev
     return eventoAosQuatorzeTsukimichi(camp, familia);
   }
   if (idade === 6) return eventoAosSeis(camp, familia);
-  if (idade === 10) return camp.genese?.marca === 'genio' ? eventoTalento(10) : nextFloat(camp.rng) < .45 ? eventoCativeiro(10) : eventoTalento(10);
-  return { id: 'partida', idade: 14, titulo: 'A vida adulta se aproxima', descricao: 'O mundo oferece um caminho, enquanto sua família ainda cobra presença.', opcoes: [
-    { id: 'aprendizado', rotulo: 'Partir para aprender um ofício', descricao: 'Ganha técnica e deixa a família conduzir a própria vida.' },
-    { id: 'defender', rotulo: 'Ficar para defender a casa', descricao: 'Fortalece corpo e vínculos; inimigos passam a conhecer seu nome.' },
-    { id: 'fugir', rotulo: 'Ir embora sem promessa de volta', descricao: 'Ganha liberdade, perde confiança e começa com recursos próprios.' },
-  ] };
+  if (idade === 10) return eventoAosDez(camp, familia);
+  return eventoAosQuatorze(camp, familia);
 }
 
 function iniciarFamiliaTsukimichi(content: ContentBundle, camp: Campaign): void {
@@ -372,7 +579,17 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
     for (const p of f.membros.filter(m => m.parentesco === 'pai' || m.parentesco === 'mae')) matar(camp, p);
     if (opcaoId === 'guardar_luto') alterarAtributo(camp, 'resiliencia', 2);
     if (opcaoId === 'buscar_responsavel') { alterarAtributo(camp, 'percepcao', 2); camp.flags['jurou_vingar_familia'] = true; }
-    if (opcaoId === 'proteger_irmaos') alterarAtributo(camp, 'social', 2);
+    if (opcaoId === 'proteger_irmaos') {
+      alterarAtributo(camp, 'social', 2);
+      for (const m of f.membros.filter(m => (m.parentesco === 'irma' || m.parentesco === 'irmao') && m.condicao !== 'morto')) {
+        registrarLembranca(camp, m.id, {
+          tipo: 'ajuda',
+          resumo: 'você assumiu o peso da família e jurou proteger os irmãos após a morte dos pais',
+          peso: 5,
+        });
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 12);
+      }
+    }
     texto += ' Seus pais morreram; a forma como você respondeu ficou em você.';
   } else if (evento.id === 'prodigio_revelado') {
     camp.flags['infancia_genio'] = true;
@@ -408,17 +625,384 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
     if (opcaoId === 'furtar') { camp.flags['procurado.por_furto'] = true; f.patrimonio += 15; alterarAtributo(camp, 'precisao'); }
     if (opcaoId === 'migrar') { f.patrimonio = Math.floor(f.patrimonio / 2); camp.flags['familia_migrou'] = true; }
   } else if (evento.id === 'talento') {
-    if (opcaoId === 'treinar') { alterarAtributo(camp, maiorTalento(camp.personagem.atributos), 2); f.prestigio += 2; }
+    if (opcaoId === 'treinar') {
+      const talento = maiorTalento(camp.personagem.atributos);
+      alterarAtributo(camp, talento, 2);
+      alterarAtributo(camp, talento === 'resiliencia' ? 'fisico' : 'resiliencia', 1);
+      f.prestigio += 3;
+
+      // Perícia de disciplina marcial ou intelectual
+      const periciasPorTalento: Record<AttrKey, string> = {
+        fisico: 'atletismo',
+        precisao: 'perceber',
+        resiliencia: 'atletismo',
+        raciocinio: 'arcana',
+        percepcao: 'rastrear',
+        social: 'intimidar',
+      };
+      const per = periciasPorTalento[talento];
+      camp.personagem.pericias[per] = (camp.personagem.pericias[per] ?? 0) + 1;
+
+      // Arte de Mestre ensinada diretamente ao discípulo
+      const artesPorTalento: Record<AttrKey, string[]> = {
+        fisico: ['guarda_perfeita', 'golpe_atordoante'],
+        precisao: ['tiro_certeiro', 'flecha_dupla', 'passo_leve'],
+        resiliencia: ['segundo_folego', 'ancora_de_ferro'],
+        raciocinio: ['escudo_arcano', 'lanca_arcana', 'ler_aura'],
+        percepcao: ['ler_aura', 'olho_torto'],
+        social: ['coragem', 'palavra_de_calma'],
+      };
+      const opcoesArtes = artesPorTalento[talento] ?? ['guarda_perfeita'];
+      const arteId = opcoesArtes.find(a => !camp.personagem.artesConhecidas.includes(a)) ?? opcoesArtes[0];
+      if (!camp.personagem.artesConhecidas.includes(arteId)) {
+        camp.personagem.artesConhecidas.push(arteId);
+      }
+      const arteDef = content.artes.find(a => a.id === arteId);
+      const nomeArte = arteDef?.nome ?? 'Técnica Secreta';
+
+      // Item / Herança de treino do mestre
+      const itensPorTalento: Record<AttrKey, string> = {
+        fisico: 'pedra_de_amolar',
+        precisao: 'luvas_de_couro',
+        resiliencia: 'pocao_cura_menor',
+        raciocinio: 'tonico_de_mana',
+        percepcao: 'tocha',
+        social: 'moeda_antiga',
+      };
+      const itemMestre = itensPorTalento[talento];
+      if (itemMestre) {
+        camp.personagem.inventario[itemMestre] = (camp.personagem.inventario[itemMestre] ?? 0) + 1;
+      }
+
+      // Reconhecimento, Alcunha e Flags
+      camp.flags['discipulo_de_mestre'] = true;
+      camp.flags['mestre_infancia_talento'] = talento;
+      camp.flags['arte_mestre_infancia'] = arteId;
+      if (!camp.personagem.alcunhas.includes('Discípulo Dedicado')) {
+        camp.personagem.alcunhas.push('Discípulo Dedicado');
+      }
+
+      // Memória de orgulho na família pelo discípulo
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        registrarLembranca(camp, m.id, {
+          tipo: 'marco',
+          resumo: 'você foi aceito como discípulo formal de um mestre aos 10 anos, enchendo a família de orgulho e respeito',
+          peso: 4,
+        });
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 6);
+      }
+
+      texto += ` Sob a tutela do mestre, você foi moldado com disciplina férrea: aprendeu a arte "${nomeArte}", aprimorou seus reflexos, herdou recursos de treino e ganhou o renome de um discípulo formal.`;
+    }
     if (opcaoId === 'dividir') {
       const irmao = f.membros.find(m => m.parentesco === 'irma' || m.parentesco === 'irmao');
-      if (irmao) { irmao.prodigio = true; irmao.prestigio += 3; camp.npcState[irmao.id].eixos.confianca = 15; texto += ` ${irmao.nome} floresceu como prodígio.`; }
-      else alterarAtributo(camp, 'social');
+      if (irmao) {
+        irmao.prodigio = true;
+        irmao.prestigio += 3;
+        camp.npcState[irmao.id].eixos.confianca = 15;
+        registrarLembranca(camp, irmao.id, {
+          tipo: 'ajuda',
+          resumo: 'você abriu mão da tutela de um mestre de renome para que ele pudesse treinar e florescer como prodígio',
+          peso: 5,
+        });
+        for (const p of f.membros.filter(m => (m.parentesco === 'pai' || m.parentesco === 'mae') && m.condicao !== 'morto')) {
+          registrarLembranca(camp, p.id, {
+            tipo: 'ajuda',
+            resumo: 'você abriu mão da própria glória pelo irmão mais novo, provando honra e lealdade de sangue',
+            peso: 4,
+          });
+          camp.npcState[p.id].eixos.confianca = Math.min(20, (camp.npcState[p.id].eixos.confianca ?? 0) + 8);
+        }
+        texto += ` ${irmao.nome} floresceu como prodígio.`;
+      } else {
+        alterarAtributo(camp, 'social');
+      }
     }
-    if (opcaoId === 'recusar') for (const m of f.membros) camp.npcState[m.id].eixos.confianca = 12;
+    if (opcaoId === 'recusar') {
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        camp.npcState[m.id].eixos.confianca = 12;
+        registrarLembranca(camp, m.id, {
+          tipo: 'ajuda',
+          resumo: 'você recusou partir com o mestre para continuar ao lado da família no sustento do lar',
+          peso: 4,
+        });
+      }
+    }
   } else if (evento.id === 'partida') {
     if (opcaoId === 'aprendizado') { camp.personagem.pericias.oficio = 1; alterarAtributo(camp, 'raciocinio'); }
-    if (opcaoId === 'defender') { alterarAtributo(camp, 'fisico'); alterarAtributo(camp, 'resiliencia'); camp.flags['defendeu_familia'] = true; }
+    if (opcaoId === 'defender') {
+      alterarAtributo(camp, 'fisico');
+      alterarAtributo(camp, 'resiliencia');
+      camp.flags['defendeu_familia'] = true;
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        registrarLembranca(camp, m.id, {
+          tipo: 'ajuda',
+          resumo: 'você colocou o corpo à frente da família quando o perigo bateu à porta aos 14 anos',
+          peso: 5,
+        });
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 10);
+      }
+    }
     if (opcaoId === 'fugir') { f.patrimonio = Math.max(0, f.patrimonio - 10); camp.personagem.dinheiro += 20; for (const m of f.membros) camp.npcState[m.id].eixos.confianca -= 8; }
+  } else if (evento.id === 'indigno_provacao') {
+    if (opcaoId === 'provar_no_trabalho') {
+      alterarAtributo(camp, 'fisico', 1);
+      alterarAtributo(camp, 'resiliencia', 1);
+      f.patrimonio += 5;
+      texto += ' O suor e a disciplina calaram os que zombavam de você.';
+    } else if (opcaoId === 'astucia_silenciosa') {
+      alterarAtributo(camp, 'precisao', 1);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.pericias.furtividade = (camp.personagem.pericias.furtividade ?? 0) + 1;
+      texto += ' Você aprendeu a se mover sem ser notado e a ler os passos dos outros.';
+    } else {
+      alterarAtributo(camp, 'resiliencia', 2);
+      camp.flags['indomavel_infancia'] = true;
+      if (!camp.personagem.alcunhas.includes('Obstinado')) camp.personagem.alcunhas.push('Obstinado');
+      texto += ' O desdém alheio apenas forjou uma têmpera de ferro em sua determinação.';
+    }
+  } else if (evento.id === 'ruinas_descoberta') {
+    if (opcaoId === 'descer_catacumbas') {
+      alterarAtributo(camp, 'raciocinio', 1);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.inventario.moeda_antiga = (camp.personagem.inventario.moeda_antiga ?? 0) + 1;
+      texto += ' Você rastejou pelas lajes frias e emergiu com uma moeda esquecida pelo tempo.';
+    } else if (opcaoId === 'marcar_segredo') {
+      alterarAtributo(camp, 'percepcao', 1);
+      alterarAtributo(camp, 'resiliencia', 1);
+      texto += ' Você guardou a memória da pedra oculta para o dia em que estivesse pronto.';
+    } else {
+      alterarAtributo(camp, 'social', 1);
+      f.prestigio += 1;
+      texto += ' Os anciãos lacraram o fosso e elogiaram seu bom senso e cautela.';
+    }
+  } else if (evento.id === 'inverno_rigoroso') {
+    if (opcaoId === 'manter_fogueira') {
+      alterarAtributo(camp, 'resiliencia', 2);
+      alterarAtributo(camp, 'social', 1);
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 5);
+        registrarLembranca(camp, m.id, {
+          tipo: 'ajuda',
+          resumo: 'você vigiou o fogo noite após noite durante o inverno mais cruel para que a casa não congelasse',
+          peso: 4,
+        });
+      }
+      texto += ' Suas noites em claro aquecendo os mais fracos selaram a união inabalável da casa.';
+    } else if (opcaoId === 'buscar_lenha_gelo') {
+      alterarAtributo(camp, 'fisico', 2);
+      camp.personagem.cicatrizes.push('marcas de geada nos dedos');
+      texto += ' Você enfrentou a nevasca e garantiu a lenha, gravando a resistência do gelo na pele.';
+    } else {
+      alterarAtributo(camp, 'precisao', 1);
+      alterarAtributo(camp, 'percepcao', 1);
+      f.patrimonio += 6;
+      texto += ' Suas armadilhas no mato nevado trouxeram caça quando todos passavam necessidade.';
+    }
+  } else if (evento.id === 'incendio_forja') {
+    if (opcaoId === 'salvar_ferreiro') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'resiliencia', 1);
+      camp.personagem.inventario.pedra_de_amolar = (camp.personagem.inventario.pedra_de_amolar ?? 0) + 1;
+      f.prestigio += 2;
+      const paiFerreiro = f.membros.find(m => m.parentesco === 'pai' && /ferreir/i.test(m.ocupacao));
+      if (paiFerreiro && paiFerreiro.condicao !== 'morto') {
+        registrarLembranca(camp, paiFerreiro.id, {
+          tipo: 'ajuda',
+          resumo: 'você entrou na forja em chamas aos 10 anos e arrancou seu pai do fogo, salvando sua vida',
+          peso: 5,
+        });
+        camp.npcState[paiFerreiro.id].eixos.confianca = Math.min(20, (camp.npcState[paiFerreiro.id].eixos.confianca ?? 0) + 12);
+      } else {
+        for (const p of f.membros.filter(m => (m.parentesco === 'pai' || m.parentesco === 'mae') && m.condicao !== 'morto')) {
+          registrarLembranca(camp, p.id, {
+            tipo: 'ajuda',
+            resumo: 'você enfrentou o fogo da forja para salvar o mestre ferreiro com bravura incomum',
+            peso: 4,
+          });
+          camp.npcState[p.id].eixos.confianca = Math.min(20, (camp.npcState[p.id].eixos.confianca ?? 0) + 8);
+        }
+      }
+      texto += ' Você arrancou o ferreiro das labaredas e recebeu a gratidão eterna da forja.';
+    } else if (opcaoId === 'linha_de_baldes') {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'social', 1);
+      camp.personagem.pericias.persuadir = (camp.personagem.pericias.persuadir ?? 0) + 1;
+      f.prestigio += 2;
+      texto += ' Sua liderança calma guiou a corrente de baldes e impediu que a vila queimasse.';
+    } else {
+      alterarAtributo(camp, 'precisao', 2);
+      f.patrimonio += 15;
+      texto += ' Com agilidade impressionante, você salvou fardos e ferramentas da ruína.';
+    }
+  } else if (evento.id === 'sombra_na_mata') {
+    if (opcaoId === 'sustentar_respiracao') {
+      alterarAtributo(camp, 'percepcao', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      if (!camp.personagem.artesConhecidas.includes('passo_leve')) {
+        camp.personagem.artesConhecidas.push('passo_leve');
+      }
+      camp.flags['vislumbrou_criatura_noturna'] = true;
+      texto += ' Você dominou o próprio pavor e a respiração, aprendendo a arte do Passo Leve no silêncio da mata.';
+    } else if (opcaoId === 'proteger_amigo') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'resiliencia', 1);
+      if (!camp.personagem.alcunhas.includes('Olhar Férreo')) {
+        camp.personagem.alcunhas.push('Olhar Férreo');
+      }
+      const irmaoMata = f.membros.find(m => (m.parentesco === 'irma' || m.parentesco === 'irmao') && m.condicao !== 'morto');
+      if (irmaoMata) {
+        registrarLembranca(camp, irmaoMata.id, {
+          tipo: 'ajuda',
+          resumo: 'você colocou o próprio corpo entre a besta da mata e seu irmão aos 10 anos, olhando o monstro de frente',
+          peso: 5,
+        });
+        camp.npcState[irmaoMata.id].eixos.confianca = Math.min(20, (camp.npcState[irmaoMata.id].eixos.confianca ?? 0) + 12);
+      }
+      for (const p of f.membros.filter(m => (m.parentesco === 'pai' || m.parentesco === 'mae') && m.condicao !== 'morto')) {
+        registrarLembranca(camp, p.id, {
+          tipo: 'ajuda',
+          resumo: 'você enfrentou o pavor da fera da mata aos 10 anos com olhar férreo para proteger quem estava com você',
+          peso: 4,
+        });
+        camp.npcState[p.id].eixos.confianca = Math.min(20, (camp.npcState[p.id].eixos.confianca ?? 0) + 8);
+      }
+      texto += ' Você sustentou a postura diante do monstro e conquistou uma lealdade que nada pode quebrar.';
+    } else {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.pericias.perceber = (camp.personagem.pericias.perceber ?? 0) + 1;
+      texto += ' Os padrões daquela criatura ficaram gravados na sua mente como lição de sobrevivência.';
+    }
+  } else if (evento.id === 'inquisicao_selo') {
+    if (opcaoId === 'responder_com_firmeza') {
+      alterarAtributo(camp, 'social', 1);
+      alterarAtributo(camp, 'raciocinio', 1);
+      f.prestigio += 2;
+      texto += ' Sua clareza e respeito desarmaram as suspeitas do clérigo e protegeram a casa.';
+    } else if (opcaoId === 'ocultar_reliquias') {
+      alterarAtributo(camp, 'precisao', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.pericias.furtividade = (camp.personagem.pericias.furtividade ?? 0) + 1;
+      texto += ' As mãos rápidas esconderam cada pergaminho antes que as botas de aço entrassem.';
+    } else {
+      alterarAtributo(camp, 'resiliencia', 2);
+      alterarAtributo(camp, 'fisico', 1);
+      camp.flags['desafiou_inquisicao'] = true;
+      if (!camp.personagem.alcunhas.includes('Indomável')) {
+        camp.personagem.alcunhas.push('Indomável');
+      }
+      texto += ' Seu olhar inflexível não baixou diante do inquisidor, inspirando quem assistia em silêncio.';
+    }
+  } else if (evento.id === 'torneio_juventude') {
+    if (opcaoId === 'vencer_na_arena') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      camp.personagem.inventario.luvas_de_couro = (camp.personagem.inventario.luvas_de_couro ?? 0) + 1;
+      f.prestigio += 2;
+      texto += ' A poeira da arena baixou com você de pé, vitorioso sob os aplausos do vale.';
+    } else if (opcaoId === 'prova_de_arquearia') {
+      alterarAtributo(camp, 'precisao', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.pericias.perceber = (camp.personagem.pericias.perceber ?? 0) + 1;
+      f.prestigio += 1;
+      texto += ' Sua flecha cravou o centro exato da marcação, provando uma precisão assombrosa.';
+    } else {
+      alterarAtributo(camp, 'social', 2);
+      alterarAtributo(camp, 'raciocinio', 1);
+      camp.personagem.pericias.persuadir = (camp.personagem.pericias.persuadir ?? 0) + 1;
+      f.prestigio += 3;
+      texto += ' As crônicas e cantos que você entoou comoveram a assembleia e elevaram o nome da sua família.';
+    }
+  } else if (evento.id === 'emboscada_estrada') {
+    if (opcaoId === 'lutar_com_furia') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      camp.personagem.pericias.atletismo = (camp.personagem.pericias.atletismo ?? 0) + 1;
+      camp.personagem.inventario.espada_curta = (camp.personagem.inventario.espada_curta ?? 0) + 1;
+      if (!camp.personagem.alcunhas.includes('Batizado em Sangue')) {
+        camp.personagem.alcunhas.push('Batizado em Sangue');
+      }
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        registrarLembranca(camp, m.id, {
+          tipo: 'marco',
+          resumo: 'aos 14 anos você empunhou o aço e sangrou os salteadores para defender a carroça da família',
+          peso: 5,
+        });
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 8);
+      }
+      texto += ' O corte de aço foi rápido e decisivo; a infância terminou na poeira da estrada com a lâmina manchada.';
+    } else if (opcaoId === 'manobrar_fuga') {
+      alterarAtributo(camp, 'precisao', 2);
+      alterarAtributo(camp, 'raciocinio', 1);
+      camp.personagem.pericias.perceber = (camp.personagem.pericias.perceber ?? 0) + 1;
+      f.patrimonio += 20;
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        registrarLembranca(camp, m.id, {
+          tipo: 'ajuda',
+          resumo: 'aos 14 anos você conduziu os cavalos no desfiladeiro durante a emboscada, salvando as vidas e a carga da família',
+          peso: 4,
+        });
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 6);
+      }
+      texto += ' Você conduziu os cavalos no fio da ravina com perícia cirúrgica, salvando as vidas e a carga.';
+    } else {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'percepcao', 1);
+      camp.personagem.pericias.furtividade = (camp.personagem.pericias.furtividade ?? 0) + 1;
+      camp.personagem.dinheiro += 25;
+      texto += ' A armadilha virou contra os caçadores: os salteadores recuaram em desespero deixando o saque.';
+    }
+  } else if (evento.id === 'rito_da_vigia') {
+    if (opcaoId === 'olhos_na_escuridao') {
+      alterarAtributo(camp, 'percepcao', 2);
+      alterarAtributo(camp, 'resiliencia', 1);
+      camp.personagem.pericias.perceber = (camp.personagem.pericias.perceber ?? 0) + 1;
+      if (!camp.personagem.artesConhecidas.includes('ler_aura')) {
+        camp.personagem.artesConhecidas.push('ler_aura');
+      }
+      texto += ' Na solidão da torre sob o vendaval noturno, seus olhos aprenderam a ler as auras no escuro.';
+    } else if (opcaoId === 'disciplina_de_ferro') {
+      alterarAtributo(camp, 'fisico', 2);
+      alterarAtributo(camp, 'precisao', 1);
+      if (!camp.personagem.artesConhecidas.includes('segundo_folego')) {
+        camp.personagem.artesConhecidas.push('segundo_folego');
+      }
+      texto += ' O treino exaustivo na chuva forjou uma resistência pulmonar profunda: a técnica de Segundo Fôlego.';
+    } else {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'social', 1);
+      camp.personagem.inventario.mapa_rasgado = (camp.personagem.inventario.mapa_rasgado ?? 0) + 1;
+      camp.personagem.pericias.decifrar = (camp.personagem.pericias.decifrar ?? 0) + 1;
+      texto += ' Você desenhou as rotas e passagens do vale à luz de vela, desvendando segredos de fronteira.';
+    }
+  } else if (evento.id === 'encruzilhada_oficio') {
+    if (opcaoId === 'seguir_batedores') {
+      alterarAtributo(camp, 'precisao', 2);
+      alterarAtributo(camp, 'raciocinio', 1);
+      camp.personagem.pericias.furtividade = (camp.personagem.pericias.furtividade ?? 0) + 1;
+      camp.flags['conhece_trilhas_secretas'] = true;
+      texto += ' O batedor ensinou os passos silenciosos e as passagens não vigiadas através dos desfiladeiros.';
+    } else if (opcaoId === 'aprender_cura_e_ervas') {
+      alterarAtributo(camp, 'raciocinio', 2);
+      alterarAtributo(camp, 'resiliencia', 1);
+      camp.personagem.pericias.oficio = (camp.personagem.pericias.oficio ?? 0) + 1;
+      camp.personagem.inventario.pocao_cura_menor = (camp.personagem.inventario.pocao_cura_menor ?? 0) + 2;
+      texto += ' Você aprendeu a estancar hemorragias e destilar bálsamos curativos na fumaça da cabana.';
+    } else {
+      alterarAtributo(camp, 'resiliencia', 2);
+      alterarAtributo(camp, 'social', 1);
+      f.prestigio += 3;
+      for (const m of f.membros.filter(m => m.condicao !== 'morto')) {
+        camp.npcState[m.id].eixos.confianca = Math.min(20, (camp.npcState[m.id].eixos.confianca ?? 0) + 10);
+        registrarLembranca(camp, m.id, {
+          tipo: 'marco',
+          resumo: 'aos 14 anos você escolheu fincar raízes e sustentar o lar ao lado da família em vez de partir pelo mundo',
+          peso: 5,
+        });
+      }
+      texto += ' Sua escolha de permanecer firme ao lado da família consolidou o respeito e a força do seu sangue.';
+    }
   } else if (evento.id === 'origem_japao') {
     if (opcaoId === 'crescer_kyudo') {
       alterarAtributo(camp, 'precisao', 2);

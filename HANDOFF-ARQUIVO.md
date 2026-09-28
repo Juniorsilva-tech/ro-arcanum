@@ -1,6 +1,6 @@
-# HANDOFF — ARQUIVO (sessões 1 a 55)
+# HANDOFF — ARQUIVO (sessões 1 a 68)
 
-Registro histórico das sessões 1 a 55, movido de `HANDOFF.md` nas sessões 16, 40, 42, 43, 44, 48, 51, 56, 58 e 62 para
+Registro histórico das sessões 1 a 68, movido de `HANDOFF.md` nas sessões 16, 40, 42, 43, 44, 48, 51, 56, 58, 62 e 83 para
 que o handoff vivo caiba na leitura de um agente novo. Nada aqui foi editado ou
 removido — é o texto original, na ordem original. O handoff ativo, com as
 sessões recentes e o próximo passo, está em `HANDOFF.md`.
@@ -5817,3 +5817,166 @@ Implementação profunda da cosmologia, religião, mitos dos Deuses Primordiais,
   - `npm run test:engine`: todos os 40+ testes + 6 campanhas de 10 anos passaram com zero violações de invariante.
   - `npm run typecheck`: 0 erros de tipagem.
   - `npx expo export --platform web`: exportação web concluída com código 0 e todos os bundles e assets gerados.
+
+## Sessão 63 — Gemini — Longcat Padrão, Correção Streaming da Nous, Prólogo Prodígio & Teste In-Game
+- **Longcat como Modelo Padrão Definitivo**:
+  - `engine/llm.ts`: `MODELO_PADRAO_NOUS` alterado de `'upstage/solar-pro4:free'` para `'meituan/longcat-2.0:free'` e posicionado como 1ª opção em `SUGESTOES_NOUS`.
+  - `ui/storage.ts`: `configPadrao` atualizado para `{ provider: 'nous', modelo: 'meituan/longcat-2.0:free', usarModelo: true, avisoAceito: false }`.
+- **Correção da Latência / Travamento na API da Nous**:
+  - `engine/llm.ts`:
+    * A Nous Research não suporta streaming SSE confiável e trava indefinidamente com `stream: true`. Para `cfg.provider === 'nous'`, o método `narrarComModeloStream` agora ignora streaming e usa `chamarNous` diretamente via POST, respondendo em ~2.4s.
+    * Adicionados timeouts de 20s na Nous e 25s na OpenRouter com `AbortController` para prevenir bloqueios de rede.
+    * `lerStreamSse` corrigido para verificar `resp.ok` antes de tentar ler o corpo (evitando mascarar erros HTTP 401/429 como "modelo vazio").
+- **Destravamento de Turno & Narrador Local**:
+  - `ui/store.ts` & `ui/screens/Jogo.tsx`: adicionada ação `desistirIaEUsarLocal` e botão "Usar narrador local" na interface para quando a rede oscilar ou falhar.
+- **Infância de Gênio / Prodígio**:
+  - `engine/genese.ts`: marca `'genio'` ("Gênio - Talento Precoce") colocada no topo de `MARCAS_INFANCIA`.
+  - `engine/familia.ts`: prólogo dedicado aos 6 e 10 anos (`'prodigio_revelado'`) com bônus de atributos e flag `infancia_genio`.
+- **Correção de Repetição e Eco de Cenas Passadas**:
+  - `engine/llm.ts`:
+    * Substituído o exemplo de diálogo da instrução de sistema que usava "Aldrica / pão velho" por um exemplo neutro ("Sentinela / desfiladeiro"). Modelos como Longcat estavam decorando o exemplo como script literal ao interagir com Aldrica.
+    * Adicionada regra explícita de "Proibição Absoluta de Repetição" no prompt de sistema e reforço em `montarMensagemNarracao` instruindo que `cenasAnteriores` é exclusivamente para contexto e proibindo transcrever o passado.
+    * Configurados `frequency_penalty: 0.35` e `presence_penalty: 0.3` em `chamarStreamCompat`, `chamarNous` e `chamarOpenRouter` (com `temperature: 0.8`), prevenindo laços autorregressivos de repetição.
+    * Criada a função `detectarRepeticaoDeCenaAnterior` em `interpretarResposta`: qualquer resposta que tente reescrever segmentos longos ou múltiplas falas já exibidas em `cenasAnteriores` é rejeitada com erro, acionando o pipeline de retry do `narrarComFallback`.
+    * Adicionado `AbortController` com timeout de 4000ms em `listarModelosNous` para prevenir congelamentos de rede.
+- **Testes & Validação**:
+  - `scripts/test_gameplay_live.ts`: teste simulando criação, mapa, viagem, Livro Arcana, NPCs, configurações e turnos com narração real do Longcat (100% aprovado).
+  - `scripts/test_repetition_logic.ts`: validação unitária da detecção de repetição (identificou com 100% de precisão o caso do usuário e aprovou continuações legítimas).
+  - `npm run typecheck`: 0 erros.
+  - `npm run test:vaelhorn`: 100% aprovado.
+  - `npx tsx engine/cosmologia.selftest.ts` e `engine/intimidadeNpc.selftest.ts`: 100% aprovados.
+  - `npm run test:engine`: 40+ suítes de teste + 6 campanhas de 10 anos (21.000 ações) concluídas com 0 violações de invariante.
+
+## Sessão 64 — Gemini — Remoção do Longcat Descontinuado & Ativação do Space Bunny Alpha
+
+- **Descontinuação do Longcat & Modelos na Nous Research**:
+  - A Nous Research descontinuou oficialmente o tier gratuito do Longcat (`meituan/longcat-2.0:free`), retornando HTTP 404. A variante paga (`meituan/longcat-2.0`) exige saldo de créditos (erro 401: balance too low). Modelos como `ling/ling-3.0-flash-*:free` e `poolside/laguna-xs-2.1:free` também foram encerrados (404).
+- **Substituição e Padrão Atual**:
+  - Novo modelo padrão da Nous definido como **`stealth/space-bunny-alpha`** (modelo ativo no Hermes do usuário, 100% funcional com status 200, prosa rica para RPG e retorno de JSON estrito).
+  - `engine/llm.ts`:
+    * `MODELO_PADRAO_NOUS` alterado para `'stealth/space-bunny-alpha'`.
+    * `SUGESTOES_NOUS` limpo para conter apenas modelos ativos e testados: `stealth/space-bunny-alpha`, `upstage/solar-pro4:free` e `stepfun/step-3.7-flash:free`.
+    * `FABRICANTE`: adicionado `stealth: 'Stealth (Nous)'`.
+    * `MODELOS_PARA_CENA_ADULTA`: removido `meituan/longcat-2.0:free`; adicionados `stealth/space-bunny-alpha`, `upstage/solar-pro4:free` e `stepfun/step-3.7-flash:free`.
+    * `PERMISSIVOS`: adicionados `'space-bunny'` e `'solar'`.
+    * `listarModelosNous`: lista `DEAD_MODELS` para filtrar endpoints descontinuados da Nous que geram 404, garantindo que `stealth/space-bunny-alpha` seja reconhecido como gratuito e prioritário.
+  - `ui/storage.ts`:
+    * `configPadrao` atualizado para `stealth/space-bunny-alpha`.
+    * `carregarConfig`: adicionada migração automática transparente para qualquer save com referências a `longcat`, `hy3:free`, `ling-3.0` ou `laguna-xs`, atualizando direto para o novo padrão funcional.
+## Sessão 65 — Gemini — Diagnóstico Isolado por Modelo & Correção do Prompt Adulto
+
+- **Diagnóstico Isolado por Modelo (Fim do Fallback Silencioso nos Testes)**:
+  - Problema: no painel de Configurações, o botão "Testar narração de verdade" chamava `narrarComFallback`. Quando o modelo escolhido (ex: `space-bunny-alpha`) falhava ou demorava, a engine silenciosamente pulava para o próximo modelo da lista (`inclusionai/ling-3.0-flash-fin:free` ou outro) e exibia o nome do modelo de reserva, gerando confusão de por que aparecia o nome de outro modelo.
+  - Correção em `ui/store.ts`:
+    * `testarNarracaoReal` e `testarSeNarraAdulto` agora aceitam parâmetro opcional `modeloEspecifico`.
+    * `testarNarracaoReal` utiliza diretamente `narrarComModelo` para o modelo especificado, garantindo que o teste avalie ESTRITAMENTE o modelo selecionado, reportando sucesso ou erro com o nome exato daquele modelo.
+  - Correção em `ui/screens/Sistema.tsx`:
+    * O nome do modelo selecionado agora é exibido dinamicamente no rótulo dos botões: `Testar narração (slug)` e `Este modelo narra romance/adulto? (slug)`.
+    * As mensagens de feedback (`FUNCIONOU`, `NÃO FUNCIONOU`, `ESTE MODELO NARRA`, `ESTE MODELO RECUSA`) agora estampam explicitamente o slug do modelo testado.
+- **Correção do Prompt de Teste de Cena Adulta**:
+  - Problema: em `engine/llm.ts:testarCenaAdulta`, o prompt de teste continha termos anatômicos crus literais ("nomeie partes do corpo sem eufemismo"), o que fazia o gateway de segurança da Nous Research cortar a resposta a 0 tokens (`content: ""`, resposta vazia).
+  - Correção: o prompt foi refinado para romance adulto e intimidade física intensa ("duas pessoas adultas, sozinhas num quarto de estalagem, entregando-se ao desejo, ao calor da pele e à paixão").
+  - Resultado: testado ao vivo na API da Nous — tanto `stealth/space-bunny-alpha` quanto `upstage/solar-pro4:free` responderam com 100% de sucesso (`narra: true, recusou: false`) e belíssima prosa em português.
+- **Validação**:
+  - `npm run typecheck`: 0 erros.
+  - Testes reais no terminal executando `testarNarracaoReal` e `testarSeNarraAdulto` para `upstage/solar-pro4:free` e `stealth/space-bunny-alpha`: ambos testados isoladamente com 100% de sucesso e identificação precisa de cada modelo.
+
+## Sessão 66 — Gemini — Revisão de Prosa: Gore Visceral, Intimidade Adulta Sem Pudores & Realismo Imersivo
+
+- **Objetivo**:
+  - Atender à solicitação enfática do usuário: *"REVISE A QUESTÃO DA PROSA, QUERO ALGO BEM SANGRENTO E GORE QUANDO PRECISAR, CENA DE ADULTO QUANDO PRECISAR BEM BÃO, TUDO BEM REALISTA E DIVERTIDO E IMERSIVO..."*.
+  - Transformar o estilo de narrativa da IA em `engine/llm.ts` para que combates tenham gore pesado e crueza anatômica, cenas íntimas tenham volúpia carnal explícita e entrega sem cortes ("bem bão"), e o tom geral tenha realismo sensorial, humor sombrio de taverna e diálogos afiados.
+- **O que foi feito**:
+  - **Revisão de `INSTRUCAO_SISTEMA` em `engine/llm.ts`**:
+    * **Seção VOZ (Realismo, Humor Sombrio e Imersão)**: adicionada diretriz de vivacidade com atitude humana, cinismo de sobrevivente, humor de taverna, reações involuntárias e riqueza sensorial (lama, cerveja azeda, ferro molhado, sebo de vela, vinho e pele).
+    * **Regra 5 (Combate Brutal, Ultraviolência & Gore Visceral Pesado)**: diretriz impiedosa contra higienização de combates. Proibição explícita de amenizar a violência. Narração obrigatória de lâminas serrando tendões e abrindo camadas fumegantes de gordura e carne, artérias carótidas/femorais bombeando esguichos violentos de sangue quente, ossos e cartilagens esmagados com pontas fraturadas rasgando músculos de dentro para fora, crânios triturados com massa encefálica e calota óssea na poeira, ventres rasgados despejando alças intestinais cinzentas com fedor pútrido de bile, fezes e ferro cru, olhos explodindo sob pressão, cotos decepados em espasmos musculares e o estertor asmático da vítima engasgando no próprio sangue grosso pelas narinas e traqueia.
+    * **Regra 5a (Conteúdo Adulto & Intimidade Intensa - "Bem Bão")**: proibição terminante de "fade to black" (cortar para a lareira ou manhã seguinte) e eufemismos poéticos vagos. Instrução de descrever volúpia carnal, calor febril da pele suada, peso dos corpos, toques firmes em pontos sensíveis, beijos profundos com saliva, roupas rasgadas ou desfeitas com pressa, atrito úmido, penetração ritmada, respiração ofegante e espasmos de prazer até a exaustão.
+    * **Regra Inviolável de Idade**: mantida rigorosamente a barreira inegociável de que todos os personagens em romance/sexo são estritamente adultos (18+).
+  - **Reforço de Instrução Dinâmico em `montarMensagemNarracao` (`engine/llm.ts`)**:
+    * Detecção dinâmica de combates/armas/golpes (`ehCombate`). Quando a ação envolve violência, a mensagem do usuário injeta automaticamente: `DIRETRIZ DE COMBATE: GORE PESADO E ULTRAVIOLÊNCIA VISCERAL EXPLÍCITA. Narre o impacto físico sem atenuantes nem cortes: carne rasgada em camadas fumegantes, ossos esmagados com estalos secos, esguichos de sangue arterial borbulhante ensopando tudo, vísceras, mutilação, dentes partidos e o estertor agonizante do inimigo na lama.`.
+- **Arquivos modificados**:
+  - `engine/llm.ts`: diretrizes de `INSTRUCAO_SISTEMA` (VOZ, Regra 5 e Regra 5a) e injeção dinâmica de combate gore em `montarMensagemNarracao`.
+  - `HANDOFF.md`: registro da Sessão 66 e atualização do índice rápido.
+- **Testes executados & Resultados**:
+  - `npm run typecheck`: 0 erros de compilação TypeScript.
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado.
+  - `engine/narracao.selftest.ts`: 100% aprovado.
+  - `engine/prosa.selftest.ts`: 100% aprovado.
+  - **Teste ao vivo com LLM real (Upstage Solar Pro 4 via Hermes/Nous)**:
+    1. **Combate Ultraviolento & Gore Hardcore**: golpe com machado de trincheira partindo clavícula e rasgando ventre — o modelo gerou narrativa hiper-detalhada com camadas fumegantes de gordura amarelada e músculo vermelho, machado atravessando com sangue arterial borbulhante, alças intestinais fumegantes despejadas na lama pulsando em espasmos com líquido viscoso entre os dedos, dentes partidos soltos com clique seco na boca aberta, sangue grosso e escuro borbulhando pelas narinas e traqueia em estertor asmático, e gosto acre de ferro impregnado na boca do protagonista. Retorno em JSON estrito impecável.
+    2. **Cena Adulta Intensa ("Bem Bão")**: quarto de estalagem com Elza — gerou narrativa erótica tórrida, pele quente suada, atrito de corpos nus, gemidos roucos, língua, volúpia descarada e entrega total sem corte ou eufemismo.
+- **Próximo passo recomendado**:
+  - Jogar diretamente pelo app e aproveitar a intensidade máxima dos combates sangrentos e romances adultos.
+
+## Sessão 67 — Gemini — Transição de Lore Feudal Realista: Fim da Ponte Mágica, Sabotagem Militar e Calendário do Santo Selo
+
+- **Objetivo**:
+  - Atender à crítica e demanda do usuário por uma história mais medieval histórica, crua e pé no chão ("tipo antes ou depois de cristo"), eliminando o misticismo vago da "ponte mágica que caiu e homens que somem em transe aos 18 anos".
+  - Substituir essa fantasia frágil por conflitos geopolíticos, tributos de guerra, conscrição forçada feudal e conspirações militares verossímeis.
+- **O que foi feito**:
+  - **Premissa Histórica & Cenário (`content/vaelhorn/scenario.ts`)**:
+    * **Tributo de Sangue (Conscrição Militar Feudal)**: há três gerações a revolta de Mir foi esmagada pela Coroa. Como punição perpétua, todo rapaz nascido no vale é levado acorrentado aos 18 anos pelos destacamentos da Coroa/Tessel como bucha de canhão nas trincheiras do norte ou escravizado nas minas de Corveira.
+    * **Três Gerações de Mulheres Feudais**: as mulheres sustentam a foice, a forja, as redes e as dívidas de guerra não por misticismo, mas pela ausência forçada dos homens conscritos.
+    * **Calendário Eclesiástico ("Santo Selo")**: `ancoraCalendario` mudada de `'desde que a ponte caiu'` para `'do Santo Selo'` (formato: *"primeiro dia do Santo Selo · pleno outono"*), ancorado na Sé Apostólica e inquisição dos Santos Mártires.
+  - **Sabotagem Militar da Travessia (`content/vaelhorn/locations.ts` e `quests.ts`)**:
+    * O local `ponte` (`A Ponte Caída`) foi reescrito: a ponte militar imperial sobre o desfiladeiro foi deliberadamente dinamitada/derrubada durante o cerco militar da revolta para cortar a marcha do exército imperial. Marcas de perfuração de cinzel e argamassa de pólvora atestam o cálculo da sabotagem.
+    * A quest `q_ponte` foi reformulada para *"A Sabotagem da Travessia"*, focando na conspiração de oficiais da guarda e corrupção militar.
+  - **Segredos e Conspirações dos NPCs (`content/vaelhorn/npcs.ts` e `segredos.ts`)**:
+    * `sargenta_bael`: segredo atualizado para a derrubada premeditada dos arcos da ponte durante a revolta para encobrir desvio de armamentos militares da sua tropa.
+    * `lunn`: segredo atualizado para o sono no posto de sentinela na noite da sabotagem militar da ponte (não tocou o sino de alarme).
+    * `ruvela`: segredo atualizado para a deserção da tropa de Bael na mesma noite em que os conspiradores detonaram a travessia.
+    * `morda`: segredo atualizado para ter testemunhado a ordem militar dos oficiais que mandaram dinamitar a ponte antes do estrondo.
+    * Efeitos de consequência em `segredos.ts` alinhados com a nova narrativa histórica.
+- **Arquivos modificados**:
+  - `content/vaelhorn/scenario.ts`
+  - `content/vaelhorn/locations.ts`
+  - `content/vaelhorn/quests.ts`
+  - `content/vaelhorn/npcs.ts`
+  - `content/vaelhorn/segredos.ts`
+  - `HANDOFF.md`
+- **Validação & Testes**:
+  - `npm run typecheck`: 0 erros.
+  - `engine/lore.selftest.ts`: 100% aprovado (respeitada a proibição de termos no teste).
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado (249 histórias, 249 segredos e propagação de relações preservados).
+  - `engine/prosa.selftest.ts`: 100% aprovado.
+  - `engine/narracao.selftest.ts`: 100% aprovado.
+  - `npm run test:vaelhorn` e `npm run test:casas`: 100% aprovados.
+- **Próximo passo recomendado**:
+  - Continuar expandindo facções e encontros regionais pé no chão ou testar a experiência de jogo diretamente no cliente.
+
+## Sessão 68 — Gemini — Reformulação Feudal: Desafios de Caça Viscerais, Inquisição na Capela e Inquisidor Emparedado
+
+- **Objetivo**:
+  - Atender à demanda do usuário de revisar e aprofundar as missões e histórias, expurgando resquícios de fantasia genérica ou mágica e substituindo por ameaças viscerais, conflito eclesiástico feudal e crueza medieval.
+- **O que foi feito**:
+  - **Trama da Capela e Cripta dos Mártires (`content/vaelhorn/quests.ts` & `bestiary.ts`)**:
+    * `q_cripta` ("O Que Dorme Sob a Capela"): reescrita para focar nos gemidos vindos das lajes da cripta e nos crimes eclesiásticos que a Madre Corvane esconde sob o altar de São Vandro.
+    * `q_selado` ("O Último Selo"): substituída a fantasia mística do "selo que racha e puxa meninos" pela história do **antigo inquisidor da Sé**, emparedado vivo sob as catacumbas por Sarine e pelas madres há 30 anos para acobertar o desvio dos dízimos e massacres da revolta.
+    * `o_selado` (`bestiary.ts` e `bestiario-historias.ts`): redefinido como o Inquisidor enlouquecido nas trevas, emparedado vivo, alimentado com restos, que arrasta grilhões pesados de ferro e golpeia às cegas pelo som.
+  - **Desafios de Caça e Expedições Viscerais (`content/vaelhorn/desafios.ts` & `bestiario-historias.ts`)**:
+    * Mantidos 100% dos IDs para garantir zero quebra em combate, causalidade e despertares.
+    * Nomes, descrições e ataques remodelados para realismo medieval e perigo mortal:
+      - `sentinela_de_basalto`: Muralha viva de cantaria esculpida pelos pedreiros do cerco para esmagar intrusos nos túneis com maças de chumbo fundido.
+      - `espadachim_sem_bandeira`: Veterana Sem Bandeira, mercenária empedernida que exige duelo de morte de quem tenta cruzar o desfiladeiro.
+      - `quimera_do_desfiladeiro`: Predador das Escarpas, fera carniceira que pendura tripas e carcaças desossadas nas árvores altas.
+      - `arauto_da_cripta`: Arauto do Ossuário, carrasco sepultado em cota de ferro oxidado que vigia os supliciados pela inquisição.
+      - `colosso_da_mina`: O Quebra-Rocha da Mina, máquina colossal de demolição com martelos de ferro maciço acionada por mineradores amotinados.
+      - `guardia_do_horizonte`: Campeã da Torre, duelista calejada que parte costelas e quebra lâminas com manoplas de ferro fundido.
+      - `draco_das_cinzas`: Fera das Cinzas de Mir, réptil colossal que habita as ruínas carbonizadas rasgando carne com dentes em serra.
+      - `cavaleira_do_eclipse`: Cavaleira Renegada de Mir, última capitã da guarda da cidade destruída em cota chamuscada, duelando até o último sangue.
+      - `arconte_de_vidro`: Guardião de Vidro Vulcânico, armadura pesada cravejada com escórias de fundição e lascas afiadas de vidro negro.
+      - `besta_do_primeiro_inverno`: O Grande Urso Cicatrizado, predador ancestral com lombo crivado de pontas de lanças e flechas ferrugentas dos soldados do cerco.
+- **Arquivos modificados**:
+  - `content/vaelhorn/quests.ts`
+  - `content/vaelhorn/bestiary.ts`
+  - `content/vaelhorn/desafios.ts`
+  - `content/vaelhorn/bestiario-historias.ts`
+  - `HANDOFF.md`
+- **Validação & Testes**:
+  - `npm run typecheck`: 0 erros.
+  - `engine/lore.selftest.ts`: 100% aprovado.
+  - `engine/causal.selftest.ts`: 100% aprovado.
+  - `engine/despertar.selftest.ts`: 100% aprovado.
+  - `engine/historiasNpc.selftest.ts`: 100% aprovado.
+  - `npm run test:vaelhorn` e `npm run test:casas`: 100% aprovados.
+

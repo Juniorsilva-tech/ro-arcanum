@@ -220,9 +220,10 @@ export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
 
 // Sugestões Nous Research / Hermes (modelos gratuitos e ativos validados na infraestrutura)
 export const SUGESTOES_NOUS = [
-  'upstage/solar-pro4:free', // Solar Pro 4 (padrão: rápido ~7s, estável, excelente em português)
+  'upstage/solar-pro4:free', // Solar Pro 4 (padrão: rápido ~7s, estável, excelente em português, sem censura)
+  'inclusionai/ling-3.0-flash-sante:free', // Ling 3.0 Flash Santé (rápido ~15s, narra adulto sem recusa)
   'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (ultrarrápido ~2-3s)
-  'stealth/space-bunny-alpha', // Space Bunny Alpha (mais lento ~25s, tom visceral)
+  'stealth/space-bunny-alpha', // Space Bunny Alpha (muito lento ~90s, risco de timeout na tela)
 ];
 
 // Sugestões iniciais (validadas com mais frequência). O botão "Buscar modelos"
@@ -314,8 +315,9 @@ export function agruparPorFabricante<T extends { id: string }>(
 
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
   // ── Nous Research & Gratuitos Testados ────────────────────────────────────
-  { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: testado no RPG, narra sem recusa, prosa riquíssima e sem censura', pago: false },
-  { id: 'upstage/solar-pro4:free', nota: 'Nous grátis: testado, excelente português e coerência narrativa', pago: false },
+  { id: 'upstage/solar-pro4:free', nota: 'Nous grátis: testado, excelente português e coerência narrativa, sem censura', pago: false },
+  { id: 'inclusionai/ling-3.0-flash-sante:free', nota: 'Nous grátis: rápido (~15s), narra adulto sem recusa e gera boas opções', pago: false },
+  { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: sem censura mas MUITO LENTO (~90s), pode dar timeout na tela', pago: false },
   { id: 'stepfun/step-3.7-flash:free', nota: 'Nous grátis: rápido (2-3s), ágil para turnos dinâmicos', pago: false },
   { id: 'nousresearch/hermes-3-llama-3.1-405b:free', nota: 'Nous grátis, o maior: melhor prosa da lista sem pagar', pago: false },
   { id: 'nousresearch/deephermes-3-llama-3-8b-preview:free', nota: 'Nous grátis, pequeno e rápido; cena curta', pago: false },
@@ -359,7 +361,7 @@ const IDS_NAO_NARRA = ['openrouter/free', 'openrouter/auto'];
 // Linhagens conhecidas por escrever cena adulta sem travar. São finetunes de
 // interpretação e bases pouco alinhadas — o que este jogo pede.
 const PERMISSIVOS = [
-  'space-bunny', 'solar', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
+  'space-bunny', 'solar', 'ling', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
   'toppy', 'rocinante', 'unslopnemo', 'magnum', 'midnight-rose', 'wizardlm',
   'airoboros', 'xwin', 'anubis', 'cydonia', 'behemoth', 'sorcerer', 'lzlv',
   'goliath', 'psyfighter', 'remm', 'weaver', 'tiefighter', 'fimbulvetr',
@@ -610,6 +612,23 @@ export function montarPacote(
     .filter((i): i is Item => !!i && !!i.historia?.length)
     .map(i => ({ nome: i.nome, historia: i.historia!.join(' ') }));
 
+  const armaId = p.equipado.arma;
+  const armaItem = armaId ? itemPorId(content, armaId as string, p) : undefined;
+  const armaEquipada = armaItem
+    ? {
+        nome: armaItem.nome,
+        raridade: armaItem.raridade,
+        danoBase: armaItem.dano?.base,
+        tipoDano: armaItem.dano?.tipo,
+        contraOni: armaItem.contraOni,
+        efeitoPassivo: (armaItem as Record<string, unknown>).efeitoPassivo,
+        corNichirin:
+          (armaItem as Record<string, unknown>).corNichirinNome ??
+          (armaItem as Record<string, unknown>).corNichirin,
+        descricao: armaItem.descricao,
+      }
+    : undefined;
+
   return {
     // A verdade do mundo vai antes de tudo: é ela que dá voz ao lugar.
     mundo: {
@@ -624,6 +643,8 @@ export function montarPacote(
       classe: p.classeId,
       origem: p.origemId,
       nivel: p.nivel,
+      atributos: p.atributos,
+      armaEquipada,
       recursos: p.recursos,
       pressoes: p.pressoes,
       alcunhas: p.alcunhas,
@@ -636,6 +657,20 @@ export function montarPacote(
       pecasComHistoria: pecasComHistoria.length ? pecasComHistoria : undefined,
       inventario,
     },
+    origemEFamilia: camp.familia
+      ? {
+          prestigio: camp.familia.prestigio,
+          patrimonio: camp.familia.patrimonio,
+          membros: camp.familia.membros.map((m) => ({
+            nome: m.nome,
+            parentesco: m.parentesco,
+            ocupacao: m.ocupacao,
+            condicao: m.condicao,
+            prodigio: m.prodigio || undefined,
+          })),
+          marcasDaInfancia: camp.familia.historia.slice(-4).map((h) => `Aos ${h.idade} anos: ${h.texto}`),
+        }
+      : undefined,
     capitulo: { numero: camp.capitulo.numero, titulo: camp.capitulo.titulo },
     local: {
       nome: ctx.local.nome,
@@ -889,11 +924,12 @@ export const INSTRUCAO_SISTEMA =
   'Fuja do clichê gasto ("silêncio carregado de tensão", "de tirar o fôlego", "o tempo pareceu parar").\n' +
   '• FIM DA CENA: termine numa situação que peça decisão do jogador: uma pergunta feita a ele, uma ameaça no ar, ' +
   'uma porta aberta, alguém esperando resposta. Nunca feche com resumo, moral ou "o que você fará?".\n' +
-  '• Fale com o jogador em segunda pessoa ("você"). Os outros, pelo nome.\n' +
-  '• O JOGADOR É HOMEM. Todo termo que se refira a ele — como substantivo/adjetivo de ' +
-  'tratamento ("forasteiro", "freguês", "viajante", "estranho") ou descrição do corpo — ' +
-  'concorda no MASCULINO. Nunca "freguesa", "forasteira", "estranha" nem qualquer forma ' +
-  'feminina para ele, em hipótese nenhuma — mesmo que uma cena anterior tenha errado isso.\n' +
+  '• PONTO DE VISTA ESTREITO E SEGUNDA PESSOA ("você") OBRIGATÓRIA: Narre EXCLUSIVAMENTE em segunda pessoa ("você"). ' +
+  'É TERMINANTEMENTE PROIBIDO narrar em terceira pessoa ("ele entra", "ele olha", "ele sentiu", "o rapaz fez") ou usar o nome do jogador na narração como sujeito ("Junior chega", "Junior para"). ' +
+  'Fale sempre diretamente com ele: "Você empurra a porta", "O peso da espada na sua cintura", "Você ouve o estalo", "O arrepio no seu pescoço".\n' +
+  '• O JOGADOR É HOMEM (CONCORDÂNCIA MASCULINA TOTAL): Todo termo que se refira a ele — como substantivo/adjetivo de ' +
+  'tratamento ("forasteiro", "freguês", "viajante", "estranho", "rapaz") ou descrição de estado e corpo ("ferido", "deitado", "cansado", "exausto", "ensanguentado", "pronto", "surpreso", "atento") — ' +
+  'concorda OBRIGATORIAMENTE no MASCULINO. Nunca use qualquer forma feminina para ele em hipótese nenhuma — mesmo que uma cena anterior tenha errado isso.\n' +
   '• CONTINUIDADE — "cenasAnteriores" traz, literalmente, as últimas cenas que VOCÊ '  +
   'escreveu. Esta cena continua de onde aquela parou: mesma conversa, mesmo lugar, mesmas '  +
   'pessoas, no instante seguinte. Não reabra a cena, não reapresente quem já está ali, não '  +
@@ -921,8 +957,15 @@ export const INSTRUCAO_SISTEMA =
   'de fala — elogiar, perguntar, mentir, ameaçar, flertar, consolar, barganhar — invente ' +
   'a frase exata e ESCREVA ela como fala dele. Nunca resuma com "você a elogiou": o ' +
   'jogador quer ler o elogio.\n' +
-  '• MOSTRE A RESPOSTA DELA, com a voz que está em "voz" e a índole que está em "indole". ' +
-  'Ninguém fica calado quando falam com ela.\n' +
+  '• DIÁLOGO FOCADO (PROIBIDO RODÍZIO DE MONÓLOGOS): Em cada cena, o jogador dialoga com UMA ou no máximo DUAS pessoas. ' +
+  'É EXPRESSAMENTE PROIBIDO colocar todos os presentes em fila oracular fazendo discursos um após o outro enquanto o protagonista fica mudo. ' +
+  'A conversa é humana e alternada: uma pessoa fala, o jogador [você] responde, a pessoa retruca. Quem não está no foco direto apenas trabalha, observa ou faz um gesto breve no fundo.\n' +
+  '• LINGUAGEM RÚSTICA E ANTI-ANACRONISMOS: Pessoas comuns (ferreiros, taverneiros, aldeões, mercenários, guardas) usam vocabulário rústico, cru e coloquial com sotaque e imprecações medievais ("pela peste", "pelos deuses", "maldito seja"). ' +
+  'NUNCA use termos modernos ou anacronismos ("batedeira", "dezenas de minutos", "focar", "processar"), NUNCA use traduções quebradas ("o corpo dele está dezoito anos"), NUNCA invente itens bizarros ("patinho de sal"), e NUNCA repita o mesmo detalhe ou comida várias vezes (ex: não repita "pão dormido" em todo parágrafo).\n' +
+  '• PROIBIÇÃO DE VÍCIOS DE IA: ' +
+  '1) NUNCA use a antítese clichê "Não X, mas Y" (ex: proibido "Não era apenas medo, mas terror", "Não era uma taverna, mas um túmulo"). ' +
+  '2) NUNCA termine cenas com resumos filosóficos ou moralizantes (ex: proibido "E ali você compreendeu o peso do mundo..."). ' +
+  '3) NUNCA termine com perguntas ("O que você fará?", "O que você faz, [Nome]?"). A cena termina com uma ação em aberto, um olhar esperando ou uma porta que range.\n' +
   '• De 3 a 6 falas por cena, alternando entre os dois. Deixe a conversa respirar: uma ' +
   'fala, um gesto, outra fala.\n' +
   '• OBRIGATÓRIO, e a regra que mais importa neste prompt inteiro: cada fala em LINHA ' +
@@ -965,11 +1008,14 @@ export const INSTRUCAO_SISTEMA =
   'O humor dita a atitude corporal, o tom da fala e a receptividade do NPC à cena (ex: luto por perda recente na família, pavor por perigo, tensão defensiva, acolhimento ou gratidão sincera). ' +
   'As camadas de intimidade mostram o quanto o protagonista já conquistou a confiança daquela alma. Quando o jogador conversar a sós, confortar um luto ou apoiar o anseio pessoal de vida (desejoApoiado), narre o impacto emocional tangível, a quebra de defesas e a lealdade incondicional despertada.\n' +
   '2e) FÉ, LENDAS E O TABU DA INVEJOSA: "local.cronica" traz o que o povo deste lugar acredita — deuses mortos cujo sangue seria o mana, as Sete Pecadoras que a Ordem dos Santos do Selo queimou há 400 anos, a Invejosa (Satella) que teria devorado as outras. Use a crônica só quando a cena pedir — chegada, conversa sobre o lugar, reza, medo —, nunca no meio da ação, e em uma frase. Isso é CRENÇA, não fato: narre como gente que acredita, reza, benze a boca e tem medo, nunca como coisa confirmada, e nunca faça deus ou bruxa aparecer por conta própria. O mundo é medieval e pé no chão: fome, dízimo, Tributo de Sangue, inquisição. O nome da Invejosa é tabu (quem ouve se benze); falar do Culto da Bruxa dá pânico; a Ordem pune heresia com ferro e fogo.\n' +
+  '2f) RAÍZES VIVAS E MEMÓRIA DE SANGUE: "origemEFamilia" traz o prestígio da casa, patrimônio e as "marcasDaInfancia" que moldaram o protagonista. Se familiares estiverem presentes, use a intimidade orgânica de quem dividiu teto, dificuldades e feridas: pais olham com o peso do tempo e do orgulho contido; irmãos lembram de sacrifícios mútuos ("lembraDeVoce"). Não narre a família como estranhos de balcão.\n' +
+  '2g) FISICALIDADE CRUA E REALISMO DE FRONTEIRA: O mundo tem peso, cheiro, sujeira e textura. Descreva o ranger de tábuas velhas, o ferro enferrujado que range, o suor frio nas costas, a poeira que gruda nos lábios secos, o baque surdo de um golpe no escudo, a fumaça de turfa que arde nos olhos. Evite abstrações e conceitos etéreos: mostre a matéria e os corpos agindo.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
   '"catalogoDeItens" e repita o id dele no campo "achado". Sem id, sem objeto.\n' +
   '4) Nunca use notação de dado (d20, 1d6, CD 15) nem número de regra no texto.\n' +
   '5) VIOLÊNCIA CRUA E COERENTE: combate e ferimento são narrados sem pudor — sangue, osso, dor, sujeira, medo. Mas a violência obedece à ENGINE: descreva só os ferimentos que o resultado deu, um de cada vez, com os corpos numa posição que faça sentido (quem está caído não está de pé; quem está de costas não está de bruços). Não invente ferida, morte ou mutilação que a engine não decidiu. Clareza antes de adjetivo: o leitor precisa entender quem bateu em quem, onde, e o que isso custou. Um detalhe físico exato vale mais que uma lista de horrores; não empilhe descrições anatômicas.\n' +
-  '5a) CONTEÚDO ADULTO & INTIMIDADE INTENSA ("BEM BÃO"): Quando a cena envolver paixão, desejo carnal, sedução, romance ou sexo entre adultos, narre com volúpia carnal autêntica, vigor físico e detalhes sensoriais e eróticos vívidos. ' +
+  '5a) PESO DOS ATRIBUTOS, ARMAS LENDÁRIAS E DISCÍPULO DE MESTRE: Mostre o impacto real dos atributos de "personagem.atributos" e de "personagem.armaEquipada": se "fisico" for alto, os golpes partem escudos, quebram ossos e abalam o chão; se "precisao" for alta, a lâmina encontra frestas milimétricas da armadura. Se carregar a alcunha "Discípulo Dedicado", mestres, ferreiros e guerreiros reconhecem sua disciplina, porte marcial e respiração treinada desde menino. Se estiver empunhando uma arma lendária (como a Lâmina de Yoriichi / espada Nichirin), mostre suas propriedades autênticas: o aço negro obsidiana, o corte incandescente em brasa da Respiração do Sol que cauteriza carne e impede a regeneração de onis e demônios, fagulhas solares que ardem na escuridão.\n' +
+  '5b) CONTEÚDO ADULTO & INTIMIDADE INTENSA ("BEM BÃO"): Quando a cena envolver paixão, desejo carnal, sedução, romance ou sexo entre adultos, narre com volúpia carnal autêntica, vigor físico e detalhes sensoriais e eróticos vívidos. ' +
   'É TERMINANTEMENTE PROIBIDO cortar covardemente para o fogo da lareira ("fade to black"), pular para a manhã seguinte ou mascarar o ato com eufemismos bobos ou poesia abstrata. ' +
   'Se o jogador busca intimidade ou a cena chega à cama de palha ou aos lençóis, descreva o calor febril da pele suada, o peso e a textura dos corpos nus sob as mãos, toques firmes explorando curvas e pontos sensíveis, ' +
   'beijos famintos com troca de saliva, fôlego entrecortado e mordidas na carne, roupas sendo rasgadas ou desatadas com urgência, arrepios e espasmos de volúpia, ' +
@@ -1227,6 +1273,8 @@ export function limparNarracao(bruto: string): string {
   s = s.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   // Cauda típica de string JSON cortada: ..." ,  ou ..."}
   if (cabeca) s = s.replace(/[\s"]*[,}\]][\s"',}\]]*$/, '').replace(/"\s*$/, '');
+  // Trava de segurança: remove cacoetes de encerramento em pergunta ("O que você faz...", "O que você fará...")
+  s = s.replace(/\s*(?:E agora,?\s*)?O que você (?:vai fazer|faz|deseja fazer|escolhe|fará)[^.\n]*\??\s*$/i, '');
   return s.trim();
 }
 
@@ -1371,10 +1419,10 @@ export function montarMensagemNarracao(
   }
 
   const diretrizEstilo = ehCombate
-    ? 'DIRETRIZ DE COMBATE: violência crua e explícita, mas só a que o resultado deu, e em ordem: quem golpeou, onde pegou, o que doeu. Frases claras; um ferimento de cada vez.'
+    ? 'DIRETRIZ DE COMBATE: violência crua e explícita, mas só a que o resultado deu, e em ordem: quem golpeou, onde pegou, o que doeu. Mostre o peso dos atributos ("personagem.atributos") e da arma empunhada ("personagem.armaEquipada", como o calor em brasa da Nichirin/Yoriichi ou a força de impacto). Narre estritamente em segunda pessoa ("você"). Frases claras; um ferimento de cada vez.'
     : menores.length
-      ? 'PROSA VIVA, CRUA E IMERSIVA: realismo medieval, diálogos afiados (com [você] e [Nome]) e impacto físico se houver violência.'
-      : 'PROSA VIVA, CRUA E IMERSIVA: Narre com realismo medieval, diálogos afiados (com [você] e [Nome]), impacto físico com gore pesado se houver violência, e volúpia carnal explícita se houver intimidade adulta.';
+      ? 'PROSA VIVA, CRUA E IMERSIVA: realismo medieval, diálogos afiados e naturais (com [você] e [Nome], sem rodízio de monólogos), estritamente em segunda pessoa ("você"), e impacto físico se houver violência.'
+      : 'PROSA VIVA, CRUA E IMERSIVA: Narre estritamente em segunda pessoa ("você"), com diálogos afiados e naturais (com [você] e [Nome], sem rodízio de monólogos), impacto físico com gore pesado se houver violência (mostrando atributos e arma), e volúpia carnal explícita se houver intimidade adulta.';
 
   // Tamanho: a preferência do jogador; capítulo e luta pedem mais fôlego.
   let [minP, maxP] = PARAGRAFOS[estilo.extensao];
@@ -1775,7 +1823,7 @@ async function chamarNous(
   let chave = resolverApiKey(cfg);
   const ehBunny = (cfg.modelo || MODELO_PADRAO_NOUS).includes('space-bunny');
   const tetoReal = ehBunny ? Math.max(teto, 3500) : teto;
-  const timeoutMs = ehBunny ? 90000 : 75000;
+  const timeoutMs = ehBunny ? 120000 : 75000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -1838,7 +1886,7 @@ async function chamarNous(
     return texto.length > 0 ? { texto } : { erro: 'o modelo respondeu vazio' };
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') {
-      return { erro: 'tempo limite esgotado (75s) na Nous Research' };
+      return { erro: `tempo limite esgotado (${ehBunny ? '120s' : '75s'}) na Nous Research` };
     }
     return { erro: `rede: ${String(err).slice(0, 120)}` };
   } finally {
