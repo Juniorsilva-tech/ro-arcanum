@@ -204,6 +204,18 @@ export const ESTILO_PADRAO: EstiloNarrador = { extensao: 'media', ritmo: 'equili
 
 const PARAGRAFOS: Record<ExtensaoCena, [number, number]> = { curta: [3, 5], media: [4, 7], longa: [8, 12] };
 
+/**
+ * Que tipo de cena o pedido vai gerar, para o rodízio escolher o narrador:
+ * intimidade vai para quem passou no teste adulto; luta, para quem passou no
+ * de gore. A engine não decide nada aqui; é só roteamento de voz.
+ */
+export function tipoDeCena(r: Pick<ResultadoTurno, 'fato' | 'acaoLivre' | 'batidasCombate'> & { verbo?: { nome?: string; categoria?: string } }): 'adulto' | 'gore' | 'comum' {
+  const t = `${r.fato} ${r.acaoLivre ?? ''} ${r.verbo?.nome ?? ''} ${r.verbo?.categoria ?? ''}`.toLowerCase();
+  if (/(beij|seduz|sedu[çc]|cama|despi|nua|nu|nus|sexo|transar|amante|carícia|caricia|volúpia|desejo carnal|intimidade|deitar com|dormir com|flerte|flertar|romance)/.test(t)) return 'adulto';
+  if ((r.batidasCombate?.length ?? 0) > 0 || /(luta|combate|golpe|matar|degolar|atacar|esfaquear|sangue|ferir|emboscada|decapit|mutil)/.test(t)) return 'gore';
+  return 'comum';
+}
+
 /** Linha do log de combate como batida de cena: sem emoji nem ruído de sistema. */
 export function batidaDeCombate(linha: string): string | null {
   const t = linha.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').replace(/\s+/g, ' ').trim();

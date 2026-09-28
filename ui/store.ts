@@ -11,6 +11,8 @@ import {
   crescerImpulsos,
   atributosBase,
   narrarComFallback,
+  tipoDeCena,
+  PROVEDORES_GRATIS,
   narrarComModeloStream,
   CAPITULO_MAX_PERIODOS,
   equipar as equiparEngine,
@@ -1558,6 +1560,11 @@ export const useGame = create<GameState>((set, get) => ({
         r = await testarCenaAdulta({ provider: config.provider, apiKey: nova, modelo: modeloAlvo });
       }
     }
+    if (!r.erro) {
+      const v = get().config.vereditos ?? {};
+      const k = `${config.provider}:${modeloAlvo}`;
+      await get().setConfig({ vereditos: { ...v, [k]: { ...(v[k] ?? {}), adulto: r.narra } } });
+    }
     return { ...r, modelo: modeloAlvo };
   },
 
@@ -1854,10 +1861,20 @@ async function narrar(
   >[4];
   // Principal primeiro; depois as reservas grátis, em rodízio. Somar as
   // camadas grátis de vários provedores é o que dá fôlego sem pagar.
-  const cfgs = [
+  const todos = [
     ...(chave ? [{ provider: config.provider, apiKey: chave, modelo: config.modelo, estilo: config.estilo }] : []),
-    ...reservas.map((r) => ({ provider: r.provider, apiKey: r.apiKey.trim(), modelo: r.modelo ?? '', estilo: config.estilo })),
+    ...reservas.map((r) => ({ provider: r.provider, apiKey: r.apiKey.trim(), modelo: r.modelo || PROVEDORES_GRATIS[r.provider].modeloPadrao, estilo: config.estilo })),
   ];
+  // Rodízio por tipo de cena: numa cena íntima ou de luta, quem passou no teste
+  // daquele conteúdo vai na frente e quem recusou vai por último. Quem nunca foi
+  // testado fica no meio, na ordem de sempre.
+  const tipo = tipoDeCena({ fato, acaoLivre, batidasCombate: extra.batidasCombate });
+  const nota = (c: { provider: string; modelo: string }) => {
+    if (tipo === 'comum') return 0;
+    const v = config.vereditos?.[`${c.provider}:${c.modelo || ''}`]?.[tipo];
+    return v === true ? -1 : v === false ? 1 : 0;
+  };
+  const cfgs = todos.map((c, k) => ({ c, k })).sort((a, b) => nota(a.c) - nota(b.c) || a.k - b.k).map((x) => x.c);
 
   set({ textoStreaming: '' });
   let res: Awaited<ReturnType<typeof narrarComFallback>> = { erro: 'sem narrador' };

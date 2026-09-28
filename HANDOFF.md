@@ -828,3 +828,11 @@ passa. Dois defeitos no narrador, corrigidos:
   feita a ele"). Reescrita: o NARRADOR não pergunta ao jogador; um PERSONAGEM
   pode, em fala.
 - Mapa rápido do HANDOFF dizia "70–79 Claude"; 70–77c são do Gemini.
+
+Rodízio por tipo de cena: `tipoDeCena` (engine/llm.ts) lê o pedido e diz se a
+cena é íntima (`adulto`), de luta (`gore`) ou comum. Em `narrar`, quem tem
+veredito ✓ para aquele tipo (`config.vereditos["provedor:modelo"]`) vai na
+frente, quem recusou vai por último, e quem não foi testado fica no meio, na
+ordem de sempre. O teste adulto do narrador principal (Configurações) também
+grava veredito agora. Reservas sem modelo escolhido usam o modelo padrão do
+provedor como chave do veredito.

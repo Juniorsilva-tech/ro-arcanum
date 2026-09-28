@@ -10,7 +10,7 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { calcularContexto } from './availability';
-import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento, limparNarracao } from './llm';
+import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento, limparNarracao, tipoDeCena } from './llm';
 import { menoresNaCena } from './protecao';
 import type { ResultadoTurno } from './turn';
 import type { Campaign } from './types';
@@ -102,4 +102,7 @@ const pedido = (extra: Partial<ResultadoTurno> = {}): ResultadoTurno =>
 ok(limparNarracao('A porta range. O que você fará?') === 'A porta range.', 'pergunta do narrador no fim sai');
 ok(limparNarracao('A porta range.\n\n— [Guarda] O que você faz aqui?').endsWith('— [Guarda] O que você faz aqui?'), 'pergunta de personagem, em fala, fica');
 ok(semPensamento('<think>devo narrar {isto}?</think>\n{"narracao":"x"}') ==='{"narracao":"x"}', 'raciocínio <think> sai antes de ler a cena');
+ok(tipoDeCena({ fato: 'Você tenta o seguinte: beijo Elza e a levo para a cama' }) === 'adulto', 'cena íntima vai para quem narra adulto');
+ok(tipoDeCena({ fato: 'A luta terminou.', batidasCombate: ['x acerta y'] }) === 'gore', 'fim de luta vai para quem narra gore');
+ok(tipoDeCena({ fato: 'Você compra pão no mercado.' }) === 'comum', 'cena comum segue a ordem de sempre');
 console.log('\nNarrador: OK.');
