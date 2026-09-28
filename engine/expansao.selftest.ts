@@ -72,9 +72,14 @@ const nova = () => criarCampanha(C, { nome: 'Teste', atributos: atributosBase(),
   ok(!executarAcaoMundo(C, c, { tipo: 'desafio', id: d.id }).ok, 'Expedição concluída não pode ser repetida');
   const salvo = normalizarCampanha(C, JSON.parse(JSON.stringify(c)));
   ok(salvo.flags[`desafio.concluido.${d.id}`], 'Conclusão da expedição persiste no save');
-  const outra = nova();
-  const combate = iniciarCombate(C, outra, [d.criaturaId]);
-  ok(combate.atores.find(a => a.criaturaId === d.criaturaId)?.vidaMax === C.criaturas.find(x => x.id === d.criaturaId)?.vida, 'Adversário não escala com o jogador');
+  // A calibragem do bestiário (CALIBRAGEM_INIMIGO) mexe na criatura, não no
+  // jogador: o mesmo adversário tem a mesma vida para um novato e um veterano.
+  const novato = nova();
+  const veterano = nova();
+  veterano.personagem.nivel = 20;
+  const vidaNovato = iniciarCombate(C, novato, [d.criaturaId]).atores.find(a => a.criaturaId === d.criaturaId)?.vidaMax;
+  const vidaVeterano = iniciarCombate(C, veterano, [d.criaturaId]).atores.find(a => a.criaturaId === d.criaturaId)?.vidaMax;
+  ok(vidaNovato !== undefined && vidaNovato === vidaVeterano, 'Adversário não escala com o jogador');
 }
 
 console.log('Expansão: regressões concluídas.');

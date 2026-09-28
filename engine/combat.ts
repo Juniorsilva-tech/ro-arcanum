@@ -327,6 +327,25 @@ function gerarBarkReencontro(r: RivalPersistente): string {
   return '— Finalmente nos encontramos de novo. Nossas contas ainda não foram pagas!';
 }
 
+/**
+ * Calibragem do bestiário contra o jogador, medida no banco de provas
+ * (`npm run balanco`, engine/simBalanco.ts): numa luta de poder equivalente o
+ * jogador deve vencer ~50%. Antes desta calibragem vencia ~80% em todos os
+ * perfis (recruta a mestre) — e o combate do começo acabava em dois golpes.
+ */
+export const CALIBRAGEM_INIMIGO = { vida: 1.15, dano: 1.1, acerto: 0 };
+/**
+ * O jogador sai de casa com arma e atributos que atropelavam o bestiário da
+ * vila (salteador de 16 PV caía num crítico). As criaturas fracas — até o
+ * nível 4 — ganham um reforço que some aos poucos: +12% no nível 1 (ou 0),
+ * zero no 5. É pela ficha da criatura, não pelo jogador: o mundo não se
+ * adapta a quem entra nele.
+ */
+export const REFORCO_CRIATURA_FRACA = 0.12;
+function fatorCriaturaFraca(nivelCriatura: number): number {
+  return 1 + REFORCO_CRIATURA_FRACA * Math.min(1, Math.max(0, (5 - Math.max(1, nivelCriatura)) / 4));
+}
+
 export function iniciarCombate(
   content: ContentBundle,
   camp: Campaign,
@@ -396,15 +415,16 @@ export function iniciarCombate(
     const penalidadeTrauma = rival?.traumaJogador ? 2 : 0;
     const bonusVinganca = rival?.tracos?.odios?.includes('furia_vinganca_sangue') ? 3 : 0;
     const nomeFinal = rival?.titulo ? `${rival.nome}, ${rival.titulo}` : (rival?.nome ?? c.nome);
+    const vidaMax = Math.round(c.vida * CALIBRAGEM_INIMIGO.vida * fatorCriaturaFraca(c.nivel));
     return {
       id: `inim_${i}_${cid}`,
       nome: nomeFinal,
       ehJogador: false,
-      vida: rival?.vida ?? c.vida,
-      vidaMax: c.vida,
+      vida: rival ? Math.min(rival.vida, vidaMax) : vidaMax,
+      vidaMax,
       defesa: Math.max(1, c.defesa + (rival?.evolucao?.nivel ?? 0) - penalidadeCicatriz - penalidadeTrauma),
-      acerto: Math.max(1, c.acerto + (rival?.evolucao?.nivel ?? 0) - Math.floor(penalidadeCicatriz / 2) - penalidadeTrauma + bonusVinganca),
-      dano: c.dano,
+      acerto: Math.max(1, c.acerto + CALIBRAGEM_INIMIGO.acerto + (rival?.evolucao?.nivel ?? 0) - Math.floor(penalidadeCicatriz / 2) - penalidadeTrauma + bonusVinganca),
+      dano: { ...c.dano, base: c.dano.base * CALIBRAGEM_INIMIGO.dano * fatorCriaturaFraca(c.nivel) },
       criaturaId: cid,
       nivelGuilda: c.nivelGuilda ?? (c.nivel >= 12 ? 1000 : c.nivel * 70),
       condicoes: [],

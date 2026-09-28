@@ -1006,3 +1006,41 @@ programa pode quebrar o Hermes se o formato mudar.
 
 Outro: `historias-costa.ts` — desejo de uma moradora nova tinha 38
 caracteres (o teste pede 40+); o `test:engine` da sessão 84 falhou por isso.
+
+### Sessão 87 (continuação) — combate, botões, turno perdido e rolagem
+
+1. **Combate fácil demais.** O banco de provas (`npm run balanco`) já dava
+   20 de 20 faixas fora da meta **antes** da sessão 77 (luta "equilibrada"
+   dando ~80% de vitória em todos os perfis; conferido rodando o código de
+   `4f3213c`). A sessão 77 quase não mexeu nisso no recruta. Correção em
+   `engine/combat.ts`, ao montar o inimigo:
+   - `CALIBRAGEM_INIMIGO` = vida ×1,15 e dano ×1,10 para todo o bestiário;
+   - `REFORCO_CRIATURA_FRACA` = +12% de vida e dano em criatura de nível 1,
+     sumindo até zero no nível 5 — pela ficha da criatura, nunca pelo nível do
+     jogador (regra do jogo: o mundo não se adapta a você; o teste de
+     `expansao.selftest.ts` agora compara novato e veterano contra o mesmo
+     adversário).
+   - O adversário de aferição do banco passou a ter o nível do jogador
+     (`engine/balanco.ts`), para "equivalente" ser equivalente de verdade.
+   Resultado: 5 de 20 faixas fora da meta (recruta 49% na luta equilibrada,
+   veterano 53%, caçador 54%; o mestre ainda vence 64%). Salteador + lobo no
+   começo: o espadachim ainda vence quase sempre, mas em ~3,7 rodadas e
+   levando ~18 de dano, não mais ~12 em duas.
+2. **Botões do combate no celular**: `acaoBtn` tinha `flex: 1` numa linha que
+   quebra; os sete botões se espremiam numa linha só. Agora base de 96 px com
+   quebra (três por linha em 430 px); "Trocar arma" / "Sem outra arma".
+3. **Turno perdido ao recarregar**: `pendente` entra no retrato da sessão; ao
+   continuar, o turno aparece esperando com "Tentar de novo" e "Usar
+   narrador local".
+4. **Rolagem**: quando a cena nova chegava, a tela ia para o fim da página
+   (opções e campo de texto) e o jogador tinha que subir para ler. Agora vai
+   para o começo da cena nova, esperando a medida do `onLayout` (no navegador
+   ela chega depois do render). O prólogo abre cada etapa do topo (`key` por
+   idade na `Pagina`). Conferido no navegador: a cena nova fica a 31 px do
+   topo da tela.
+
+A narração por IA voltou a responder no navegador (a ponte do Hermes da
+sessão 85 funcionou). Primeira cena de luta com as batidas: segue a ordem e
+quem caiu fica caído, mas o Solar erra palavra ("desmaça", "filo" por fio),
+repete frases ("o salteador ainda não se mexe") e a Vess chama o jogador
+pelo nome sem ter sido apresentada.

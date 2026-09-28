@@ -179,6 +179,9 @@ export type EntradaFeed = {
 type SessaoSalva = {
   feed: EntradaFeed[];
   cena?: { narracao: string; opcoes: OpcaoResolvida[]; contexto: Contexto };
+  // O turno que esperava o narrador. A engine já aplicou a ação; sem isto,
+  // recarregar a página perdia a narração dela (a fala ficava sem resposta).
+  pendente?: GameState['pendente'];
 };
 
 type Rascunho = {
@@ -509,6 +512,11 @@ export const useGame = create<GameState>((set, get) => ({
     if (sessao?.feed?.length) {
       const cena = sessao.cena ?? montarCena(content, camp);
       set({ camp, content, feed: renumerarFeed(sessao.feed), cena, tela: 'jogo', ocupado: false });
+      if (sessao.pendente) {
+        // Voltou com um turno sem narração: ele aparece esperando, com
+        // "Tentar de novo" e "Usar narrador local", como numa falha de rede.
+        set({ pendente: sessao.pendente, iaStatus: 'erro', iaErro: 'a narração foi interrompida quando a página fechou' });
+      }
       return;
     }
 
@@ -1738,8 +1746,8 @@ export const useGame = create<GameState>((set, get) => ({
 // pontos de set() e arriscar esquecer um.
 useGame.subscribe((state, anterior) => {
   if (!state.camp) return;
-  if (state.feed === anterior.feed && state.cena === anterior.cena) return;
-  void salvarSessao({ feed: state.feed, cena: state.cena } satisfies SessaoSalva);
+  if (state.feed === anterior.feed && state.cena === anterior.cena && state.pendente === anterior.pendente) return;
+  void salvarSessao({ feed: state.feed, cena: state.cena, pendente: state.pendente } satisfies SessaoSalva);
 });
 
 function romano(n: number): string {

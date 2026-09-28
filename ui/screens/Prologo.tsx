@@ -6,6 +6,7 @@ import { cores, esp } from '../theme';
 import { useGame } from '../store';
 
 
+// Parentesco com acento, como se escreve.
 const NOME_PARENTESCO: Record<string, string> = { pai: 'pai', mae: 'mãe', irmao: 'irmão', irma: 'irmã' };
 export function PrologoInfancia() {
   const camp = useGame(s => s.camp)!;
@@ -23,8 +24,10 @@ export function PrologoInfancia() {
     ? 'PRIMEIROS TESTES (10 ANOS)'
     : 'RUMO À VIDA ADULTA (14 ANOS)';
 
+  // key por etapa: a página nova abre do topo, não onde a escolha anterior
+  // deixou a rolagem (lá embaixo, nos botões).
   return (
-    <Pagina>
+    <Pagina key={f.idadeJogador}>
       <Rotulo cor={cores.ouro}>PRÓLOGO · ETAPA {etapaNum} DE 4 · {etapaRotulo}</Rotulo>
       <Titulo style={{ marginTop: esp.sm }}>{evento?.titulo ?? 'Sua infância'}</Titulo>
       <TextoSerif style={{ fontSize: 19, color: cores.vellum, marginBottom: esp.lg }}>{evento?.descricao}</TextoSerif>

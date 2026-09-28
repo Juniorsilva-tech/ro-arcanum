@@ -123,7 +123,7 @@ export function medirFaixas(
     const sintetica: Criatura = {
       id: '__afericao__', nome: 'Adversário de aferição',
       descricao: 'Existe apenas no banco de provas.',
-      nivel: 0, vida: Math.round(ficha.vida), defesa: ficha.defesa, acerto: ficha.acerto,
+      nivel: opts.nivel, vida: Math.round(ficha.vida), defesa: ficha.defesa, acerto: ficha.acerto,
       ataqueNome: 'golpe', dano: ficha.dano, moralBase: 100, xp: 0,
     };
     const bancada: ContentBundle = { ...content, criaturas: [...content.criaturas, sintetica] };

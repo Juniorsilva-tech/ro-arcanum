@@ -415,7 +415,7 @@ export function Combate() {
             <View style={[styles.chips, { marginTop: esp.sm }]}>
               {/* Botão de Troca Tática de Arma */}
               <Acao
-                nome={gavetaArmasAberta ? 'Fechar Mochila de Armas' : outrasArmas.length > 0 ? '🔄 Trocar Arma (1 turno)' : '🔄 Trocar Arma (mochila vazia)'}
+                nome={gavetaArmasAberta ? 'Fechar Mochila de Armas' : outrasArmas.length > 0 ? '🔄 Trocar arma' : 'Sem outra arma'}
                 cor={outrasArmas.length > 0 ? cores.ouro : cores.mudo}
                 onPress={() => setGavetaArmasAberta(!gavetaArmasAberta)}
               />
@@ -888,7 +888,12 @@ const styles = StyleSheet.create({
   acoesWrap: { maxHeight: 230 },
   botoesLinha: { flexDirection: 'row', gap: esp.sm },
   acaoBtn: {
-    flex: 1,
+    // Base de 96 px e quebra de linha: no celular eram sete botões numa linha
+    // só, espremidos em colunas altas ("Trocar Arma (mochila vazia)").
+    flexGrow: 1,
+    flexBasis: 96,
+    minWidth: 96,
+    paddingHorizontal: esp.sm,
     borderWidth: 1,
     borderColor: cores.ouro,
     borderRadius: raio.md,
@@ -896,7 +901,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(207, 168, 45, 0.05)',
   },
-  acaoTxt: { fontFamily: fontes.serifMedium, color: cores.ouro, fontSize: 16 },
+  acaoTxt: { fontFamily: fontes.serifMedium, color: cores.ouro, fontSize: 15, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm },
   gavetaArmas: {
     marginTop: esp.sm,

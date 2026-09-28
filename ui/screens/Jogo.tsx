@@ -112,15 +112,35 @@ export function Jogo() {
     }
   }, [textoStreaming]);
 
+  // Quando a cena nova chega, a tela vai para o COMEÇO dela — não para o fim
+  // da página, onde ficam as opções e o campo de texto (o jogador tinha que
+  // subir para ler). A posição de cada entrada vem do onLayout.
+  const posicaoEntrada = useRef<Record<string, number>>({});
   const tamanhoFeedAnterior = useRef(feed.length);
   useEffect(() => {
-    if (feed.length > tamanhoFeedAnterior.current) {
-      tamanhoFeedAnterior.current = feed.length;
-      const t = setTimeout(() => {
+    const antes = tamanhoFeedAnterior.current;
+    tamanhoFeedAnterior.current = feed.length;
+    if (feed.length <= antes) return;
+    const novas = feed.slice(antes);
+    const alvo = novas.find((e) => e.tipo === 'narracao') ?? novas[0];
+    // Enquanto o narrador escreve, quem manda é o acompanhamento do texto.
+    if (ocupado && alvo.tipo !== 'narracao') return;
+    // No navegador a medida (onLayout) chega depois do render; espera por
+    // ela até ~1,5 s antes de desistir e ir para o fim.
+    let tentativas = 0;
+    let t: ReturnType<typeof setTimeout>;
+    const rolar = () => {
+      const y = posicaoEntrada.current[alvo.id];
+      if (y !== undefined) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      } else if (tentativas++ < 15) {
+        t = setTimeout(rolar, 100);
+      } else {
         scrollRef.current?.scrollToEnd({ animated: true });
-      }, 60);
-      return () => clearTimeout(t);
-    }
+      }
+    };
+    t = setTimeout(rolar, 80);
+    return () => clearTimeout(t);
   }, [feed.length]);
 
   const ctx = cena?.contexto;
@@ -247,14 +267,15 @@ export function Jogo() {
           }}
         >
           {feed.map((e, i) => (
-            <EntradaNarrativaAnimada
-              key={e.id}
-              entrada={e}
-              primeira={i === 0}
-              nomes={nomesConhecidos}
-              nomeJogador={camp?.personagem.nome}
-              ehUltima={i === feed.length - 1}
-            />
+            <View key={e.id} onLayout={(ev) => { posicaoEntrada.current[e.id] = ev.nativeEvent.layout.y; }}>
+              <EntradaNarrativaAnimada
+                entrada={e}
+                primeira={i === 0}
+                nomes={nomesConhecidos}
+                nomeJogador={camp?.personagem.nome}
+                ehUltima={i === feed.length - 1}
+              />
+            </View>
           ))}
 
           {/* Sem chave: aviso pequeno, não bloqueia nada — o narrador local
