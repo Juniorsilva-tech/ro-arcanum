@@ -31,7 +31,12 @@ import { conviccoesDoNpc } from './reflexao';
 import { avisosDoDia } from './memoriaMundo';
 import { descreverEdificioRegional } from './edificiosRegionais';
 import { calcularHumorNpc, obterIntimidadeNpc } from './intimidadeNpc';
-import { obterTokenNousAtual, renovarTokenNous } from './hermesBridge';
+import {
+  obterTokenNousAtual,
+  renovarTokenNous,
+  jwtExpirado,
+  tokenEstaPrestesAExpirar,
+} from './hermesBridge';
 import {
   obterOcupantesSubespaco,
   verificarSupressaoMana,
@@ -234,6 +239,7 @@ export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
 // Sugestões Nous Research / Hermes (modelos gratuitos e ativos validados na infraestrutura)
 export const SUGESTOES_NOUS = [
   'upstage/solar-pro4:free', // Solar Pro 4 (padrão: rápido ~7s, estável, excelente em português, sem censura)
+  'meituan/longcat-2.5-preview:free', // Longcat 2.5 Preview (rápido ~4s, excelente prosa e sem censura)
   'inclusionai/ling-3.0-flash-sante:free', // Ling 3.0 Flash Santé (rápido ~15s, narra adulto sem recusa)
   'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (ultrarrápido ~2-3s)
   'stealth/space-bunny-alpha', // Space Bunny Alpha (muito lento ~90s, risco de timeout na tela)
@@ -329,6 +335,7 @@ export function agruparPorFabricante<T extends { id: string }>(
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
   // ── Nous Research & Gratuitos Testados ────────────────────────────────────
   { id: 'upstage/solar-pro4:free', nota: 'Nous grátis: testado, excelente português e coerência narrativa, sem censura', pago: false },
+  { id: 'meituan/longcat-2.5-preview:free', nota: 'Nous grátis: rápido (~4s), excelente prosa e sem censura em cena adulta', pago: false },
   { id: 'inclusionai/ling-3.0-flash-sante:free', nota: 'Nous grátis: rápido (~15s), narra adulto sem recusa e gera boas opções', pago: false },
   { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: sem censura mas MUITO LENTO (~90s), pode dar timeout na tela', pago: false },
   { id: 'stepfun/step-3.7-flash:free', nota: 'Nous grátis: rápido (2-3s), ágil para turnos dinâmicos', pago: false },
@@ -374,7 +381,7 @@ const IDS_NAO_NARRA = ['openrouter/free', 'openrouter/auto'];
 // Linhagens conhecidas por escrever cena adulta sem travar. São finetunes de
 // interpretação e bases pouco alinhadas — o que este jogo pede.
 const PERMISSIVOS = [
-  'space-bunny', 'solar', 'ling', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
+  'longcat', 'space-bunny', 'solar', 'ling', 'dolphin', 'hermes', 'euryale', 'lumimaid', 'noromaid', 'mythomax', 'mythalion',
   'toppy', 'rocinante', 'unslopnemo', 'magnum', 'midnight-rose', 'wizardlm',
   'airoboros', 'xwin', 'anubis', 'cydonia', 'behemoth', 'sorcerer', 'lzlv',
   'goliath', 'psyfighter', 'remm', 'weaver', 'tiefighter', 'fimbulvetr',
@@ -481,6 +488,10 @@ export async function listarModelosNous(
 ): Promise<ModeloOR[]> {
   try {
     let chave = apiKey?.trim() || obterTokenNousAtual();
+    if (!chave || jwtExpirado(chave, 120)) {
+      const novaChave = await renovarTokenNous(true);
+      if (novaChave) chave = novaChave;
+    }
     const headers: Record<string, string> = {};
     if (chave) headers.authorization = `Bearer ${chave}`;
     const ctrl = new AbortController();
@@ -1653,14 +1664,24 @@ export function interpretarResposta(
 }
 
 export function resolverApiKey(cfg: LlmConfig): string {
+  if (cfg.provider === 'nous') {
+    // Para a Nous (Hermes), o token rotativo da bridge tem precedência sobre chaves manuais expiradas
+    const tokenBridge = obterTokenNousAtual();
+    if (tokenBridge && !jwtExpirado(tokenBridge, 60)) {
+      return tokenBridge;
+    }
+    const c = cfg.apiKey?.trim();
+    if (c && !jwtExpirado(c, 60)) {
+      return c;
+    }
+    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
+    if (envKey.trim() && !jwtExpirado(envKey.trim(), 60)) {
+      return envKey.trim();
+    }
+    return tokenBridge || c || envKey.trim() || '';
+  }
   const c = cfg.apiKey?.trim();
   if (c) return c;
-  if (cfg.provider === 'nous') {
-    const tokenBridge = obterTokenNousAtual();
-    if (tokenBridge) return tokenBridge;
-    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
-    if (envKey.trim()) return envKey.trim();
-  }
   return '';
 }
 
@@ -1847,6 +1868,12 @@ async function chamarNous(
   teto: number = MAX_TOKENS,
 ): Promise<ResultadoNarracao> {
   let chave = resolverApiKey(cfg);
+  if (!chave || jwtExpirado(chave, 120) || tokenEstaPrestesAExpirar()) {
+    const renovada = await renovarTokenNous(true);
+    if (renovada) {
+      chave = renovada;
+    }
+  }
   const ehBunny = (cfg.modelo || MODELO_PADRAO_NOUS).includes('space-bunny');
   const tetoReal = ehBunny ? Math.max(teto, 3500) : teto;
   const timeoutMs = ehBunny ? 120000 : 75000;
@@ -2027,6 +2054,10 @@ export async function testarChave(cfg: LlmConfig): Promise<{ ok: boolean; erro?:
     }
     if (cfg.provider === 'nous') {
       let chave = resolverApiKey(cfg);
+      if (!chave || jwtExpirado(chave, 120) || tokenEstaPrestesAExpirar()) {
+        const renovada = await renovarTokenNous(true);
+        if (renovada) chave = renovada;
+      }
       let resp = await fetch('https://inference-api.nousresearch.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -2141,21 +2172,36 @@ export async function narrarComFallback(
   ctx: Contexto,
   r: ResultadoTurno,
 ): Promise<ResultadoNarracao & { modeloUsado?: string }> {
-  const primeira = await narrarComModelo(cfg, content, camp, ctx, r);
+  let cfgAtual = { ...cfg };
+  if (cfg.provider === 'nous') {
+    const chaveFresca = resolverApiKey(cfg);
+    if (chaveFresca) cfgAtual.apiKey = chaveFresca;
+  }
+  const primeira = await narrarComModelo(cfgAtual, content, camp, ctx, r);
   if (primeira.texto || cfg.provider === 'anthropic') return primeira;
 
-  // Se a chave for comprovadamente inválida (401), nenhum modelo vai responder
+  // Se a chamada devolveu 401, tenta renovar preventivamente na Nous antes de declarar erro
   const chaveInvalida = /chave inválida|sem permissão|401/i.test(primeira.erro ?? '');
-  if (chaveInvalida) return primeira;
+  if (chaveInvalida) {
+    if (cfg.provider === 'nous') {
+      const novaChave = await renovarTokenNous(true);
+      if (novaChave && novaChave !== cfgAtual.apiKey) {
+        cfgAtual.apiKey = novaChave;
+        const retry = await narrarComModelo(cfgAtual, content, camp, ctx, r);
+        if (retry.texto) return retry;
+      }
+    }
+    return primeira;
+  }
 
   // A lista já vem ordenada com os permissivos/prioritários na frente
-  const vivos = await listarModelos(cfg.provider, cfg.apiKey, true);
+  const vivos = await listarModelos(cfgAtual.provider, cfgAtual.apiKey, true);
   const candidatos = vivos
-    .filter((m) => m.id !== cfg.modelo && m.perfil !== 'estrito' && !m.moderado)
+    .filter((m) => m.id !== cfgAtual.modelo && m.perfil !== 'estrito' && !m.moderado)
     .map((m) => m.id)
     .slice(0, 3);
   for (const modelo of candidatos) {
-    const tentativa = await narrarComModelo({ ...cfg, modelo }, content, camp, ctx, r);
+    const tentativa = await narrarComModelo({ ...cfgAtual, modelo }, content, camp, ctx, r);
     if (tentativa.texto) return { ...tentativa, modeloUsado: modelo };
   }
   return primeira;

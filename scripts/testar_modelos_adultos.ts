@@ -2,13 +2,11 @@ declare const require: any;
 const fs = require('fs');
 const path = require('path');
 
-import { testarCenaAdulta, narrarComModelo, criarCampanha, atributosBase, montarCena } from '../engine';
+import { testarCenaAdulta, narrarComModelo, criarCampanha, atributosBase, montarCena, obterTokenNousAtual } from '../engine';
 import { bundlePorId } from '../content';
 
 async function testarModelos() {
-  const authPath = path.join(process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local', 'hermes', 'auth.json');
-  const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-  const token = authData?.providers?.nous?.access_token || authData?.credential_pool?.nous?.[0]?.access_token;
+  const token = obterTokenNousAtual();
 
   console.log('Buscando modelos da Nous Research...');
   const resp = await fetch('https://inference-api.nousresearch.com/v1/models', {

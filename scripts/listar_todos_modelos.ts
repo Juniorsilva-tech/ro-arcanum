@@ -1,11 +1,14 @@
 declare const require: any;
 const fs = require('fs');
 const path = require('path');
+import { obterTokenNousAtual } from '../engine';
 
 async function main() {
-  const authPath = path.join(process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local', 'hermes', 'auth.json');
-  const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-  const token = authData?.providers?.nous?.access_token || authData?.credential_pool?.nous?.[0]?.access_token;
+  const token = obterTokenNousAtual();
+  if (!token) {
+    console.error('Nenhum token da Nous encontrado.');
+    return;
+  }
 
   const resp = await fetch('https://inference-api.nousresearch.com/v1/models', {
     headers: { authorization: 'Bearer ' + token },

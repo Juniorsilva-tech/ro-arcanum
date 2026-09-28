@@ -20,6 +20,7 @@ import {
   todosNpcs,
   obterTokenNousAtual,
   renovarTokenNous,
+  jwtExpirado,
 } from '@/engine';
 import { COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
 import {
@@ -256,8 +257,9 @@ export function Config() {
   const ehOR = provider === 'openrouter';
   const ehNous = provider === 'nous';
 
-  const tokenHermes = (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_NOUS_API_KEY : undefined) || (ehNous ? obterTokenNousAtual() : undefined);
-  const temChaveEfetiva = !!(config.apiKey || (ehNous && tokenHermes));
+  const tokenHermes = (ehNous ? obterTokenNousAtual() : undefined) || (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_NOUS_API_KEY : undefined);
+  const tokenHermesValido = !!(tokenHermes && !jwtExpirado(tokenHermes, 60));
+  const temChaveEfetiva = !!((config.apiKey && !jwtExpirado(config.apiKey, 60)) || (ehNous && tokenHermesValido));
 
   const [resultadoDiagnostico, setResultadoDiagnostico] = useState<string | null>(null);
 
@@ -371,9 +373,13 @@ export function Config() {
             </Pressable>
           )}
         </View>
-      ) : ehNous && tokenHermes ? (
+      ) : ehNous && tokenHermesValido ? (
         <TextoMono style={{ color: cores.verdigris, marginBottom: esp.xs }}>
           Token do Hermes ativo com renovação automática imperceptível ✓
+        </TextoMono>
+      ) : ehNous && tokenHermes && !tokenHermesValido ? (
+        <TextoMono style={{ color: cores.ouro, marginBottom: esp.xs }}>
+          Token do Hermes expirado. Toque em "Renovar token do Hermes" abaixo.
         </TextoMono>
       ) : null}
       {ehOR && (

@@ -62,6 +62,7 @@ import {
   type AcaoMundo,
   obterTokenNousAtual,
   iniciarMonitoramentoNous,
+  jwtExpirado,
   acolherTriboWasteland,
   definirAlocacaoTrabalho,
   iniciarProjetoConstrucao,
@@ -396,10 +397,11 @@ function chaveEfetiva(cfg: ConfigApp): string | undefined {
   if (cfg.provider === 'nous') {
     // Para o provedor Nous, prioriza o token dinâmico atualizado pelo Hermes
     const bridgeToken = obterTokenNousAtual();
-    if (bridgeToken) return bridgeToken;
-    if (manual) return manual;
+    if (bridgeToken && !jwtExpirado(bridgeToken, 60)) return bridgeToken;
+    if (manual && !jwtExpirado(manual, 60)) return manual;
     const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
-    if (envKey.trim()) return envKey.trim();
+    if (envKey.trim() && !jwtExpirado(envKey.trim(), 60)) return envKey.trim();
+    return bridgeToken || manual || envKey.trim() || undefined;
   } else if (manual) {
     return manual;
   }
@@ -436,6 +438,12 @@ export const useGame = create<GameState>((set, get) => ({
   async init() {
     iniciarMonitoramentoNous();
     const config = await carregarConfig();
+    if (config.provider === 'nous') {
+      try {
+        const { renovarTokenNous } = await import('@/engine');
+        void renovarTokenNous(false);
+      } catch {}
+    }
     await carregarSlotAtivo();
     // Save de antes dos slots vira slot 0. O antigo nao e' apagado.
     await migrarSaveAntigo();
@@ -1540,6 +1548,7 @@ export const useGame = create<GameState>((set, get) => ({
         erro: teste.erro || 'Token obtido do Hermes, mas a Nous recusou a autenticação (401).',
       };
     }
+    set({ iaSuspensa: false, iaErro: undefined });
     return { ok: true, token: novo };
   },
 
@@ -1642,6 +1651,11 @@ export const useGame = create<GameState>((set, get) => ({
   async tentarNarrarDeNovo() {
     const pend = get().pendente;
     if (!pend || get().ocupado) return;
+    set({ iaSuspensa: false });
+    if (get().config.provider === 'nous') {
+      const { renovarTokenNous } = await import('@/engine');
+      await renovarTokenNous(true);
+    }
     await narrar(get, set, pend.fato, pend.acaoLivre, pend.extra);
   },
 
@@ -1853,9 +1867,18 @@ async function narrar(
     acaoLivre = fala;
     extra = { ...extra, tipoAcaoLivre: 'dizer' };
   }
-  set({ cena, pendente: { fato, acaoLivre, extra } });
+  let chave = chaveEfetiva(config);
+  if (config.provider === 'nous' && (!chave || jwtExpirado(chave, 120))) {
+    const { renovarTokenNous } = await import('@/engine');
+    const novo = await renovarTokenNous(false);
+    if (novo) {
+      chave = novo;
+      if (get().iaSuspensa) {
+        set({ iaSuspensa: false });
+      }
+    }
+  }
 
-  const chave = chaveEfetiva(config);
   const reservas = (config.reservas ?? []).filter((r) => r.apiKey?.trim());
 
   if ((!chave && !reservas.length) || get().iaSuspensa) {
@@ -1939,6 +1962,8 @@ async function narrar(
           }
         : cenaAtual,
       iaStatus: 'ok',
+      iaErro: undefined,
+      iaSuspensa: false,
       ocupado: false,
       textoStreaming: undefined,
       pendente: undefined,

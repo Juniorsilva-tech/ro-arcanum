@@ -15,6 +15,28 @@ function getHermesCommand(): string {
 
 function syncHermes() {
   console.log('--- Sincronizando credenciais do Hermes (Nous Research) ---');
+  const localAppData = process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local';
+  const sharedPath = path.join(localAppData, 'hermes', 'shared', 'nous_auth.json');
+  const authPath = path.join(localAppData, 'hermes', 'auth.json');
+
+  // 1. Espelha shared/nous_auth.json em auth.json se necessário (necessário para o CLI hermes auth refresh nous)
+  if (fs.existsSync(sharedPath)) {
+    try {
+      const sharedData = JSON.parse(fs.readFileSync(sharedPath, 'utf8'));
+      if (fs.existsSync(authPath)) {
+        const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+        if (!authData.providers) authData.providers = {};
+        if (!authData.providers.nous || !authData.providers.nous.access_token) {
+          authData.providers.nous = sharedData;
+          fs.writeFileSync(authPath, JSON.stringify(authData, null, 2), 'utf8');
+        }
+      }
+    } catch (e) {
+      console.warn('Aviso ao sincronizar shared/nous_auth.json com auth.json:', e);
+    }
+  }
+
+  // 2. Tenta renovar via CLI
   const hermesBin = getHermesCommand();
   try {
     console.log('Tentando renovar token via hermes auth refresh nous...');
@@ -24,43 +46,47 @@ function syncHermes() {
     console.log('Hermes CLI refresh pulado ou indisponível:', String(err).slice(0, 100));
   }
 
-  const authPath = path.join(
-    process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local',
-    'hermes',
-    'auth.json',
-  );
+  // 3. Lê token do shared store ou do auth.json
+  let token: string | null = null;
+  let expiresAt: string | null = null;
 
-  if (!fs.existsSync(authPath)) {
-    console.log('Arquivo auth.json não encontrado em:', authPath);
+  if (fs.existsSync(sharedPath)) {
+    try {
+      const sharedData = JSON.parse(fs.readFileSync(sharedPath, 'utf8'));
+      if (sharedData?.access_token) {
+        token = sharedData.access_token;
+        expiresAt = sharedData.expires_at || null;
+      }
+    } catch {}
+  }
+
+  if (!token && fs.existsSync(authPath)) {
+    try {
+      const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+      const nous =
+        authData?.providers?.nous ||
+        authData?.credential_pool?.nous?.[0];
+      if (nous?.access_token) {
+        token = nous.access_token;
+        expiresAt = nous.expires_at || null;
+      }
+    } catch {}
+  }
+
+  if (!token) {
+    console.log('Nenhum access_token da Nous encontrado em shared/nous_auth.json ou auth.json.');
+    console.log('Dica: execute "hermes auth add nous" no terminal para reconectar sua conta da Nous.');
+    process.exitCode = 1;
     return;
   }
 
-  try {
-    const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-    const token =
-      authData?.providers?.nous?.access_token ||
-      authData?.credential_pool?.nous?.[0]?.access_token;
-    const expiresAt =
-      authData?.providers?.nous?.expires_at ||
-      authData?.credential_pool?.nous?.[0]?.expires_at;
+  const envContent = `# Gerado automaticamente por scripts/sync_hermes.ts\nEXPO_PUBLIC_NOUS_API_KEY=${token}\n`;
+  const envPath = path.join(process.cwd(), '.env.local');
+  fs.writeFileSync(envPath, envContent, 'utf8');
 
-    if (!token) {
-      console.log('Nenhum access_token da Nous encontrado em auth.json.');
-      console.log('Dica: execute "hermes auth add nous" no terminal para reconectar sua conta da Nous.');
-      process.exitCode = 1;
-      return;
-    }
-
-    const envContent = `# Gerado automaticamente por scripts/sync_hermes.ts\nEXPO_PUBLIC_NOUS_API_KEY=${token}\n`;
-    const envPath = path.join(process.cwd(), '.env.local');
-    fs.writeFileSync(envPath, envContent, 'utf8');
-
-    console.log(`✓ Token da Nous Research sincronizado em .env.local`);
-    if (expiresAt) {
-      console.log(`  Válido até: ${expiresAt}`);
-    }
-  } catch (e) {
-    console.error('Erro ao ler auth.json:', e);
+  console.log(`✓ Token da Nous Research sincronizado em .env.local`);
+  if (expiresAt) {
+    console.log(`  Válido até: ${expiresAt}`);
   }
 }
 

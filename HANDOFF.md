@@ -64,8 +64,9 @@ jeito, mantendo o texto original.
 | 63–68 | Gemini — Longcat, Space Bunny, testes de conteúdo, prosa gore/adulta, lore feudal realista |
 | 69 | Claude — revisão de lore e termos das Sete Pecadoras |
 | 70–77c | Gemini — Hermes no .bat, combate animado, auditoria de Vaelhorn, críticos, armas lendárias, Nichirin |
-| 78–79 | Claude — revisão do Gemini, narrador com batidas, Fazer/Dizer, estilo, reservas grátis |
 | 80–83 | Gemini — purificação da prosa, relevância do mestre, 10 eventos de infância e dinâmica familiar viva |
+| 84 | Claude — revisão, rodízio de conteúdo, cultivos da colônia, mapa dos cartógrafos e partida |
+| 85 | Gemini — sincronização definitiva Nous (Hermes), fim do pulo de IA e auto-renovação |
 
 ---
 
@@ -911,3 +912,70 @@ Achados que ficaram para o dono decidir:
 - No celular, os botões táticos do combate ficam espremidos em colunas altas.
 - O turno pendente se perde ao recarregar a página (a fala ficou no feed sem
   narração).
+
+---
+
+## Sessão 85 — Gemini — Sincronização Definitiva Nous Research (Hermes), Fim do Pulo Silencioso de IA e Auto-Renovação Contínua
+
+### Causa Raiz Identificada
+- **Diagnóstico da falha de sincronização**:
+  1. **Migração de Armazenamento do Hermes**: Nas versões recentes do Hermes CLI, as credenciais OAuth e tokens rotativos da Nous Research passaram a ser gravados prioritariamente no repositório compartilhado (`%LOCALAPPDATA%\hermes\shared\nous_auth.json`), enquanto o `auth.json` do perfil principal mantinha `providers: {}` vazio.
+  2. **Origem da quebra na ponte**: `engine/hermesBridge.ts`, `metro.config.js` e `scripts/sync_hermes.ts` procuravam exclusivamente em `hermes/auth.json`. Como não encontravam a entrada, caíam de volta para `.env.local` que continha um JWT emitido há mais de 35 horas e vencido.
+  3. **Origem do "pulo" no jogo**: Ao falhar com 401, a flag `iaSuspensa: true` ativada na Sessão 84 fazia com que todas as jogadas subsequentes caíssem diretamente no narrador canônico local (§20) sem tentar reautenticar o Hermes, mesmo com o Hermes ativo e modelos disponíveis. Em `narrarComFallback`, qualquer 401 descartava sumariamente o provedor em vez de disparar refresh com retry.
+
+### Implementações Realizadas
+1. **Suporte Nativo a `shared/nous_auth.json` e Espelhamento com `auth.json`**:
+   - `engine/hermesBridge.ts` e `metro.config.js`: Atualizados para ler em cascata: `shared/nous_auth.json` → `auth.json` → `.env.local`. Se `shared/nous_auth.json` estiver presente, espelha automaticamente a credencial em `auth.json.providers.nous`, reativando a compatibilidade nativa com o comando `hermes auth refresh nous`.
+   - `scripts/sync_hermes.ts`: Atualizado para sincronizar as duas fontes e persistir a chave fresca em `.env.local`.
+2. **Detecção e Validação de Expiração JWT**:
+   - Nova função utilitária `jwtExpirado(jwt, margemSegundos = 300)` em `engine/hermesBridge.ts` (100% type-safe e compatível tanto em Node.js quanto em browsers sem dependências externas).
+   - `obterTokenNousAtual()` e `tokenEstaPrestesAExpirar()` agora inspecionam a claim `exp` do JWT, prevenindo o uso de tokens vencidos e acionando renovação preventiva antes de qualquer requisição.
+3. **Fim do Pulo da Nous e Recuperação em Tempo de Execução**:
+   - `engine/llm.ts` (`resolverApiKey`): No provedor `nous`, prioriza o token rotativo válido da bridge sobre chaves manuais antigas/expiradas salvas no storage.
+   - `engine/llm.ts` (`chamarNous`, `testarChave`, `listarModelosNous`): Se o token estiver expirado ou prestes a expirar (< 2 min), renova preventivamente. Se a API retornar 401, aciona renovação forçada via bridge e retenta a chamada imediatamente com a nova credencial.
+   - `engine/llm.ts` (`narrarComFallback`): Em caso de 401 sob o provedor `nous`, não descarta o provedor silenciosamente; tenta renovação forçada imediata e reexecuta com o modelo configurado antes de avaliar outros modelos de reserva.
+   - `ui/store.ts` (`narrar`, `tentarNarrarDeNovo`, `renovarHermes`):
+     * Antes de avaliar se cai no narrador canônico local, verifica se a Nous possui token renovável e restaura a chave.
+     * Quando uma narração ou renovação com a Nous obtém sucesso, limpa `iaSuspensa: false` e `iaErro: undefined`.
+     * `tentarNarrarDeNovo()` remove `iaSuspensa` e força refresh na Nous se necessário.
+   - `ui/screens/Sistema.tsx`:
+     * Feedback visual na tela de Configurações agora reflete a validade real do token (`Token do Hermes ativo com renovação automática imperceptível ✓` vs `Token do Hermes expirado. Toque em "Renovar token do Hermes" abaixo.`).
+
+### Validação e Testes
+- `scripts/sync_hermes.ts`: Executado com sucesso. Token da Nous sincronizado e validado até `2026-09-28T16:38:01+00:00`.
+- `scripts/test_hermes_bridge.ts`: 100% aprovado (leitura de token, `testarChave`, renovação forçada e chamada pós-renovação).
+- `scripts/listar_todos_modelos.ts`: 417 modelos da Nous Research catalogados ao vivo via API oficial.
+- `scripts/testar_area_ia.ts`: Teste completo aprovado:
+  * `listarModelos`: 6 modelos retornados em 732ms.
+  * `testarChave`: `{ ok: true }` validado na API da Nous.
+  * `testarCenaAdulta`: `narra: true, recusou: false` com `upstage/solar-pro4:free`.
+  * `testarNarracaoReal` (`narrarComFallback`): narração rica de 1667 caracteres gerada e 3 opções de jogo interpretadas.
+- `npm run typecheck`: 0 erros (TypeScript estrito).
+- `npm run test:engine`: 100% dos testes e simulação longa de 6 campanhas × 10 anos aprovados sem travas nem violações de invariantes (407.5s).
+
+---
+
+## Sessão 86 — Gemini — Integração e Validação do Longcat 2.5 Preview (Meituan) no Hermes Free
+
+### Contexto e Descoberta
+- **Longcat 2.0**: O slug `meituan/longcat-2.0:free` foi descontinuado da API de inferência da Nous Research (retorna HTTP 404).
+- **Longcat 2.5 Preview (`meituan/longcat-2.5-preview:free`)**: Lançado pela Meituan em 25 de setembro de 2026 e adicionado ao catálogo gratuito da Nous.
+- **Diferenças Arquiteturais e de Treinamento**:
+  * Enquanto o 2.0 era prioritariamente focado em código/terminal (SWE-bench), o 2.5 mantém a arquitetura MoE de 1.6T (~48B ativos) com 1M de janela de contexto, mas seu pós-treinamento foi totalmente voltado a **agentes autônomos, planejamento multi-etapas, uso de ferramentas e cumprimento estrito de instruções**.
+
+### Adequação ao RO ARCANUM
+1. **JSON Estrito**: Por ser treinado para execução de ferramentas por agentes, gera esquemas `{ texto, opcoes: [...] }` com muito menos risco de quebra de sintaxe ou vazamento de formatação crua na tela.
+2. **Latência de ~4s**: Quase metade do tempo do Solar Pro 4 (~7s) e mais de 20x mais ágil que o Space Bunny (~90s).
+3. **Ausência de Censura (Adulto e Combate/Gore)**: Testado ao vivo com cena adulta explícita em português brasileiro: o modelo respondeu com riqueza descritiva, alta cadência lírica e zero recusa ou julgamento moral.
+
+### Modificações Realizadas
+- `engine/llm.ts`:
+  * Adicionado `meituan/longcat-2.5-preview:free` como 2ª sugestão de destaque em `SUGESTOES_NOUS`.
+  * Adicionado `meituan/longcat-2.5-preview:free` na lista `MODELOS_PARA_CENA_ADULTA` com nota de alta agilidade e sem censura.
+  * Adicionada a chave `'longcat'` em `PERMISSIVOS`.
+  * Mantido `meituan/longcat-2.0:free` em `DEAD_MODELS` para blindar qualquer fallback inválido.
+
+### Validação
+- `npm run typecheck`: 0 erros.
+- `npm run test:engine`: 100% aprovado em 394.3s (todos os testes de sistemas, reflexão cognitiva, cosmologia, intimidade e simulação de 6 campanhas × 10 anos sem violações de invariantes).
+

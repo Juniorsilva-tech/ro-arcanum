@@ -10,35 +10,20 @@ import {
   criarCampanha,
   atributosBase,
   montarCena,
+  obterTokenNousAtual,
 } from '../engine';
 import { bundlePorId } from '../content';
 
 async function main() {
   console.log('=== TESTE DA ÁREA DE IA (NOUS RESEARCH / HERMES) ===\n');
 
-  // 1. Ler token do auth.json local
-  const authPath = path.join(
-    process.env.LOCALAPPDATA || 'C:\\Users\\Junior\\AppData\\Local',
-    'hermes',
-    'auth.json',
-  );
-
-  if (!fs.existsSync(authPath)) {
-    console.error(`Arquivo não encontrado: ${authPath}`);
-    process.exit(1);
-  }
-
-  const authData = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-  const token =
-    authData?.providers?.nous?.access_token ||
-    authData?.credential_pool?.nous?.[0]?.access_token;
-
+  // 1. Ler token do Hermes / bridge local
+  const token = obterTokenNousAtual();
   if (!token) {
-    console.error('Token da Nous não encontrado no auth.json');
+    console.error('Token da Nous não encontrado no Hermes');
     process.exit(1);
   }
-
-  console.log('✓ Token encontrado e carregado de auth.json');
+  console.log('✓ Token encontrado e carregado do Hermes / bridge');
 
   // Testar 1: buscarModelos (listarModelos)
   console.log('\n--- 1. Testando "Buscar Modelos" (listarModelos) ---');
