@@ -965,7 +965,7 @@ export const INSTRUCAO_SISTEMA =
   '• PROIBIÇÃO DE VÍCIOS DE IA: ' +
   '1) NUNCA use a antítese clichê "Não X, mas Y" (ex: proibido "Não era apenas medo, mas terror", "Não era uma taverna, mas um túmulo"). ' +
   '2) NUNCA termine cenas com resumos filosóficos ou moralizantes (ex: proibido "E ali você compreendeu o peso do mundo..."). ' +
-  '3) NUNCA termine com perguntas ("O que você fará?", "O que você faz, [Nome]?"). A cena termina com uma ação em aberto, um olhar esperando ou uma porta que range.\n' +
+  '3) O NARRADOR nunca pergunta ao jogador ("O que você fará?", "O que você faz, [Nome]?"). A cena termina com uma ação em aberto, um olhar esperando, uma porta que range — ou com a pergunta de um PERSONAGEM, em fala, esperando resposta.\n' +
   '• De 3 a 6 falas por cena, alternando entre os dois. Deixe a conversa respirar: uma ' +
   'fala, um gesto, outra fala.\n' +
   '• OBRIGATÓRIO, e a regra que mais importa neste prompt inteiro: cada fala em LINHA ' +
@@ -1273,8 +1273,10 @@ export function limparNarracao(bruto: string): string {
   s = s.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   // Cauda típica de string JSON cortada: ..." ,  ou ..."}
   if (cabeca) s = s.replace(/[\s"]*[,}\]][\s"',}\]]*$/, '').replace(/"\s*$/, '');
-  // Trava de segurança: remove cacoetes de encerramento em pergunta ("O que você faz...", "O que você fará...")
-  s = s.replace(/\s*(?:E agora,?\s*)?O que você (?:vai fazer|faz|deseja fazer|escolhe|fará)[^.\n]*\??\s*$/i, '');
+  // Trava de segurança: remove o cacoete do NARRADOR perguntando ao jogador
+  // ("O que você fará?") no fim. Só em linha de narração: "— [Guarda] O que
+  // você faz aqui?" é fala de personagem e fica.
+  s = s.replace(/(^|\n)((?![ \t]*[—–-])[^\n]*?)[ \t]*(?:E agora,?\s*)?O que você (?:vai fazer|faz|deseja fazer|escolhe|fará)[^.\n]*\?\s*$/i, '$1$2').trimEnd();
   return s.trim();
 }
 

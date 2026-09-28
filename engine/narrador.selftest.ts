@@ -10,7 +10,7 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { calcularContexto } from './availability';
-import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento } from './llm';
+import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento, limparNarracao } from './llm';
 import { menoresNaCena } from './protecao';
 import type { ResultadoTurno } from './turn';
 import type { Campaign } from './types';
@@ -98,5 +98,8 @@ const pedido = (extra: Partial<ResultadoTurno> = {}): ResultadoTurno =>
   const cena = 'O machado desce e abre o ventre do salteador. O sangue esguicha na lama, e ele cai de joelhos, as mãos tentando segurar o que escapa. Você puxa a lâmina de volta com um estalo úmido.';
   ok(!detectarRecusa(cena) && !foraDeContexto(cena), 'cena em português não é recusa');
 }
+// O narrador não pergunta ao jogador no fim; o personagem pode (sessão 80 cortava a fala).
+ok(limparNarracao('A porta range. O que você fará?') === 'A porta range.', 'pergunta do narrador no fim sai');
+ok(limparNarracao('A porta range.\n\n— [Guarda] O que você faz aqui?').endsWith('— [Guarda] O que você faz aqui?'), 'pergunta de personagem, em fala, fica');
 ok(semPensamento('<think>devo narrar {isto}?</think>\n{"narracao":"x"}') ==='{"narracao":"x"}', 'raciocínio <think> sai antes de ler a cena');
 console.log('\nNarrador: OK.');

@@ -63,7 +63,8 @@ jeito, mantendo o texto original.
 | 61–62 | Gemini — intimidade e humor dos NPCs, cosmologia, Deuses, 7 Bruxas e crônicas do mapa |
 | 63–68 | Gemini — Longcat, Space Bunny, testes de conteúdo, prosa gore/adulta, lore feudal realista |
 | 69 | Claude — revisão de lore e termos das Sete Pecadoras |
-| 70–79 | Claude — expansão e consolidação de sistemas |
+| 70–77c | Gemini — Hermes no .bat, combate animado, auditoria de Vaelhorn, críticos, armas lendárias, Nichirin |
+| 78–79 | Claude — revisão do Gemini, narrador com batidas, Fazer/Dizer, estilo, reservas grátis |
 | 80–83 | Gemini — purificação da prosa, relevância do mestre, 10 eventos de infância e dinâmica familiar viva |
 
 ---
@@ -812,3 +813,18 @@ A Groq funcionou no aparelho do dono, e o print mostrou dois defeitos:
   * `engine/selftest.ts`: 100% aprovado (todas as 40+ suítes de teste + simulação longa de 10 anos sem quebras de invariantes).
   * `npm run typecheck`: 0 erros de compilação TypeScript (modo estrito).
 
+
+---
+
+## Sessão 84 — Claude — revisão das sessões 80 a 83 do Gemini e rodada grande
+
+Revisão do Gemini (checkpoint `abbb88f`): ids de itens e artes dados na
+infância existem no catálogo; nada de `Math.random`/`Date.now`; teste da família
+passa. Dois defeitos no narrador, corrigidos:
+- `limparNarracao` apagava a pergunta do fim mesmo quando era FALA de
+  personagem ("— [Guarda] O que você faz aqui?" virava "— [Guarda]"). Agora só
+  corta a pergunta em linha de narração.
+- A regra "NUNCA termine com perguntas" brigava com a do gancho ("uma pergunta
+  feita a ele"). Reescrita: o NARRADOR não pergunta ao jogador; um PERSONAGEM
+  pode, em fala.
+- Mapa rápido do HANDOFF dizia "70–79 Claude"; 70–77c são do Gemini.
