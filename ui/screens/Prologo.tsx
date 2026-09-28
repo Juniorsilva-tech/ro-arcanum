@@ -5,6 +5,8 @@ import { Botao, Card, Divisor, Rotulo, TextoMono, TextoSerif, Titulo } from '../
 import { cores, esp } from '../theme';
 import { useGame } from '../store';
 
+
+const NOME_PARENTESCO: Record<string, string> = { pai: 'pai', mae: 'mãe', irmao: 'irmão', irma: 'irmã' };
 export function PrologoInfancia() {
   const camp = useGame(s => s.camp)!;
   const avancar = useGame(s => s.avancarInfancia);
@@ -30,8 +32,8 @@ export function PrologoInfancia() {
       <Divisor label="sua família agora" />
       {f.membros.filter(m => m.idadeNoNascimento + f.idadeJogador >= 0).map(m => (
         <Card key={m.id} acento={m.condicao === 'morto' ? cores.cinabrio : m.prodigio ? cores.ouro : undefined}>
-          <TextoSerif style={{ fontSize: 20 }}>{m.nome} · {m.parentesco}</TextoSerif>
-          <TextoMono>{m.ocupacao} · {m.idadeNoNascimento + f.idadeJogador} anos · {m.condicao}{m.prodigio ? ' · prodígio' : ''}</TextoMono>
+          <TextoSerif style={{ fontSize: 20 }}>{m.nome} · {NOME_PARENTESCO[m.parentesco] ?? m.parentesco}</TextoSerif>
+          <TextoMono>{m.ocupacao} · {m.idadeNoNascimento + f.idadeJogador} {m.idadeNoNascimento + f.idadeJogador === 1 ? 'ano' : 'anos'} · {m.condicao}{m.prodigio ? ' · prodígio' : ''}</TextoMono>
         </Card>
       ))}
       <TextoMono style={{ marginVertical: esp.md }}>Patrimônio familiar: {f.patrimonio} · prestígio: {f.prestigio}</TextoMono>

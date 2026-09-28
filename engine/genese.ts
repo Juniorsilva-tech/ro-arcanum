@@ -62,7 +62,7 @@ export const MARCAS_INFANCIA: { id: MarcaInfancia; titulo: string; descricao: st
 export const REACOES_INFANCIA: { id: ReacaoInfancia; titulo: string; descricao: string }[] = [
   {
     id: 'sozinho',
-    titulo: 'Você lidou com isso sozinho(a)',
+    titulo: 'Você lidou com isso sozinho',
     descricao: 'Aprendeu a aguentar. O corpo endureceu antes da cabeça.',
   },
   {

@@ -88,7 +88,7 @@ export function disponibilidadeVerbo(
   }
 
   if (req.item && (p.inventario[req.item] ?? 0) <= 0) {
-    return { disponivel: false, motivo: `precisa de ${req.item}` };
+    return { disponivel: false, motivo: `precisa de ${content?.itens.find((i) => i.id === req.item)?.nome.toLowerCase() ?? req.item}` };
   }
 
   if (req.pericia && (p.pericias[req.pericia] ?? 0) <= 0 && !(content && verbosConcedidos(content, p).has(verbo.id))) {

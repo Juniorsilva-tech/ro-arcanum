@@ -89,7 +89,9 @@ function nomeAlvo(content: ContentBundle, camp: Campaign, alvoId?: string): NPC 
 // Constrói o "fato consumado" seco que a narração recebe (GDD §4.4).
 function construirFato(verbo: Verbo, alvo: NPC | undefined, res?: ResultadoTeste): string {
   const acao = verbo.nome.toLowerCase();
-  const alvoTxt = alvo ? ` ${alvo.nome}` : '';
+  // Regência: flerta-se COM alguém, mente-se PARA alguém.
+  const prep: Record<string, string> = { flertar: 'com ', conversar: 'com ', conversar_a_sos: 'com ', mentir: 'para ', barganhar: 'com ', negociar: 'com ' };
+  const alvoTxt = alvo ? ` ${prep[verbo.id] ?? ''}${alvo.nome}` : '';
   if (!res) return `Você foi ${acao}${alvoTxt}.`;
   const g = res.grau;
   const quase = res.grau === 'falha' && res.r < res.p + (1 - res.p) * 0.5;

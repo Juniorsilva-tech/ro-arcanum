@@ -12,6 +12,7 @@ import {
   atributosBase,
   narrarComFallback,
   tipoDeCena,
+  batidaDeCombate,
   PROVEDORES_GRATIS,
   narrarComModeloStream,
   CAPITULO_MAX_PERIODOS,
@@ -265,6 +266,8 @@ interface GameState {
   pendente?: { fato: string; acaoLivre?: string; extra?: ExtraNarracao };
   // Texto da aba Dizer: a próxima narração o trata como fala do jogador.
   falaJogador?: string;
+  // O jogador pediu o narrador local depois de uma falha: fica até mexer na configuração.
+  iaSuspensa?: boolean;
 
   init: () => Promise<void>;
   irPara: (t: Tela) => void;
@@ -1470,7 +1473,7 @@ export const useGame = create<GameState>((set, get) => ({
   async setConfig(patch) {
     const config = { ...get().config, ...patch };
     await salvarConfig(config);
-    set({ config });
+    set({ config, iaSuspensa: false });
   },
 
   async proximoCapitulo() {
@@ -1651,9 +1654,15 @@ export const useGame = create<GameState>((set, get) => ({
     const fato = pend.fato;
     const grade = montarGrade(content, camp, cena.contexto, [], cena.opcoes);
     registrarNaCronica(camp, fato);
+    // A abertura já está no feed quando a IA falha nela: não repetir.
+    const ultima = get().feed.at(-1);
+    const jaNaTela = ultima?.tipo === 'narracao' && ultima.texto === fato;
     set({
+      // O jogador escolheu o narrador local: vale até mudar a configuração,
+      // não só neste turno (senão cada ação tentava a chave ruim de novo).
+      iaSuspensa: true,
       camp: { ...camp },
-      feed: [...get().feed, nf(fato, 'narracao')],
+      feed: jaNaTela ? get().feed : [...get().feed, nf(textoLocal(fato, pend.extra), 'narracao')],
       cena: { ...cena, opcoes: grade },
       iaStatus: 'off',
       iaErro: undefined,
@@ -1808,6 +1817,13 @@ function montarOpcoesIA(
 // pedido: sem modelo não há prosa). A engine resolve o que aconteceu; o
 // narrador escreve. Se ele não escrever, o turno fica pendente e o jogador
 // manda tentar de novo — o jogo NUNCA inventa um texto de reserva.
+// Narrador local: sem modelo, a luta ainda é contada batida por batida, com o
+// log que a engine escreveu, antes do fato final.
+function textoLocal(fato: string, extra?: ExtraNarracao): string {
+  const batidas = (extra?.batidasCombate ?? []).map(batidaDeCombate).filter((b): b is string => !!b);
+  return batidas.length ? [...batidas, fato].join('\n\n') : fato;
+}
+
 type ExtraNarracao = {
   tipoAcaoLivre?: 'fazer' | 'dizer';
   batidasCombate?: string[];
@@ -1842,7 +1858,7 @@ async function narrar(
   const chave = chaveEfetiva(config);
   const reservas = (config.reservas ?? []).filter((r) => r.apiKey?.trim());
 
-  if (!chave && !reservas.length) {
+  if ((!chave && !reservas.length) || get().iaSuspensa) {
     // Narrador canônico local (GDD §20, P0: o jogo tem que rodar sem rede e
     // sem modelo). As peças já existiam — 'fato' é a frase que a própria
     // engine escreve reagindo ao grau do teste (construirFato em turn.ts), e
@@ -1853,7 +1869,7 @@ async function narrar(
     registrarNaCronica(camp, fato);
     set({
       camp: { ...camp },
-      feed: [...get().feed, nf(fato, 'narracao')],
+      feed: [...get().feed, nf(textoLocal(fato, extra), 'narracao')],
       cena: { ...cena, opcoes: grade },
       iaStatus: 'off',
       iaErro: undefined,

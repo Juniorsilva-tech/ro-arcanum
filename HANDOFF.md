@@ -872,3 +872,42 @@ foi lida símbolo por símbolo:
 - Narrador: `local.mapaVelho` (nome antigo + até duas lendas de perto), regra
   2e2 no prompt (crença, uma frase); sai do pacote em luta e perseguição.
 - Teste `engine/marcosMapa.selftest.ts` (no `test:engine`).
+
+### Sessão 84 (continuação) — partida de verdade no navegador (Playwright)
+
+Joguei uma campanha nova em Vaelhorn pelo Playwright (tela de celular,
+430 px), clicando: aviso, classe (Espadachim), origem (Foragido), infância
+(Expectativas baixas → Olhar de Desdém → Comitiva da Ordem → ficar em casa),
+atributos, taverna, Dizer, Flertar, combate, fim de luta, mapa. Fotos em
+`.playwright-mcp/jogo/` (fora do git). O narrador por IA respondeu 401: a
+chave do `.env.local` está vencida e não uso a do dono; a partida seguiu no
+narrador local, que exercita a engine inteira.
+
+Defeitos achados e corrigidos:
+- **Flertar oferecia pai, mãe e irmã como alvo.** A engine já barrava
+  (`família não é alvo romântico`), mas o seletor listava todos os presentes.
+  Agora a lista passa por `disponibilidadeVerbo`.
+- "Usar narrador local" valia só um turno: a ação seguinte tentava a chave
+  ruim de novo e travava. Agora vale até mexer na configuração
+  (`iaSuspensa`), e a abertura não aparece duplicada.
+- O narrador local mostrava só "A luta terminou"; agora conta as batidas do
+  log antes do fato.
+- Irmã com nome masculino/irmão com nome feminino ("Mara · irmao"): nomes por
+  gênero; "trabalhadora da família" para irmã.
+- Prólogo: "mae"/"irmao" sem acento e "1 anos".
+- "Você lidou com isso sozinho(a)" (o protagonista é homem).
+- "precisa de alaude" mostrava o id do item; agora o nome ("alaúde").
+- "Você tentou flertar Elza" → "flertar com Elza" (e mentir para, conversar com,
+  barganhar com).
+- Aviso de entrada dizia 17+ e "todos os personagens são adultos, sem
+  exceção" — falso (há infância e colonos jovens) e 17+ não cabe em cena
+  sexual explícita. Agora 18+, e o texto diz que cena sexual só existe entre
+  adultos.
+
+Achados que ficaram para o dono decidir:
+- **Combate fácil demais no começo**: personagem de nível 1 matou salteador
+  (16 PV) com um crítico de 36 e lobo com 17, sem levar dano. É o efeito do
+  reforço de crítico e atributos da sessão 77 (Gemini).
+- No celular, os botões táticos do combate ficam espremidos em colunas altas.
+- O turno pendente se perde ao recarregar a página (a fala ficou no feed sem
+  narração).

@@ -1,4 +1,4 @@
-// ARCANUM · Entrada e Aviso 17+ (GDD §32 P0, §25).
+// ARCANUM · Entrada e Aviso 18+ (GDD §32 P0, §25).
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Pagina } from './_layout';
@@ -65,10 +65,10 @@ export function Aviso17() {
   return (
     <Pagina>
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        <TextoMono style={styles.avisoSelo}>17+</TextoMono>
+        <TextoMono style={styles.avisoSelo}>18+</TextoMono>
         <Titulo style={{ marginBottom: esp.lg }}>Um aviso antes de entrar</Titulo>
         <TextoSerif style={styles.avisoTexto}>
-          ARCANUM é uma ficção sombria para adultos. Todos os personagens são adultos, sem exceção.
+          ARCANUM é uma ficção sombria para adultos. A história tem infância e gente jovem, mas cena sexual só existe entre adultos — a engine barra o resto.
         </TextoSerif>
         <TextoSerif style={styles.avisoTexto}>
           Sexualidade, substâncias, violência e transgressão existem aqui como sistemas com
@@ -76,7 +76,7 @@ export function Aviso17() {
           ser explícitas. A ação está no menu; o efeito, no estado.
         </TextoSerif>
         <View style={{ height: esp.xl }} />
-        <Botao titulo="Tenho 17 anos ou mais — entrar" variante="acento" onPress={aceitar} />
+        <Botao titulo="Tenho 18 anos ou mais — entrar" variante="acento" onPress={aceitar} />
         <Botao titulo="Voltar" variante="fantasma" onPress={() => irPara('entrada')} />
       </View>
     </Pagina>

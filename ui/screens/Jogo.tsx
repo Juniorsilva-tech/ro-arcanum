@@ -70,7 +70,8 @@ export function Jogo() {
   const textoStreaming = useGame((s) => s.textoStreaming);
   // Ter chave liga a IA; sem chave, o narrador local (engine) assume — o
   // jogo nunca fica parado por falta de chave (GDD §20, P0).
-  const iaLigada = useGame((s) => !!s.config.apiKey);
+  // Ligada: há chave (ou reserva grátis) e o jogador não pediu o narrador local.
+  const iaLigada = useGame((s) => (!!s.config.apiKey || !!s.config.reservas?.length) && !s.iaSuspensa);
   const tentarNarrarDeNovo = useGame((s) => s.tentarNarrarDeNovo);
   const desistirIaEUsarLocal = useGame((s) => s.desistirIaEUsarLocal);
   // Turno resolvido esperando prosa: enquanto existir, ninguém age.
@@ -435,7 +436,9 @@ export function Jogo() {
       {verboAlvo && (
         <SeletorAlvo
           verbo={verboAlvo}
-          presentes={ctx.presentes}
+          // Só quem pode ser alvo desta ação: a engine barra, por exemplo,
+          // flerte com pai, mãe ou irmão — e a lista não os oferece.
+          presentes={ctx.presentes.filter((n) => disponibilidadeVerbo(verboAlvo, ctx, camp, n, content).disponivel)}
           camp={camp}
           onEscolher={(id) => {
             agirVerbo(verboAlvo.id, id);

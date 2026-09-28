@@ -36,7 +36,9 @@ export type FamiliaState = {
 
 const OFICIOS_COMUNS = ['lavrador', 'criadora de animais', 'ferreiro', 'curandeira', 'mercador itinerante', 'caçadora', 'escriba', 'soldado'];
 const OFICIOS_RAROS = ['herói aposentado', 'mestre da espada', 'maga de corte', 'nobre fugitivo', 'rei exilado'];
-const NOMES_IRMAOS = ['Iria', 'Cael', 'Mara', 'Oren', 'Sena', 'Tomas', 'Lia', 'Daren'];
+// Nome no gênero do parentesco: "Mara · irmão" saía porque o sorteio ignorava isso.
+const NOMES_IRMAS = ['Iria', 'Mara', 'Sena', 'Lia'];
+const NOMES_IRMAOS = ['Cael', 'Oren', 'Tomas', 'Daren'];
 const ATRIBUTOS: AttrKey[] = ['fisico', 'precisao', 'resiliencia', 'raciocinio', 'percepcao', 'social'];
 
 function maiorTalento(atributos: Record<AttrKey, number>): AttrKey {
@@ -538,7 +540,7 @@ export function iniciarFamilia(content: ContentBundle, camp: Campaign): void {
   ];
   for (let i = 0; i < g.irmaos; i++) {
     const irma = nextFloat(camp.rng) < .5;
-    membros.push({ id: `familia_irmao_${i + 1}`, nome: pick(camp.rng, NOMES_IRMAOS), parentesco: irma ? 'irma' : 'irmao',
+    membros.push({ id: `familia_irmao_${i + 1}`, nome: pick(camp.rng, irma ? NOMES_IRMAS : NOMES_IRMAOS), parentesco: irma ? 'irma' : 'irmao',
       idadeNoNascimento: nextInt(camp.rng, -4, 5), ocupacao: 'criança da família', talento: pick(camp.rng, ATRIBUTOS),
       prestigio: 0, condicao: 'livre', prodigio: nextFloat(camp.rng) < .12 });
   }
@@ -1061,7 +1063,7 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
     const idade = m.idadeNoNascimento + proximaIdade;
     camp.npcState[m.id].idade = idade;
     const npc = camp.npcsProcedurais?.find(n => n.id === m.id);
-    if (npc && idade >= 18 && (m.parentesco === 'irma' || m.parentesco === 'irmao')) npc.ocupacao = m.prodigio ? 'jovem prodígio' : 'trabalhador da família';
+    if (npc && idade >= 18 && (m.parentesco === 'irma' || m.parentesco === 'irmao')) npc.ocupacao = m.prodigio ? 'jovem prodígio' : m.parentesco === 'irma' ? 'trabalhadora da família' : 'trabalhador da família';
   }
   if (proximaIdade >= 18) {
     f.prologoConcluido = true;
@@ -1088,7 +1090,7 @@ export function concluirPrologoInfancia(content: ContentBundle, camp: Campaign):
     if (camp.npcState[m.id]) camp.npcState[m.id].idade = idade;
     const npc = camp.npcsProcedurais?.find(n => n.id === m.id);
     if (npc && idade >= 18 && (m.parentesco === 'irma' || m.parentesco === 'irmao')) {
-      npc.ocupacao = m.prodigio ? 'jovem prodígio' : 'trabalhador da família';
+      npc.ocupacao = m.prodigio ? 'jovem prodígio' : m.parentesco === 'irma' ? 'trabalhadora da família' : 'trabalhador da família';
     }
   }
   f.prologoConcluido = true;
