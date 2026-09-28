@@ -153,7 +153,8 @@ export function memoriaParaNarrador(camp: Campaign, npcId: string, quantas = 5):
 export function diasDeConvivio(camp: Campaign, npcId: string): number {
   const din = camp.npcState[npcId];
   const primeira = din?.memoria[0];
-  if (!primeira?.dia) return 0;
+  // Dia 0 é o primeiro dia da campanha, não "sem data".
+  if (primeira?.dia === undefined) return 0;
   return Math.max(0, camp.calendario.dia - primeira.dia);
 }
 

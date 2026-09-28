@@ -1044,3 +1044,31 @@ sessão 85 funcionou). Primeira cena de luta com as batidas: segue a ordem e
 quem caiu fica caído, mas o Solar erra palavra ("desmaça", "filo" por fio),
 repete frases ("o salteador ainda não se mexe") e a Vess chama o jogador
 pelo nome sem ter sido apresentada.
+
+### Sessão 87 (continuação) — o nome do jogador e o Longcat
+
+**Nome.** A regra "estranho não sabe seu nome" estava só no prompt. Agora é
+da engine (`engine/nomeDoJogador.ts`):
+- sabe o nome: família, quem convive com ele há 3+ dias, e quem estava
+  presente quando ele disse o próprio nome (na ação livre, na aba Dizer, ou
+  numa fala `[você]` da cena) — `camp.sabemSeuNome`;
+- cada presente vai ao narrador com `sabeSeuNome`; a regra do prompt usa isso;
+- depois da resposta, `protegerNome` troca o nome por "forasteiro" nas falas
+  de quem não sabe (narração e falas do próprio jogador ficam como estão).
+- Defeito antigo achado no caminho: `diasDeConvivio` tratava memória do dia 0
+  (primeiro dia da campanha) como "sem data" e devolvia 0 para sempre.
+- Teste `engine/nomeDoJogador.selftest.ts` (no `test:engine`).
+
+**Longcat 2.5 × Solar Pro 4** (Nous grátis, pelo próprio jogo, cena da
+taverna com Aldrica, Vess, Sarine, Rengoku e a família):
+- Solar: 20–29 s; português com erros ("olhar de forasteiro varre as mesas"
+  para o olhar do jogador; antes, "desmaça", "filo"); respeitou o nome.
+- Longcat: 36–87 s (uma vez passou de 75 s e deu tempo esgotado); português
+  bem mais limpo, usou os presentes certos, a crônica do lugar (a viga que
+  nunca apodrece) e a família com intimidade; respeitou o nome; dois
+  deslizes pequenos (Mara "a irmã mais nova", que é mais velha; "só ele
+  conhece" para Ceres). Os dois narram cena adulta no teste.
+- Tempo limite do Longcat subiu para 120 s (como o Space Bunny). A nota "rápido
+  ~4s" da sessão 86 não se confirmou; corrigida.
+- `testarNarracaoReal` agora devolve o texto inteiro (antes só 220
+  caracteres), para dar para comparar modelos.

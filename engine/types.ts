@@ -905,6 +905,9 @@ export type Campaign = {
   // "Lembre o narrador": detalhes da história que o jogador pediu para o
   // narrador não esquecer. Só memória de voz; não mudam o estado do mundo.
   lembretesNarrador?: string[];
+  // Quem sabe o nome do jogador (engine/nomeDoJogador.ts), além da família e
+  // de quem convive com ele há dias.
+  sabemSeuNome?: string[];
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.

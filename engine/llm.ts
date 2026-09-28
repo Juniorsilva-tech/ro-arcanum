@@ -45,6 +45,7 @@ import {
 import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
 import { nomesAntigosDe, lendasPerto } from '@/content/vaelhorn/marcosMapa';
 import { menoresNaCena, restricaoDeMenores } from './protecao';
+import { sabeONome } from './nomeDoJogador';
 
 export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous' | ProvedorCompat;
@@ -239,7 +240,7 @@ export const MODELO_PADRAO_NOUS = 'upstage/solar-pro4:free';
 // Sugestões Nous Research / Hermes (modelos gratuitos e ativos validados na infraestrutura)
 export const SUGESTOES_NOUS = [
   'upstage/solar-pro4:free', // Solar Pro 4 (padrão: rápido ~7s, estável, excelente em português, sem censura)
-  'meituan/longcat-2.5-preview:free', // Longcat 2.5 Preview (rápido ~4s, excelente prosa e sem censura)
+  'meituan/longcat-2.5-preview:free', // Longcat 2.5 Preview (prosa mais limpa que o Solar; 36–87 s por cena no teste de 28/09)
   'inclusionai/ling-3.0-flash-sante:free', // Ling 3.0 Flash Santé (rápido ~15s, narra adulto sem recusa)
   'stepfun/step-3.7-flash:free', // StepFun 3.7 Flash (ultrarrápido ~2-3s)
   'stealth/space-bunny-alpha', // Space Bunny Alpha (muito lento ~90s, risco de timeout na tela)
@@ -335,7 +336,7 @@ export function agruparPorFabricante<T extends { id: string }>(
 export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean }[] = [
   // ── Nous Research & Gratuitos Testados ────────────────────────────────────
   { id: 'upstage/solar-pro4:free', nota: 'Nous grátis: testado, excelente português e coerência narrativa, sem censura', pago: false },
-  { id: 'meituan/longcat-2.5-preview:free', nota: 'Nous grátis: rápido (~4s), excelente prosa e sem censura em cena adulta', pago: false },
+  { id: 'meituan/longcat-2.5-preview:free', nota: 'Nous grátis: melhor português que o Solar, narra adulto; lento (36–87 s por cena)', pago: false },
   { id: 'inclusionai/ling-3.0-flash-sante:free', nota: 'Nous grátis: rápido (~15s), narra adulto sem recusa e gera boas opções', pago: false },
   { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: sem censura mas MUITO LENTO (~90s), pode dar timeout na tela', pago: false },
   { id: 'stepfun/step-3.7-flash:free', nota: 'Nous grátis: rápido (2-3s), ágil para turnos dinâmicos', pago: false },
@@ -778,6 +779,8 @@ export function montarPacote(
       eixos: camp.npcState[n.id]?.eixos ?? {},
       // Sem isto, cada encontro era o primeiro. É o que faz ela lembrar.
       conheceHaDias: diasDeConvivio(camp, n.id),
+      // Quem não sabe não diz o nome dele (engine/nomeDoJogador.ts).
+      sabeSeuNome: sabeONome(camp, n),
       lembraDeVoce: memoriaParaNarrador(camp, n.id, 4),
       conviccoesSobreVoce: conviccoesDoNpc(camp, n.id).map(c => c.texto),
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
@@ -971,12 +974,10 @@ export const INSTRUCAO_SISTEMA =
   'ecoar ou repetir falas, frases ou acontecimentos que já constam em "cenasAnteriores". O jogador ' +
   'já leu aquilo na tela anterior. A nova cena deve conter APENAS O QUE ACONTECE DEPOIS: novas falas, novas reações ' +
   'e o avanço imediato da conversa. Repetir diálogos passados é uma falha inaceitável.\n' +
-  '• NOME DO JOGADOR — "personagem.nome" está no pacote pra você narrar em segunda ' +
-  'pessoa, não pra qualquer NPC saber de cor. Uma NPC só o chama pelo nome se ' +
-  '"jaAconteceu" ou "arcosAtivos" já mostrarem uma apresentação de verdade (ele se ' +
-  'apresentou, alguém o apresentou, ela ouviu de outra pessoa). Sem isso registrado, ela ' +
-  'não sabe — trate-o por "você" na fala dela, ou por um termo genérico no masculino ' +
-  '(acima), e é ótimo se ela perguntar o nome dele como parte da cena.\n' +
+  '• NOME DO JOGADOR — cada presente traz "sabeSeuNome". Se for false, essa pessoa NÃO sabe o ' +
+  'nome dele e nunca o diz: trata-o por "você" ou por um termo genérico no masculino (forasteiro, ' +
+  'rapaz, viajante), e é ótimo se ela perguntar o nome dele como parte da cena. ' +
+  '"personagem.nome" existe só para você, narrador.\n' +
   '• REALISMO VÍVIDO, IMERSÃO E PERSONALIDADE: O mundo não é um tratado solene nem um museu; é uma terra viva, áspera, perigosa e fascinante. ' +
   'As pessoas têm cinismo de sobrevivente, humor sombrio de taverna, risadas de alívio tenso, malícia, desconfiança de mercenário e humanidade quente. ' +
   'Faça o texto ser prazeroso, envolvente e divertido de ler: diálogos com atitude, pausas expressivas, reações corporais involuntárias (uma mão que treme na caneca, um cuspe de desdém na terra, um olhar de canto que avalia a bolsa). ' +
@@ -1876,7 +1877,9 @@ async function chamarNous(
   }
   const ehBunny = (cfg.modelo || MODELO_PADRAO_NOUS).includes('space-bunny');
   const tetoReal = ehBunny ? Math.max(teto, 3500) : teto;
-  const timeoutMs = ehBunny ? 120000 : 75000;
+  // Longcat 2.5 levou 36–87 s por cena no teste de 28/09/2026: 75 s cortava.
+  const lento = ehBunny || (cfg.modelo ?? '').includes('longcat');
+  const timeoutMs = lento ? 120000 : 75000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

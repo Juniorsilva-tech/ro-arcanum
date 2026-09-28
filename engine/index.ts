@@ -76,3 +76,4 @@ export * from './livro';
 export * from './nichirin';
 export * from './protecao';
 export * from './cultivos';
+export * from './nomeDoJogador';

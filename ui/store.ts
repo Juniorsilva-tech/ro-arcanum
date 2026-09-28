@@ -12,6 +12,10 @@ import {
   atributosBase,
   narrarComFallback,
   tipoDeCena,
+  disseONome,
+  apresentar,
+  protegerNome,
+  sabeONome,
   batidaDeCombate,
   PROVEDORES_GRATIS,
   narrarComModeloStream,
@@ -373,7 +377,7 @@ interface GameState {
   renovarHermes: () => Promise<{ ok: boolean; token?: string; erro?: string }>;
   buscarModelosGratis: () => Promise<ModeloOR[]>;
   testarSeNarraAdulto: (modeloEspecifico?: string) => Promise<{ narra: boolean; recusou: boolean; amostra?: string; erro?: string; modelo?: string }>;
-  testarNarracaoReal: (modeloEspecifico?: string) => Promise<{ ok: boolean; amostra?: string; erro?: string; modelo?: string }>;
+  testarNarracaoReal: (modeloEspecifico?: string) => Promise<{ ok: boolean; amostra?: string; texto?: string; opcoes?: number; erro?: string; modelo?: string }>;
   tentarNarrarDeNovo: () => Promise<void>;
   desistirIaEUsarLocal: () => Promise<void>;
   exportarSave: () => Promise<void>;
@@ -1649,7 +1653,7 @@ export const useGame = create<GameState>((set, get) => ({
       }
     }
     if (res.texto) {
-      return { ok: true, amostra: res.texto.slice(0, 220), modelo: modeloAlvo };
+      return { ok: true, amostra: res.texto.slice(0, 220), texto: res.texto, opcoes: res.opcoes?.length, modelo: modeloAlvo };
     }
     return { ok: false, erro: res.erro ?? 'sem resposta', modelo: modeloAlvo };
   },
@@ -1866,6 +1870,12 @@ async function narrar(
   const avisos = consumirAvisos(camp);
   if (avisos.length) set({ feed: [...get().feed, ...avisos.map(a => nf(a.texto, 'eco'))] });
 
+  // Disse o próprio nome ("Sou Kael")? Quem está aqui passa a saber — antes
+  // do pacote ir para o narrador.
+  const presentesAntes = get().cena?.contexto.presentes ?? [];
+  const falaOuAcao = get().falaJogador ?? acaoLivre;
+  if (falaOuAcao && disseONome(falaOuAcao, camp.personagem.nome)) apresentar(camp, presentesAntes);
+
   const cena = montarCena(content, { ...camp });
   // Fala do jogador (aba Dizer): vale para esta narração, qualquer que tenha
   // sido o caminho da engine até aqui.
@@ -1954,8 +1964,15 @@ async function narrar(
   const cenaAtual = get().cena;
   if (res.texto) {
     const opcoesIA = montarOpcoesIA(res.opcoes, camp, `${camp.turno}_${feedSeq}`);
-    registrarNaCronica(camp, res.texto);
-    const extras: EntradaFeed[] = [nf(res.texto, 'narracao')];
+    // Quem não sabe o nome do jogador não o diz (engine/nomeDoJogador.ts). Se
+    // na cena ele mesmo disse o nome numa fala [você], aí os presentes sabem.
+    const presentes = cena.contexto.presentes;
+    const nomeJ = camp.personagem.nome;
+    const falasDele = res.texto.split('\n').filter((l) => /^\s*[—–-]\s*\[(você|voce)\]/i.test(l)).join(' ');
+    if (disseONome(falasDele, nomeJ)) apresentar(camp, presentes);
+    const textoFinal = protegerNome(res.texto, nomeJ, presentes.filter((n) => !sabeONome(camp, n)).map((n) => n.nome));
+    registrarNaCronica(camp, textoFinal);
+    const extras: EntradaFeed[] = [nf(textoFinal, 'narracao')];
     const achado = entregarAchado(content, camp, res.achado);
     if (achado) extras.push(achado);
     set({
