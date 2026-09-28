@@ -63,7 +63,9 @@ const dias = (c: Campaign, n: number, estacao?: Estacao) => {
 // ── 3. O terreno decide a economia ────────────────────────────────────────
 {
   const campo = fundada('campo_ceifa'), areia = fundada('ruina_areia');
-  for (const c of [campo, areia]) { c.feudo!.comida = 100; c.feudo!.populacao = 10; }
+  // A mesma planta nos dois: o painço do ermo existe justamente para encurtar
+  // essa diferença (engine/cultivos.ts), e aqui o assunto é o terreno.
+  for (const c of [campo, areia]) { c.feudo!.comida = 100; c.feudo!.populacao = 10; c.feudo!.cultivo = 'trigo'; }
   // Mede o que o TERRENO deu (roça + caça − consumo − tributo), pelo relatório
   // do dia: desde as etapas D e E, furto e ameaça também mexem no celeiro, e
   // este teste é sobre o terreno.

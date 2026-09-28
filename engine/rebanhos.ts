@@ -103,7 +103,7 @@ function rngDe(camp: Campaign, chave: string) {
  * O dia do rebanho. Chamado por `processarDiaColonia` depois do consumo das
  * pessoas: o celeiro alimenta gente primeiro, bicho depois.
  */
-export function processarRebanhos(camp: Campaign, s: SitioColonia, inverno: boolean): RelatorioRebanho {
+export function processarRebanhos(camp: Campaign, s: SitioColonia, inverno: boolean, forragem = 0): RelatorioRebanho {
   const f = camp.feudo!;
   const reb = rebanhoDe(f);
   const r: RelatorioRebanho = { comida: 0, ouro: 0, material: 0, feno: 0, nasceram: [], morreram: [] };
@@ -112,7 +112,8 @@ export function processarRebanhos(camp: Campaign, s: SitioColonia, inverno: bool
 
   // Comer: pasto primeiro, feno do celeiro no que faltar.
   const fome = fomeDoRebanho(f);
-  const faltaFeno = Math.max(0, fome - pastoDoDia(s, inverno));
+  // Nabo de forragem (engine/cultivos.ts) cobre parte do que faltaria.
+  const faltaFeno = Math.max(0, fome - pastoDoDia(s, inverno)) * (1 - Math.min(1, forragem));
   const feno = Math.min(f.comida, faltaFeno);
   f.comida -= feno;
   r.feno = feno;

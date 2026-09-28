@@ -32,6 +32,7 @@ import { processarAmeacas } from './ameacas';
 import { processarRenome, anunciarFundacao } from './renome';
 import { processarRebanhos, segurancaDosCavalos, type RelatorioRebanho } from './rebanhos';
 import { colonosFundadores, eficiencia, processarGente, type RelatorioGente } from './colonos';
+import { colheitaDoDia, cultivoAtual, replantando } from './cultivos';
 
 // ── O terreno em números ──────────────────────────────────────────────────
 
@@ -183,6 +184,8 @@ export function migrarColonia(content: ContentBundle, camp: Campaign): void {
 export type RelatorioDia = {
   lavoura: number; selvagem: number; consumo: number; materiais: number; renda: number;
   tributo: number; eventos: string[];
+  /** Planta da roça hoje. */
+  cultivo?: string;
   gente?: RelatorioGente;
   rebanho?: RelatorioRebanho;
 };
@@ -223,8 +226,18 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   // Cada ofício anda conforme quem cuida dele (engine/colonos.ts): sem
   // responsável, 60%.
   const ef = (o: Parameters<typeof eficiencia>[1]) => eficiencia(f, o);
-  const roca = (f.edificios.lavoura_silos ?? 0) * 8 * m.fatorLavoura * (inverno ? m.lavouraInverno : 1) * ef('lavoura');
+  const rocaTrigo = (f.edificios.lavoura_silos ?? 0) * 8 * m.fatorLavoura * (inverno ? m.lavouraInverno : 1) * ef('lavoura');
+  // A planta da roça (engine/cultivos.ts) muda a colheita e traz o que não é comida.
+  const colheita = colheitaDoDia(f, camp.calendario.dia, {
+    rocaTrigo, niveis: f.edificios.lavoura_silos ?? 0, fatorSolo: m.fatorLavoura, inverno, fatorInverno: m.lavouraInverno,
+  });
+  const roca = colheita.comida;
   r.lavoura = roca;
+  r.cultivo = cultivoAtual(f).nome;
+  if (replantando(f, camp.calendario.dia)) r.eventos.push(`A roça de ${cultivoAtual(f).nome.toLowerCase()} ainda está brotando.`);
+  f.tesouro += colheita.ouro;
+  f.remedios = Math.min(500, f.remedios + colheita.remedios);
+  f.estabilidade = Math.min(100, f.estabilidade + colheita.estabilidade);
   if (s.traco === 'trigo_do_marechal' && !f.acordos?.includes('tessel')) {
     r.tributo = roca * 0.2;
     const tessel = camp.vivo?.cidades.tessel;
@@ -236,7 +249,7 @@ export function processarDiaColonia(content: ContentBundle, camp: Campaign): Rel
   f.comida = Math.max(0, f.comida + r.lavoura - r.tributo + r.selvagem - r.consumo);
   // O rebanho come depois da gente (o celeiro alimenta pessoas primeiro) e
   // devolve ovo, leite, lã e tração (engine/rebanhos.ts).
-  r.rebanho = processarRebanhos(camp, s, inverno);
+  r.rebanho = processarRebanhos(camp, s, inverno, colheita.forragem);
   r.eventos.push(...r.rebanho.morreram);
   if (r.rebanho.nasceram.length) r.eventos.push(`Nasceram crias: ${r.rebanho.nasceram.join(', ')}.`);
   // O celeiro tem tamanho: o que passa dele estraga. Sem isto, ovo e leite

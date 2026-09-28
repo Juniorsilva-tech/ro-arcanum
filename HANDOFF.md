@@ -836,3 +836,17 @@ frente, quem recusou vai por último, e quem não foi testado fica no meio, na
 ordem de sempre. O teste adulto do narrador principal (Configurações) também
 grava veredito agora. Reservas sem modelo escolhido usam o modelo padrão do
 provedor como chave do veredito.
+
+Cultivos por sítio (resto da etapa C): `engine/cultivos.ts`. Cada sítio aceita
+as plantas da região (`CULTIVOS_POR_SITIO`) e cada uma faz uma coisa: trigo
+(cheio), centeio (não quebra no inverno), cevada (80% + estabilidade), linho e
+vinha (ouro), nabo (no inverno o rebanho come nabo e não o celeiro), ervas
+(remédio), painço (aguenta terra ruim), arroz (125%, só com água 3). Trocar
+de planta para a colheita por 10 dias. `processarDiaColonia` usa
+`colheitaDoDia`; `processarRebanhos` recebe a forragem. Aba "Roça" no
+assentamento (`ui/screens/RocaColonia.tsx`). Saves antigos: sem planta
+escolhida, a colônia usa a primeira do sítio — na Colina dos Forcados e na
+Clareira isso é centeio, que rende 85% no verão e mais no inverno. Teste
+`engine/cultivos.selftest.ts` (no `test:engine`); o teste de terreno da
+colônia agora compara os dois sítios com trigo, porque o painço existe
+justamente para encurtar a diferença do ermo.

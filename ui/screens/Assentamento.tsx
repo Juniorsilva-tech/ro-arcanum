@@ -9,6 +9,7 @@ import { useGame } from '../store';
 import { FundacaoColonia, SitioDaColonia } from './Colonia';
 import { GenteDaColonia } from './GenteColonia';
 import { RebanhoDaColonia } from './RebanhoColonia';
+import { RocaDaColonia } from './RocaColonia';
 import { AmeacaDaColonia } from './AmeacaColonia';
 import {
   obterFeudo,
@@ -73,7 +74,7 @@ export function imagemDoLocal(localId?: string, regiao?: string): any {
   return IMAGENS_FEUDO.aldeia;
 }
 
-export type AbaAssentamento = 'geral' | 'gente' | 'rebanho' | 'trono' | 'quartel' | 'linhagem' | 'vassalos' | 'intrigas' | 'distritos' | 'rotas' | 'asora' | 'mapa';
+export type AbaAssentamento = 'geral' | 'gente' | 'roca' | 'rebanho' | 'trono' | 'quartel' | 'linhagem' | 'vassalos' | 'intrigas' | 'distritos' | 'rotas' | 'asora' | 'mapa';
 
 export function Assentamento() {
   const camp = useGame((s) => s.camp);
@@ -200,6 +201,12 @@ export function Assentamento() {
               <Text style={[styles.abaTxt, abaAtiva === 'gente' && styles.abaTxtAtiva]}>Gente</Text>
             </Pressable>
             <Pressable
+              onPress={() => setAbaAtiva('roca')}
+              style={[styles.abaItem, abaAtiva === 'roca' && styles.abaItemAtiva]}
+            >
+              <Text style={[styles.abaTxt, abaAtiva === 'roca' && styles.abaTxtAtiva]}>Roça</Text>
+            </Pressable>
+            <Pressable
               onPress={() => setAbaAtiva('rebanho')}
               style={[styles.abaItem, abaAtiva === 'rebanho' && styles.abaItemAtiva]}
             >
@@ -265,6 +272,7 @@ export function Assentamento() {
 
           {/* ABA GERAL: Visão Geral de Recursos, Soberania e Canteiro Ativo */}
           {abaAtiva === 'gente' && <GenteDaColonia />}
+          {abaAtiva === 'roca' && <RocaDaColonia />}
           {abaAtiva === 'rebanho' && <RebanhoDaColonia />}
 
           {abaAtiva === 'geral' && (

@@ -306,6 +306,7 @@ interface GameState {
   decidirAssembleiaAcao: (entrada: string | import('@/engine').Preparacao[]) => Promise<string>;
   comprarAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   abaterAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
+  plantarCultivoAcao: (id: import('@/engine').CultivoId) => Promise<string>;
   recusarChegadaAcao: (id: string) => Promise<string>;
   designarFuncaoAcao: (colonoId: string, oficio?: import('@/engine').OficioColonia) => Promise<string>;
   iniciarObraFeudoAcao: (tipo: TipoEdificioModular) => Promise<string>;
@@ -778,6 +779,16 @@ export const useGame = create<GameState>((set, get) => ({
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;
+  },
+
+  async plantarCultivoAcao(id) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const { plantar } = await import('@/engine');
+    const r = plantar(content, camp, id);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')] });
+    await persistir(camp, set);
+    return r.texto;
   },
 
   async aceitarChegadaAcao(id) {

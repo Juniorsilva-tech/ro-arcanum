@@ -1176,6 +1176,9 @@ export type CasaDinastica = {
 
 export type FeudoState = {
   fundado: boolean;
+  // Planta da roça (engine/cultivos.ts) e até que dia ela ainda está brotando.
+  cultivo?: string;
+  replantioAte?: number;
   nome: string;
   localId: string;
   bioma: BiomaFeudo;
