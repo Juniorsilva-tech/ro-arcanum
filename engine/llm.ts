@@ -1674,7 +1674,7 @@ export function resolverApiKey(cfg: LlmConfig): string {
     if (c && !jwtExpirado(c, 60)) {
       return c;
     }
-    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
+    const envKey = (typeof process !== 'undefined' && process.env?.NOUS_API_KEY_LOCAL) || '';
     if (envKey.trim() && !jwtExpirado(envKey.trim(), 60)) {
       return envKey.trim();
     }

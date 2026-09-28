@@ -365,7 +365,7 @@ export const HISTORIAS_COSTA: Record<string, HistoriaNpc> = {
   morador_ponta_areia_4: {
     origem: 'Pastora de cabras na duna, dorme fora com o rebanho e vê o que passa pela praia de noite.',
     ferida: 'Viu o que descarregaram na praia numa noite de lua nova, e desde então tem medo de contar.',
-    desejo: 'Um lugar onde as cabras não comam sal.',
+    desejo: 'Um pasto longe da praia, onde as cabras não comam sal.',
     medo: 'Que alguém da torre de Forrarborg saiba que ela viu.',
   },
 };

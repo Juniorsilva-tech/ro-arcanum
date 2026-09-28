@@ -399,7 +399,7 @@ function chaveEfetiva(cfg: ConfigApp): string | undefined {
     const bridgeToken = obterTokenNousAtual();
     if (bridgeToken && !jwtExpirado(bridgeToken, 60)) return bridgeToken;
     if (manual && !jwtExpirado(manual, 60)) return manual;
-    const envKey = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) || '';
+    const envKey = (typeof process !== 'undefined' && process.env?.NOUS_API_KEY_LOCAL) || '';
     if (envKey.trim() && !jwtExpirado(envKey.trim(), 60)) return envKey.trim();
     return bridgeToken || manual || envKey.trim() || undefined;
   } else if (manual) {

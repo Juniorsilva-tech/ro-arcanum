@@ -80,7 +80,7 @@ function syncHermes() {
     return;
   }
 
-  const envContent = `# Gerado automaticamente por scripts/sync_hermes.ts\nEXPO_PUBLIC_NOUS_API_KEY=${token}\n`;
+  const envContent = `# Gerado automaticamente por scripts/sync_hermes.ts\nNOUS_API_KEY_LOCAL=${token}\n`;
   const envPath = path.join(process.cwd(), '.env.local');
   fs.writeFileSync(envPath, envContent, 'utf8');
 

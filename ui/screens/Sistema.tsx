@@ -257,7 +257,7 @@ export function Config() {
   const ehOR = provider === 'openrouter';
   const ehNous = provider === 'nous';
 
-  const tokenHermes = (ehNous ? obterTokenNousAtual() : undefined) || (typeof process !== 'undefined' ? process.env?.EXPO_PUBLIC_NOUS_API_KEY : undefined);
+  const tokenHermes = (ehNous ? obterTokenNousAtual() : undefined) || (typeof process !== 'undefined' ? process.env?.NOUS_API_KEY_LOCAL : undefined);
   const tokenHermesValido = !!(tokenHermes && !jwtExpirado(tokenHermes, 60));
   const temChaveEfetiva = !!((config.apiKey && !jwtExpirado(config.apiKey, 60)) || (ehNous && tokenHermesValido));
 

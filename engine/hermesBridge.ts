@@ -16,8 +16,8 @@ let refreshEmAndamento: Promise<string | null> | null = null;
 let monitorIniciado = false;
 
 // Inicialização síncrona se a variável de ambiente estiver definida
-if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) {
-  tokenAtual = process.env.EXPO_PUBLIC_NOUS_API_KEY.trim();
+if (typeof process !== 'undefined' && process.env?.NOUS_API_KEY_LOCAL) {
+  tokenAtual = process.env.NOUS_API_KEY_LOCAL.trim();
 }
 
 function decodificarBase64Url(b64url: string): string {
@@ -99,7 +99,7 @@ export function obterTokenNousAtual(): string {
       // 3. .env.local do projeto
       const envLocal = path.join(process.cwd(), '.env.local');
       if (fs.existsSync(envLocal)) {
-        const m = fs.readFileSync(envLocal, 'utf-8').match(/EXPO_PUBLIC_NOUS_API_KEY=(.+)/);
+        const m = fs.readFileSync(envLocal, 'utf-8').match(/(?:NOUS_API_KEY_LOCAL|EXPO_PUBLIC_NOUS_API_KEY)=(.+)/);
         const val = m?.[1]?.trim();
         if (val && !jwtExpirado(val, 60)) {
           definirTokenNous(val);
@@ -111,8 +111,8 @@ export function obterTokenNousAtual(): string {
     }
   }
 
-  if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NOUS_API_KEY) {
-    const envKey = process.env.EXPO_PUBLIC_NOUS_API_KEY.trim();
+  if (typeof process !== 'undefined' && process.env?.NOUS_API_KEY_LOCAL) {
+    const envKey = process.env.NOUS_API_KEY_LOCAL.trim();
     if (envKey && !jwtExpirado(envKey, 60)) {
       tokenAtual = envKey;
       return envKey;
@@ -269,7 +269,7 @@ export async function renovarTokenNous(forcar = true): Promise<string | null> {
             definirTokenNous(tokenEncontrado, expEncontrado);
             try {
               const envLocal = path.join(process.cwd(), '.env.local');
-              fs.writeFileSync(envLocal, `EXPO_PUBLIC_NOUS_API_KEY=${tokenEncontrado}\n`, 'utf-8');
+              fs.writeFileSync(envLocal, `NOUS_API_KEY_LOCAL=${tokenEncontrado}\n`, 'utf-8');
             } catch {}
             return tokenEncontrado;
           }

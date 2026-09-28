@@ -979,3 +979,30 @@ Achados que ficaram para o dono decidir:
 - `npm run typecheck`: 0 erros.
 - `npm run test:engine`: 100% aprovado em 394.3s (todos os testes de sistemas, reflexão cognitiva, cosmologia, intimidade e simulação de 6 campanhas × 10 anos sem violações de invariantes).
 
+
+---
+
+## Sessão 87 — Claude — token da Nous vazava para dentro do build
+
+Revisão das sessões 85–86 do Gemini (checkpoint `330114c`). Achado de
+segurança: o token da Nous vivia em `.env.local` como
+`EXPO_PUBLIC_NOUS_API_KEY`, e o cliente lia essa variável (`llm.ts`,
+`store.ts`, `Sistema.tsx`, `hermesBridge.ts`). O Expo **embute no JavaScript**
+toda variável `EXPO_PUBLIC_*` que o código cliente usa: o `expo export` web
+gerado nesta máquina tinha o JWT dentro do bundle. Qualquer APK ou build web
+feito aqui levaria o token do dono junto.
+
+Correção: a variável virou `NOUS_API_KEY_LOCAL` (sem o prefixo, o Expo não
+embute). Quem grava `.env.local` (`scripts/sync_hermes.ts`, `metro.config.js`,
+`hermesBridge.ts`) grava o nome novo; o leitor de arquivo do bridge aceita o
+antigo e o novo. No navegador o token continua chegando pela rota
+`/api/hermes/token` do Metro. Conferido: `expo export --clear` sem nenhum JWT
+no bundle. O build antigo, que tinha o token, foi apagado.
+
+Também para o dono decidir: o jogo agora escreve em
+`%LOCALAPPDATA%\hermes\auth.json` (espelha a credencial de
+`shared/nous_auth.json`, sessão 85). Mexer no arquivo de credenciais de outro
+programa pode quebrar o Hermes se o formato mudar.
+
+Outro: `historias-costa.ts` — desejo de uma moradora nova tinha 38
+caracteres (o teste pede 40+); o `test:engine` da sessão 84 falhou por isso.

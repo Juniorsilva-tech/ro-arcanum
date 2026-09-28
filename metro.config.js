@@ -78,7 +78,7 @@ function getHermesTokenInfo(forceRefresh = false) {
       if (token) {
         const envLocalPath = path.join(__dirname, '.env.local');
         try {
-          fs.writeFileSync(envLocalPath, `EXPO_PUBLIC_NOUS_API_KEY=${token}\n`, 'utf-8');
+          fs.writeFileSync(envLocalPath, `NOUS_API_KEY_LOCAL=${token}\n`, 'utf-8');
         } catch {}
         return {
           ok: true,
@@ -106,7 +106,7 @@ function getHermesTokenInfo(forceRefresh = false) {
       if (token) {
         const envLocalPath = path.join(__dirname, '.env.local');
         try {
-          fs.writeFileSync(envLocalPath, `EXPO_PUBLIC_NOUS_API_KEY=${token}\n`, 'utf-8');
+          fs.writeFileSync(envLocalPath, `NOUS_API_KEY_LOCAL=${token}\n`, 'utf-8');
         } catch {}
 
         return {
