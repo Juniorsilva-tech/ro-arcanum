@@ -12,6 +12,7 @@ import {
 import type { Campaign, ContentBundle } from '@/engine/types';
 import { posicaoMapa, CAPITAIS_CONTINENTE, COORDENADAS_LOCAIS } from '@/content/vaelhorn/mapa';
 import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
+import { MARCOS_PINTADOS, nomesAntigosDe, type MarcoPintado } from '@/content/vaelhorn/marcosMapa';
 import { cores, fontes, esp } from '../theme';
 import { rotasVisiveis, estadosDaSecao } from '@/engine';
 
@@ -50,6 +51,7 @@ export function MapaVisual({
   const [modoVisao, setModoVisao] = useState<'geral' | 'local'>('geral');
   const [feedbackViagem, setFeedbackViagem] = useState<string | null>(null);
   const [lugarInspecionado, setLugarInspecionado] = useState<MarcadorMapa | null>(null);
+  const [lendaAberta, setLendaAberta] = useState<MarcoPintado | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(0.85);
   const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 });
@@ -258,6 +260,11 @@ export function MapaVisual({
   // O mapa mostra o que o Livro conhece: lugar desconhecido não aparece, e o
   // escondido só depois de descoberto. As cidades pintadas são, no mínimo, boato.
   const camadasLugar = estadosDaSecao(content, camp, 'lugares', content.locais.map((l) => l.id));
+  // Símbolos pintados (dragão, serpentes, estandartes…): a lenda aparece
+  // quando o jogador já ouviu falar do lugar a que ela se prende.
+  const lendasVisiveis = ehTsukimichi
+    ? []
+    : MARCOS_PINTADOS.filter((m) => m.tipo === 'lenda' && m.localId && (camadasLugar[m.localId] ?? 'desconhecida') !== 'desconhecida');
   const marcadores: MarcadorMapa[] = (() => {
     const lista = new Map<string, MarcadorMapa>();
     const montar = (id: string, extra: Partial<MarcadorMapa> = {}): MarcadorMapa | undefined => {
@@ -401,6 +408,7 @@ export function MapaVisual({
                 onHoverOut={() => setFoco((f) => (f === m.id ? null : f))}
                 onPress={() => {
                   if (arrastou.current) return;
+                  setLendaAberta(null);
                   setLugarInspecionado(m);
                   setFoco(m.id);
                 }}
@@ -443,6 +451,33 @@ export function MapaVisual({
               </Pressable>
             );
           })}
+          {lendasVisiveis.map((l) => {
+            const focado = foco === l.id;
+            return (
+              <Pressable
+                key={l.id}
+                onHoverIn={() => setFoco(l.id)}
+                onHoverOut={() => setFoco((f) => (f === l.id ? null : f))}
+                onPress={() => {
+                  if (arrastou.current) return;
+                  setLugarInspecionado(null);
+                  setLendaAberta(l);
+                  setFoco(l.id);
+                }}
+                style={[styles.areaPintada, { left: `${l.x}%`, top: `${l.y}%` }]}
+                accessibilityRole="button"
+                accessibilityLabel={`Lenda: ${l.nome}`}
+              >
+                {(focado || lendaAberta?.id === l.id) && <View style={styles.contornoPintado} />}
+                {focado && (
+                  <View style={styles.rotulo} pointerEvents="box-none">
+                    <Text numberOfLines={1} style={styles.rotuloNome}>{l.nome}</Text>
+                    <Text style={styles.rotuloInspecionar}>lenda · toque para ler</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Bússola Decorativa fixa no canto superior esquerdo do viewport */}
@@ -475,6 +510,36 @@ export function MapaVisual({
         </View>
       </View>
 
+      {/* Lenda de um símbolo pintado no mapa */}
+      {lendaAberta && (
+        <View style={styles.cardCronica}>
+          <View style={styles.cronicaCabecalho}>
+            <View style={styles.cronicaTituloBox}>
+              <Text style={styles.cronicaIcone}>🐉</Text>
+              <View style={styles.cronicaTitulos}>
+                <Text style={styles.cronicaNome}>{lendaAberta.nome}</Text>
+                <Text style={styles.cronicaRegiao}>{lendaAberta.regiao} · pintado no mapa dos cartógrafos</Text>
+              </View>
+            </View>
+            <Pressable onPress={() => setLendaAberta(null)} style={styles.cronicaFecharBtn} accessibilityLabel="Fechar lenda" hitSlop={10}>
+              <Text style={styles.cronicaFecharTxt}>✕</Text>
+            </Pressable>
+          </View>
+          <View style={styles.cronicaCorpo}>
+            <View style={styles.cronicaBloco}>
+              <Text style={styles.cronicaBlocoTexto}>{lendaAberta.lenda}</Text>
+            </View>
+            <View style={styles.cronicaBloco}>
+              <View style={styles.cronicaBlocoHeader}>
+                <Text style={styles.cronicaBlocoIcone}>🕯️</Text>
+                <Text style={styles.cronicaBlocoTitulo}>O que o povo diz</Text>
+              </View>
+              <Text style={styles.cronicaBlocoTexto}>“{lendaAberta.boato}”</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Crônica Cósmica e Histórica do Lugar Inspecionado */}
       {lugarInspecionado && (
         <View style={styles.cardCronica}>
@@ -487,6 +552,9 @@ export function MapaVisual({
                   {lugarInspecionado.regiao ?? 'Continente de Vaelhorn'}
                   {lugarInspecionado.sub ? ` · ${lugarInspecionado.sub}` : ''}
                 </Text>
+                {nomesAntigosDe(lugarInspecionado.id).map((n) => (
+                  <Text key={n.id} style={styles.cronicaRegiao}>no mapa velho: {n.nome} — {n.lenda}</Text>
+                ))}
               </View>
             </View>
             <Pressable

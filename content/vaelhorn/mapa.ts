@@ -64,6 +64,9 @@ export const COORDENADAS_LOCAIS: Record<string, PosicaoMapa> = {
   aldeia_rede: { x: 81, y: 76 },
   estrada_costeira: { x: 65, y: 79 },
   mercado_peixe: { x: 71, y: 78 },
+  // Pintados no mapa: a torre de Forrarborg Aelha e a língua de areia.
+  forrarborg: { x: 50, y: 88 },
+  ponta_areia: { x: 58.5, y: 95 },
 
   // ── Halvern e os Baixios ─────────────────────────────────────────
   // Os Baixios ficam a oeste, no Rio-Verde: pelas rotas, o Juncal só se liga

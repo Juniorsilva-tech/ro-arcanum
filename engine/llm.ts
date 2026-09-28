@@ -38,6 +38,7 @@ import {
   avaliarReacaoHumanosPresenca,
 } from './tsukimichi';
 import { CRONICAS_MAPA } from '@/content/vaelhorn/cosmologia';
+import { nomesAntigosDe, lendasPerto } from '@/content/vaelhorn/marcosMapa';
 import { menoresNaCena, restricaoDeMenores } from './protecao';
 
 export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
@@ -698,6 +699,13 @@ export function montarPacote(
             supersticao: CRONICAS_MAPA[ctx.local.id].supersticaoPopular,
           }
         : undefined,
+      // O mapa dos cartógrafos (content/vaelhorn/marcosMapa.ts): o nome que ele
+      // pinta para este lugar e o que o povo daqui conta dos símbolos perto.
+      mapaVelho: (() => {
+        const nomes = nomesAntigosDe(ctx.local.id).map((m) => m.nome);
+        const lendas = lendasPerto(ctx.local.id, ctx.local.regiao).map((m) => ({ nome: m.nome, boato: m.boato }));
+        return nomes.length || lendas.length ? { nomesAntigos: nomes.length ? nomes : undefined, lendas: lendas.length ? lendas : undefined } : undefined;
+      })(),
     },
     quando: {
       data: dataPorExtenso(camp.calendario, content.cenario.ancoraCalendario),
@@ -1020,6 +1028,7 @@ export const INSTRUCAO_SISTEMA =
   'O humor dita a atitude corporal, o tom da fala e a receptividade do NPC à cena (ex: luto por perda recente na família, pavor por perigo, tensão defensiva, acolhimento ou gratidão sincera). ' +
   'As camadas de intimidade mostram o quanto o protagonista já conquistou a confiança daquela alma. Quando o jogador conversar a sós, confortar um luto ou apoiar o anseio pessoal de vida (desejoApoiado), narre o impacto emocional tangível, a quebra de defesas e a lealdade incondicional despertada.\n' +
   '2e) FÉ, LENDAS E O TABU DA INVEJOSA: "local.cronica" traz o que o povo deste lugar acredita — deuses mortos cujo sangue seria o mana, as Sete Pecadoras que a Ordem dos Santos do Selo queimou há 400 anos, a Invejosa (Satella) que teria devorado as outras. Use a crônica só quando a cena pedir — chegada, conversa sobre o lugar, reza, medo —, nunca no meio da ação, e em uma frase. Isso é CRENÇA, não fato: narre como gente que acredita, reza, benze a boca e tem medo, nunca como coisa confirmada, e nunca faça deus ou bruxa aparecer por conta própria. O mundo é medieval e pé no chão: fome, dízimo, Tributo de Sangue, inquisição. O nome da Invejosa é tabu (quem ouve se benze); falar do Culto da Bruxa dá pânico; a Ordem pune heresia com ferro e fogo.\n' +
+  '2e2) "local.mapaVelho" traz o nome que o mapa dos cartógrafos pinta para este lugar ("nomesAntigos") e as lendas dos símbolos pintados por perto ("lendas", com um "boato" de boca de povo). Mesma regra da crônica: crença, não fato, uma frase, só quando a cena pedir; um velho pode usar o nome antigo.\n' +
   '2f) RAÍZES VIVAS E MEMÓRIA DE SANGUE: "origemEFamilia" traz o prestígio da casa, patrimônio e as "marcasDaInfancia" que moldaram o protagonista. Se familiares estiverem presentes, use a intimidade orgânica de quem dividiu teto, dificuldades e feridas: pais olham com o peso do tempo e do orgulho contido; irmãos lembram de sacrifícios mútuos ("lembraDeVoce"). Não narre a família como estranhos de balcão.\n' +
   '2g) FISICALIDADE CRUA E REALISMO DE FRONTEIRA: O mundo tem peso, cheiro, sujeira e textura. Descreva o ranger de tábuas velhas, o ferro enferrujado que range, o suor frio nas costas, a poeira que gruda nos lábios secos, o baque surdo de um golpe no escudo, a fumaça de turfa que arde nos olhos. Evite abstrações e conceitos etéreos: mostre a matéria e os corpos agindo.\n' +
   '3) Se citar um objeto que o jogador ganha, use EXATAMENTE um nome de ' +
@@ -1420,8 +1429,11 @@ export function montarMensagemNarracao(
   // perseguição ("o poço de sangue que a taverna construiu sobre o gigante de
   // Vandul"). Em cena de luta, emboscada ou perseguição, a crônica fica fora.
   const perseguicao = /rastro|perseguir|seguir|fugir|correr|laço|armadilha/i.test(textoTotal);
-  const pacoteLocal = (pacote as { local?: { cronica?: unknown } }).local;
-  if ((ehCombate || perseguicao) && pacoteLocal) delete pacoteLocal.cronica;
+  const pacoteLocal = (pacote as { local?: { cronica?: unknown; mapaVelho?: unknown } }).local;
+  if ((ehCombate || perseguicao) && pacoteLocal) {
+    delete pacoteLocal.cronica;
+    delete pacoteLocal.mapaVelho;
+  }
 
   // Menores em cena: a engine tira a descrição do corpo deles do pacote e
   // proíbe qualquer teor sexual, independente do que o modelo faria.

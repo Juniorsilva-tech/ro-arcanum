@@ -337,4 +337,35 @@ export const HISTORIAS_COSTA: Record<string, HistoriaNpc> = {
     desejo: 'Uma lâmina dela na mão de um Hashira, com o nome dela na espiga.',
     medo: 'Morrer aprendiz.',
   },
+  // Ponta da Areia (lugar pintado no mapa, sessão 84).
+  morador_ponta_areia_0: {
+    origem: 'Nasceu numa cabana que o mar já levou; é a mais velha da Ponta e conta o tempo pelas casas que a areia engoliu.',
+    ferida: 'Perdeu o marido e dois filhos num barco que saiu na maré errada, porque ela disse que dava.',
+    desejo: 'Que ninguém mais saia ao mar sem antes perguntar a ela.',
+    medo: 'Esquecer os nomes das cabanas que já se foram.',
+  },
+  morador_ponta_areia_1: {
+    origem: 'Veio do Vale para plantar numa terra de areia, e planta assim mesmo: nabo e cebola em cova de alga.',
+    ferida: 'O senhor das terras do Vale tomou o campo da família por dívida de dízimo.',
+    desejo: 'Uma horta que não precise pedir licença a ninguém.',
+    medo: 'Cobrador com selo da Coroa descendo a duna.',
+  },
+  morador_ponta_areia_2: {
+    origem: 'Benzedeira de rede e de gente; a Ponta a chama antes de chamar padre, e o padre sabe.',
+    ferida: 'Benzeu um menino afogado que não voltou, e a mãe dele ainda não fala com ela.',
+    desejo: 'Que a Ordem continue sem saber o nome dela.',
+    medo: 'A maré mais baixa do ano, quando os ossos aparecem nas pedras.',
+  },
+  morador_ponta_areia_3: {
+    origem: 'Some por dias no mar e volta com peixe demais para quem mal sai do raso.',
+    ferida: 'Foi degredada nas salinas quando moça e ainda tem o sal nas rachaduras das mãos.',
+    desejo: 'Juntar o bastante para comprar o nome da família de volta no livro do Porto do Sal.',
+    medo: 'Que a luz do barco sem bandeira pare de responder.',
+  },
+  morador_ponta_areia_4: {
+    origem: 'Pastora de cabras na duna, dorme fora com o rebanho e vê o que passa pela praia de noite.',
+    ferida: 'Viu o que descarregaram na praia numa noite de lua nova, e desde então tem medo de contar.',
+    desejo: 'Um lugar onde as cabras não comam sal.',
+    medo: 'Que alguém da torre de Forrarborg saiba que ela viu.',
+  },
 };

@@ -277,6 +277,40 @@ const MAREU: Def[] = [
       'Houve anos em que uma luz falsa foi acesa ali de propósito, para atrair navio até a pedra. Nunca se provou quem.',
     ],
   },
+  // Pintados no mapa dos cartógrafos (assets/feudo/mapa_continente.jpg) e que
+  // o jogo não tinha: a torre de Forrarborg Aelha e a Ponta da Areia.
+  {
+    id: 'forrarborg', nome: 'Forrarborg Aelha', regiao: 'Costa de Mareu', tipo: 'torre', perigo: 5,
+    descricao: 'Uma torre redonda de pedra escura no último morro antes das dunas, com o topo aberto e uma escada que falta degrau. Dali se vê o Deserto dos Crânios de um lado e o mar do outro.',
+    atmosfera: [
+      'O vento do deserto bate de um lado e o do mar do outro; no alto da torre os dois se encontram e assobiam.',
+      'O sol se põe sobre as dunas e a torre fica vermelha como brasa por um instante.',
+      'Alguém acende fogo no topo em noites sem lua. Ninguém admite que é ele.',
+    ],
+    privacidade: [2, 3],
+    ganchos: ['A fogueira do topo foi acesa de novo, e um barco respondeu com lanterna', 'Um caravaneiro jura ter visto a torre de pé onde hoje há só entulho'],
+    pontos: ['escada sem degrau', 'topo aberto', 'cisterna rachada', 'marcas de fogueira'],
+    historia: [
+      'Forrarborg foi a torre de vigia que avisava Mareu das caravanas que desciam de Solgar. "Aelha" é o nome antigo da colina, na fala de antes da Coroa.',
+      'Quando a Coroa tirou a guarnição, os contrabandistas ficaram com a torre. A fogueira do topo ainda fala com os barcos, só que agora em código.',
+    ],
+  },
+  {
+    id: 'ponta_areia', nome: 'Ponta da Areia', regiao: 'Costa de Mareu', tipo: 'aldeia', perigo: 4,
+    descricao: 'Uma língua de areia que entra no mar, com meia dúzia de cabanas de palha e barcos puxados para a duna. Na maré baixa dá para ir a pé até as pedras de fora.',
+    atmosfera: [
+      'Gente remendando rede na sombra dos barcos virados; as crianças catam caranguejo nas poças.',
+      'A maré vira e a ponta encolhe; quem está nas pedras de fora corre de volta.',
+      'As cabanas apagam cedo. Só a luz de um barco sem bandeira fica acesa ao largo.',
+    ],
+    privacidade: [1, 3],
+    ganchos: ['A maré baixa descobriu o casco de um navio que ninguém lembra de ter afundado', 'Um pescador vende peixe demais para quem mal sai ao mar'],
+    pontos: ['cabanas de palha', 'pedras de fora', 'barcos na duna', 'poças da maré'],
+    historia: [
+      'A Ponta foi desembarque de sal antes do Porto do Sal ter ancoradouro. O que não pagava imposto em Mareu entrava por aqui, e ainda entra.',
+      'Dizem que a areia da ponta anda: um palmo por ano, para o sul. Os velhos contam o tempo pelas cabanas que o mar já levou.',
+    ],
+  },
 ];
 
 // ── Bosque de Vintra ──────────────────────────────────────────────────────
@@ -683,6 +717,10 @@ const ARESTAS: Aresta[] = [
   ['estrada_costeira', 'aldeia_rede', 1, 3],
   ['estrada_costeira', 'farol_quebrado', 1, 6],
   ['porto_sal', 'aldeia_rede', 1, 4],
+  ['porto_sal', 'ponta_areia', 1, 4],
+  ['ponta_areia', 'forrarborg', 1, 5],
+  ['forrarborg', 'porto_sal', 1, 5],
+  ['forrarborg', 'corveira', 1, 6],
 
   // Bosque de Vintra
   ['vintra', 'aldeia_carvoeira', 1, 5],

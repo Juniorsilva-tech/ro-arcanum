@@ -850,3 +850,25 @@ Clareira isso é centeio, que rende 85% no verão e mais no inverno. Teste
 `engine/cultivos.selftest.ts` (no `test:engine`); o teste de terreno da
 colônia agora compara os dois sítios com trigo, porque o painço existe
 justamente para encurtar a diferença do ermo.
+
+Mapa dos cartógrafos no jogo. A imagem (`assets/feudo/mapa_continente.jpg`)
+foi lida símbolo por símbolo:
+- Dois lugares pintados que o jogo não tinha viraram lugares de verdade, com
+  estrada, crônica, moradores, histórias e segredos autorais: **Forrarborg
+  Aelha** (a torre no último morro antes das dunas, hoje dos contrabandistas;
+  liga Porto do Sal, Ponta da Areia e Corveira) e **Ponta da Areia** (a
+  língua de areia do sal sem selo). 55 lugares agora.
+- `content/vaelhorn/marcosMapa.ts`: 13 nomes antigos pintados (Tesselgarde,
+  Gelo-Fortis, Vintraborg, Clareira Negra, Sombraltrar, Pedra-Alta,
+  Corveiraborg, Mina de Ferro, Mina de Prata, Solgar Capital, Halvetia,
+  Mareuborg, Enseada Velha) ligados aos lugares do jogo, e 17 lendas dos
+  símbolos (dragão do bosque, as duas serpentes, redemoinho, naufrágio do
+  Tributo, as velas do Oceanus, os três estandartes, a Ponte-Velha, os campos
+  do Rio-Verde, o castelo da serra, a boca na serra, Petra-Áurea, o oásis, o
+  Deserto dos Crânios).
+- Mapa: tocar num símbolo pintado abre a lenda e "o que o povo diz"; a lenda
+  só aparece quando o lugar a que ela se prende já é conhecido no Livro. O
+  cartão de um lugar mostra "no mapa velho: …".
+- Narrador: `local.mapaVelho` (nome antigo + até duas lendas de perto), regra
+  2e2 no prompt (crença, uma frase); sai do pacote em luta e perseguição.
+- Teste `engine/marcosMapa.selftest.ts` (no `test:engine`).
