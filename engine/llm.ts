@@ -342,7 +342,6 @@ export const MODELOS_PARA_CENA_ADULTA: { id: string; nota: string; pago: boolean
   { id: 'inclusionai/ling-3.0-flash-sante:free', nota: 'Nous grátis: rápido (~15s), narra adulto sem recusa e gera boas opções', pago: false },
   { id: 'stealth/space-bunny-alpha', nota: 'Nous grátis: sem censura mas MUITO LENTO (~90s), pode dar timeout na tela', pago: false },
   { id: 'stepfun/step-3.7-flash:free', nota: 'Nous grátis: rápido (2-3s), ágil para turnos dinâmicos', pago: false },
-  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', nota: 'Nous grátis, o maior: melhor prosa da lista sem pagar', pago: false },
   { id: 'nousresearch/deephermes-3-llama-3-8b-preview:free', nota: 'Nous grátis, pequeno e rápido; cena curta', pago: false },
   { id: 'nousresearch/deephermes-3-mistral-24b-preview:free', nota: 'Nous grátis, meio-termo: aguenta diálogo', pago: false },
 
@@ -602,6 +601,18 @@ async function listarModelosCompat(p: ProvedorCompat, apiKey: string): Promise<M
   }
 }
 
+/** Crimes públicos do jogador na região, nos últimos 60 dias (mais recentes primeiro, até 3). */
+function crimesPublicosNaRegiao(content: ContentBundle, camp: Campaign, localId: string): string[] {
+  const regiao = content.locais.find((l) => l.id === localId)?.regiao;
+  const hoje = camp.calendario.dia;
+  return (camp.vivo?.fatos ?? [])
+    .filter((f) => f.publico && f.atores.includes('jogador') && (f.tipo === 'assassinato' || f.tipo === 'briga') &&
+      hoje - f.dia <= 60 && content.locais.find((l) => l.id === f.local)?.regiao === regiao)
+    .slice(-3)
+    .reverse()
+    .map((f) => (f.dia === hoje ? 'hoje: ' : `há ${hoje - f.dia} dias: `) + f.texto);
+}
+
 // Pacote de contexto de tamanho ~constante (GDD §18.1).
 // Além do estado, ele carrega o VOCABULÁRIO do jogo: os nomes exatos de itens,
 // criaturas e pessoas que o modelo tem permissão de citar. Nada fora daqui.
@@ -762,6 +773,7 @@ export function montarPacote(
     // repete, e o que dá ao vale história própria.
     boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
     presentes: ctx.presentes.map((n) => {
+      const crimesConhecidos = crimesPublicosNaRegiao(content, camp, ctx.local.id);
       const hum = calcularHumorNpc(camp, content, n);
       const intimi = obterIntimidadeNpc(camp, n);
       return {
@@ -794,6 +806,10 @@ export function montarPacote(
       sabeSeuNome: sabeONome(camp, n),
       lembraDeVoce: memoriaParaNarrador(camp, n.id, 4),
       conviccoesSobreVoce: conviccoesDoNpc(camp, n.id).map(c => c.texto),
+      // Sangue derramado em público corre a região (engine/briga.ts): quem
+      // está aqui sabe. Sem isto, a guarda cumprimentava o assassino da
+      // taverna ao lado como "o forasteiro que apareceu ontem".
+      sabeDoQueVoceFez: crimesConhecidos.length ? crimesConhecidos : undefined,
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
       // não foi descoberto não entra no pacote — não se entrega de graça.
       segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
@@ -1088,6 +1104,7 @@ export const INSTRUCAO_SISTEMA =
   'Narre o desejo e a entrega física com paixão e sem moralismo.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens envolvidos em qualquer cena de teor erótico ou sensual são estritamente adultos (18+). Jamais sexualize menores em nenhuma hipótese. Respeite as idades registradas no pacote.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
+  '• "sabeDoQueVoceFez" (num presente) é sangue que você derramou em público por aqui, e essa pessoa SABE. Ela reage a isso antes de qualquer outra coisa: guarda tenta prender ou chama reforço, gente comum recua, cala ou foge, parente de vítima odeia. Ninguém trata você como um estranho qualquer.\n' +
   '• Cada presente traz "lembraDeVoce" e "conheceHaDias". USE. Quem já foi ' +
   'traída não recebe você como estranha, e quem você ajudou lembra disso.\n' +
   '• "jaAconteceu" é a história desta campanha. Cite o que couber — uma frase de ' +

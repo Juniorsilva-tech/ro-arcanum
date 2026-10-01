@@ -883,3 +883,67 @@ Pendente observado: pai, mãe e irmãos têm `vozNarrativa`, `personalidade` e
 `corpo` genéricos (`engine/familia.ts`, `npcDeParente`) — "Fala com a
 intimidade e a memória de quem acompanhou sua infância". O modelo inventa a
 voz. Vale gerar voz pelo ofício e pelo talento de cada um.
+
+## Sessão 92b — Claude — teste de ações na taverna: briga e morte de NPC
+
+O dono pediu para testar falas, perguntas, ações, ataques e "matar todo
+mundo na taverna". Teste no navegador (servidor de dev, save de teste), com o
+narrador local e com a Nous do servidor de dev (o próprio app busca o token
+em `/api/hermes/token`; não li credencial nenhuma).
+
+Achados:
+- Dizer funciona: pergunta e acusação viram fala [você], não verbo.
+  ("Me vê uma cerveja…" executa Beber E manda a fala — aceitável.)
+- Ação livre violenta não tinha regra. `ui/freeAction.ts` só casava o
+  infinitivo: "agrido", "ataco", "soco", "esfaqueio", "chuto" iam crus
+  para o narrador ("Você tenta o seguinte: …"), que inventava o resultado sem
+  consequência nenhuma. "Mato todo mundo na taverna" virava `cacar` e
+  sorteava um "Bandido armado" de fora da cena.
+- O fallback do provedor troca de modelo sem avisar (a Nous respondeu com
+  ling-3.0-flash e longcat-2.5, não com o hermes-405b configurado). O rótulo
+  da sessão 88b mostra isso na tela.
+- A guarda da praça tratou o assassino da taverna ao lado como "o forasteiro
+  que apareceu ontem": nada no pacote dizia o que o NPC sabia.
+
+Alterações:
+- `engine/briga.ts` (novo): briga com quem está na cena. Cada NPC adulto
+  presente vira adversário gerado na hora pelo ofício (luta = nível 5, velho
+  = 1, comum = 2, mestre = nível do rito). Não letal: dano de punho do
+  jogador, sem amputação, quem cai fica nocauteado (medo +12, disposição
+  −15, confiança −10), derrota não rouba. Letal: quem cai morre
+  (`npcState.vivo = false`, `registrarMorteFamiliar` se for parente), fato
+  público `assassinato`, guarda −15 e vila −10 por morto, testemunhas com
+  medo +25. Menor de 18 nunca entra.
+- `engine/combat.ts`: `iniciarCombate` aceita `briga` (marcada antes de
+  alguém agir); `CombatState.briga`; derrota não letal sem roubo; vitória não
+  letal sem saque e sem fama de arma; `avaliarAmputacao` não age em rito nem
+  em briga não letal.
+- `ui/freeAction.ts`: `classificarBriga` com radicais conjugados
+  (agrid/atac/soc/chut/esfaque/mat…), "todo mundo" = todos os presentes,
+  alvo por qualquer palavra do nome ("a Bael" acha "Sargenta Bael"),
+  conversa ("sobre o ataque") e "no mato" não viram briga; lâmina na frase =
+  letal.
+- `ui/store.ts`: `brigarAcao`; `acaoLivre` (aba Fazer) abre a briga;
+  `fecharLuta` chama `concluirBriga` e usa o fato dela ("Mortos · …",
+  "Briga vencida/perdida").
+- `engine/llm.ts`: cada presente recebe `sabeDoQueVoceFez` (assassinato ou
+  briga pública do jogador na mesma região, últimos 60 dias) e o sistema
+  manda reagir a isso antes de tudo.
+- Teste novo `engine/briga.selftest.ts` (no `test:engine`).
+
+Verificado no navegador: soco na Elza → briga não letal de punho; "Parto pra
+cima do Bastian" → o pai (batedor) ganhou, bolsa intacta; "Saco a espada e
+mato todo mundo na taverna" → seis mortos de verdade, fora da cena, boato
+público, guarda −93 e vila −60; na praça, com a Nous, a Sargenta Bael
+bloqueia o caminho, cita as mortes e ameaça prender.
+
+Pendente:
+- a guarda só reage na narração; não há prisão nem perseguição mecânica
+  por reputação muito negativa. Vale um sistema de captura/fuga;
+- violência sem alvo nomeado com 2+ pessoas na cena ainda cai na narração
+  livre (ambíguo de propósito);
+- família com voz genérica (`engine/familia.ts`, `npcDeParente`).
+- `nousresearch/hermes-3-llama-3.1-405b:free` saiu da lista de sugestões:
+  a Nous devolve 404 ("Model not found"). Saves com ele escolhido caem no
+  fallback (por isso as cenas vinham de ling-3.0-flash ou longcat-2.5). O
+  Solar (padrão) também falhou no teste de hoje; o longcat-2.5 respondeu.

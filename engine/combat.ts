@@ -127,6 +127,8 @@ export function penalidadePorMembros(perdidos: MembroId[] | undefined, anulada =
 // Retorna a linha de log da lesão, ou undefined se nada aconteceu.
 export function avaliarAmputacao(camp: Campaign, ator: CombatActor, danoRecebido: number): string | undefined {
   if (ator.ehAliado) return undefined;
+  // Prova do mestre e briga de soco não arrancam braço de ninguém.
+  if (camp.combate?.rito || (camp.combate?.briga && !camp.combate.briga.letal)) return undefined;
   if (danoRecebido < 12) return undefined;
   if (ator.vida > ator.vidaMax * 0.3) return undefined; // só quando a guarda já quase quebrou
   if (ator.ehJogador && chimAlcancado(camp)) return undefined; // CHIM: nem a amputação acontece
@@ -358,6 +360,7 @@ export function iniciarCombate(
   camp: Campaign,
   criaturaIds: string[],
   rivalAlvo?: string,
+  briga?: { letal: boolean },
 ): CombatState {
   if (camp.combate && !camp.combate.terminado) return camp.combate;
   const p = camp.personagem;
@@ -497,6 +500,9 @@ export function iniciarCombate(
   // Prova do mestre (engine/rito.ts): marcada antes do primeiro golpe — o
   // mestre pode agir primeiro, e um crítico dele não pode virar luta de estrada.
   if (criaturaIds.length === 1 && criaturaIds[0].startsWith('rito_')) state.rito = { mestreId: criaturaIds[0].slice('rito_'.length) };
+  // Briga com quem está na cena (engine/briga.ts): mesmo cuidado, marcada
+  // antes de alguém agir.
+  if (briga || (criaturaIds.length && criaturaIds.every((id) => id.startsWith('briga_')))) state.briga = briga ?? { letal: false };
   camp.combate = state;
   for (const a of inimigos) {
     const r = a.rivalId && camp.kimetsu?.rivais[a.rivalId];
@@ -1598,6 +1604,9 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
         continue;
       }
 
+      // Briga de soco: quem caiu está nocauteado, não morto — sem saque, xp
+      // de briga só.
+      if (s.briga && !s.briga.letal) { xp += Math.floor(c.xp / 2); continue; }
       xp += c.xp;
       // Marca a presa: missões podem exigir a queda de uma criatura específica.
       camp.flags[`matou.${c.id}`] = true;
@@ -1655,7 +1664,7 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     }
     p.xp += xp;
     // A arma conta quem derrubou (engine/famaArma.ts). A prova do mestre não conta.
-    if (!s.rito) {
+    if (!s.rito && !(s.briga && !s.briga.letal)) {
       const abatidos = s.atores.filter((a) => !a.ehJogador && !a.ehAliado && !vivo(a) && !a.capturado).length;
       const fama = registrarAbates(content, camp, abatidos);
       if (fama) s.log.push(fama);
@@ -1716,6 +1725,11 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     // Perder a prova do mestre não é perder uma luta de estrada: ninguém leva
     // nada, e o corpo fica como ficou (a um quarto da vida).
     p.recursos.vida = Math.max(1, s.atores.find((a) => a.ehJogador)?.vida ?? 1);
+  } else if (resultado === 'derrota' && s.briga && !s.briga.letal) {
+    // Apanhar numa briga de taverna: sai machucado, não roubado.
+    p.recursos.vida = 1;
+    if (!p.condicoes.includes('ferido')) p.condicoes.push('ferido');
+    s.log.push('Você vai ao chão. Quando levanta, a briga acabou e ninguém mexeu na sua bolsa.');
   } else if (resultado === 'derrota') {
     // GDD §15: sobrevive com sequela; o inimigo leva algo seu.
     p.recursos.vida = 1;

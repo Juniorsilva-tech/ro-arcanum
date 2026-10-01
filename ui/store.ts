@@ -13,6 +13,7 @@ import {
   narrarComFallback,
   tipoDeCena,
   concluirRito,
+  concluirBriga,
   disseONome,
   apresentar,
   protegerNome,
@@ -323,6 +324,7 @@ interface GameState {
   abaterAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   plantarCultivoAcao: (id: import('@/engine').CultivoId) => Promise<string>;
   pedirRitoAcao: (mestreId: string) => Promise<void>;
+  brigarAcao: (npcIds: string[], letal: boolean, texto?: string) => Promise<void>;
   criarTecnicaAcao: (nome: string, principio: import('@/engine').Principio, forma: import('@/engine').Forma) => Promise<string>;
   passarLegadoAcao: (herdeiroId?: string) => Promise<string>;
   recusarChegadaAcao: (id: string) => Promise<string>;
@@ -846,6 +848,21 @@ export const useGame = create<GameState>((set, get) => ({
     await persistir(camp, set);
   },
 
+  // Briga com quem está na cena (engine/briga.ts): soco nocauteia, lâmina mata.
+  async brigarAcao(npcIds, letal, texto) {
+    const { camp, content } = get();
+    if (!camp || !content) return;
+    const { iniciarBriga } = await import('@/engine');
+    const linhaAcao = texto ? [nf(texto, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })] : [];
+    const r = iniciarBriga(content, camp, npcIds, letal);
+    if (!r.ok) {
+      set({ feed: [...get().feed, ...linhaAcao, nf(r.motivo ?? 'não há com quem brigar', 'sistema')] });
+      return;
+    }
+    set({ camp: { ...camp }, tela: 'combate', feed: [...get().feed, ...linhaAcao] });
+    await persistir(camp, set);
+  },
+
   async plantarCultivoAcao(id) {
     const { camp, content } = get();
     if (!camp || !content) return '';
@@ -1274,6 +1291,8 @@ export const useGame = create<GameState>((set, get) => ({
     const rec = camp.combate?.recompensa;
     // Prova do mestre: o resultado e o que falta viram o fato da cena.
     const rito = camp.combate?.rito ? concluirRito(content, camp) : undefined;
+    // Briga na cena: mortos, nocauteados e testemunhas viram o fato da cena.
+    const briga = camp.combate?.briga ? concluirBriga(content, camp) : undefined;
     const batidasCombate = [...(camp.combate?.log ?? [])];
     fecharCombate(camp);
     avancarMundo(content, camp);
@@ -1284,6 +1303,8 @@ export const useGame = create<GameState>((set, get) => ({
       : '';
     const fato = rito
       ? rito.fato
+      : briga
+        ? briga.fato
       : resultado === 'vitoria'
         ? `A luta terminou e você ficou de pé.${saque}`
         : resultado === 'derrota'
@@ -1293,6 +1314,10 @@ export const useGame = create<GameState>((set, get) => ({
       nf(
         rito
           ? `Prova do mestre · ${rito.resultado === 'aprovado' ? 'aprovado' : rito.resultado === 'promissor' ? 'promissor' : 'ainda cru'}`
+          : briga?.mortos.length
+          ? `Mortos · ${briga.mortos.join(', ')}`
+          : briga
+          ? (resultado === 'vitoria' ? 'Briga vencida' : resultado === 'derrota' ? 'Briga perdida' : 'Fuga da briga')
           : resultado === 'vitoria'
           ? `Combate vencido${rec?.xp ? ` · +${rec.xp} xp` : ''}`
           : resultado === 'derrota'
@@ -1466,6 +1491,11 @@ export const useGame = create<GameState>((set, get) => ({
     }
 
     const cls = classificarAcaoLivre(t, content, get().cena?.contexto);
+    // Violência contra quem está aqui vira briga de verdade, com regra.
+    if (cls?.briga && !dizer) {
+      await get().brigarAcao(cls.briga.alvos, cls.briga.letal, t);
+      return;
+    }
     if (cls) {
       // 'cacar' e os verbos de chefe abrem combate estruturado de verdade
       // (tela de PV, dano, vitoria/derrota) — agirVerbo ja sabe disso.

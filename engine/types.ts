@@ -753,6 +753,8 @@ export type CombatState = {
   /** Prova do mestre (engine/rito.ts): para a um quarto da vida, ninguém morre. */
   rito?: { mestreId: string };
   ritoFim?: 'vitoria' | 'derrota';
+  // Briga com quem está na cena (engine/briga.ts). Letal: quem cai morre.
+  briga?: { letal: boolean };
   /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
   bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
   /** Emboscada contra caravana que o jogador escolta (engine/caravanas.ts). */

@@ -63,12 +63,50 @@ function temIntencaoLetal(t: string): boolean {
   return LETAIS.some((p) => t.includes(p));
 }
 
+// Violência contra quem está na cena vira briga de verdade (engine/briga.ts).
+// O mapa acima só tinha o infinitivo: "agrido", "ataco", "soco", "esfaqueio"
+// e "chuto" não casavam, e a frase ia crua para o narrador inventar.
+const B = '(?<!\\p{L})';
+const F = '(?!\\p{L})';
+const VIOLENCIA = new RegExp(`${B}(agrid\\p{L}*|agred\\p{L}*|ataq\\p{L}*|atac\\p{L}*|bat(?:o|e|i|eu|er|endo)|soc(?:o|a|ar|ou|ando|am)|murr\\p{L}*|chut\\p{L}*|esbofet\\p{L}*|tapa|espanc\\p{L}*|brig(?:a|o|ar)|parto pra cima|parto para cima|partir pra cima|vou pra cima|pra cima d[aeo]|empurr\\p{L}*|derrub\\p{L}*|golpe\\p{L}*|soquei|chutei|bati)${F}`, 'iu');
+const LETAL = new RegExp(`${B}(mat(?:o|a|ar|ei|ando|em|ou)|assassin\\p{L}*|esfaque\\p{L}*|apunhal\\p{L}*|degol\\p{L}*|estrangul\\p{L}*|esgan\\p{L}*|chacin\\p{L}*|massacr\\p{L}*|extermin\\p{L}*|cort(?:o|ar) a garganta)${F}`, 'iu');
+const ARMA_NA_MAO = new RegExp(`${B}(espada|faca|adaga|lâmina|lamina|machado|punhal|katana|lança|lanca)${F}`, 'iu');
+const TODOS = new RegExp(`${B}(todo mundo|todos|todas|todo o mundo|a taverna inteira|o salão inteiro|geral|quem estiver)${F}`, 'iu');
+// "Falo com a Elza sobre o ataque" é conversa, não briga.
+const CONVERSA = new RegExp(`${B}(sobre|falo|falar|pergunt\\p{L}*|conto|contar|convers\\p{L}*|lembr\\p{L}*|históri\\p{L}*|digo|dizer)${F}`, 'iu');
+
+// Qualquer palavra do nome serve: "Sargenta Bael" é citada como "a Bael".
+const NAO_E_NOME = new Set(['das', 'dos', 'que', 'com']);
+function citado(t: string, nome: string): boolean {
+  const palavras = nome.toLowerCase().split(',')[0].split(/\s+/).filter((p) => p.length >= 3 && !NAO_E_NOME.has(p));
+  return palavras.some((p) => new RegExp(`${B}${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${F}`, 'iu').test(t));
+}
+
+export type Briga = { alvos: string[]; letal: boolean };
+
+export function classificarBriga(texto: string, ctx?: Contexto): Briga | null {
+  if (!ctx?.presentes.length) return null;
+  const t = normalizar(texto);
+  if (CONVERSA.test(t)) return null;
+  const letal = LETAL.test(t);
+  if (!letal && !VIOLENCIA.test(t)) return null;
+  let alvos = TODOS.test(t) ? ctx.presentes.map((n) => n.id) : ctx.presentes.filter((n) => citado(t, n.nome)).map((n) => n.id);
+  // Só uma pessoa na cena: "ataco ela" é com ela. "Mato"/"mata" sozinho é
+  // ambíguo (o mato, a mata) — só conta com alvo dito.
+  const soMato = letal && /(?<!\p{L})mat[oa](?!\p{L})/iu.test(t) && !LETAL.test(t.replace(/(?<!\p{L})mat[oa](?!\p{L})/giu, ''));
+  if (!alvos.length && ctx.presentes.length === 1 && !soMato) alvos = [ctx.presentes[0].id];
+  if (!alvos.length) return null;
+  return { alvos, letal: letal || ARMA_NA_MAO.test(t) };
+}
+
 export function classificarAcaoLivre(
   texto: string,
   content: ContentBundle,
   ctx?: Contexto,
-): { verboId: string; alvoId?: string } | null {
+): { verboId: string; alvoId?: string; briga?: Briga } | null {
   const t = normalizar(texto);
+  const briga = classificarBriga(texto, ctx);
+  if (briga) return { verboId: 'agredir', alvoId: briga.alvos[0], briga };
 
   // Encontra o verbo cuja palavra-chave melhor casa (a mais longa vence).
   let melhor: { verbo: string; peso: number } | null = null;
@@ -99,8 +137,8 @@ export function classificarAcaoLivre(
   // Tenta achar um alvo citado pelo nome, entre os presentes.
   let alvoId: string | undefined;
   if (ctx) {
-    const citado = ctx.presentes.find((n) => t.includes(n.nome.toLowerCase().split(',')[0].split(' ')[0]));
-    alvoId = citado?.id ?? (verbo.alvo === 'pessoa' ? ctx.presentes[0]?.id : undefined);
+    const quem = ctx.presentes.find((n) => citado(t, n.nome));
+    alvoId = quem?.id ?? (verbo.alvo === 'pessoa' ? ctx.presentes[0]?.id : undefined);
   }
 
   return { verboId: verbo.id, alvoId };
