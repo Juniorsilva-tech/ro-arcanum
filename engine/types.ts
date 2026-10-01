@@ -931,6 +931,10 @@ export type Campaign = {
   procura?: Record<string, ProcuraGuarda>;
   abordagem?: { dia: number; local: string; regiao: string; guarda: string; cacador?: boolean };
   prisao?: { local: string; regiao: string; desdeDia: number; ateDia: number; motivo: string; fianca?: number; armaConfiscada?: string };
+  // Gente do mundo que fugiu da cela e está com cartaz (engine/crimeUrbano.ts),
+  // e o caçador de recompensas de cada região, com nome e memória (engine/guarda.ts).
+  procuradosNpc?: Record<string, ProcuradoNpc>;
+  cacadores?: Record<string, CacadorRecompensa>;
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.
@@ -1386,4 +1390,27 @@ export type ProcuraGuarda = {
   atualizadoDia: number;
   ultimaAbordagemDia?: number;
   fugitivo?: boolean;
+};
+
+/** NPC fugido da cela, com cartaz na cidade (engine/crimeUrbano.ts). */
+export type ProcuradoNpc = {
+  crime: string;
+  cidade: string;
+  regiao: string;
+  recompensa: number;
+  vivoOuMorto: boolean;
+  desdeDia: number;
+  /** Onde se escondeu (lugar de ermo da região). */
+  esconderijo: string;
+};
+
+/** O caçador de recompensas da região: nome, força e o que lembra do jogador. */
+export type CacadorRecompensa = {
+  nome: string;
+  nivel: number;
+  encontros: number;
+  vivo: boolean;
+  mortoDia?: number;
+  ultimo?: 'fugiu' | 'pagou' | 'escapou' | 'entregou';
+  pagamentos: number;
 };

@@ -38,6 +38,7 @@ import {
   todosNpcs,
   type Campaign,
   custoDoSuborno,
+  cartazesDaRegiao,
   cartazDe,
 } from '@/engine';
 
@@ -253,6 +254,7 @@ export function Jogo() {
             vale={comoEstaOVale(camp, content)}
             objetivos={objetivosAtivos}
             aconteceu={marcosRecentes(camp, 2)}
+            cartazes={cartazesDaRegiao(content, camp) ?? []}
           />
         </View>
 
@@ -490,6 +492,7 @@ function FaixaContexto(props: {
   vale: { clima: string; estacao: string; evento?: string; carestia?: string };
   objetivos: string[];
   aconteceu: string[];
+  cartazes: string[];
 }) {
   const [aberto, setAberto] = useState(true);
   return (
@@ -520,6 +523,16 @@ function FaixaContexto(props: {
               <Text style={styles.hudTitulo}>o que está aberto</Text>
               {props.objetivos.map((o, i) => (
                 <Text key={i} style={styles.hudItem} numberOfLines={1}>
+                  · {o}
+                </Text>
+              ))}
+            </View>
+          )}
+          {props.cartazes.length > 0 && (
+            <View style={styles.hudBloco}>
+              <Text style={styles.hudTitulo}>cartazes na praça</Text>
+              {props.cartazes.map((o, i) => (
+                <Text key={i} style={styles.hudItem} numberOfLines={2}>
                   · {o}
                 </Text>
               ))}

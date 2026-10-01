@@ -243,7 +243,7 @@ const abordagens = (c: Campaign, dias: number): number => {
   c.abordagem = { dia: c.calendario.dia, local: c.localAtual, regiao: regiaoDe(C, c.localAtual), guarda: 'o caçador de recompensas', cacador: true };
   const antes = procuraAqui(C, c)!.pontos;
   const r = responderAbordagem(C, c, 'lutar');
-  ok(r.combate && c.combate?.atores.some((a) => a.criaturaId === CACADOR), 'lutar é contra o caçador');
+  ok(r.combate && c.combate?.atores.some((a) => a.criaturaId?.startsWith(CACADOR)), 'lutar é contra o caçador');
   const eu = c.combate!.atores.find((a) => a.ehJogador)!; eu.dano = { base: 200, dispersao: 0.1, tipo: 'cortante' };
   vencer(c);
   const fim = concluirConfrontoGuarda(C, c)!;

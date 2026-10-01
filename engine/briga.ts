@@ -23,6 +23,8 @@ import { NIVEL_MESTRE } from '../content/vaelhorn/ritoMestres';
 import { registrarCrime, ehAssentamentoDoJogador, OFICIO_GUARDA } from './guarda';
 
 export const PREFIXO_BRIGA = 'briga_';
+/** Fugitivo pego pelo jogador volta à cela com pena dobrada (engine/crimeUrbano.ts). */
+const PENA_FUGITIVO = { furto: 10, briga: 6, morte: 80 } as const;
 export const REGIAO_DA_BRIGA = 'Briga';
 
 const OFICIO_DE_LUTA = /guard|soldad|sentinel|mercen|capit|cavaleir|caçad|cacad|ferreir|lutador|patrulh|batedor|carrasc|miliciano|guerreir|inquisi|caçador/i;
@@ -125,6 +127,8 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
   const caidos: string[] = [];
   const fugiram: string[] = [];
   const idsDaLuta = new Set<string>();
+  const cacadas: { nome: string; valor: number; cidade: string; vivo: boolean }[] = [];
+  const queriamVivo: string[] = [];
 
   for (const a of lutaram) {
     const npcId = a.criaturaId!.slice(PREFIXO_BRIGA.length);
@@ -132,10 +136,29 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
     const npc = npcPorId(content, camp, npcId);
     const nome = npc?.nome ?? a.nome;
     const caiu = a.vida <= 0 && !a.capturado;
+    // Fugitivo com cartaz (engine/crimeUrbano.ts): caçar a recompensa é
+    // trabalho, não crime — vivo sempre paga; morto, só se "vivo ou morto".
+    const caso = camp.procuradosNpc?.[npcId];
+    if (caso && !letal && (caiu || a.capturado)) {
+      const pessoa = camp.vivo?.pessoas[npcId];
+      if (pessoa) {
+        const crime = pessoa.presoPor ?? 'furto';
+        pessoa.objetivo = 'preso'; pessoa.presoAte = camp.calendario.dia + PENA_FUGITIVO[crime]; pessoa.local = caso.cidade; pessoa.deslocado = false;
+      }
+      delete camp.procuradosNpc![npcId];
+      cacadas.push({ nome, valor: caso.recompensa, cidade: caso.cidade, vivo: true });
+      continue;
+    }
     if (caiu && letal) {
       const din = camp.npcState[npcId];
       if (din) { din.vivo = false; din.vida = 0; }
       if (npc?.parentesco) registrarMorteFamiliar(camp, npcId);
+      if (caso?.vivoOuMorto) {
+        delete camp.procuradosNpc![npcId];
+        cacadas.push({ nome, valor: caso.recompensa, cidade: caso.cidade, vivo: false });
+        continue;
+      }
+      if (caso) { delete camp.procuradosNpc![npcId]; queriamVivo.push(nome); }
       mortos.push(nome);
     } else if (caiu || a.capturado) {
       ajustar(camp, npcId, 'medo', 12);
@@ -185,6 +208,22 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
   if (cidade) cidade.inseguranca = Math.min(100, cidade.inseguranca + 5 * mortos.length + caidos.length);
 
   const p = camp.personagem;
+  // Recompensa paga pela cidade do cartaz; a guarda fica grata.
+  let textoCacada = '';
+  if (cacadas.length) {
+    for (const c of cacadas) {
+      const cidade = camp.vivo?.cidades[c.cidade];
+      const pago = c.valor;
+      if (cidade) cidade.tesouro = Math.max(0, cidade.tesouro - pago);
+      p.dinheiro += pago;
+      r.guarda = (r.guarda ?? 0) + 5;
+      if (camp.vivo) registrarFato(camp, { tipo: 'recompensa', local: c.cidade, texto: `${p.nome} ${c.vivo ? 'entregou' : 'levou o corpo de'} ${c.nome.split(',')[0]} à guarda e recebeu ${pago} moedas de recompensa.`, atores: ['jogador'], publico: true });
+    }
+    textoCacada = cacadas.map((c) => c.vivo
+      ? `Você amarra ${c.nome.split(',')[0]} e entrega na guarda: ${c.valor} moedas de recompensa.`
+      : `Você leva o corpo de ${c.nome.split(',')[0]} à guarda. O cartaz dizia vivo ou morto: ${c.valor} moedas.`).join(' ');
+  }
+  if (queriamVivo.length) textoCacada += ` O cartaz de ${listar(queriamVivo)} pedia vivo: a guarda não paga por corpo e trata a morte como crime.`;
   let fato: string;
   if (mortos.length) {
     const texto = `${p.nome} matou ${listar(mortos)} em ${local}.`;
@@ -199,9 +238,12 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
       (letal ? ' Você queria matar e não conseguiu: agora todo mundo aqui sabe disso.' : '');
   } else if (s.resultado === 'fuga') {
     fato = `Você começou uma briga em ${local} e saiu correndo antes do fim.`;
+  } else if (!caidos.length && cacadas.length) {
+    fato = '';
   } else {
     fato = `Você derrubou ${listar(caidos)} na briga em ${local}. Ninguém morreu, mas ninguém vai esquecer.`;
     if (camp.vivo && caidos.length) registrarFato(camp, { tipo: 'briga', local: camp.localAtual, texto: `${p.nome} derrubou ${listar(caidos)} numa briga em ${local}.`, atores: ['jogador'], publico: true });
   }
+  fato = [fato, textoCacada.trim()].filter(Boolean).join(' ');
   return { fato, mortos };
 }

@@ -68,7 +68,7 @@ function temIntencaoLetal(t: string): boolean {
 // e "chuto" não casavam, e a frase ia crua para o narrador inventar.
 const B = '(?<!\\p{L})';
 const F = '(?!\\p{L})';
-const VIOLENCIA = new RegExp(`${B}(agrid\\p{L}*|agred\\p{L}*|ataq\\p{L}*|atac\\p{L}*|bat(?:o|e|i|eu|er|endo)|soc(?:o|a|ar|ou|ando|am)|murr\\p{L}*|chut\\p{L}*|esbofet\\p{L}*|tapa|espanc\\p{L}*|brig(?:a|o|ar)|parto pra cima|parto para cima|partir pra cima|vou pra cima|pra cima d[aeo]|empurr\\p{L}*|derrub\\p{L}*|golpe\\p{L}*|soquei|chutei|bati)${F}`, 'iu');
+const VIOLENCIA = new RegExp(`${B}(agrid\\p{L}*|agred\\p{L}*|ataq\\p{L}*|atac\\p{L}*|bat(?:o|e|i|eu|er|endo)|soc(?:o|a|ar|ou|ando|am)|murr\\p{L}*|chut\\p{L}*|esbofet\\p{L}*|tapa|espanc\\p{L}*|brig(?:a|o|ar)|parto pra cima|parto para cima|partir pra cima|vou pra cima|pra cima d[aeo]|empurr\\p{L}*|derrub\\p{L}*|golpe\\p{L}*|soquei|chutei|bati|prend(?:o|er)|captur\\p{L}*|amarr\\p{L}*|imobiliz\\p{L}*)${F}`, 'iu');
 const LETAL = new RegExp(`${B}(mat(?:o|a|ar|ei|ando|em|ou)|assassin\\p{L}*|esfaque\\p{L}*|apunhal\\p{L}*|degol\\p{L}*|estrangul\\p{L}*|esgan\\p{L}*|chacin\\p{L}*|massacr\\p{L}*|extermin\\p{L}*|cort(?:o|ar) a garganta)${F}`, 'iu');
 const ARMA_NA_MAO = new RegExp(`${B}(espada|faca|adaga|lâmina|lamina|machado|punhal|katana|lança|lanca)${F}`, 'iu');
 const TODOS = new RegExp(`${B}(todo mundo|todos|todas|todo o mundo|a taverna inteira|o salão inteiro|geral|quem estiver)${F}`, 'iu');

@@ -39,6 +39,8 @@ export type VidaCivil = {
   conjuge?: string; filhos: string[]; tutores?: string[]; cativoAte?: number;
   /** Na cela da guarda da cidade (engine/guarda.ts) até este dia. */
   presoAte?: number;
+  /** Por que está (ou esteve) na cela: furto, briga ou morte. */
+  presoPor?: 'furto' | 'briga' | 'morte';
   formacao?: { caminho: 'civil' | 'guarda'; sessoes: number; mentor?: string; concluida: boolean };
 };
 export type GovernoVivo = {

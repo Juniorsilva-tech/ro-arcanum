@@ -534,3 +534,54 @@ crime urbano mexendo na fome, a Sarine foi para casa (a taverna) no dia 143
 e o Livro do caminho dia a dia ficou "acessível". O resto do mundo segue
 idêntico nos dois caminhos. Também: NPC preso (`objetivo 'preso'`) não está
 em lugar nenhum visitável (`localEfetivo` devolve vazio).
+
+## Sessão 92e — Claude — caçador com nome, fugitivos e caçada de recompensa
+
+Pedido do dono: fazer os três pendentes da 92d.
+
+**Caçador de recompensas com nome e memória** (`engine/guarda.ts`):
+- `camp.cacadores[regiao]`: nome (lista fixa, sem repetir), nível (começa 8,
+  teto 14), encontros, último desfecho, pagamentos. `cacadorDaRegiao` cria
+  um quando não há; morto, a região fica 30 dias sem caçador e depois vem
+  outro, com outro nome.
+- Ele só aparece no ermo, sem guarda, com cartaz "vivo ou morto".
+- Fala muda com a memória: primeiro encontro; "De novo você… da última vez
+  você correu"; "Da última vez você pagou… o meu preço também"; "Você me
+  deve um braço" (se escapou ferido).
+- Correr ou escapar ferido: nível +1. Pagar: preço +25% por pagamento (e não
+  esfria mais a procura). Te entregar: fica na memória.
+- A criatura é uma por região (`patrulha_guarda_cacador_<região>`), refeita
+  com o nível atual a cada luta.
+
+**Fugitivos** (`engine/crimeUrbano.ts`):
+- `VidaCivil.presoPor` guarda o crime.
+- Preso foge com chance 0,5% + 3% × (1 − força/100) por dia. Vira
+  `camp.procuradosNpc[id]` (crime, cidade, região, recompensa 25/15/80, "vivo
+  ou morto" se foi morte), com cartaz como fato público, e se esconde num lugar
+  de ermo da região (`deslocado`, então aparece lá).
+- `engine/autonomia.ts`: fugitivo com cartaz não toma decisão nenhuma (não
+  volta para casa).
+- A guarda caça: chance força/100 × 4% por dia. Achou: cela com o dobro da
+  pena. Depois de 120 dias o cartaz "desbota" e o caso some.
+
+**O jogador caça a recompensa** (`engine/briga.ts`):
+- Briga de soco contra fugitivo: quem cai é entregue à guarda (cela com pena
+  dobrada), o jogador recebe a recompensa (sai do tesouro da cidade), a guarda
+  sobe +5, e não há arruaça.
+- Luta letal: com "vivo ou morto", o corpo paga e não é crime; sem, não paga
+  e conta como assassinato ("o cartaz pedia vivo").
+- `ui/freeAction.ts`: "prendo", "capturo", "amarro" e "imobilizo" abrem briga
+  de soco.
+- `engine/llm.ts`: `cartazesDaRegiao` (nome, crime, recompensa, onde foi
+  visto) no pacote, e `procurado` em cada presente que tem cartaz, com regra
+  de como a pessoa reage.
+- `ui/screens/Jogo.tsx`: "cartazes na praça" no painel "o que está aberto".
+
+Teste novo: `engine/recompensa.selftest.ts` (24 checagens, no
+`test:engine`). `guardaMundo.selftest` ajustado ao id do caçador por região.
+
+Verificado no navegador: o painel mostra "Vess — a morte no beco — 80
+moedas, vivo ou morto — visto por último em A Cripta" (estado injetado).
+
+Pendente: o caçador não caça os fugitivos NPC (só o jogador); o fugitivo não
+se defende de outro jeito além de lutar (não tenta comprar o silêncio).

@@ -49,6 +49,7 @@ import { sabeONome } from './nomeDoJogador';
 import { famaDaArma } from './famaArma';
 import { famaDoNome, sobrenome } from './linhagem';
 import { procuraAqui, cartazDe, textoDoCartaz } from './guarda';
+import { todosNpcs } from './elenco';
 
 export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous' | ProvedorCompat;
@@ -602,6 +603,19 @@ async function listarModelosCompat(p: ProvedorCompat, apiKey: string): Promise<M
   }
 }
 
+/** Cartazes de fugitivos da região do jogador: nome, crime, recompensa e onde foi visto. */
+export function cartazesDaRegiao(content: ContentBundle, camp: Campaign): string[] | undefined {
+  const regiao = content.locais.find((l) => l.id === camp.localAtual)?.regiao;
+  const lista = Object.entries(camp.procuradosNpc ?? {})
+    .filter(([, f]) => f.regiao === regiao)
+    .map(([id, f]) => {
+      const nome = todosNpcs(content, camp).find((n) => n.id === id)?.nome ?? id;
+      const onde = content.locais.find((l) => l.id === f.esconderijo)?.nome ?? f.esconderijo;
+      return `${nome.split(',')[0]} — ${f.crime} — ${f.recompensa} moedas${f.vivoOuMorto ? ', vivo ou morto' : ', vivo'} — visto por último em ${onde}`;
+    });
+  return lista.length ? lista : undefined;
+}
+
 /** Crimes públicos do jogador na região, nos últimos 60 dias (mais recentes primeiro, até 3). */
 function crimesPublicosNaRegiao(content: ContentBundle, camp: Campaign, localId: string): string[] {
   const regiao = content.locais.find((l) => l.id === localId)?.regiao;
@@ -789,6 +803,8 @@ export function montarPacote(
     // O que rolou entre elas sem o jogador por perto — é o que a boca do povo
     // repete, e o que dá ao vale história própria.
     boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
+    // Cartazes de procurados da região (engine/crimeUrbano.ts).
+    cartazesDaRegiao: cartazesDaRegiao(content, camp),
     presentes: ctx.presentes.map((n) => {
       const crimesConhecidos = crimesPublicosNaRegiao(content, camp, ctx.local.id);
       const hum = calcularHumorNpc(camp, content, n);
@@ -827,6 +843,8 @@ export function montarPacote(
       // está aqui sabe. Sem isto, a guarda cumprimentava o assassino da
       // taverna ao lado como "o forasteiro que apareceu ontem".
       sabeDoQueVoceFez: crimesConhecidos.length ? crimesConhecidos : undefined,
+      // Fugitivo com cartaz (engine/crimeUrbano.ts): o jogador pode reconhecer.
+      procurado: camp.procuradosNpc?.[n.id] && { crime: camp.procuradosNpc[n.id].crime, recompensa: camp.procuradosNpc[n.id].recompensa, vivoOuMorto: camp.procuradosNpc[n.id].vivoOuMorto },
       // Segredo que o jogador JÁ descobriu: o narrador pode usar. O que ainda
       // não foi descoberto não entra no pacote — não se entrega de graça.
       segredoQueVoceSabe: camp.segredosRevelados.includes(n.id) ? n.segredo?.conteudo : undefined,
@@ -1121,6 +1139,7 @@ export const INSTRUCAO_SISTEMA =
   'Narre o desejo e a entrega física com paixão e sem moralismo.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens envolvidos em qualquer cena de teor erótico ou sensual são estritamente adultos (18+). Jamais sexualize menores em nenhuma hipótese. Respeite as idades registradas no pacote.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
+  '• "procurado" (num presente) é fugitivo com cartaz: quem conhece o cartaz pode reconhecer o rosto, e a pessoa foge do olhar, mente o nome ou tenta comprar silêncio. "cartazesDaRegiao" é o que está pregado na praça; cite só quando a cena pedir.\n' +
   '• "sabeDoQueVoceFez" (num presente) é sangue que você derramou em público por aqui, e essa pessoa SABE. Ela reage a isso antes de qualquer outra coisa: guarda tenta prender ou chama reforço, gente comum recua, cala ou foge, parente de vítima odeia. Ninguém trata você como um estranho qualquer.\n' +
   '• "personagem.procuradoAqui", "cercadoPelaGuarda" e "naCela" são decisão da engine. Na cela, a cena acontece dentro da cela (carcereiro, outro preso, pão duro) e ninguém solta você por conta própria. Cercado, a patrulha espera resposta: não resolva o cerco na narração. Procurado, quem é da guarda desconfia de você, e o "cartaz" com a "recompensa" está pregado na praça: gente comum pode reconhecer seu rosto, cochichar ou pensar no dinheiro. A guarda fala como guarda de verdade, seca e prática ("Parado aí.", "Mãos onde eu possa ver.", "Você está preso em nome da lei.", "Vivo ou morto, tanto faz para o juiz."), nunca com discurso solene.\n' +
   '• Cada presente traz "lembraDeVoce" e "conheceHaDias". USE. Quem já foi ' +

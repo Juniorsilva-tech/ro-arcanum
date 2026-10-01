@@ -70,6 +70,8 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
         registrarFato(camp, { tipo: 'soltura_npc', local: p.local, texto: `${npc.nome} cumpriu a pena e saiu da cela da guarda.`, atores: [npc.id], publico: true });
       } else continue;
     }
+    // Fugitivo com cartaz fica no esconderijo (engine/crimeUrbano.ts).
+    if (camp.procuradosNpc?.[npc.id]) continue;
     if (p.objetivo === 'cativo') {
       const parente = camp.familia?.membros.find(m => m.id === npc.id);
       if (parente?.condicao === 'livre') { p.objetivo = 'rotina'; p.local = npc.localBase; }
