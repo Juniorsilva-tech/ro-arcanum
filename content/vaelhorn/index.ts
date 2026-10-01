@@ -1,4 +1,5 @@
 // ARCANUM · Pacote de conteúdo de Vaelhorn.
+import { criaturasDoRito } from './ritoMestres';
 import type { ContentBundle } from '../../engine/types';
 import { vaelhorn } from './scenario';
 import { classesVaelhorn } from './classes';
@@ -144,7 +145,8 @@ export const conteudoVaelhorn: ContentBundle = {
   ...baseVaelhorn,
   npcs: enriquecerElenco(baseVaelhorn.npcs),
   locais: comHistoriaDosLugares(baseVaelhorn.locais),
-  criaturas: comBestiario(baseVaelhorn.criaturas),
+  // O adversário de prova de cada mestre (content/vaelhorn/ritoMestres.ts).
+  criaturas: [...comBestiario(baseVaelhorn.criaturas), ...criaturasDoRito(baseVaelhorn.mestres, baseVaelhorn.npcs)],
 };
 
 export {

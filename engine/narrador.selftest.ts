@@ -10,7 +10,7 @@ import { conteudoVaelhorn as C } from '../content/vaelhorn';
 import { criarCampanha } from './campaign';
 import { atributosBase } from './character';
 import { calcularContexto } from './availability';
-import { montarMensagemNarracao, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento, limparNarracao, tipoDeCena } from './llm';
+import { montarMensagemNarracao, INSTRUCAO_SISTEMA, batidaDeCombate, ESTILO_PADRAO, detectarRecusa, foraDeContexto, semPensamento, limparNarracao, tipoDeCena } from './llm';
 import { menoresNaCena } from './protecao';
 import type { ResultadoTurno } from './turn';
 import type { Campaign } from './types';
@@ -43,6 +43,28 @@ const pedido = (extra: Partial<ResultadoTurno> = {}): ResultadoTurno =>
   const c = nova('dizer');
   const m = montarMensagemNarracao(C, c, calcularContexto(C, c), pedido({ fato: 'Você diz: “Quem mandou você?”', acaoLivre: 'Quem mandou você?', tipoAcaoLivre: 'dizer' }));
   ok(m.includes('O JOGADOR DISSE, com estas palavras: "Quem mandou você?"') && m.includes('fala [você]'), 'Dizer: palavras exatas como fala [você]');
+}
+{
+  const c = nova('conversa-comum');
+  const m = montarMensagemNarracao(C, c, calcularContexto(C, c), pedido({
+    fato: 'Você puxa conversa com a taverneira sobre o movimento da estrada.',
+    verbo: { nome: 'conversar', categoria: 'social' } as ResultadoTurno['verbo'],
+    acaoLivre: 'Quero saber se a estrada está segura.',
+  }));
+  ok(m.includes('DIRETRIZ DE CONVERSA COMUM'), 'conversa comum recebe uma diretriz própria');
+  ok(m.includes('português brasileiro revisado') && m.includes('sem monólogo de lore'), 'conversa comum exige português natural e evita exposição');
+  ok(m.includes('2 a 4 falas naturais'), 'conversa comum limita o diálogo a uma troca focada');
+}
+{
+  // A aba Dizer ("Você diz: …") é conversa: antes a regex não reconhecia "diz".
+  const c = nova('dizer-taverna');
+  c.localAtual = 'taverna';
+  const ctx = calcularContexto(C, c);
+  const m = montarMensagemNarracao(C, c, ctx, pedido({ fato: 'Você diz: “Me vê uma cerveja.”', acaoLivre: 'Me vê uma cerveja.', tipoAcaoLivre: 'dizer' }));
+  ok(ctx.presentes.length === 0 || m.includes('DIRETRIZ DE CONVERSA COMUM'), 'fala pela aba Dizer recebe a diretriz de conversa comum');
+  ok(!m.includes('gore pesado'), 'cena comum não pede gore');
+  ok(!INSTRUCAO_SISTEMA.includes('fábula sombria') && INSTRUCAO_SISTEMA.includes('O TOM CERTO, num exemplo'), 'sistema pede prosa clara e traz um exemplo de tom');
+  ok(!INSTRUCAO_SISTEMA.includes('"pela peste", "pelos deuses", "maldito seja")'), 'sistema não manda mais encher a fala de pragas');
 }
 {
   const c = nova('luta');

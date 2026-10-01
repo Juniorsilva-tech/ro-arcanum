@@ -1,4 +1,5 @@
 // ARCANUM · Aprender e conjurar artes fora de combate (GDD §13.1, §13.3).
+import { adotarEstilo, mestreRecusa } from './estiloMestre';
 import type { Campaign, ContentBundle, Arte, Mestre } from './types';
 import { clampRecursos } from './character';
 import { artePorId } from './fusao';
@@ -13,7 +14,7 @@ import { concederDespertar } from './progresso';
 // procedurais (ver engine/autonomia.ts). Calcular um por mestre fazia a
 // varredura custar N vezes o mesmo trabalho — daí ele entra pronto por
 // parâmetro e é calculado uma vez só por quem chama.
-function mestreDisponivel(
+export function mestreDisponivel(
   content: ContentBundle,
   camp: Campaign,
   mestre: Mestre,
@@ -58,6 +59,9 @@ export function podeAprender(
     (m) => m.ensina.includes(arteId) && mestreDisponivel(content, camp, m, ctx),
   );
   if (!ensinaAqui) return { ok: false, motivo: 'nenhum mestre ensina isto aqui' };
+  const quem = content.mestres.find((m) => m.ensina.includes(arteId) && mestreDisponivel(content, camp, m, ctx));
+  const recusa = quem ? mestreRecusa(content, camp, quem.id) : undefined;
+  if (recusa) return { ok: false, motivo: recusa };
   const tecnica = content.artes.find(a => a.id === arteId)?.tecnica;
   if (tecnica) {
     if (camp.personagem.nivel < tecnica.nivelMinimo) return { ok: false, motivo: `exige nível ${tecnica.nivelMinimo}` };
@@ -100,9 +104,15 @@ export function aprenderArte(
     }
   }
 
-  camp.calendario = avancarPeriodos(camp.calendario, PERIODOS_PARA_APRENDER);
-  crescerImpulsos(camp, PERIODOS_PARA_APRENDER);
-  camp.capitulo.periodosDecorridos += PERIODOS_PARA_APRENDER;
+  // Quem ensina marca o jeito de lutar (engine/estiloMestre.ts).
+  adotarEstilo(camp, mestreDaArte?.id);
+  // Depois da prova do mestre (engine/rito.ts): aprovado aprende sem gastar
+  // tempo; promissor, pela metade.
+  const rito = mestreDaArte ? camp.ritos?.[mestreDaArte.id]?.resultado : undefined;
+  const periodos = rito === 'aprovado' ? 0 : rito === 'promissor' ? Math.max(1, Math.floor(PERIODOS_PARA_APRENDER / 2)) : PERIODOS_PARA_APRENDER;
+  camp.calendario = avancarPeriodos(camp.calendario, periodos);
+  crescerImpulsos(camp, periodos);
+  camp.capitulo.periodosDecorridos += periodos;
   avancarMundo(content, camp);
   return { ok: true };
 }

@@ -415,10 +415,10 @@ export function processarCasas(content: ContentBundle, camp: Campaign): void {
 }
 
 /** Uma linha por casa, para o narrador e para a tela. */
-export function descreverCasa(content: ContentBundle, camp: Campaign, casa: CasaNobre): string {
+export function descreverCasa(content: ContentBundle, camp: Campaign, casa: CasaNobre, comLema = true): string {
   const e = camp.mundo?.casas?.[casa.id];
-  if (!e) return `${casa.nome}: "${casa.lema}".`;
-  const partes = [`${casa.nome} ("${casa.lema}")`, `chefiada por ${nomeDe(content, camp, e.lider)}`];
+  if (!e) return comLema ? `${casa.nome}: "${casa.lema}".` : `${casa.nome}.`;
+  const partes = [comLema ? `${casa.nome} ("${casa.lema}")` : casa.nome, `chefiada por ${nomeDe(content, camp, e.lider)}`];
   if (e.herdeiro) partes.push(`herdeira: ${nomeDe(content, camp, e.herdeiro)}`);
   partes.push(`legitimidade ${Math.round(e.legitimidade)}`);
   if (e.alianca) partes.push(`aliada por casamento à ${content.casas?.find(c => c.id === e.alianca!.casa)?.nome ?? e.alianca.casa}`);

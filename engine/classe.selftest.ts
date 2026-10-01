@@ -219,4 +219,31 @@ const atorFalso = (ehJogador = true): CombatActor => ({
   }
 }
 
+// ── Espadachim Samurai: Katana, Haori e Zanshin Marcial ───────────────────
+{
+  const esp = nova('espadachim');
+  ok(esp.personagem.equipado.arma === 'katana', 'Espadachim nasce empunhando Katana');
+  ok(esp.personagem.equipado.armadura === 'haori_do_andarilho', 'Espadachim nasce vestindo Haori do Andarilho');
+  ok((esp.personagem.inventario.katana ?? 0) >= 1, 'Katana está no inventário inicial');
+  ok((esp.personagem.inventario.haori_do_andarilho ?? 0) >= 1, 'Haori do Andarilho está no inventário inicial');
+
+  // Katana é arma de precisão e corte com multiplicador crítico superior
+  const katanaItem = C.itens.find(i => i.id === 'katana')!;
+  ok(katanaItem.atributoAtaque === 'precisao', 'Katana escala com Precisão');
+  ok(katanaItem.tipoArma === 'espada', 'Katana conta como domínio de espada');
+  ok((katanaItem.multiplicadorCritico ?? 1) >= 1.95, 'Katana tem corte crítico afiado (>= 1.95x)');
+
+  // Zanshin no combate: abater com foco transfere para o próximo adversário
+  const ator = atorFalso();
+  registrarFoco(esp, ator, 'lobo1', true);
+  registrarFoco(esp, ator, 'lobo1', true);
+  ok(bonusDeFoco(esp, ator, 'lobo1') === 2, 'Acumulou 2 de foco contra lobo1');
+
+  // Simula abate marcial: alvo derrotado gera Zanshin
+  ator.focoZanshin = Math.min(TETO_FOCO_ESPADACHIM, ator.focoAcertos ?? 0);
+  ok(bonusDeFoco(esp, ator, 'lobo2') === 2, 'Zanshin do abate é herdado no próximo alvo');
+  registrarFoco(esp, ator, 'lobo2', true);
+  ok(bonusDeFoco(esp, ator, 'lobo2') === 3, 'Primeiro golpe acertado no novo alvo eleva para 3 de foco');
+}
+
 console.log('\nClasses: o que está escrito na ficha acontece no jogo.');

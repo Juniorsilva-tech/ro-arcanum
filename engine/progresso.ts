@@ -86,7 +86,9 @@ export function recalcularRecursosMaximos(camp: Campaign): void {
 // nao havia rodadas suficientes para a diferenca de poder aparecer.
 export const VIDA_BASE = 44;
 export function ganhoDeVidaPorNivel(camp: Campaign): number {
-  return 2 + Math.max(0, modificador(camp.personagem.atributos.resiliencia));
+  // 3 por nível (era 2): com o XP vindo de toda ação (sessão 87), a vida
+  // precisa crescer de um jeito que o jogador sinta.
+  return 3 + Math.max(0, modificador(camp.personagem.atributos.resiliencia));
 }
 export function vidaMaxima(camp: Campaign): number {
   const p = camp.personagem;

@@ -1,5 +1,6 @@
 // ARCANUM · Tela Dedicada de Assentamento, Feudo & Reino (GDD §32, §34).
 // Suporte ao mundo base (Vaelhorn / Feudo / Castelo) e à DLC (Asora / Tsukimichi).
+import { tracoDoHerdeiro, podeSuceder, IDADE_PARA_SUCEDER, deliberarSucessaoCorte } from '@/engine';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, Pressable, TextInput } from 'react-native';
 import { Pagina, BarraVoltar } from './_layout';
@@ -95,6 +96,7 @@ export function Assentamento() {
   const iniciarGestacao = useGame((s) => s.iniciarGestacaoAcao);
   const darLuzHerdeiro = useGame((s) => s.darLuzHerdeiroAcao);
   const designarHerdeiroAparente = useGame((s) => s.designarHerdeiroAparenteAcao);
+  const passarLegado = useGame((s) => s.passarLegadoAcao);
   const concederFeudo = useGame((s) => s.concederFeudoVassaloAcao);
   const convocarLevas = useGame((s) => s.convocarLevasVassalosAcao);
   const convocarGuerra = useGame((s) => s.convocarAssembleiaGuerraAcao);
@@ -739,19 +741,28 @@ export function Assentamento() {
               ) : (
                 feudo.filhosHerdeiros.map((filho) => {
                   const ehAparente = feudo.herdeiroAparenteId === filho.id;
+                  const traco = tracoDoHerdeiro(camp, filho);
                   return (
                     <Card key={filho.id} acento={ehAparente ? cores.ouro : undefined}>
                       <View style={styles.linhaEntre}>
-                        <View>
+                        <View style={{ flex: 1, marginRight: esp.sm }}>
                           <TextoSerif style={{ fontSize: 18 }}>{filho.nome}</TextoSerif>
                           <TextoMono style={{ fontSize: 11, color: cores.mudo }}>
                             Idade: {filho.idadeAnos} ano(s) · {filho.genero === 'm' ? 'Príncipe' : 'Princesa'} · Nascido no Dia {filho.diaNascimento}
                           </TextoMono>
+                          <TextoMono style={{ fontSize: 11, color: cores.ouro }}>
+                            traço: {traco.nome} (+2 em {traco.atributo})
+                          </TextoMono>
+                          {filho.inclinacao ? (
+                            <TextoMono style={{ fontSize: 11, color: cores.mudo, marginTop: 2 }}>
+                              vocação: {filho.inclinacao}
+                            </TextoMono>
+                          ) : null}
                         </View>
                         <Selo texto={ehAparente ? 'HERDEIRO DA COROA' : 'LINHAGEM REAL'} cor={ehAparente ? cores.ouro : cores.verdigris} />
                       </View>
 
-                      <TextoMono style={{ fontSize: 11, color: cores.mudo, marginTop: 4 }}>Atributos Herdados da Dinastia:</TextoMono>
+                      <TextoMono style={{ fontSize: 11, color: cores.mudo, marginTop: 4 }}>Atributos da Linhagem:</TextoMono>
                       <View style={styles.gradeRecursos}>
                         <View style={styles.caixaRecurso}><Text style={styles.rotuloRecurso}>Físico</Text><Text style={styles.valorRecurso}>{filho.atributos.fisico}</Text></View>
                         <View style={styles.caixaRecurso}><Text style={styles.rotuloRecurso}>Precisão</Text><Text style={styles.valorRecurso}>{filho.atributos.precisao}</Text></View>
@@ -761,19 +772,71 @@ export function Assentamento() {
                         <View style={styles.caixaRecurso}><Text style={styles.rotuloRecurso}>Social</Text><Text style={styles.valorRecurso}>{filho.atributos.social}</Text></View>
                       </View>
 
-                      {!ehAparente && (
-                        <View style={{ marginTop: esp.xs }}>
+                      <View style={{ marginTop: esp.sm, gap: esp.xs }}>
+                        {!ehAparente && (
                           <Botao
                             titulo="Designar como Herdeiro Aparente"
                             sub="Proclamar formalmente a sucessão do trono para este filho"
                             onPress={() => designarHerdeiroAparente(filho.id)}
                           />
-                        </View>
-                      )}
+                        )}
+                        <Botao
+                          titulo={`Passar o legado para ${filho.nome}`}
+                          sub={filho.idadeAnos < IDADE_PARA_SUCEDER
+                            ? `Assume sob regência da corte (${filho.idadeAnos} anos) · a campanha continua com ele`
+                            : `Assume a coroa imediatamente aos ${filho.idadeAnos} anos · a campanha continua com ele`}
+                          onPress={() => passarLegado(filho.id)}
+                        />
+                      </View>
                     </Card>
                   );
                 })
               )}
+
+              {/* Consulta à Corte: Opinião dos Oficiais e NPCs sobre a Sucessão */}
+              {(() => {
+                const deliberacao = deliberarSucessaoCorte(camp);
+                if (!deliberacao || deliberacao.opinioes.length === 0) return null;
+                return (
+                  <Card acento={cores.couro}>
+                    <TextoSerif style={{ fontSize: 18 }}>Conselho de Sucessão da Corte</TextoSerif>
+                    <TextoMono style={{ color: cores.mudo, marginVertical: 4 }}>
+                      Aconselhamento dos nobres e oficiais sobre quem possui a melhor aptidão para liderar o feudo:
+                    </TextoMono>
+                    <View style={{ gap: esp.xs, marginVertical: esp.xs }}>
+                      {deliberacao.opinioes.map((op, idx) => (
+                        <View key={idx} style={{ backgroundColor: cores.fundo3, padding: esp.sm, borderRadius: raio.sm }}>
+                          <TextoMono style={{ fontSize: 12, color: cores.ouro }}>
+                            {op.cargo} ({op.npcNome}):
+                          </TextoMono>
+                          <TextoMono style={{ fontSize: 11, color: cores.vellum, fontStyle: 'italic', marginTop: 2 }}>
+                            {op.justificativa}
+                          </TextoMono>
+                        </View>
+                      ))}
+                    </View>
+                    <TextoMono style={{ fontSize: 11, color: cores.mudo, marginTop: esp.xs }}>
+                      Aclamação da Corte em caso de morte sem decreto: {deliberacao.herdeiro.nome} ({deliberacao.motivo}).
+                    </TextoMono>
+                  </Card>
+                );
+              })()}
+
+              {/* Sucessão ao Herdeiro Aparente Geral */}
+              {(() => {
+                const suc = podeSuceder(camp);
+                return (
+                  <Card>
+                    <TextoSerif style={{ fontSize: 18 }}>Passar o legado ao Herdeiro Aparente</TextoSerif>
+                    <TextoMono style={{ color: cores.mudo, marginVertical: 4 }}>
+                      {suc.pode
+                        ? `${suc.herdeiro!.nome} assume o feudo: herda o dinheiro (menos um décimo), a mochila, o feudo e a fama do nome. Quem conhecia o pai lembra da família pela metade.`
+                        : `Ainda não: ${suc.motivo}.`}
+                    </TextoMono>
+                    {suc.pode && <Botao titulo={`Passar o nome a ${suc.herdeiro!.nome}`} sub="a campanha continua com este herdeiro" onPress={() => passarLegado(suc.herdeiro!.id)} />}
+                  </Card>
+                );
+              })()}
             </View>
           )}
 

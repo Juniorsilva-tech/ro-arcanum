@@ -9,7 +9,7 @@ import {
   itemPorId,
   itensDaLoja,
   precoCompra,
-  multiplicadorDePreco,
+  multiplicadorDePreco, descontoDoNome,
   precoVenda,
   type Item,
   estoqueNaLoja,
@@ -25,7 +25,7 @@ export function Loja() {
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
   const desconto = camp.flags['desconto'] === true;
   // Feira derruba o preço, escassez levanta: a praça responde ao vale.
-  const multMundo = multiplicadorDePreco(camp);
+  const multMundo = multiplicadorDePreco(camp) * descontoDoNome(content, camp);
   const aVenda = itensDaLoja(content, local.id);
 
   const meus = Object.entries(p.inventario)

@@ -131,6 +131,13 @@ export function registrarFato(camp: Campaign, entrada: Omit<FatoHistorico, 'id' 
   };
   v.fatos.push(fato);
   v.contadores[fato.tipo] = (v.contadores[fato.tipo] ?? 0) + 1;
+  // Feito público do jogador: o nome da família fica mais falado ali
+  // (engine/linhagem.ts). Conta aqui para valer para todo feito, sem espalhar
+  // chamadas; e sem importar a linhagem, que já importa este módulo.
+  if (fato.publico && fato.atores?.includes('jogador') && fato.local) {
+    const r = (camp.renomeDoNome ??= {});
+    r[fato.local] = (r[fato.local] ?? 0) + 1;
+  }
   // Causal links carry their own immutable summary when old entries are compacted.
   while (v.fatos.length > 300) {
     const velho = v.fatos.shift()!;

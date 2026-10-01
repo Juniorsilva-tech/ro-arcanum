@@ -631,7 +631,10 @@ function EntradaNarrativa({
   return (
     <>
       {marca}
-      <BotaoOuvir texto={entrada.texto} />
+      <View style={styles.narrTopo}>
+        {entrada.modelo ? <Text style={styles.modeloTxt} numberOfLines={1}>{entrada.modelo}</Text> : <View />}
+        <BotaoOuvir texto={entrada.texto} />
+      </View>
       <View style={styles.narrBloco}>
         {blocos.map((b, i) =>
           b.tipo === 'fala' ? (
@@ -1065,6 +1068,8 @@ const styles = StyleSheet.create({
   livreAbaAtiva: { borderColor: cores.ouro, backgroundColor: 'rgba(212,175,55,0.12)' },
   livreAbaTxt: { fontFamily: fontes.mono, fontSize: 11, color: cores.mudo, letterSpacing: 1 },
   livreAbaTxtAtiva: { color: cores.ouro },
+  narrTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: esp.sm },
+  modeloTxt: { flexShrink: 1, fontFamily: fontes.mono, fontSize: 10, color: cores.mudo, letterSpacing: 0.5 },
   ouvir: { alignSelf: 'flex-end', paddingVertical: 2, paddingHorizontal: 6, marginBottom: 2 },
   ouvirTxt: { fontFamily: fontes.mono, fontSize: 10, color: cores.mudo, letterSpacing: 1 },
   livreAtalhoDica: {

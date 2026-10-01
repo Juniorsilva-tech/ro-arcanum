@@ -43,13 +43,13 @@ export const classesVaelhorn: Classe[] = [
     id: 'espadachim',
     nome: 'Espadachim',
     recursoPrincipal: 'vigor',
-    mecanicaUnica: 'Um alvo por vez: cada acerto no mesmo inimigo facilita o próximo. Trocar de alvo zera.',
+    mecanicaUnica: 'Caminho da Lâmina e Zanshin: cada golpe no mesmo alvo facilita o próximo (+1 acerto, teto +4). Ao derrotar um inimigo, o ímpeto marcial é preservado para o próximo oponente.',
     descricao:
-      'Aprendeu a lâmina como quem aprende um idioma: cedo, apanhando, e sem escolha. Não carrega escudo — carrega a certeza de que o segundo golpe não vai ser preciso.',
+      'Segue a via da espada clássica com disciplina marcial e olhar atento. Veste o haori tradicional e empunha a katana com ambas as mãos — sem escudo, pois a própria lâmina é o corte, a guarda e a resposta definitiva.',
     bonusAtributos: { precisao: 3, fisico: 1 },
     periciasIniciais: { atletismo: 2, perceber: 1, intimidar: 1 },
-    itensIniciais: { espada_longa: 1, pedra_de_amolar: 1, gibao_de_couro: 1, racao: 3, oleo_de_lamina: 1 },
-    equipInicial: { arma: 'espada_longa', armadura: 'gibao_de_couro' },
+    itensIniciais: { katana: 1, pedra_de_amolar: 1, haori_do_andarilho: 1, racao: 3, oleo_de_lamina: 1 },
+    equipInicial: { arma: 'katana', armadura: 'haori_do_andarilho' },
   },
   {
     id: 'cacadora',

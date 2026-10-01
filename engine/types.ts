@@ -213,7 +213,7 @@ export type ModoKai =
 // ── Personagem.
 export type Personagem = {
   nome: string;
-  genero: 'm';
+  genero: 'm' | 'f';
   classeId: string;
   origemId: string;
   nivel: number;
@@ -237,6 +237,8 @@ export type Personagem = {
   corNichirinInata?: 'preta' | 'azul' | 'vermelha' | 'amarela' | 'verde' | 'cinza' | 'branca' | 'lavanda' | 'rosa' | 'indigo';
   // Fusões de estilo já criadas nesta vida — limite de 3 (ver engine/fusao.ts).
   fusoesFeitas?: number;
+  // O jeito de lutar que o último mestre deixou (engine/estiloMestre.ts).
+  estiloMarcial?: 'agressivo' | 'defensivo' | 'preciso' | 'bruto';
   alcunhas: string[];
   cicatrizes: string[];
   condicoes: string[];
@@ -591,6 +593,8 @@ export type CombatActor = {
   /** Espadachim: alvo em que ele esta focado, e quantos acertos seguidos. */
   focoAlvo?: string;
   focoAcertos?: number;
+  /** Preservação de foco marcial ao derrotar um inimigo (Zanshin do Espadachim). */
+  focoZanshin?: number;
   // Fracao dos acertos que sai como critico. Ausente = 0,25 (regra base).
   janelaCritica?: number;
   // Multiplicador de dano em caso de acerto crítico (ausente = 1.75)
@@ -746,6 +750,9 @@ export type EstadoMarca = {
 };
 
 export type CombatState = {
+  /** Prova do mestre (engine/rito.ts): para a um quarto da vida, ninguém morre. */
+  rito?: { mestreId: string };
+  ritoFim?: 'vitoria' | 'derrota';
   /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
   bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
   /** Emboscada contra caravana que o jogador escolta (engine/caravanas.ts). */
@@ -908,6 +915,13 @@ export type Campaign = {
   // Quem sabe o nome do jogador (engine/nomeDoJogador.ts), além da família e
   // de quem convive com ele há dias.
   sabemSeuNome?: string[];
+  // Provas feitas com cada mestre (engine/rito.ts).
+  ritos?: Record<string, { dia: number; resultado: 'aprovado' | 'promissor' | 'cru' }>;
+  // A linhagem (engine/linhagem.ts): quem veio antes, e a fama do nome por lugar.
+  linhagem?: { nome: string; idade: number; nivel: number; alcunhas: string[]; fim: 'morte' | 'legado'; dia: number }[];
+  renomeDoNome?: Record<string, number>;
+  // Fama de cada arma pelo que ela derrubou (engine/famaArma.ts).
+  famaArmas?: Record<string, { abates: number; nivel: 'comum' | 'conhecida' | 'lendaria' }>;
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.
@@ -1132,6 +1146,15 @@ export type GestacaoReino = {
   saudeFeto: number; // 0 a 100
 };
 
+export type VocacaoHerdeiro =
+  | 'estrategista'
+  | 'combatente'
+  | 'diplomata'
+  | 'batedor'
+  | 'guardiao'
+  | 'erudito'
+  | 'equilibrado';
+
 export type FilhoHerdeiro = {
   id: string;
   nome: string;
@@ -1141,6 +1164,8 @@ export type FilhoHerdeiro = {
   vivo: boolean;
   atributos: Atributos;
   legitimidade: 'legitimo' | 'bastardo';
+  vocacao?: VocacaoHerdeiro;
+  inclinacao?: string;
 };
 
 export type LordeVassalo = {

@@ -7,6 +7,7 @@
 // Este módulo faz o tempo cobrar de todo mundo. Não é simulação econômica: é
 // um punhado de estados que mudam sozinhos, chegam ao narrador e mexem no
 // preço da loja. Barato de rodar, e o bastante para o vale parecer vivo.
+import { assumirLegado, podeSuceder } from './linhagem';
 import { processarBandos } from './bandos';
 import { atualizarLivro } from './livro';
 import type { Campaign, ContentBundle, Estacao } from './types';
@@ -214,6 +215,9 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     // pro próximo ano (ver vidanpc.ts).
     if ((m.proximoEnvelhecimento ?? DIAS_POR_ANO) <= dia) {
       processarEnvelhecimentoJogador(camp);
+      // Morreu de velhice e tem filho com idade para herdar: a campanha
+      // continua com ele (engine/linhagem.ts).
+      if (camp.personagem.recursos.vida <= 0 && podeSuceder(camp).pode) assumirLegado(content, camp, 'morte');
     }
 
     // E a vida civil segue: elas envelhecem, e o que sentem umas pelas

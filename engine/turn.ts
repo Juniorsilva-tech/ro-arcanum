@@ -11,6 +11,7 @@ import type {
   Grau,
 } from './types';
 import { resolverTeste, type ResultadoTeste, NOME_GRAU } from './resolution';
+import { processarSubidaDeNivel } from './progresso';
 import { avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
 import { clampRecursos } from './character';
@@ -218,6 +219,21 @@ export function resolverIntencao(
   for (const ef of substituirAlvo(baldeGrau, intencao.alvoId)) {
     aplicarEfeito(camp, ef);
     aplicados.push(ef);
+  }
+
+  // Aprender fazendo: todo teste de verdade dá um pouco de experiência — até
+  // a sessão 87 só luta e quatro verbos davam XP, e quem vivia de conversa,
+  // ofício e investigação ficava no nível 1 (e com 44 de vida) para sempre.
+  // Não soma se o próprio verbo já pagou XP.
+  if (teste && resultado && !aplicados.some((ef) => ef.tipo === 'xp')) {
+    const peso = Math.max(0, teste.dificuldade - 10) / 2;
+    const xp = resultado.grau === 'critico' ? Math.round(6 + peso * 2)
+      : resultado.sucesso ? Math.round(3 + peso)
+      : 1;
+    const ef: Efeito = { tipo: 'xp', delta: xp };
+    aplicarEfeito(camp, ef);
+    aplicados.push(ef);
+    processarSubidaDeNivel(camp);
   }
 
   // Arcanista: estudar devolve mana a ela, e so a ela (engine/classe.ts).

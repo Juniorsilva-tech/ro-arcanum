@@ -77,3 +77,8 @@ export * from './nichirin';
 export * from './protecao';
 export * from './cultivos';
 export * from './nomeDoJogador';
+export * from './rito';
+export * from './linhagem';
+export * from './criacao';
+export * from './famaArma';
+export * from './estiloMestre';

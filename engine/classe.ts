@@ -65,18 +65,27 @@ export function ehClasseEspadachim(camp: Campaign): boolean {
 
 export function bonusDeFoco(camp: Campaign, atacante: CombatActor, alvoId: string): number {
   if (!atacante.ehJogador || !ehClasseEspadachim(camp)) return 0;
-  return atacante.focoAlvo === alvoId ? Math.min(TETO_FOCO_ESPADACHIM, atacante.focoAcertos ?? 0) : 0;
+  if (atacante.focoAlvo === alvoId) {
+    return Math.min(TETO_FOCO_ESPADACHIM, atacante.focoAcertos ?? 0);
+  }
+  // Se abateu o inimigo anterior, o Zanshin marcial preserva o foco para o primeiro golpe no novo alvo
+  if (atacante.focoZanshin && atacante.focoZanshin > 0) {
+    return Math.min(TETO_FOCO_ESPADACHIM, atacante.focoZanshin);
+  }
+  return 0;
 }
 
 export function registrarFoco(camp: Campaign, atacante: CombatActor, alvoId: string, acertou: boolean): void {
   if (!atacante.ehJogador || !ehClasseEspadachim(camp)) return;
   if (atacante.focoAlvo !== alvoId) {
     atacante.focoAlvo = alvoId;
-    atacante.focoAcertos = 0;
+    // Transfere o Zanshin do abate, ou reinicia do zero caso seja troca de alvo voluntária sem abate
+    atacante.focoAcertos = atacante.focoZanshin ? atacante.focoZanshin : 0;
+    atacante.focoZanshin = undefined;
   }
   // Errar não zera o acúmulo: quem insiste no mesmo alvo continua insistindo.
-  // Trocar de alvo zera, e é só isso que zera.
-  if (acertou) atacante.focoAcertos = (atacante.focoAcertos ?? 0) + 1;
+  // Trocar de alvo zera (a menos que tenha Zanshin do abate).
+  if (acertou) atacante.focoAcertos = Math.min(TETO_FOCO_ESPADACHIM, (atacante.focoAcertos ?? 0) + 1);
 }
 
 export type EfeitoRupturaAsora = {
@@ -240,7 +249,7 @@ export function alivioDeRota(camp: Campaign): number {
 export function efeitoDaClasse(camp: Campaign): string | undefined {
   switch (classeDe(camp)) {
     case CLASSE_GUARDIAO: return 'O primeiro golpe de cada combate não passa.';
-    case CLASSE_ESPADACHIM: return `Cada acerto no mesmo alvo soma +1 de acerto, até +${TETO_FOCO_ESPADACHIM}. Trocar de alvo zera.`;
+    case CLASSE_ESPADACHIM: return `Cada acerto no mesmo alvo soma +1 de acerto, até +${TETO_FOCO_ESPADACHIM}. Abater o alvo preserva o Zanshin para o próximo adversário.`;
     case CLASSE_CACADORA: return 'Descansar recupera metade a mais.';
     case CLASSE_CURANDEIRA: return 'Descansar também trata veneno, doença e infecção.';
     case CLASSE_CONTRABANDISTA: return 'Compra 20% mais barato e vende 20% mais caro.';

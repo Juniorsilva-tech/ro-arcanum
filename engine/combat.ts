@@ -21,6 +21,8 @@ import { periodoAtual, avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
 import { aplicarFerimentoOni, haAbrigoSolar, obterRival, registrarConfronto, VERSAO_COMBATE } from './kimetsu';
 import { verificarDespertarNichirin } from './nichirin';
+import { efeitoDoEstilo } from './estiloMestre';
+import { bonusDeFamaDaArma, registrarAbates } from './famaArma';
 import type { RivalPersistente } from './kimetsuTypes';
 import { atualizarAmeacas } from './continuidade';
 import { npcPorId } from './elenco';
@@ -33,6 +35,8 @@ import {
   absorveuOPrimeiroGolpe,
   bonusDeFoco,
   registrarFoco,
+  ehClasseEspadachim,
+  TETO_FOCO_ESPADACHIM,
   multiplicadorDeArte,
   efeitoEspadachimAsora,
   bonusArqueiroAzusa,
@@ -187,7 +191,8 @@ export function defesaJogador(content: ContentBundle, camp: Campaign): number {
     sakaiBonus = 2;
   }
   const bonusCenarioDef = camp.cenarioId === 'tsukimichi' ? 14 : 0;
-  return base + sakaiBonus + bonusCenarioDef;
+  // O jeito de lutar que o mestre deixou (engine/estiloMestre.ts).
+  return base + sakaiBonus + bonusCenarioDef + efeitoDoEstilo(p.estiloMarcial).defesa;
 }
 
 // Janela de critico: a fatia dos acertos que sai limpa. Aproveitar a abertura
@@ -201,7 +206,7 @@ export function janelaCriticaJogador(camp: Campaign, content?: ContentBundle): n
     const arma = armaEquipada(content, p);
     bonusArma = arma?.bonusCritico ?? 0;
   }
-  return Math.min(0.60, 0.25 + bonusArma + maestriaDe(camp, 'espada') / 500);
+  return Math.min(0.60, 0.25 + bonusArma + maestriaDe(camp, 'espada') / 500 + efeitoDoEstilo(p.estiloMarcial).critico);
 }
 
 export function acertoJogador(content: ContentBundle, camp: Campaign): number {
@@ -232,7 +237,7 @@ export function acertoJogador(content: ContentBundle, camp: Campaign): number {
     sakaiBonus = 3 + (sakai.nivel ?? 1);
   }
   const bonusCenarioAcerto = camp.cenarioId === 'tsukimichi' ? 10 : 0;
-  return base + sakaiBonus + bonusCenarioAcerto;
+  return base + sakaiBonus + bonusCenarioAcerto + efeitoDoEstilo(camp.personagem.estiloMarcial).acerto;
 }
 
 // Dano do jogador. A arma define o molde básico, mas o guerreiro a potencializa:
@@ -301,7 +306,9 @@ export function danoJogador(content: ContentBundle, camp: Campaign): PerfilDano 
   return {
     ...perfil,
     dispersao: dispersaoEstabilizada,
-    base: (base + bonusDanoSakai + bonusCenarioDano) * multiplicadoresDeIdentidade(camp).dano,
+    // Estilo do mestre (bruto pesa mais) e a fama da arma (engine/famaArma.ts).
+    base: (base + bonusDanoSakai + bonusCenarioDano) * multiplicadoresDeIdentidade(camp).dano
+      * efeitoDoEstilo(p.estiloMarcial).dano * bonusDeFamaDaArma(camp, p.equipado.arma),
   };
 }
 
@@ -487,6 +494,9 @@ export function iniciarCombate(
     }
   }
 
+  // Prova do mestre (engine/rito.ts): marcada antes do primeiro golpe — o
+  // mestre pode agir primeiro, e um crítico dele não pode virar luta de estrada.
+  if (criaturaIds.length === 1 && criaturaIds[0].startsWith('rito_')) state.rito = { mestreId: criaturaIds[0].slice('rito_'.length) };
   camp.combate = state;
   for (const a of inimigos) {
     const r = a.rivalId && camp.kimetsu?.rivais[a.rivalId];
@@ -530,6 +540,16 @@ function contraGolpe(camp: Campaign, atacante: CombatActor, dano: number): void 
   atacante.vida = real.vida;
 }
 
+// Prova do mestre (engine/rito.ts): o golpe que leva alguém a um quarto da
+// vida encerra a luta, e não mata. Fica aqui para o combate não depender do
+// módulo do rito.
+function limiteDaProva(camp: Campaign, alvo: CombatActor): 'vitoria' | 'derrota' | undefined {
+  if (!camp.combate?.rito) return undefined;
+  if (alvo.vida > Math.ceil(alvo.vidaMax * 0.25)) return undefined;
+  alvo.vida = Math.max(1, alvo.vida);
+  return alvo.ehJogador ? 'derrota' : 'vitoria';
+}
+
 function resolverAtaque(
   camp: Campaign,
   atacante: CombatActor,
@@ -568,11 +588,18 @@ function resolverAtaque(
   const niten = bonificacaoNitenMusashi(camp, atacante);
   const anulaCobertura = kyudo.anulaCobertura || atacante.efeitoPassivoArma === 'disparo_perfurante';
   const defCobertura = anulaCobertura ? 0 : alvo.posicao === 'cobertura' ? 3 : 0;
+  const bonusZanshinDefesa =
+    alvo.ehJogador &&
+    ehClasseEspadachim(camp) &&
+    (camp.combate?.atores.filter((a) => !a.ehJogador && !a.ehAliado && a.vida > 0).length ?? 0) >= 2
+      ? 2
+      : 0;
   const defEfetiva =
     alvo.defesa +
     (alvo.defendendo ? 4 : 0) +
     (evasao ? 5 : 0) +
     defCobertura +
+    bonusZanshinDefesa +
     (alvo.posicao === 'flanco' ? -2 : 0);
   if (evasao) alvo.tatico!.esquiva!--;
   const posicao =
@@ -747,6 +774,12 @@ function resolverAtaque(
   }
 
   alvo.vida = Math.max(0, alvo.vida - dano.valor);
+  // Prova do mestre: ninguém morre; quem chega a um quarto da vida perde.
+  const fimRito = limiteDaProva(camp, alvo);
+  if (fimRito) {
+    camp.combate!.ritoFim = fimRito;
+    return `${atacante.nome} acerta ${alvo.nome} — ${dano.valor} de dano. ${alvo.ehJogador ? 'Você não aguenta mais: a prova acaba.' : `${alvo.nome} baixa a arma: a prova acaba.`}`;
+  }
   aplicarFerimentoOni(camp, alvo, contraOni);
   const submissaoTsukimichi = camp.cenarioId === 'tsukimichi' && alvo.criaturaId && alvo.criaturaId in ENTIDADES_CONTRATAVEIS;
   if (submissaoTsukimichi && alvo.vida <= 0) {
@@ -762,6 +795,14 @@ function resolverAtaque(
       ? ` ${alvo.nome} cai de joelhos, exausto e subjugado pelo seu oceano imensurável de mana!`
       : ` ${alvo.nome} cai.`
     : '';
+  let notaZanshin = '';
+  if (alvo.vida <= 0 && atacante.ehJogador && ehClasseEspadachim(camp)) {
+    const focoAtual = Math.min(TETO_FOCO_ESPADACHIM, atacante.focoAcertos ?? 0);
+    if (focoAtual > 0) {
+      atacante.focoZanshin = focoAtual;
+      notaZanshin = ' [Zanshin: ímpeto marcial preservado para o próximo oponente!]';
+    }
+  }
   let notaVeneno = '';
   const armaId = camp.personagem.equipado.arma;
   const armaEquip = camp.personagem.itensForjados?.find(i => i.id === armaId);
@@ -783,7 +824,7 @@ function resolverAtaque(
   const tagCrit = crit ? ' [crítico]' : '';
   const verboAcerto = `${atacante.nome} acerta ${alvo.nome}${crit ? ' em cheio' : ''}`;
 
-  return `${verboAcerto} — ${dano.valor} de dano ${dano.tipo}.${tagCrit}${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaPassiva}${notaMantoTsukimichi}${morte}${lesao ? ` ${lesao}` : ''}${notaOni}`;
+  return `${verboAcerto} — ${dano.valor} de dano ${dano.tipo}.${tagCrit}${notaQuebra}${notaOleo}${notaRuptura}${notaVeneno}${notaPassiva}${notaMantoTsukimichi}${morte}${notaZanshin}${lesao ? ` ${lesao}` : ''}${notaOni}`;
 }
 
 // ── Ações do jogador ────────────────────────────────────────────────
@@ -1254,6 +1295,7 @@ export function jogadorAcaoTatica(content: ContentBundle, camp: Campaign, acao: 
 // ── Fluxo de turnos ─────────────────────────────────────────────────
 function depoisDaAcaoDoJogador(content: ContentBundle, camp: Campaign): void {
   const s = camp.combate!;
+  if (s.ritoFim) { encerrar(camp, s.ritoFim, content); return; }
   if (inimigosVivos(s).length === 0) {
     encerrar(camp, 'vitoria', content);
     return;
@@ -1387,6 +1429,10 @@ function avancarAteJogador(content: ContentBundle, camp: Campaign): void {
         registrarMarco(camp, `${alvoDoInimigo.nome} morreu lutando ao seu lado.`);
         s.log.push(`${alvoDoInimigo.nome} não volta a se levantar.`);
       }
+    }
+    if (s.ritoFim) {
+      encerrar(camp, s.ritoFim, content);
+      return;
     }
     if (jog.vida <= 0) {
       encerrar(camp, 'derrota', content);
@@ -1608,6 +1654,12 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
       moedasAchadas += mochila.moedas;
     }
     p.xp += xp;
+    // A arma conta quem derrubou (engine/famaArma.ts). A prova do mestre não conta.
+    if (!s.rito) {
+      const abatidos = s.atores.filter((a) => !a.ehJogador && !a.ehAliado && !vivo(a) && !a.capturado).length;
+      const fama = registrarAbates(content, camp, abatidos);
+      if (fama) s.log.push(fama);
+    }
     const nivelAntes = p.nivel;
     processarSubidaDeNivel(camp);
     if (p.nivel > nivelAntes) s.log.push(`Você subiu para o nível ${p.nivel}.`);
@@ -1660,6 +1712,10 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
         }
       }
     }
+  } else if (resultado === 'derrota' && s.rito) {
+    // Perder a prova do mestre não é perder uma luta de estrada: ninguém leva
+    // nada, e o corpo fica como ficou (a um quarto da vida).
+    p.recursos.vida = Math.max(1, s.atores.find((a) => a.ehJogador)?.vida ?? 1);
   } else if (resultado === 'derrota') {
     // GDD §15: sobrevive com sequela; o inimigo leva algo seu.
     p.recursos.vida = 1;

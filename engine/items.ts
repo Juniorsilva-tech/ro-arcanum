@@ -6,6 +6,7 @@ import { multiplicadorDePreco } from './mundo';
 import { cidadeDoLocal, cidadeIdDoLocal } from './historiaViva';
 import { descontoDeCompra, multiplicadorDeVenda } from './classe';
 import { verificarDespertarNichirin } from './nichirin';
+import { descontoDoNome } from './linhagem';
 
 export function estoqueNaLoja(content: ContentBundle, camp: Campaign, itemId: string): number {
   const item = itemPorId(content, itemId);
@@ -117,7 +118,8 @@ export function comprar(
   const p = camp.personagem;
   const item = itemPorId(content, itemId);
   if (!item) return { ok: false, motivo: 'item desconhecido' };
-  const preco = precoCompra(item, descontoDeCompra(camp, desconto), multiplicadorDePreco(camp));
+  // Onde o nome da família é falado, o comércio faz preço de conhecido (engine/linhagem.ts).
+  const preco = precoCompra(item, descontoDeCompra(camp, desconto), multiplicadorDePreco(camp) * descontoDoNome(content, camp));
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
   if (estoqueNaLoja(content, camp, itemId) <= 0) return { ok: false, motivo: 'item indisponível nesta loja ou serviço interrompido' };
   if (p.dinheiro < preco) return { ok: false, motivo: 'sem moedas suficientes' };

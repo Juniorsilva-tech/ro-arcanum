@@ -12,6 +12,7 @@ import {
   atributosBase,
   narrarComFallback,
   tipoDeCena,
+  concluirRito,
   disseONome,
   apresentar,
   protegerNome,
@@ -174,6 +175,9 @@ export type EntradaFeed = {
   // Sem isso o feed vira um rolo só e ninguém sabe onde uma ação terminou.
   abreTurno?: boolean;
   cabecalho?: string;
+  // Quem narrou esta cena (provedor · modelo). O rodízio de reservas e o
+  // fallback trocam de modelo sem avisar; a tela mostra qual respondeu.
+  modelo?: string;
 };
 
 // O retrato exato da tela — feed e cena correntes — persistido à parte da
@@ -318,6 +322,9 @@ interface GameState {
   comprarAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   abaterAnimaisAcao: (especie: import('@/engine').AnimalColonia, qtd: number) => Promise<string>;
   plantarCultivoAcao: (id: import('@/engine').CultivoId) => Promise<string>;
+  pedirRitoAcao: (mestreId: string) => Promise<void>;
+  criarTecnicaAcao: (nome: string, principio: import('@/engine').Principio, forma: import('@/engine').Forma) => Promise<string>;
+  passarLegadoAcao: (herdeiroId?: string) => Promise<string>;
   recusarChegadaAcao: (id: string) => Promise<string>;
   designarFuncaoAcao: (colonoId: string, oficio?: import('@/engine').OficioColonia) => Promise<string>;
   iniciarObraFeudoAcao: (tipo: TipoEdificioModular) => Promise<string>;
@@ -804,6 +811,41 @@ export const useGame = create<GameState>((set, get) => ({
     return r.mensagem;
   },
 
+  async criarTecnicaAcao(nome, principio, forma) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const { criarTecnica } = await import('@/engine');
+    const r = criarTecnica(content, camp, nome, principio, forma);
+    const texto = r.ok ? `Você inventou ${r.arte!.nome}.` : r.motivo ?? 'não deu';
+    set({ camp: { ...camp }, feed: [...get().feed, nf(texto, 'sistema')] });
+    await persistir(camp, set);
+    return texto;
+  },
+
+  async passarLegadoAcao(herdeiroId?: string) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const { assumirLegado } = await import('@/engine');
+    const r = assumirLegado(content, camp, 'legado', herdeiroId);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.texto, 'sistema')] });
+    await persistir(camp, set);
+    if (r.ok) await narrar(get, set, r.texto, undefined, { modoCena: 'capitulo' });
+    return r.texto;
+  },
+
+  async pedirRitoAcao(mestreId) {
+    const { camp, content } = get();
+    if (!camp || !content) return;
+    const { iniciarRito } = await import('@/engine');
+    const r = iniciarRito(content, camp, mestreId);
+    if (!r.ok) {
+      set({ feed: [...get().feed, nf(r.motivo ?? 'o mestre recusou a prova', 'sistema')] });
+      return;
+    }
+    set({ camp: { ...camp }, tela: 'combate' });
+    await persistir(camp, set);
+  },
+
   async plantarCultivoAcao(id) {
     const { camp, content } = get();
     if (!camp || !content) return '';
@@ -1230,6 +1272,8 @@ export const useGame = create<GameState>((set, get) => ({
     if (!content || !camp) return;
     const resultado = camp.combate?.resultado;
     const rec = camp.combate?.recompensa;
+    // Prova do mestre: o resultado e o que falta viram o fato da cena.
+    const rito = camp.combate?.rito ? concluirRito(content, camp) : undefined;
     const batidasCombate = [...(camp.combate?.log ?? [])];
     fecharCombate(camp);
     avancarMundo(content, camp);
@@ -1238,15 +1282,18 @@ export const useGame = create<GameState>((set, get) => ({
           .map((id) => content.itens.find((i) => i.id === id)?.nome ?? id)
           .join(', ')}.`
       : '';
-    const fato =
-      resultado === 'vitoria'
+    const fato = rito
+      ? rito.fato
+      : resultado === 'vitoria'
         ? `A luta terminou e você ficou de pé.${saque}`
         : resultado === 'derrota'
           ? 'A luta terminou com você no chão. Você acorda depois, ferido, e mais pobre.'
           : 'Você virou as costas e correu, e conseguiu.';
     const linhas: EntradaFeed[] = [
       nf(
-        resultado === 'vitoria'
+        rito
+          ? `Prova do mestre · ${rito.resultado === 'aprovado' ? 'aprovado' : rito.resultado === 'promissor' ? 'promissor' : 'ainda cru'}`
+          : resultado === 'vitoria'
           ? `Combate vencido${rec?.xp ? ` · +${rec.xp} xp` : ''}`
           : resultado === 'derrota'
             ? 'Combate perdido'
@@ -1947,6 +1994,7 @@ async function narrar(
   set({ textoStreaming: '' });
   let res: Awaited<ReturnType<typeof narrarComFallback>> = { erro: 'sem narrador' };
   const erros: string[] = [];
+  let quemNarrou: string | undefined;
   for (const [k, cfg] of cfgs.entries()) {
     // Só o primeiro vai em streaming; a segunda tentativa automática cobre
     // falha de rede antes de passar para a reserva seguinte.
@@ -1956,7 +2004,10 @@ async function narrar(
       });
     }
     if (!res.texto) res = await narrarComFallback(cfg, content, camp, cena.contexto, pedido);
-    if (res.texto) break;
+    if (res.texto) {
+      quemNarrou = `${cfg.provider} · ${res.modeloUsado ?? cfg.modelo ?? 'padrão'}`;
+      break;
+    }
     erros.push(`${cfg.provider}: ${res.erro ?? 'sem resposta'}`);
   }
   if (!res.texto && erros.length > 1) res = { erro: erros.join(' · ') };
@@ -1972,7 +2023,7 @@ async function narrar(
     if (disseONome(falasDele, nomeJ)) apresentar(camp, presentes);
     const textoFinal = protegerNome(res.texto, nomeJ, presentes.filter((n) => !sabeONome(camp, n)).map((n) => n.nome));
     registrarNaCronica(camp, textoFinal);
-    const extras: EntradaFeed[] = [nf(textoFinal, 'narracao')];
+    const extras: EntradaFeed[] = [{ ...nf(textoFinal, 'narracao'), modelo: quemNarrou }];
     const achado = entregarAchado(content, camp, res.achado);
     if (achado) extras.push(achado);
     set({

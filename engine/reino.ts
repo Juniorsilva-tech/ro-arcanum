@@ -19,6 +19,7 @@ import type {
   CasamentoReino,
   GestacaoReino,
   FilhoHerdeiro,
+  VocacaoHerdeiro,
   LordeVassalo,
   TramaReino,
   CasaDinastica,
@@ -911,10 +912,11 @@ export function processarCicloReino(camp: Campaign, periodos: number): void {
       if (!filho.vivo) continue;
       const idadeCalculada = Math.floor((camp.calendario.dia - filho.diaNascimento) / 360);
       if (idadeCalculada > filho.idadeAnos) {
+        const anosPassados = idadeCalculada - filho.idadeAnos;
         filho.idadeAnos = idadeCalculada;
-        // Ao crescer, aprimora atributos herdados
-        filho.atributos.fisico += 1;
-        filho.atributos.raciocinio += 1;
+        for (let i = 0; i < anosPassados; i++) {
+          aprimorarAtributosHerdeiro(filho);
+        }
       }
     }
   }
@@ -1359,27 +1361,123 @@ export function iniciarGestacao(camp: Campaign): { ok: boolean; mensagem: string
   return { ok: true, mensagem: texto };
 }
 
-/** Realiza o parto e registra um novo filho herdeiro na dinastia */
+export type InfoVocacaoHerdeiro = {
+  id: VocacaoHerdeiro;
+  nome: string;
+  descricao: string;
+  modificadores: Partial<Record<keyof Atributos, number>>;
+};
+
+export const VOCACOES_HERDEIRO: InfoVocacaoHerdeiro[] = [
+  {
+    id: 'estrategista',
+    nome: 'Estrategista nato',
+    descricao: 'franzino em combate, mente superior para táticas, leis e governo',
+    modificadores: { raciocinio: 4, percepcao: 2, social: 1, fisico: -3, resiliencia: -1, precisao: 0 },
+  },
+  {
+    id: 'combatente',
+    nome: 'Campeão marcial',
+    descricao: 'combatente formidável no aço e escudo, raciocínio simples e direto',
+    modificadores: { fisico: 4, resiliencia: 3, precisao: 2, raciocinio: -2, social: -1, percepcao: 0 },
+  },
+  {
+    id: 'diplomata',
+    nome: 'Estadista diplomata',
+    descricao: 'eloquente e persuasivo na corte, une vassalos e evita o sangue',
+    modificadores: { social: 4, raciocinio: 2, percepcao: 1, fisico: -2, resiliencia: 0, precisao: -1 },
+  },
+  {
+    id: 'batedor',
+    nome: 'Olhos de falcão',
+    descricao: 'olhos aguçados e reflexos ágeis, vigia fronteiras e antecipa emboscadas',
+    modificadores: { percepcao: 4, precisao: 3, fisico: 1, social: -2, raciocinio: 0, resiliencia: 0 },
+  },
+  {
+    id: 'guardiao',
+    nome: 'Bastião inabalável',
+    descricao: 'vigor de muralha, resiste a cercos e venenos, leal à casa',
+    modificadores: { resiliencia: 4, fisico: 2, percepcao: 1, precisao: -1, raciocinio: -1, social: 0 },
+  },
+  {
+    id: 'erudito',
+    nome: 'Erudito dos segredos',
+    descricao: 'erudição profunda e mente investigativa, desinteressado pelas armas',
+    modificadores: { raciocinio: 5, percepcao: 2, fisico: -3, resiliencia: -2, precisao: 0, social: 1 },
+  },
+  {
+    id: 'equilibrado',
+    nome: 'Nobre equilibrado',
+    descricao: 'instruído com igual esmero nas artes marciais, nas letras e na corte',
+    modificadores: { fisico: 1, precisao: 1, resiliencia: 1, raciocinio: 1, percepcao: 1, social: 1 },
+  },
+];
+
+export function aprimorarAtributosHerdeiro(filho: FilhoHerdeiro): void {
+  const v = filho.vocacao;
+  switch (v) {
+    case 'estrategista':
+    case 'erudito':
+      filho.atributos.raciocinio += 1;
+      if (filho.idadeAnos % 2 === 0) filho.atributos.percepcao += 1;
+      if (filho.idadeAnos % 3 === 0) filho.atributos.social += 1;
+      break;
+    case 'combatente':
+      filho.atributos.fisico += 1;
+      if (filho.idadeAnos % 2 === 0) filho.atributos.precisao += 1;
+      if (filho.idadeAnos % 3 === 0) filho.atributos.resiliencia += 1;
+      break;
+    case 'guardiao':
+      filho.atributos.resiliencia += 1;
+      if (filho.idadeAnos % 2 === 0) filho.atributos.fisico += 1;
+      break;
+    case 'diplomata':
+      filho.atributos.social += 1;
+      if (filho.idadeAnos % 2 === 0) filho.atributos.raciocinio += 1;
+      break;
+    case 'batedor':
+      filho.atributos.percepcao += 1;
+      if (filho.idadeAnos % 2 === 0) filho.atributos.precisao += 1;
+      break;
+    case 'equilibrado':
+    default:
+      filho.atributos.fisico += 1;
+      filho.atributos.raciocinio += 1;
+      break;
+  }
+}
+
+/** Realiza o parto e registra um novo filho herdeiro na dinastia com vocação e perfil únicos */
 export function darLuzHerdeiro(
   camp: Campaign,
   nomeBebe: string,
   genero: 'm' | 'f',
+  vocacaoForcada?: VocacaoHerdeiro,
 ): { ok: boolean; mensagem: string; filho?: FilhoHerdeiro } {
   const feudo = obterFeudo(camp);
   const p = camp.personagem;
 
-  // Herança genética determinística dos atributos dos pais com bônus de linhagem
+  // Escolhe a vocação/perfil do herdeiro
+  let infoVoc: InfoVocacaoHerdeiro;
+  if (vocacaoForcada) {
+    infoVoc = VOCACOES_HERDEIRO.find((v) => v.id === vocacaoForcada) ?? VOCACOES_HERDEIRO[0];
+  } else {
+    const rngVoc = createRng((camp.rng.seed ^ seedFromString(`vocacao:${camp.calendario.dia}:${nomeBebe}`)) >>> 0);
+    infoVoc = pick(rngVoc, VOCACOES_HERDEIRO);
+  }
+
+  // Herança genética determinística dos atributos dos pais com variação vocacional rica
   const atributosHerdados: Atributos = {
-    fisico: Math.max(8, Math.round((p.atributos.fisico ?? 10) * 0.75 + 3)),
-    precisao: Math.max(8, Math.round((p.atributos.precisao ?? 10) * 0.75 + 3)),
-    resiliencia: Math.max(8, Math.round((p.atributos.resiliencia ?? 10) * 0.75 + 3)),
-    raciocinio: Math.max(8, Math.round((p.atributos.raciocinio ?? 10) * 0.75 + 3)),
-    percepcao: Math.max(8, Math.round((p.atributos.percepcao ?? 10) * 0.75 + 3)),
-    social: Math.max(8, Math.round((p.atributos.social ?? 10) * 0.75 + 3)),
+    fisico: Math.max(5, Math.round((p.atributos.fisico ?? 10) * 0.75 + 3) + (infoVoc.modificadores.fisico ?? 0)),
+    precisao: Math.max(5, Math.round((p.atributos.precisao ?? 10) * 0.75 + 3) + (infoVoc.modificadores.precisao ?? 0)),
+    resiliencia: Math.max(5, Math.round((p.atributos.resiliencia ?? 10) * 0.75 + 3) + (infoVoc.modificadores.resiliencia ?? 0)),
+    raciocinio: Math.max(5, Math.round((p.atributos.raciocinio ?? 10) * 0.75 + 3) + (infoVoc.modificadores.raciocinio ?? 0)),
+    percepcao: Math.max(5, Math.round((p.atributos.percepcao ?? 10) * 0.75 + 3) + (infoVoc.modificadores.percepcao ?? 0)),
+    social: Math.max(5, Math.round((p.atributos.social ?? 10) * 0.75 + 3) + (infoVoc.modificadores.social ?? 0)),
   };
 
   const novoHerdeiro: FilhoHerdeiro = {
-    id: `herdeiro_${camp.calendario.dia}_${camp.turno}`,
+    id: `herdeiro_${camp.calendario.dia}_${camp.turno}_${(feudo.filhosHerdeiros?.length ?? 0) + 1}`,
     nome: nomeBebe.trim() || (genero === 'm' ? 'Aemon' : 'Lyanna'),
     idadeAnos: 0,
     diaNascimento: camp.calendario.dia,
@@ -1387,6 +1485,8 @@ export function darLuzHerdeiro(
     vivo: true,
     atributos: atributosHerdados,
     legitimidade: 'legitimo',
+    vocacao: infoVoc.id,
+    inclinacao: `${infoVoc.nome} — ${infoVoc.descricao}`,
   };
 
   if (!feudo.filhosHerdeiros) feudo.filhosHerdeiros = [];
@@ -1407,7 +1507,7 @@ export function darLuzHerdeiro(
   }
   feudo.estabilidade = Math.min(100, feudo.estabilidade + 20);
 
-  const texto = `Ouviram-se os sinos da cidadela! Nasceu ${novoHerdeiro.nome}, herdeiro da Casa Dinástica! Que seu reinado seja longo e próspero.`;
+  const texto = `Ouviram-se os sinos da cidadela! Nasceu ${novoHerdeiro.nome}, herdeiro da Casa Dinástica (${novoHerdeiro.inclinacao})! Que seu futuro traga glória ao feudo.`;
   feudo.historicoEventos.push({ dia: camp.calendario.dia, texto });
   camp.cronica.push({ turno: camp.turno, tipo: 'sistema', texto });
   registrarMarco(camp, texto);
@@ -1415,7 +1515,7 @@ export function darLuzHerdeiro(
   return { ok: true, mensagem: texto, filho: novoHerdeiro };
 }
 
-/** Designa formalmente qual filho é o herdeiro aparente da coroa */
+/** Designa formalmente qual filho é o herdeiro aparente da coroa (pode ser o mais jovem, mais velho, estrategista ou combatente) */
 export function designarHerdeiroAparente(
   camp: Campaign,
   filhoId: string,
@@ -1426,11 +1526,139 @@ export function designarHerdeiroAparente(
 
   feudo.herdeiroAparenteId = filhoId;
 
-  const texto = `Decreto de Sucessão: ${filho.nome} foi proclamado solenemente como Herdeiro Aparente do Trono!`;
+  const desc = filho.inclinacao ? ` (${filho.inclinacao})` : '';
+  const texto = `Decreto Soberano de Sucessão: ${filho.nome}${desc} foi proclamado solenemente como Herdeiro Aparente do Trono!`;
   feudo.historicoEventos.push({ dia: camp.calendario.dia, texto });
   camp.cronica.push({ turno: camp.turno, tipo: 'sistema', texto });
+  registrarMarco(camp, texto);
 
   return { ok: true, mensagem: texto };
+}
+
+export type OpiniaoOficialSucessao = {
+  cargo: string;
+  npcNome: string;
+  candidatoId: string;
+  candidatoNome: string;
+  justificativa: string;
+};
+
+export type DecisaoCorteSucessao = {
+  herdeiro: FilhoHerdeiro;
+  motivo: string;
+  autoridade: string;
+  opinioes: OpiniaoOficialSucessao[];
+};
+
+/** Delibera e consulta as opiniões dos oficiais e corte sobre quem deve assumir a dinastia */
+export function deliberarSucessaoCorte(camp: Campaign): DecisaoCorteSucessao | undefined {
+  const feudo = camp.feudo;
+  if (!feudo?.filhosHerdeiros?.length) return undefined;
+  const vivos = feudo.filhosHerdeiros.filter((x) => x.vivo);
+  if (vivos.length === 0) return undefined;
+  if (vivos.length === 1) {
+    return {
+      herdeiro: vivos[0],
+      motivo: 'é o único herdeiro vivo do sangue dinástico',
+      autoridade: 'Corte Unânime',
+      opinioes: [],
+    };
+  }
+
+  const conselho = (feudo.conselho ?? {}) as Partial<Record<CargoConselho, ConselheiroReino>>;
+  const marechalNome = conselho.marechal?.nome || 'Marechal da Guarda';
+  const chancelerNome = conselho.chanceler?.nome || 'Chanceler da Corte';
+  const espioesNome = conselho.mestre_espioes?.nome || 'Mestre dos Sussurros';
+  const conjugeNome = feudo.casamento?.nomeConjuge || 'Cônjuge da Casa';
+
+  // Candidato marcial (maior físico + precisão + resiliência)
+  const melhorCombatente = [...vivos].sort(
+    (a, b) => (b.atributos.fisico + b.atributos.precisao + b.atributos.resiliencia) -
+              (a.atributos.fisico + a.atributos.precisao + a.atributos.resiliencia)
+  )[0];
+
+  // Candidato intelectual / estrategista (maior raciocínio + percepção + social)
+  const melhorEstrategista = [...vivos].sort(
+    (a, b) => (b.atributos.raciocinio + b.atributos.percepcao + b.atributos.social) -
+              (a.atributos.raciocinio + a.atributos.percepcao + a.atributos.social)
+  )[0];
+
+  // Primogênito
+  const primogenito = [...vivos].sort((a, b) => a.diaNascimento - b.diaNascimento)[0];
+
+  const opinioes: OpiniaoOficialSucessao[] = [
+    {
+      cargo: 'Marechal',
+      npcNome: marechalNome,
+      candidatoId: melhorCombatente.id,
+      candidatoNome: melhorCombatente.nome,
+      justificativa: `Defende ${melhorCombatente.nome}: "Nosso senhor precisa de braço forte e bravura com o aço para intimidar rivais e liderar as levas."`,
+    },
+    {
+      cargo: 'Chanceler',
+      npcNome: chancelerNome,
+      candidatoId: melhorEstrategista.id,
+      candidatoNome: melhorEstrategista.nome,
+      justificativa: `Defende ${melhorEstrategista.nome}: "O destino do feudo depende de lucidez estratégica, colheitas fartas e gestão sábia das leis, não de ímpeto sangrento."`,
+    },
+    {
+      cargo: 'Cônjuge',
+      npcNome: conjugeNome,
+      candidatoId: primogenito.id,
+      candidatoNome: primogenito.nome,
+      justificativa: `Defende ${primogenito.nome}: "A tradição e a ordem familiar ditam que a primogenitura deve ser mantida para preservar a harmonia da linhagem."`,
+    },
+  ];
+
+  if (conselho.mestre_espioes) {
+    opinioes.push({
+      cargo: 'Mestre dos Espiões',
+      npcNome: espioesNome,
+      candidatoId: melhorEstrategista.id,
+      candidatoNome: melhorEstrategista.nome,
+      justificativa: `Defende ${melhorEstrategista.nome}: "Um soberano arguto antecipa punhais nas sombras antes que alcancem nossos portões."`,
+    });
+  }
+
+  // Julgamento do cenário atual do reino:
+  const emGuerraOuCriseMilitar = (feudo.vassalos?.some((v) => v.lealdade < 40) ?? false) || feudo.seguranca < 45;
+  const criseFinanceiraOuPolitica = feudo.tesouro < 120 || feudo.estabilidade < 45;
+
+  let herdeiroEscolhido: FilhoHerdeiro;
+  let motivo: string;
+  let autoridade: string;
+
+  if (emGuerraOuCriseMilitar && melhorCombatente) {
+    herdeiroEscolhido = melhorCombatente;
+    autoridade = 'Conselho de Guerra & Marechal';
+    motivo = `diante de ameaças militares e tensões de fronteira, a facção marcial prevaleceu, aclamando a valentia marcial de ${melhorCombatente.nome}`;
+  } else if (criseFinanceiraOuPolitica && melhorEstrategista) {
+    herdeiroEscolhido = melhorEstrategista;
+    autoridade = 'Chancelaria & Oficiais de Governo';
+    motivo = `necessitando de recuperação econômica e prudência tática, a corte uniu-se em torno da mente brilhante de ${melhorEstrategista.nome}`;
+  } else {
+    herdeiroEscolhido = primogenito;
+    autoridade = 'Conselho Nobre da Corte';
+    motivo = `em tempos de ordem dinástica, a assembleia nobre ratificou o direito de sucessão de ${primogenito.nome}`;
+  }
+
+  return {
+    herdeiro: herdeiroEscolhido,
+    motivo,
+    autoridade,
+    opinioes,
+  };
+}
+
+/** Retorna a escolha de sucessão da corte quando o jogador não designou previamente */
+export function escolherSucessorPelaCorte(camp: Campaign): { herdeiro?: FilhoHerdeiro; motivo: string; autoridade?: string } {
+  const d = deliberarSucessaoCorte(camp);
+  if (!d) return { motivo: 'não há herdeiros vivos na corte' };
+  return {
+    herdeiro: d.herdeiro,
+    motivo: d.motivo,
+    autoridade: d.autoridade,
+  };
 }
 
 // ---------------------------------------------------------------------------

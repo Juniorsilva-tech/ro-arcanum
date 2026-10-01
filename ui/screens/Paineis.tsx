@@ -26,6 +26,17 @@ import {
   armaEquipada,
   itemPorId,
   mestresQueEnsinamAqui,
+  podePedirRito,
+  podeCriarTecnica,
+  preverTecnica,
+  PRINCIPIOS,
+  FORMAS,
+  NOME_ESTILO,
+  famaDaArma,
+  famaDoNome,
+  sobrenome,
+  type Principio,
+  type Forma,
   rotasVisiveis,
   escolasDominadas,
   podeFundir,
@@ -82,6 +93,14 @@ export function Ficha() {
       ) : (
         <TextoMono style={{ marginBottom: esp.md }}>
           {classe?.nome} · {p.idade ?? 18} anos · nível {p.nivel} · {p.xp} xp · {p.dinheiro} moedas
+        </TextoMono>
+      )}
+      {content.cenario.id !== 'tsukimichi' && (
+        <TextoMono style={{ color: cores.mudo, marginBottom: esp.sm }}>
+          {p.estiloMarcial ? `estilo ${NOME_ESTILO[p.estiloMarcial]}` : 'sem estilo de mestre'}
+          {famaDaArma(camp, p.equipado.arma).nivel !== 'comum' ? ` · arma ${famaDaArma(camp, p.equipado.arma).nivel} (${famaDaArma(camp, p.equipado.arma).abates} abates)` : ''}
+          {` · ${sobrenome(camp)}: nome ${famaDoNome(content, camp).nivel} aqui`}
+          {camp.linhagem?.length ? ` · ${camp.linhagem.length}ª geração depois de ${camp.linhagem[0].nome}` : ''}
         </TextoMono>
       )}
       {camp.genese && (
@@ -1448,10 +1467,58 @@ function corCamada(e: string): string {
   return e === 'obtida' ? cores.verdigris : e === 'acessivel' ? cores.ouro : e === 'perdida' ? cores.cinabrio : cores.mudo;
 }
 
+function CriarTecnica() {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+  const criar = useGame((s) => s.criarTecnicaAcao);
+  const [principio, setPrincipio] = useState<Principio>('corte');
+  const [forma, setForma] = useState<Forma>('equilibrada');
+  const [nome, setNome] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const pode = podeCriarTecnica(content, camp);
+  const previa = preverTecnica(content, camp, principio, forma);
+  return (
+    <>
+      <Divisor label={`inventar uma técnica · ${LIMITE_FUSOES - (camp.personagem.fusoesFeitas ?? 0)} criações restantes nesta vida`} />
+      {!pode.pode ? (
+        <TextoMono style={{ color: cores.mudo }}>{pode.motivo}</TextoMono>
+      ) : (
+        <Card>
+          <TextoMono style={{ color: cores.mudo }}>o que o golpe faz</TextoMono>
+          <View style={styles.chips}>
+            {(Object.keys(PRINCIPIOS) as Principio[]).map((k) => (
+              <Pressable key={k} style={[styles.chipAprender, principio === k && { borderColor: cores.ouro }]} onPress={() => setPrincipio(k)}>
+                <Text style={styles.chipAprenderTxt}>{k}</Text>
+                <Text style={styles.chipAprenderSub}>{PRINCIPIOS[k]}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextoMono style={{ color: cores.mudo, marginTop: esp.sm }}>a forma</TextoMono>
+          <View style={styles.chips}>
+            {(Object.keys(FORMAS) as Forma[]).map((k) => (
+              <Pressable key={k} style={[styles.chipAprender, forma === k && { borderColor: cores.ouro }]} onPress={() => setForma(k)}>
+                <Text style={styles.chipAprenderTxt}>{FORMAS[k].nome}</Text>
+                <Text style={styles.chipAprenderSub}>recarga {FORMAS[k].recarga}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextoMono style={{ marginTop: esp.sm }}>
+            vai sair: potência {previa.tecnica.potencia} · recarga {previa.tecnica.recarga} · {previa.custo} de vigor
+          </TextoMono>
+          <TextInput value={nome} onChangeText={setNome} placeholder="nome da técnica" placeholderTextColor={cores.mudo} style={styles.inputNome} maxLength={40} />
+          <Botao titulo="Inventar (12 períodos de treino)" onPress={async () => { setMsg(await criar(nome, principio, forma)); setNome(''); }} />
+          {msg && <TextoMono style={{ color: cores.verdigris }}>{msg}</TextoMono>}
+        </Card>
+      )}
+    </>
+  );
+}
+
 export function Livro() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
   const aprender = useGame((s) => s.aprenderArteAcao);
+  const pedirRito = useGame((s) => s.pedirRitoAcao);
   const conjurar = useGame((s) => s.conjurarArteLivre);
   const fundir = useGame((s) => s.fundirEstilos);
   const p = camp.personagem;
@@ -1507,10 +1574,34 @@ export function Livro() {
                     onPress={() => aprender(a.id)}
                   >
                     <Text style={styles.chipAprenderTxt}>aprender {a.nome}</Text>
-                    <Text style={styles.chipAprenderSub}>2 períodos</Text>
+                    <Text style={styles.chipAprenderSub}>
+                      {camp.ritos?.[mestre.id]?.resultado === 'aprovado' ? 'sem demora (aprovado na prova)' : camp.ritos?.[mestre.id]?.resultado === 'promissor' ? '1 período (promissor na prova)' : '2 períodos'}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
+              {/* Rito: quem já chega bom pede a prova em vez da primeira lição
+                  (engine/rito.ts). Duelo sem morte; o mestre diz o que falta. */}
+              {(() => {
+                const r = camp.ritos?.[mestre.id];
+                const pode = podePedirRito(content, camp, mestre.id);
+                return (
+                  <View style={{ marginTop: esp.sm }}>
+                    {r && <TextoMono style={{ color: r.resultado === 'aprovado' ? cores.verdigris : r.resultado === 'promissor' ? cores.ouro : cores.mudo }}>
+                      prova feita no dia {r.dia}: {r.resultado === 'aprovado' ? 'aprovado' : r.resultado === 'promissor' ? 'promissor' : 'ainda cru'}
+                    </TextoMono>}
+                    <Pressable
+                      disabled={!pode.pode}
+                      style={[styles.chipAprender, !pode.pode && { opacity: 0.4 }]}
+                      accessibilityRole="button"
+                      onPress={() => pedirRito(mestre.id)}
+                    >
+                      <Text style={styles.chipAprenderTxt}>pedir a prova do mestre</Text>
+                      <Text style={styles.chipAprenderSub}>{pode.pode ? 'duelo sem morte: ele diz se você precisa de treino e o que falta' : pode.motivo}</Text>
+                    </Pressable>
+                  </View>
+                );
+              })()}
             </Card>
           ))}
         </>
@@ -1542,6 +1633,10 @@ export function Livro() {
           </View>
         </>
       )}
+
+      {/* Técnica própria (engine/criacao.ts): princípio e forma de um
+          catálogo fechado; a engine calcula a potência, com teto. */}
+      <CriarTecnica />
 
       {/* Fundir estilos: combina duas escolas dominadas (2+ artes conhecidas
           em cada) num estilo original — limite de 3 por vida (documento
@@ -1850,6 +1945,7 @@ function corGrauReliquia(grau: string): string {
 void ({} as EstadoEntrada);
 
 const styles = StyleSheet.create({
+  inputNome: { borderWidth: 1, borderColor: cores.linha, color: cores.vellum, paddingHorizontal: esp.sm, paddingVertical: 6, marginVertical: esp.sm, fontSize: 14 },
   cronicaFiltros: { marginBottom: esp.md, gap: esp.sm },
   cronicaBusca: { fontFamily: fontes.mono, color: cores.vellum, fontSize: 13, borderWidth: 1, borderColor: cores.linha, borderRadius: 8, padding: esp.sm, marginBottom: esp.sm },
   cronicaChips: { flexDirection: 'row', gap: esp.sm, flexWrap: 'wrap' },
