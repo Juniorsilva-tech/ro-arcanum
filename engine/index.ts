@@ -79,6 +79,7 @@ export * from './cultivos';
 export * from './nomeDoJogador';
 export * from './rito';
 export * from './briga';
+export * from './guarda';
 export * from './linhagem';
 export * from './criacao';
 export * from './famaArma';

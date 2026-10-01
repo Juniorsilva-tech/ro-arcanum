@@ -140,6 +140,8 @@ export function resolverIntencao(
 ): ResultadoTurno {
   const p = camp.personagem;
   if (p.condicoes.includes('cativo')) return { fato: 'Você continua cativo; precisa recuperar a liberdade antes de agir fora do cativeiro.', custoPeriodos: 0, efeitosAplicados: [] };
+  if (camp.abordagem) return { fato: `${camp.abordagem.guarda} te cercou e espera resposta: render-se, subornar, fugir ou lutar.`, custoPeriodos: 0, efeitosAplicados: [] };
+  if (p.condicoes.includes('preso')) return { fato: 'Você está na cela da guarda; daqui só se sai cumprindo a pena, pagando fiança ou fugindo.', custoPeriodos: 0, efeitosAplicados: [] };
   camp.turno += 1;
 
   let verbo: Verbo | undefined;

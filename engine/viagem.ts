@@ -235,6 +235,8 @@ export type ResultadoViagem = {
 export function viajar(content: ContentBundle, camp: Campaign, destino: string): ResultadoViagem {
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'termine o combate primeiro' };
   if (camp.personagem.condicoes.includes('cativo')) return { ok: false, motivo: 'recupere a liberdade antes de viajar' };
+  if (camp.abordagem) return { ok: false, motivo: 'a patrulha te cercou: responda primeiro' };
+  if (camp.personagem.condicoes.includes('preso')) return { ok: false, motivo: 'você está na cela da guarda' };
   const local = content.locais.find((l) => l.id === camp.localAtual);
   const rota = local?.rotas.find((r) => r.destino === destino);
   if (!rota) return { ok: false, motivo: 'não há rota daqui para lá' };

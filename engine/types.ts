@@ -755,6 +755,8 @@ export type CombatState = {
   ritoFim?: 'vitoria' | 'derrota';
   // Briga com quem está na cena (engine/briga.ts). Letal: quem cai morre.
   briga?: { letal: boolean };
+  // Confronto com a patrulha da guarda (engine/guarda.ts).
+  guarda?: { regiao: string };
   /** Luta contra um bando (engine/bandos.ts). `pedagio` > 0: eles aceitam moeda em vez de sangue. */
   bando?: { id: string; pedagio?: number; esconderijo?: boolean; vinganca?: boolean };
   /** Emboscada contra caravana que o jogador escolta (engine/caravanas.ts). */
@@ -924,6 +926,11 @@ export type Campaign = {
   renomeDoNome?: Record<string, number>;
   // Fama de cada arma pelo que ela derrubou (engine/famaArma.ts).
   famaArmas?: Record<string, { abates: number; nivel: 'comum' | 'conhecida' | 'lendaria' }>;
+  // A guarda (engine/guarda.ts): procurado por região, a patrulha que te
+  // achou e espera resposta, e a cela.
+  procura?: Record<string, ProcuraGuarda>;
+  abordagem?: { dia: number; local: string; regiao: string; guarda: string };
+  prisao?: { local: string; regiao: string; desdeDia: number; ateDia: number; motivo: string; fianca?: number; armaConfiscada?: string };
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
   // O que aconteceu entre elas enquanto você não estava olhando.
@@ -1368,3 +1375,13 @@ export type Bando = {
 };
 
 export type EstadoBandos = { bandos: Record<string, Bando> };
+
+/** O que a guarda de uma região quer com o jogador (engine/guarda.ts). */
+export type ProcuraGuarda = {
+  gravidade: 'arruaca' | 'sangue';
+  pontos: number;
+  motivo: string;
+  atualizadoDia: number;
+  ultimaAbordagemDia?: number;
+  fugitivo?: boolean;
+};

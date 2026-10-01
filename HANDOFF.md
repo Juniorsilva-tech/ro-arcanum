@@ -947,3 +947,50 @@ Pendente:
   a Nous devolve 404 ("Model not found"). Saves com ele escolhido caem no
   fallback (por isso as cenas vinham de ling-3.0-flash ou longcat-2.5). O
   Solar (padrão) também falhou no teste de hoje; o longcat-2.5 respondeu.
+
+## Sessão 92c — Claude — a guarda: procurado, perseguição e cela
+
+Pedido do dono: prisão e perseguição pela guarda. Antes a guarda só reagia
+na narração (sessão 92b).
+
+`engine/guarda.ts` (novo):
+- **Procurado por região** (`camp.procura[regiao]`): `registrarCrime` soma
+  pontos. Sangue: 40 por morto na briga letal, 30 por guarda morto, 20 por
+  fuga da cela. Arruaça: 10 por nocauteado quando alguém viu ou quando o
+  alvo é da guarda (`engine/briga.ts`). Esfria: arruaça 3/dia, sangue
+  0,5/dia (fugitivo 0,25/dia).
+- **Perseguição**: `checarPerseguicao` roda depois de toda cena (o
+  `narrar` do store virou um invólucro de `narrarCena`). Chance: com guarda
+  na cena 0,35 + pontos/100 (teto 0,95); sem guarda, pontos/100 × 0,5 (×0,15
+  no ermo). Uma abordagem por dia, sorteio derivado (não gasta o RNG da
+  campanha).
+- **Abordagem** (`camp.abordagem`): render-se → cela; subornar (arruaça 10 +
+  pontos/2, sempre cola; sangue 60 + pontos, chance pelo social, falha =
+  cela e a moeda vai embora); fugir (físico e percepção; falha = luta);
+  lutar → combate com a patrulha (`patrulha_guarda` nível 4, sargento nível
+  7 no sangue, gerados na hora). Durante o cerco, verbos, viagem, briga e
+  texto livre da aba Fazer ficam travados; Dizer continua.
+- **Cela** (`camp.prisao`, condição `preso`): pena de arruaça = pontos/10
+  dias (mín. 2) com fiança de 10 + pontos; sangue = 15 dias a cada 40 pontos
+  (teto 120), sem fiança. Arma confiscada. `agirNaCela`: cumprir (passa os
+  dias, devolve a arma, limpa a procura, cura, guarda +10), fiança, fugir
+  (sucesso: livre, sem a arma, fugitivo; falha: +10 dias e −30% de vida).
+  Preso não age, não viaja, não briga, e a cena não tem ninguém do lugar
+  (`calcularContexto` devolve presentes vazios).
+- `engine/combat.ts`: patrulha marcada em `iniciarCombate`; derrota contra a
+  patrulha não rouba (`concluirConfrontoGuarda` leva à cela).
+- `engine/llm.ts`: `personagem.procuradoAqui`, `cercadoPelaGuarda`,
+  `naCela`, com a regra de que isso é decisão da engine.
+- `ui/store.ts`: `responderGuardaAcao`, `celaAcao`; `fecharLuta` trata a
+  patrulha. `ui/screens/Jogo.tsx`: cartões "A guarda te cercou" e "Na cela
+  da guarda" no lugar das opções.
+- Teste novo `engine/guarda.selftest.ts` (31 checagens, no `test:engine`).
+
+Verificado no navegador: soco na Sargenta Bael → arruaça → a Bael te para →
+cartão do cerco → "Render-se" pelo clique → cela de 2 dias, fiança 20,
+espada confiscada → briga bloqueada na cela → cumprir → dia 345, espada de
+volta, procura limpa.
+
+Pendente: crimes de verbo (furtar pego, agredir com testemunhas) ainda só
+mexem na reputação, sem `registrarCrime`; a guarda que você acabou de
+nocautear pode ser a mesma que te aborda logo depois.

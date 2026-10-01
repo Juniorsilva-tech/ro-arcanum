@@ -20,6 +20,7 @@ import { registrarMarco } from './memoria';
 import { registrarFato } from './historiaViva';
 import { registrarMorteFamiliar } from './familia';
 import { NIVEL_MESTRE } from '../content/vaelhorn/ritoMestres';
+import { registrarCrime } from './guarda';
 
 export const PREFIXO_BRIGA = 'briga_';
 export const REGIAO_DA_BRIGA = 'Briga';
@@ -74,6 +75,8 @@ export function iniciarBriga(
   letal: boolean,
 ): { ok: boolean; motivo?: string } {
   if (camp.combate && !camp.combate.terminado) return { ok: false, motivo: 'já há uma luta em curso' };
+  if (camp.prisao) return { ok: false, motivo: 'você está na cela' };
+  if (camp.abordagem) return { ok: false, motivo: 'a patrulha te cercou: escolha lutar, fugir, subornar ou render-se' };
   const alvos = alvosDaBriga(content, camp, npcIds);
   if (!alvos.length) return { ok: false, motivo: 'não há com quem brigar aqui' };
   // As criaturas da briga nascem na hora (família e gente do mundo vivo não
@@ -157,8 +160,14 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
   if (mortos.length) {
     r.guarda = (r.guarda ?? 0) - 15 * mortos.length;
     r.vila = (r.vila ?? 0) - 10 * mortos.length;
+    // A guarda da região passa a procurar (engine/guarda.ts).
+    registrarCrime(content, camp, 'sangue', 40 * mortos.length, `matou ${listar(mortos)} em ${local}`);
   } else if (caidos.length) {
     r.guarda = (r.guarda ?? 0) - 3 * caidos.length;
+    // Briga vista por alguém (testemunha ou guarda) vira arruaça.
+    if (testemunhas.length || lutaram.some((a) => /guard|sentinel|soldad|patrulh|sargent/i.test(npcPorId(content, camp, a.criaturaId!.slice(PREFIXO_BRIGA.length))?.ocupacao ?? ''))) {
+      registrarCrime(content, camp, 'arruaca', 10 * caidos.length, `briga em ${local}`);
+    }
   }
 
   const p = camp.personagem;

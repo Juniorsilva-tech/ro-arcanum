@@ -79,6 +79,7 @@ export function executarAcaoMundo(content: ContentBundle, camp: Campaign, acao: 
   iniciarMundoVivoSePreciso(content, camp);
   const v = camp.vivo!, p = camp.personagem, dia = camp.calendario.dia;
   if (p.condicoes.includes('cativo') && acao.tipo !== 'libertar_se') return { ok: false, texto: 'Você precisa recuperar a liberdade.' };
+  if (p.condicoes.includes('preso')) return { ok: false, texto: 'Você está na cela da guarda.' };
   const local = cidadeIdDoLocal(content, camp, camp.localAtual), c = local && v.cidades[local];
   const terminar = (texto: string, periodos = 1): ResultadoAcaoMundo => {
     camp.turno++; camp.capitulo.periodosDecorridos += periodos;

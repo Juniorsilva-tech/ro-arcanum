@@ -21,7 +21,8 @@ export function calcularContexto(content: ContentBundle, camp: Campaign): Contex
   const local = content.locais.find((l) => l.id === camp.localAtual)!;
   const periodo = periodoAtual(camp.calendario);
 
-  const presentes = todosNpcs(content, camp).filter((npc) => {
+  // Na cela da guarda (engine/guarda.ts) ninguém do lugar está com você.
+  const presentes = camp.prisao ? [] : todosNpcs(content, camp).filter((npc) => {
     const din = camp.npcState[npc.id];
     if (din && !din.vivo) return false;
     // Quem aceitou viajar com o protagonista está onde ele está; a rotina
@@ -62,6 +63,7 @@ export function disponibilidadeVerbo(
 ): Disponibilidade {
   const p = camp.personagem;
   if (p.condicoes.includes('cativo')) return { disponivel: false, motivo: 'recupere a liberdade no painel do mundo' };
+  if (p.condicoes.includes('preso')) return { disponivel: false, motivo: 'você está na cela da guarda' };
   const req = verbo.requisitos ?? {};
 
   if (ctx.local.verbosBloqueados?.includes(verbo.id)) {

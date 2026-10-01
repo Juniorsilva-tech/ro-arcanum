@@ -503,6 +503,8 @@ export function iniciarCombate(
   // Briga com quem está na cena (engine/briga.ts): mesmo cuidado, marcada
   // antes de alguém agir.
   if (briga || (criaturaIds.length && criaturaIds.every((id) => id.startsWith('briga_')))) state.briga = briga ?? { letal: false };
+  // Patrulha da guarda (engine/guarda.ts): quem cai vai para a cela, não é roubado.
+  if (criaturaIds.length && criaturaIds.every((id) => id.startsWith('patrulha_guarda'))) state.guarda = { regiao: camp.abordagem?.regiao ?? '' };
   camp.combate = state;
   for (const a of inimigos) {
     const r = a.rivalId && camp.kimetsu?.rivais[a.rivalId];
@@ -1725,6 +1727,10 @@ function encerrar(camp: Campaign, resultado: 'vitoria' | 'derrota' | 'fuga', con
     // Perder a prova do mestre não é perder uma luta de estrada: ninguém leva
     // nada, e o corpo fica como ficou (a um quarto da vida).
     p.recursos.vida = Math.max(1, s.atores.find((a) => a.ehJogador)?.vida ?? 1);
+  } else if (resultado === 'derrota' && s.guarda) {
+    // A patrulha não rouba: amarra e leva para a cela (engine/guarda.ts).
+    p.recursos.vida = 1;
+    if (!p.condicoes.includes('ferido')) p.condicoes.push('ferido');
   } else if (resultado === 'derrota' && s.briga && !s.briga.letal) {
     // Apanhar numa briga de taverna: sai machucado, não roubado.
     p.recursos.vida = 1;

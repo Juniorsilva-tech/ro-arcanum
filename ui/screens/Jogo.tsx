@@ -37,6 +37,7 @@ import {
   type NPC,
   todosNpcs,
   type Campaign,
+  custoDoSuborno,
 } from '@/engine';
 
 const ORDEM_CATEGORIAS: CategoriaVerbo[] = [
@@ -328,6 +329,10 @@ export function Jogo() {
                 </Pressable>
               </View>
             </View>
+          ) : camp.abordagem ? (
+            <CercoDaGuarda />
+          ) : camp.prisao ? (
+            <NaCela />
           ) : (
             cena.opcoes.length > 0 && (
               <>
@@ -653,6 +658,71 @@ function EntradaNarrativa({
         )}
       </View>
     </>
+  );
+}
+
+// A guarda (engine/guarda.ts): a patrulha cercou e espera resposta.
+function CercoDaGuarda() {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+  const responder = useGame((s) => s.responderGuardaAcao);
+  const ab = camp.abordagem!;
+  const pr = camp.procura?.[ab.regiao];
+  const custo = custoDoSuborno(content, camp);
+  return (
+    <View style={styles.falhaBox}>
+      <Text style={styles.falhaTitulo}>A guarda te cercou</Text>
+      <Text style={styles.falhaMotivo}>
+        {pr ? `${pr.gravidade === 'sangue' ? 'procurado por sangue' : 'procurado por arruaça'}: ${pr.motivo}` : ab.guarda}
+      </Text>
+      <Text style={styles.falhaTexto}>
+        {ab.guarda} espera a sua resposta. Render-se leva à cela. Fugir é arriscado: se não der, a patrulha te pega na marra.
+      </Text>
+      <View style={styles.falhaBotoes}>
+        <Pressable style={styles.botaoVazio} onPress={() => responder('render')}>
+          <Text style={styles.botaoVazioTxt}>Render-se</Text>
+        </Pressable>
+        <Pressable style={[styles.botaoVazio, custo !== undefined && camp.personagem.dinheiro < custo && { opacity: 0.4 }]} onPress={() => responder('subornar')}>
+          <Text style={styles.botaoVazioTxt}>Subornar{custo !== undefined ? ` (${custo} moedas)` : ''}</Text>
+        </Pressable>
+        <Pressable style={styles.botaoVazio} onPress={() => responder('fugir')}>
+          <Text style={styles.botaoVazioTxt}>Fugir</Text>
+        </Pressable>
+        <Pressable style={styles.botaoOuro} onPress={() => responder('lutar')}>
+          <Text style={styles.botaoOuroTxt}>Lutar</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function NaCela() {
+  const camp = useGame((s) => s.camp)!;
+  const cela = useGame((s) => s.celaAcao);
+  const preso = camp.prisao!;
+  const dias = Math.max(0, preso.ateDia - camp.calendario.dia);
+  return (
+    <View style={styles.falhaBox}>
+      <Text style={styles.falhaTitulo}>Na cela da guarda</Text>
+      <Text style={styles.falhaMotivo}>{preso.motivo}</Text>
+      <Text style={styles.falhaTexto}>
+        Faltam {dias} dias.{preso.armaConfiscada ? ' Sua arma está no depósito da guarda.' : ''}{' '}
+        {preso.fianca ? `A fiança é ${preso.fianca} moedas.` : 'Para sangue não há fiança.'} Fugir dá certo às vezes; se der errado, a pena cresce.
+      </Text>
+      <View style={styles.falhaBotoes}>
+        <Pressable style={styles.botaoOuro} onPress={() => cela('cumprir')}>
+          <Text style={styles.botaoOuroTxt}>Cumprir a pena</Text>
+        </Pressable>
+        {preso.fianca ? (
+          <Pressable style={[styles.botaoVazio, camp.personagem.dinheiro < preso.fianca && { opacity: 0.4 }]} onPress={() => cela('fianca')}>
+            <Text style={styles.botaoVazioTxt}>Pagar fiança</Text>
+          </Pressable>
+        ) : null}
+        <Pressable style={styles.botaoVazio} onPress={() => cela('fugir')}>
+          <Text style={styles.botaoVazioTxt}>Tentar fugir</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 

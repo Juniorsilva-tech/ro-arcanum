@@ -14,6 +14,8 @@ import {
   tipoDeCena,
   concluirRito,
   concluirBriga,
+  concluirConfrontoGuarda,
+  checarPerseguicao,
   disseONome,
   apresentar,
   protegerNome,
@@ -325,6 +327,8 @@ interface GameState {
   plantarCultivoAcao: (id: import('@/engine').CultivoId) => Promise<string>;
   pedirRitoAcao: (mestreId: string) => Promise<void>;
   brigarAcao: (npcIds: string[], letal: boolean, texto?: string) => Promise<void>;
+  responderGuardaAcao: (escolha: 'render' | 'subornar' | 'fugir' | 'lutar') => Promise<void>;
+  celaAcao: (escolha: 'cumprir' | 'fianca' | 'fugir') => Promise<void>;
   criarTecnicaAcao: (nome: string, principio: import('@/engine').Principio, forma: import('@/engine').Forma) => Promise<string>;
   passarLegadoAcao: (herdeiroId?: string) => Promise<string>;
   recusarChegadaAcao: (id: string) => Promise<string>;
@@ -863,6 +867,45 @@ export const useGame = create<GameState>((set, get) => ({
     await persistir(camp, set);
   },
 
+  // A guarda (engine/guarda.ts): resposta ao cerco da patrulha.
+  async responderGuardaAcao(escolha) {
+    const { camp, content } = get();
+    if (!camp || !content || get().ocupado) return;
+    const { responderAbordagem } = await import('@/engine');
+    const r = responderAbordagem(content, camp, escolha);
+    if (!r.ok) {
+      set({ feed: [...get().feed, nf(r.texto, 'sistema')] });
+      return;
+    }
+    const rotulo = { render: 'Render-se', subornar: 'Subornar a guarda', fugir: 'Fugir da patrulha', lutar: 'Lutar contra a patrulha' }[escolha];
+    const linha = nf(rotulo, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) });
+    if (r.combate) {
+      set({ camp: { ...camp }, tela: 'combate', feed: [...get().feed, linha, nf(r.texto, 'sistema')] });
+      await persistir(camp, set);
+      return;
+    }
+    set({ camp: { ...camp }, feed: [...get().feed, linha] });
+    await persistir(camp, set);
+    await narrar(get, set, r.texto);
+  },
+
+  // A cela: cumprir a pena, pagar fiança ou fugir.
+  async celaAcao(escolha) {
+    const { camp, content } = get();
+    if (!camp || !content || get().ocupado) return;
+    const { agirNaCela } = await import('@/engine');
+    const r = agirNaCela(content, camp, escolha);
+    if (!r.ok) {
+      set({ feed: [...get().feed, nf(r.texto, 'sistema')] });
+      return;
+    }
+    const rotulo = { cumprir: 'Cumprir a pena', fianca: 'Pagar a fiança', fugir: 'Fugir da cela' }[escolha];
+    set({ camp: { ...camp }, feed: [...get().feed, nf(rotulo, 'acao', { abreTurno: true, cabecalho: marcaDoTurno(content, camp) })] });
+    await persistir(camp, set);
+    await narrar(get, set, r.texto);
+    checarCapitulo(get, set);
+  },
+
   async plantarCultivoAcao(id) {
     const { camp, content } = get();
     if (!camp || !content) return '';
@@ -1293,6 +1336,8 @@ export const useGame = create<GameState>((set, get) => ({
     const rito = camp.combate?.rito ? concluirRito(content, camp) : undefined;
     // Briga na cena: mortos, nocauteados e testemunhas viram o fato da cena.
     const briga = camp.combate?.briga ? concluirBriga(content, camp) : undefined;
+    // Patrulha da guarda: perdeu, cela; matou guarda, mais sangue.
+    const guarda = camp.combate?.guarda ? concluirConfrontoGuarda(content, camp) : undefined;
     const batidasCombate = [...(camp.combate?.log ?? [])];
     fecharCombate(camp);
     avancarMundo(content, camp);
@@ -1305,6 +1350,8 @@ export const useGame = create<GameState>((set, get) => ({
       ? rito.fato
       : briga
         ? briga.fato
+      : guarda
+        ? guarda.fato
       : resultado === 'vitoria'
         ? `A luta terminou e você ficou de pé.${saque}`
         : resultado === 'derrota'
@@ -1314,6 +1361,8 @@ export const useGame = create<GameState>((set, get) => ({
       nf(
         rito
           ? `Prova do mestre · ${rito.resultado === 'aprovado' ? 'aprovado' : rito.resultado === 'promissor' ? 'promissor' : 'ainda cru'}`
+          : guarda
+          ? (guarda.preso ? 'Preso pela guarda' : resultado === 'vitoria' ? 'Patrulha derrubada' : 'Fuga da patrulha')
           : briga?.mortos.length
           ? `Mortos · ${briga.mortos.join(', ')}`
           : briga
@@ -1472,6 +1521,11 @@ export const useGame = create<GameState>((set, get) => ({
     const t = texto.trim();
     if (!t) return;
     const dizer = tipo === 'dizer';
+    // Cercado pela patrulha (engine/guarda.ts): a resposta é pelos botões do cerco.
+    if (camp.abordagem && !dizer) {
+      set({ feed: [...get().feed, nf(`${camp.abordagem.guarda} te cercou: responda pelo cerco (render-se, subornar, fugir ou lutar).`, 'sistema')] });
+      return;
+    }
     set({ falaJogador: dizer ? t : undefined });
 
     // Domínio do Kai (Sakai): intercepta e resolve comandos livres do Kai diretamente na engine
@@ -1933,7 +1987,26 @@ type ExtraNarracao = {
   modoCena?: 'capitulo';
 };
 
+// Depois de toda cena, a patrulha pode chegar (engine/guarda.ts). A cena da
+// ação aparece primeiro; o cerco vem depois, como um aviso com escolhas.
 async function narrar(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  fato: string,
+  acaoLivre?: string,
+  extra: ExtraNarracao = {},
+) {
+  await narrarCena(get, set, fato, acaoLivre, extra);
+  const { content, camp } = get();
+  if (!content || !camp || get().pendente) return;
+  const aviso = checarPerseguicao(content, camp);
+  if (aviso) {
+    set({ camp: { ...camp }, feed: [...get().feed, nf(aviso, 'sistema')] });
+    await persistir(camp, set);
+  }
+}
+
+async function narrarCena(
   get: () => GameState,
   set: (p: Partial<GameState>) => void,
   fato: string,

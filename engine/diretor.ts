@@ -103,7 +103,7 @@ export function ganchosPossiveis(content: ContentBundle, camp: Campaign): Gancho
  * não foi usado há pouco, respeitando o intervalo entre ganchos.
  */
 export function processarDiretorDeArcos(content: ContentBundle, camp: Campaign): void {
-  if (!camp.vivo || camp.personagem.condicoes.includes('cativo')) return;
+  if (!camp.vivo || camp.personagem.condicoes.includes('cativo') || camp.personagem.condicoes.includes('preso')) return;
   const dia = camp.calendario.dia;
   const d = estadoMemoria(camp).diretor;
   if (dia - d.ultimoDia < DIAS_ENTRE_GANCHOS) return;
