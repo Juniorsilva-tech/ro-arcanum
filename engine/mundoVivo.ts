@@ -2,6 +2,7 @@ import type { Campaign, ContentBundle } from './types';
 import { iniciarMundoVivo, descobrirNoticias } from './historiaViva';
 import { processarCidades, processarDiretor } from './cidades';
 import { processarAutonomia } from './autonomia';
+import { processarCrimeUrbano } from './crimeUrbano';
 import { processarPolitica } from './politica';
 import { processarNemesis } from './nemesis';
 import { processarMissoesVivas } from './missoesVivas';
@@ -16,6 +17,8 @@ export function processarMundoVivo(content: ContentBundle, camp: Campaign): void
   if (v.ultimoDia >= camp.calendario.dia) return;
   processarCidades(content, camp);
   processarAutonomia(content, camp);
+  // Furto, briga e morte nas cidades, e a guarda que pega ou não (engine/crimeUrbano.ts).
+  processarCrimeUrbano(content, camp);
   processarPolitica(content, camp);
   processarNemesis(content, camp);
   atualizarAmeacas(content, camp);

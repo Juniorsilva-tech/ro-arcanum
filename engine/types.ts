@@ -929,7 +929,7 @@ export type Campaign = {
   // A guarda (engine/guarda.ts): procurado por região, a patrulha que te
   // achou e espera resposta, e a cela.
   procura?: Record<string, ProcuraGuarda>;
-  abordagem?: { dia: number; local: string; regiao: string; guarda: string };
+  abordagem?: { dia: number; local: string; regiao: string; guarda: string; cacador?: boolean };
   prisao?: { local: string; regiao: string; desdeDia: number; ateDia: number; motivo: string; fianca?: number; armaConfiscada?: string };
   // O vale continua sem você: clima, evento corrente e carestia (ver mundo.ts).
   mundo?: MundoState;
@@ -1267,6 +1267,8 @@ export type FeudoState = {
   /** Pedido de audiência esperando resposta (engine/audiencias.ts). */
   audiencia?: import('./audiencias').Audiencia;
   ultimaAudiencia?: number;
+  /** Última vez que a guarda da região veio cobrar o senhor (engine/audiencias.ts). */
+  ultimaExigenciaGuarda?: number;
   seqAudiencias?: number;
   /** Até que dia a colônia está em meia ração (60% do consumo). */
   racionamentoAte?: number;

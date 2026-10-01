@@ -17,10 +17,10 @@ import { iniciarCombate } from './combat';
 import { calcularContexto } from './availability';
 import { npcPorId } from './elenco';
 import { registrarMarco } from './memoria';
-import { registrarFato } from './historiaViva';
+import { registrarFato, cidadeIdDoLocal } from './historiaViva';
 import { registrarMorteFamiliar } from './familia';
 import { NIVEL_MESTRE } from '../content/vaelhorn/ritoMestres';
-import { registrarCrime } from './guarda';
+import { registrarCrime, ehAssentamentoDoJogador, OFICIO_GUARDA } from './guarda';
 
 export const PREFIXO_BRIGA = 'briga_';
 export const REGIAO_DA_BRIGA = 'Briga';
@@ -156,8 +156,18 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
     ajustar(camp, t.id, 'disposicao', mortos.length ? -25 : -6);
   }
 
+  // Quem caiu na briga de soco hoje não vem te prender agora (engine/guarda.ts).
+  if (!letal) for (const a of lutaram) if (a.vida <= 0) camp.flags[`nocaute.${a.criaturaId!.slice(PREFIXO_BRIGA.length)}`] = camp.calendario.dia;
+
   const r = camp.reputacao as unknown as Record<string, number>;
-  if (mortos.length) {
+  const noMeuAssentamento = ehAssentamentoDoJogador(camp, camp.localAtual);
+  if (noMeuAssentamento && camp.feudo) {
+    // No seu assentamento a guarda é sua: ninguém te prende, mas a colônia viu.
+    const f = camp.feudo;
+    f.estabilidade = Math.max(0, f.estabilidade - 10 * mortos.length - 3 * caidos.length);
+    for (const co of f.colonos ?? []) co.humor = Math.max(0, co.humor - (mortos.length ? 15 : 4));
+    f.historicoEventos.push({ dia: camp.calendario.dia, texto: mortos.length ? `O senhor matou ${listar(mortos)} dentro da colônia. Ninguém ousa falar alto.` : `O senhor brigou dentro da colônia.` });
+  } else if (mortos.length) {
     r.guarda = (r.guarda ?? 0) - 15 * mortos.length;
     r.vila = (r.vila ?? 0) - 10 * mortos.length;
     // A guarda da região passa a procurar (engine/guarda.ts).
@@ -165,10 +175,14 @@ export function concluirBriga(content: ContentBundle, camp: Campaign): { fato: s
   } else if (caidos.length) {
     r.guarda = (r.guarda ?? 0) - 3 * caidos.length;
     // Briga vista por alguém (testemunha ou guarda) vira arruaça.
-    if (testemunhas.length || lutaram.some((a) => /guard|sentinel|soldad|patrulh|sargent/i.test(npcPorId(content, camp, a.criaturaId!.slice(PREFIXO_BRIGA.length))?.ocupacao ?? ''))) {
+    if (testemunhas.length || lutaram.some((a) => OFICIO_GUARDA.test(npcPorId(content, camp, a.criaturaId!.slice(PREFIXO_BRIGA.length))?.ocupacao ?? ''))) {
       registrarCrime(content, camp, 'arruaca', 10 * caidos.length, `briga em ${local}`);
     }
   }
+  // Sangue na rua deixa a cidade com medo: a desordem dela sobe.
+  const cidadeId = cidadeIdDoLocal(content, camp, camp.localAtual);
+  const cidade = cidadeId ? camp.vivo?.cidades[cidadeId] : undefined;
+  if (cidade) cidade.inseguranca = Math.min(100, cidade.inseguranca + 5 * mortos.length + caidos.length);
 
   const p = camp.personagem;
   let fato: string;

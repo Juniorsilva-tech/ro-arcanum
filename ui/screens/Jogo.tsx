@@ -38,6 +38,7 @@ import {
   todosNpcs,
   type Campaign,
   custoDoSuborno,
+  cartazDe,
 } from '@/engine';
 
 const ORDEM_CATEGORIAS: CategoriaVerbo[] = [
@@ -671,12 +672,18 @@ function CercoDaGuarda() {
   const custo = custoDoSuborno(content, camp);
   return (
     <View style={styles.falhaBox}>
-      <Text style={styles.falhaTitulo}>A guarda te cercou</Text>
+      <Text style={styles.falhaTitulo}>{ab.cacador ? 'Um caçador de recompensas te achou' : 'A guarda te cercou'}</Text>
       <Text style={styles.falhaMotivo}>
-        {pr ? `${pr.gravidade === 'sangue' ? 'procurado por sangue' : 'procurado por arruaça'}: ${pr.motivo}` : ab.guarda}
+        {pr
+          ? pr.gravidade === 'sangue'
+            ? `PROCURADO${cartazDe(pr).vivoOuMorto ? ' — VIVO OU MORTO' : ''} · ${pr.motivo} · recompensa de ${cartazDe(pr).recompensa} moedas`
+            : `queixa de arruaça: ${pr.motivo}`
+          : ab.guarda}
       </Text>
       <Text style={styles.falhaTexto}>
-        {ab.guarda} espera a sua resposta. Render-se leva à cela. Fugir é arriscado: se não der, a patrulha te pega na marra.
+        {ab.cacador
+          ? 'Ele trabalha por dinheiro: render-se é ser entregue na guarda; pagar mais que a recompensa compra o silêncio dele; lutar é contra uma besta armada.'
+          : `${ab.guarda} espera a sua resposta. Render-se leva à cela. Fugir é arriscado: se não der, a patrulha te pega na marra.`}
       </Text>
       <View style={styles.falhaBotoes}>
         <Pressable style={styles.botaoVazio} onPress={() => responder('render')}>

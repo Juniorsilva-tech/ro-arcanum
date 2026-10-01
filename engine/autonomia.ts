@@ -63,6 +63,13 @@ export function processarAutonomia(content: ContentBundle, camp: Campaign): void
         registrarFato(camp, { tipo: 'ruptura_grupo', local: p.local, texto: `${npc.nome} deixou o grupo após perder a confiança em você.`, atores: [npc.id, 'jogador'], publico: false, conhecimento: 'testemunhado' });
       } else continue;
     }
+    // Na cela da guarda da cidade (engine/guarda.ts): sai quando a pena acaba.
+    if (p.objetivo === 'preso') {
+      if (p.presoAte !== undefined && dia >= p.presoAte) {
+        p.objetivo = 'rotina'; p.presoAte = undefined;
+        registrarFato(camp, { tipo: 'soltura_npc', local: p.local, texto: `${npc.nome} cumpriu a pena e saiu da cela da guarda.`, atores: [npc.id], publico: true });
+      } else continue;
+    }
     if (p.objetivo === 'cativo') {
       const parente = camp.familia?.membros.find(m => m.id === npc.id);
       if (parente?.condicao === 'livre') { p.objetivo = 'rotina'; p.local = npc.localBase; }

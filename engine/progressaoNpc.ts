@@ -44,7 +44,7 @@ export function fichaCombatente(camp: Campaign, npc: NPC): NPC['combatente'] {
 
 export function treinarNpc(camp: Campaign, npc: NPC, esforco = 1, experiencia = 0): boolean {
   const din = camp.npcState[npc.id];
-  if (!din?.vivo || (din.idade ?? npc.idade) < 18 || camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') return false;
+  if (!din?.vivo || (din.idade ?? npc.idade) < 18 || (camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo' || camp.vivo?.pessoas[npc.id]?.objetivo === 'preso')) return false;
   const e = inicializarProgressaoNpc(camp, npc);
   if (!e) return false;
   const antes = fichaCombatente(camp, npc)!;

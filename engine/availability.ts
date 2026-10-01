@@ -29,6 +29,7 @@ export function calcularContexto(content: ContentBundle, camp: Campaign): Contex
     // normal volta a valer assim que a pessoa deixa o grupo.
     if ((camp.grupo ?? []).includes(npc.id)) return true;
     if (camp.vivo?.pessoas[npc.id]?.objetivo === 'cativo') return false;
+    if (camp.vivo?.pessoas[npc.id]?.objetivo === 'preso') return false;
     return localEfetivo(camp, npc, periodo, content) === local.id;
   });
 

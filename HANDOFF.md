@@ -22,11 +22,11 @@ Antes de alterar qualquer coisa:
 O registro cresceu além do que um agente novo consegue ler antes de começar.
 Na sessão 16 ele foi dividido:
 
-- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (78 em
+- **`HANDOFF.md` (este arquivo)** — estado atual, sessões recentes (88 em
   diante), problemas abertos e próximo passo. É o que se lê antes de trabalhar.
-- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 77c, na íntegra e sem edição. Consultar
+- **`HANDOFF-ARQUIVO.md`** — sessões 1 a 87, na íntegra e sem edição. Consultar
   quando for preciso saber *por que* alguma decisão antiga foi tomada. As
-  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, 51 a 53 na sessão 58, 54 a 55 na sessão 62, 56 a 57 na sessão 69, 58 a 59 na sessão 78, 60 a 62 na sessão 79, 63 a 68 na sessão 83, e 69 a 77c na sessão 88.
+  sessões 13 a 23 foram movidas na sessão 40, 24 a 27 na sessão 42, 28 a 31 na sessão 43, 32 a 38 na sessão 44, 39 a 42 na sessão 48, 43 a 45 na sessão 51, 46 a 50 na sessão 56, 51 a 53 na sessão 58, 54 a 55 na sessão 62, 56 a 57 na sessão 69, 58 a 59 na sessão 78, 60 a 62 na sessão 79, 63 a 68 na sessão 83, 69 a 77c na sessão 88, e 78 a 87 na sessão 92.
 
 Nada foi apagado. Ao encerrar uma sessão, escreva aqui; quando este arquivo
 passar de ~800 linhas, mova as sessões mais antigas para o arquivo do mesmo
@@ -70,556 +70,6 @@ jeito, mantendo o texto original.
 | 87–88b | Claude — segurança de chave, rito do mestre, técnica própria, vida/XP e linhagem |
 | 89 | Codex — régua de conversa cotidiana e validação |
 | 90 | Gemini — liberdade de sucessão pelo jogador/corte, vocações variadas e regência |
-
----
-
-## Sessão 78 — Claude — revisão das sessões 70 a 77c do Gemini
-
-Títulos: as duas últimas sessões do Gemini vinham como "72" e "73", números
-já usados; viraram 77b e 77c (texto intacto). Sessões 58 e 59 foram para o
-arquivo. Commit `9101ff9` guarda o trabalho do Gemini como entregue; as
-correções abaixo vêm num commit separado.
-
-Confirmado e mantido: correção do .bat (o `(S/N)` fechava o bloco `if`),
-caminho do Hermes em LOCALAPPDATA (nenhum token impresso nem gravado),
-troca de arma em combate, `marcosRecentes` sem "dia X:" repetido, UI do
-combate, abas de Mochila e Forja, protagonista sempre masculino, passivas
-das armas lendárias, cores da Nichirin.
-
-Defeitos encontrados e corrigidos:
-- Queimadura e sangramento matavam oni (o veneno já deixava o oni com 1 de
-  vida). Agora têm o mesmo piso: oni só morre por Nichirin ou sol.
-- Contra-golpe do Bastião de Halvet: o ataque inimigo às vezes chega numa
-  cópia do ator, então os 7 de dano iam para a cópia e o log mentia; e quando
-  acertava o original, o inimigo morria sem a luta acabar. `contraGolpe`
-  acha o ator real, não mata oni, e o turno inimigo verifica a queda.
-- `peso_imperial` tirava 2 de acerto a cada golpe, até o piso. Agora uma vez
-  por alvo (`EstadoTatico.abalado`).
-- `flexionarOficio` usava ``, que não reconhece letra acentuada: "artesã"
-  nunca virava "artesão". Tabela de pares com fronteira `\p{L}`; entraram
-  mercador/mercadora e soldado/soldada.
-- O log de crítico gritava ("desfere um GOLPE CRÍTICO devastador", emoji). O
-  log vai para o narrador; voltou a "acerta X em cheio … [crítico]". A UI
-  continua destacando (procura "crítico").
-- `scripts/test_nichirin_cores.ts` importava `jogadorAtor`, não exportado
-  (typecheck falhava). Exportado.
-
-Nichirin conforme o cânone que o dono mandou:
-- A lâmina só muda de cor na mão de quem domina a Concentração Total
-  (`dominaConcentracaoTotal`: qualquer arte `respiracao_*`/`hinokami*`, ou
-  o treino de quase-morte). Novato empunha e o aço fica neutro; o despertar é
-  checado de novo ao equipar e ao começar combate.
-- A "marca" que puxava a cor preta era `classeId === 'cacadora'` (a classe
-  Caçador). Agora é a Marca de verdade (`temMarca`).
-- A Lâmina de Yoriichi tinha a cor gravada no item do catálogo em tempo de
-  jogo (mutava o conteúdo compartilhado). A cor preta agora vem no próprio
-  item em `content/vaelhorn/items.ts`.
-- A instância desperta usava `Date.now()` no id, o que quebra a
-  reprodutibilidade da engine. Agora `lamina_nichirin_azul_1`, `_2`…
-- Lore da preta: por muito tempo tida como sinal de má sorte.
-- Nova ação tática `lamina_carmesim` (akatō): exige Nichirin desperta e a
-  Marca, custa 4 de vigor, dura 3 rodadas; golpe em oni nesse tempo segura a
-  regeneração (`imuneRegenTurnos` 2). Botão em Combate quando disponível.
-
-Testes novos em `engine/sistemas.selftest.ts`: oni não morre de sangramento,
-contra-golpe encerra a luta, ofício flexionado, Nichirin só com Concentração
-Total (id determinístico, catálogo intacto), Lâmina Carmesim pede a Marca.
-
-Pontos de design deixados para o dono decidir: protagonista obrigatoriamente
-masculino (`genero: 'm'` no tipo); críticos bem mais fortes (janela até 60%,
-multiplicador até 2,4, +10% de dano por ponto de modificador, sem dispersão
-para baixo no crítico). O .bat já não oferece login quando o token expira.
-
----
-
-## Sessão 79 — Claude — o narrador aprende com o StoryZone e o AI Dungeon
-
-O dono mostrou capturas e um capítulo do StoryZone, e um resumo técnico dele e
-do AI Dungeon. O que veio daí, sempre com a engine como fonte da verdade:
-
-1. **Luta narrada por batidas.** `fecharLuta` guarda o log do combate antes de
-   `fecharCombate` e manda como `batidasCombate`. O narrador recebe as linhas
-   numeradas (sem emoji, sem "subiu de nível", sem "Vitória") e escreve um
-   parágrafo curto por batida, na ordem, sem inventar golpe, ferida ou morte;
-   fecha com o que ficou e um gancho. Antes o modelo só recebia "A luta
-   terminou e você ficou de pé".
-2. **Fazer / Dizer** no campo de ação livre (`ui/screens/Jogo.tsx`). Dizer
-   manda as palavras exatas como fala `[você]`; passa pela engine do mesmo
-   jeito (o verbo é classificado), mas fala nunca abre combate. O texto vai
-   por `falaJogador` no store e é consumido pela próxima narração.
-3. **Ritmo e gancho** no prompt de sistema: um parágrafo, uma ideia; frase curta
-   depois de trecho longo; abrir pelo corpo; lista de clichês a evitar; a cena
-   termina numa situação que pede decisão.
-4. **Estilo do narrador** em Configurações (`ui/screens/EstiloNarrador.tsx`,
-   `config.estilo`): extensão Curta 3–5 / Média 4–7 (padrão, igual antes) /
-   Longa 8–12; ritmo Atmosfera / Equilibrado / Trama rápida; menção à decisão
-   "Mostrar minha ação" ou "Direto à consequência".
-5. **Modo capítulo** (abertura da campanha, chegada de viagem, capítulo novo):
-   8–12 parágrafos com estrutura corpo → lugar → presentes → tensão do pacote →
-   gancho, e proibição de fato novo sobre o mundo.
-6. **Lembre o narrador** (`camp.lembretesNarrador`, até 8, 200 caracteres):
-   entram na mensagem como memória, com o aviso de que o pacote vence e de que
-   não mudam dinheiro, itens, feridas nem relações.
-7. **Ouvir a cena**: botão "▶ ouvir" em cada narração, com `expo-speech` (voz do
-   aparelho, local, sem custo). `ui/voz.ts` tira colchetes e travessões.
-8. **Trava de menores na engine** (`engine/protecao.ts`): com jogador ou
-   presente abaixo de 18 anos, o pacote perde o `corpo` dessas pessoas, a
-   diretriz de estilo perde a parte adulta e a mensagem ganha uma restrição
-   inviolável. O dono tinha recusado isso antes (item 2 da sessão 69) e pediu
-   "todos os itens" desta rodada, que incluía a trava.
-
-Extra: o feed restaurado do save mantinha ids f0, f1… e as entradas novas
-repetiam esses ids (aviso de chave duplicada do React). `renumerarFeed`
-renumera ao carregar.
-
-`montarMensagemNarracao` agora é exportada e recebe o estilo; `ResultadoTurno`
-ganhou `tipoAcaoLivre`, `batidasCombate` e `modoCena`, todos opcionais.
-Teste novo `engine/narrador.selftest.ts` (no `test:engine`).
-
-Do AI Dungeon, ficou de fora de propósito: modo "Story/Trama" (o jogador ditar
-fatos do enredo contradiz a engine), memória por embeddings (a engine já tem
-marcos, Livro e memória dos NPCs), cartões de mundo por palavra-chave (o pacote
-já escolhe por relevância). O "Author's Note" do AI Dungeon é o que fizemos com
-o estilo: instrução curta logo antes do pedido.
-
-Não testado com narração real (não uso a chave da Nous do dono). Verificado no
-navegador em modo local: painel de estilo grava, aba Dizer põe a fala no feed,
-"ouvir" alterna para "parar", lembretes entram e saem, ids do feed únicos.
-
-### Sessão 79 (continuação) — narradores grátis em rodízio
-
-O dono não tem dinheiro para modelo pago e pediu provedores grátis com limite
-alto. Pesquisa (setembro de 2026): a OpenRouter sem créditos dá ~50 pedidos
-por dia nos modelos `:free`, e a lista antiga de sugestões já não existia.
-Groq, Mistral, Google Gemini e Cerebras têm camada grátis com API no formato
-da OpenAI e aceitam CORS (testado com preflight; a NVIDIA NIM não aceita, por
-isso ficou de fora da versão web).
-
-- `engine/llm.ts`: `LlmProvider` ganhou `groq | mistral | gemini | cerebras`
-  (`ProvedorCompat`) e a tabela `PROVEDORES_GRATIS` (URL, modelo padrão,
-  sugestões, onde pegar a chave, limite e aviso). `chamarOpenRouter`,
-  `chamarStreamCompat` e `testarChave` passaram a usar `urlChat`,
-  `cabecalhos` e `modeloPadraoDe`, então os quatro narram com o mesmo código.
-  `listarModelos` lê `/models` dos compatíveis. `narrarComFallback` troca de
-  modelo em qualquer provedor que não seja a Anthropic.
-- Sugestões da OpenRouter trocadas pelos `:free` que existem hoje (Gemma 4,
-  Nemotron 3, Qwen 3.8, Inkling); modelo padrão da OpenRouter virou
-  `google/gemma-4-31b-it:free` (o anterior, rocinante-12b, é pago).
-- `config.reservas` + `ui/screens/ReservasGratis.tsx`: chaves grátis salvas no
-  aparelho. `narrar` tenta o narrador principal e, se falhar (limite, rede,
-  recusa), cada reserva na ordem; sem principal, as reservas narram. Somar as
-  camadas grátis é o que dá fôlego sem pagar.
-- Avisos na tela: Mistral grátis exige aceitar treino com os dados; Gemini
-  grátis também usa o conteúdo e o filtro dele bloqueia cena adulta; Groq pode
-  recusar cena adulta; Cerebras pode ter passado a pedir cartão.
-
-Verificado no navegador: o painel abre, "Testar" com chave falsa faz a
-chamada real à Groq e mostra "chave da Groq inválida ou sem permissão (401)".
-Bug achado e corrigido na hora: seletor do zustand com `?? []` dentro criava
-array novo a cada render (laço infinito).
-
-Cena adulta: cada reserva tem "Testar cena adulta" (usa `testarCenaAdulta`, a
-mesma chamada curta do narrador principal). Recusa já conta como falha na
-narração (`interpretarResposta` devolve erro), então uma cena recusada passa
-sozinha para a próxima reserva. Ordem do rodízio: Mistral, Groq, Cerebras,
-Gemini (o de filtro mais duro por último). Não sei, sem chave, quais modelos
-grátis narram sexo hoje; o botão existe para o dono descobrir no aparelho.
-
-Cada cartão de reserva tem o link para criar a chave (abre no navegador com
-`Linking.openURL`) e o caminho até o botão, em `PROVEDORES_GRATIS[*].linkChave`
-e `.passos`. As quatro páginas responderam (a da Mistral redireciona para o
-login).
-
-Com a chave salva, o cartão da reserva busca os modelos da própria conta
-(`listarModelos` → `/models` do provedor) e mostra até 40 como botões, com os
-recomendados primeiro; sem chave, mostra as sugestões fixas. A busca roda ao
-abrir o cartão (se já há chave) e a cada Salvar/Testar. Não testado com chave
-real; com chave falsa a lista fica nas sugestões, como esperado.
-
-Lista de modelos com avaliação: `PROVEDORES_GRATIS[*].notas` diz o que se sabe
-de cada modelo conhecido (★ = recomendado; "costuma recusar sexo"; "prosa
-fraca"), e `notaDoModelo` dá uma leitura pelo nome para os desconhecidos
-(grande, leve, experimental, feito para código). Recomendados sobem para o
-topo. "Testar cena adulta" grava o veredito em `config.testesAdulto`
-("provedor:modelo"), e o botão do modelo passa a mostrar "✓ narra adulto" ou
-"✗ recusa adulto". As notas são expectativa, não teste: o veredito que vale é o
-do botão.
-
-O dono colou as chaves da Groq e da Mistral e "não roda"; a Mistral dizia
-"travado". CORS e endpoints conferidos (preflight de `/models` e de chat OK nos
-três). O erro resumido escondia o motivo: `explicarErro` agora mostra a frase
-do próprio provedor (lê `{error}`, `{detail}` e o `[{error}]` do Gemini) e, na
-Mistral, lembra que a chave só funciona depois de escolher o plano grátis
-Experiment (e que chave nova leva minutos para ativar). Se a lista de modelos
-da conta não vier, o cartão diz para tocar em Testar e ver o motivo. Falta a
-mensagem real do aparelho do dono para fechar o diagnóstico.
-
-Print do dono (admin.mistral.ai): em 2026 o plano "Gratuito" da Mistral dá
-US$ 10/mês em créditos de API; o "Experiment" de 1 bilhão de tokens não existe
-mais. Textos do cartão da Mistral atualizados (limite, passos e dica de erro:
-a chave vem de console.mistral.ai → API Keys, não do Le Chat/Vibe). Ainda sem a
-mensagem de erro real do aparelho.
-
-Confirmado pelo console da Mistral (26/09/2026): "Sua organização está no plano
-Free. Atualize para Pro para ativar suas chaves de API." A API da Mistral não é
-mais grátis. O cartão diz isso, a nota do Large perdeu a ★ e a Mistral foi para
-o fim do rodízio (ordem agora: Groq, Cerebras, Gemini, Mistral). O dono colou a
-chave da Mistral no chat; não a usei, e recomendei apagar.
-
-A Groq funcionou no aparelho do dono, e o print mostrou dois defeitos:
-- "Testar cena adulta" marcou ✓ com a amostra "I’m sorry, but I can’t help with
-  that." O apóstrofo curvo não casava com a lista de recusa. `detectarRecusa`
-  normaliza apóstrofos e ganhou "can't help with that" e afins; o teste de
-  conteúdo agora só dá ✓ se não for recusa, estiver em português
-  (`foraDeContexto`) e tiver corpo de parágrafo (≥160 caracteres). Os vereditos
-  antigos (`config.testesAdulto`) são ignorados; os novos vivem em
-  `config.vereditos` por "provedor:modelo", com `adulto` e `gore`.
-- Novo "Testar gore" (`testarConteudo(cfg, 'gore')`, cena de machado no ventre);
-  a linha do modelo mostra ✓/✗ para adulto e para gore.
-- A conta Groq do dono lista só gpt-oss-120b/20b, qwen3.8-27b e modelos de voz
-  (orpheus) e árabe (allam): o Llama 70B saiu do catálogo. Padrão da Groq virou
-  `qwen/qwen3.8-27b`; voz/árabe/compound saem da lista.
-- `semPensamento` tira `<think>…</think>` (Qwen 3.x e R1 mandam o raciocínio
-  junto) antes de interpretar a cena e antes do teste de conteúdo.
-
-### Sessão 80 (Gemini) — Diagnóstico de Modelos Gratuitos, Injeção de Atributos/Arma e Purificação da Prosa
-- **Diagnóstico da Nous / Modelos**:
-  * Testados 417 modelos na API da Nous Research. Modelos comerciais (Claude, GPT, Qwen pagos) exigem créditos (`status: 404`).
-  * `stealth/space-bunny-alpha` funciona sem filtros, mas demora ~95s (estourava o timeout de 75s). Timeout ampliado para 120s para este modelo.
-  * `upstage/solar-pro4:free` validado como a melhor opção gratuita ativa (rápido ~15s, sem censura em sexo/gore, JSON 100% estável).
-  * `inclusionai/ling-3.0-flash-sante:free` testado e aprovado como reserva imediata (~15s, narra adulto e gera 5 opções válidas).
-- **Purificação da Prosa & Eliminação de Cacoetes de IA**:
-  * Adicionada regra estrita de segunda pessoa ("você"), proibindo narrar em terceira pessoa ("Junior chega", "ele entra").
-  * Proibido o carrossel/rodízio de monólogos (onde 4 NPCs discursavam em fila). O diálogo agora foca em 1 ou no máximo 2 interlocutores por cena, com o jogador respondendo ativamente (`— [você]`).
-  * Proibidos anacronismos modernos ("batedeira", "dezenas de minutos"), traduções quebradas e alucinações de itens sem sentido ("patinho de sal").
-  * Proibidos vícios clássicos de IA: antíteses "Não X, mas Y", conclusões moralizantes e fechamentos em perguntas ("O que você fará?"). `limparNarracao` remove trailing questions automaticamente por regex de segurança.
-  * Concordância masculina estrita do protagonista reforçada em pronomes, vocativos, adjetivos e particípios ("ferido", "exausto", "pronto", "surpreso").
-- **Atributos e Armas Lendárias na Prosa**:
-  * `personagem.atributos` e `personagem.armaEquipada` (com `danoBase`, `tipoDano`, `contraOni`, `efeitoPassivo`, `corNichirin`) agora são injetados diretamente em `montarPacote`.
-  * Diretriz de combate instrui a refletir o impacto real da força/precisão e as propriedades autênticas da arma (como o aço negro obsidiana e as chamas solares da Lâmina de Yoriichi / Respiração do Sol cauterizando feridas de onis).
-- **Validação**:
-  * `npm run typecheck` OK (código 0).
-  * `npm run test:engine` OK (100% dos testes e simulação de 10 anos passaram sem violações de invariantes).
-  * Teste ao vivo de narração com `Solar Pro 4` gerou cena com 2ª pessoa estrita, foco na Elza sem rodízio, reconhecimento imediato da Lâmina de Yoriichi aquecida e opções de turno categorizadas.
-
-### Sessão 81 (Gemini) — Relevância Profunda do Treinamento de Mestre na Infância
-- **Impacto Mecânico e Narrativo da Opção `treinar` aos 10 anos (`eventoTalento`)**:
-  * Em `engine/familia.ts`, a opção aos 10 anos de aceitar o mestre foi reformulada para conceder ao protagonista recompensas reais e permanentes no mesmo nível do irmão prodígio:
-    1. **Arte Secreta de Mestre Conhecida (`artesConhecidas`)**: Concede imediatamente uma técnica marcial ou mística autêntica conforme a vocação do maior talento do protagonista (`guarda_perfeita` para físico, `tiro_certeiro` para precisão, `escudo_arcano` para raciocínio, `segundo_folego` para resiliência, `ler_aura` para percepção, `coragem` para social, com fallbacks caso já conheça).
-    2. **Atributos em Dobro**: Concede +2 no talento principal e +1 em resiliência/físico pela disciplina do treino severo.
-    3. **Perícia Marcial / Intelectual**: +1 na perícia afim (`atletismo`, `perceber`, `arcana`, `rastrear`, `intimidar`).
-    4. **Herança / Item de Treino do Mestre**: Adiciona um item ao inventário herdado do mestre (`pedra_de_amolar`, `luvas_de_couro`, `tonico_de_mana`, `pocao_cura_menor`, etc.).
-    5. **Alcunha e Prestígio Social**: Concede +3 de prestígio familiar, a alcunha honorífica `'Discípulo Dedicado'` e as flags `camp.flags['discipulo_de_mestre'] = true`, `mestre_infancia_talento` e `arte_mestre_infancia`.
-  * Em `engine/llm.ts`: Instrução 5a ampliada para fazer mestres, combatentes e ferreiros reconhecerem formalmente a postura marcial, respiração e disciplina do protagonista com a alcunha de discípulo.
-- **Validação e Testes**:
-  * `engine/familia.selftest.ts`: Adicionado teste unitário rigoroso validando atribuição de arte, perícia, item herdado no inventário, prestígio e reconhecimento de discípulo.
-  * `npm run typecheck`: 0 erros (TypeScript estrito).
-  * `engine/familia.selftest.ts` e `engine/selftest.ts`: 100% aprovados sem violações de invariantes.
-
-### Sessão 82 (Gemini) — Expansão Dramática e Variedade de Eventos da Infância
-- **Novos Eventos Formativos da Infância em [`engine/familia.ts`](file:///c:/Users/Junior/ro-arcanum/engine/familia.ts)**:
-  * A infância do Vaelhorn recebeu 10 novos eventos ricos com escolhas profundas e consequências permanentes:
-    1. **Aos 6 anos**:
-       - `indigno_provacao`: Evento exclusivo para a marca `indigno` ("O Olhar de Desdém" — provar-se no trabalho, astúcia pelas sombras ou têmpera de aço).
-       - `ruinas_descoberta`: "O Buraco sob a Capela Velha" (descer às catacumbas, marcar segredo ou avisar anciãos). Concede `moeda_antiga`, atributos e prestígio.
-       - `inverno_rigoroso`: "O Inverno da Geada Vermelha" (manter a fogueira e salvar os fracos, buscar lenha na nevasca ou caçar armadilhas na neve). Concede cicatrizes de frio, resiliência e patrimônio.
-    2. **Aos 10 anos** (sorteio expandido de 2 para 6 tipos):
-       - `incendio_forja`: "O Fogo na Rua da Ferraria" (salvar o ferreiro com `pedra_de_amolar`, comandar linha de baldes com `persuadir` ou arrombar depósito para salvar carga).
-       - `sombra_na_mata`: "A Coisa Que Não Tinha Sombra" (sustentar respiração e aprender `passo_leve`, proteger amigo com alcunha 'Olhar Férreo', ou gravar pontos fracos no bestiário com `perceber`).
-       - `inquisicao_selo`: "A Comitiva da Ordem do Santo Selo" (responder com modéstia e prestígio, ocultar relíquias da família com `furtividade`, ou desafiar o inquisidor com a alcunha 'Indomável').
-       - `torneio_juventude`: "A Disputa do Meio-Verão" (vencer na arena de terra batida com `luvas_de_couro`, prova de arquearia com `perceber`, ou cantar crônicas da fogueira com `persuadir`).
-    3. **Aos 14 anos** (sorteio expandido de 1 para 4 tipos):
-       - `emboscada_estrada`: "O Batismo de Sangue na Estrada do Sal" (lutar na linha de frente com `espada_curta` e alcunha 'Batizado em Sangue', manobrar a fuga pela ravina salvando a carga, ou contra-emboscar saqueando ouro).
-       - `rito_da_vigia`: "A Vigília Solitária na Torre da Fronteira" (olhos no nevoeiro aprendendo `ler_aura`, disciplina marcial aprendendo `segundo_folego`, ou mapear o vale com `mapa_rasgado` e `decifrar`).
-       - `encruzilhada_oficio`: "A Oferta na Encruzilhada" (seguir batedores com `conhece_trilhas_secretas`, aprender cura de feridas com `pocao_cura_menor`, ou firmar raízes no sangue com prestígio e lealdade máxima).
-       - `partida`: o evento clássico mantido e polido.
-- **Validação e Testes**:
-  * `engine/familia.selftest.ts`: Adicionados testes unitários cobrindo o disparo da marca `indigno`, resolução do incêndio na forja, sombra na mata e batismo de sangue na estrada.
-  * `npm run typecheck`: 0 erros (TypeScript estrito).
-  * `engine/familia.selftest.ts` e `engine/selftest.ts`: 100% aprovados sem quebras de determinismo ou regressões.
-
-### Sessão 83 (Gemini) — Infância Dinâmica, Memória Familiar Viva e Realismo Cru de Fronteira
-- **Gravação de Memórias Duradouras nos Parentes ([`engine/familia.ts`](file:///c:/Users/Junior/ro-arcanum/engine/familia.ts))**:
-  * `registrarLembranca` integrado em `resolverEtapaInfancia` em todos os acontecimentos cruciais da infância:
-    - `talento` (`treinar`): lembrança gravada em todos os familiares de que o protagonista foi aceito como discípulo formal de um mestre aos 10 anos (+6 de confiança).
-    - `talento` (`dividir`): memória no irmão de que o protagonista abriu mão da tutela de mestre para ele virar prodígio (+15 de confiança); nos pais, memória de lealdade e honra de sangue (+8 de confiança).
-    - `talento` (`recusar`): memória na família de que recusou partir para sustentar o lar.
-    - `incendio_forja` (`salvar_ferreiro`): se o pai for ferreiro, memória eterna de resgate do fogo (+12 de confiança); para os pais, memória de coragem destemida (+8 de confiança).
-    - `sombra_na_mata` (`proteger_amigo`): memória no irmão de que você colocou o corpo entre ele e a fera aos 10 anos (+12 de confiança); pais gravam admiração com olhar férreo (+8 de confiança).
-    - `inverno_rigoroso` (`manter_fogueira`): memória em todos os familiares de ter vigiado o fogo noite após noite durante o grande inverno (+5 de confiança).
-    - `emboscada_estrada`: em `lutar_com_furia`, memória do batismo de sangue empunhando o aço aos 14 anos (+8 de confiança); em `manobrar_fuga`, memória de conduzir os cavalos no desfiladeiro salvando vidas e carga (+6 de confiança).
-    - `encruzilhada_oficio` (`firmar_raizes_na_casa`): memória de honra ao escolher fincar raízes e sustentar a família em vez de partir pelo mundo (+10 de confiança).
-    - `partida` (`defender`): memória na família de ter colocado o corpo à frente quando o perigo bateu à porta aos 14 anos (+10 de confiança).
-    - `perda` (`proteger_irmaos`): nos irmãos vivos, memória de ter assumido o peso da casa após a morte dos pais (+12 de confiança).
-- **Injeção de `origemEFamilia` no Pacote de Contexto do Narrador ([`engine/llm.ts`](file:///c:/Users/Junior/ro-arcanum/engine/llm.ts))**:
-  * Em `montarPacote`, adicionado o bloco `origemEFamilia`: passa `prestigio`, `patrimonio`, relação de `membros` (nome, parentesco, ocupação, condição, prodígio) e as `marcasDaInfancia` (as decisões e feitos reais registrados na história da família).
-  * O narrador agora tem ciência imediata da linhagem, das escolhas da infância e de quem são os pais e irmãos.
-- **Diretrizes 2f e 2g no Prompt de Sistema ([`engine/llm.ts`](file:///c:/Users/Junior/ro-arcanum/engine/llm.ts))**:
-  * `2f) RAÍZES VIVAS E MEMÓRIA DE SANGUE`: familiares dialogam com a intimidade orgânica de quem dividiu teto, feridas e dificuldades, reconhecendo o passado através de `lembraDeVoce`. Pais e irmãos nunca são retratados como estranhos de taverna.
-  * `2g) FISICALIDADE CRUA E REALISMO DE FRONTEIRA`: proíbe abstrações e clichês etéreos, exigindo matéria, texturas, cheiros ásperos (lama, cerveja azeda, ferro oxidado, sebo de vela, baque seco de escudos) e corpos agindo de fato.
-- **Validação e Testes**:
-  * `engine/familia.selftest.ts`: Adicionadas asserções para memórias vivas registradas nos familiares e presença de `origemEFamilia` com membros e histórico no pacote do narrador. 100% aprovado.
-  * `engine/selftest.ts`: 100% aprovado (todas as 40+ suítes de teste + simulação longa de 10 anos sem quebras de invariantes).
-  * `npm run typecheck`: 0 erros de compilação TypeScript (modo estrito).
-
-
----
-
-## Sessão 84 — Claude — revisão das sessões 80 a 83 do Gemini e rodada grande
-
-Revisão do Gemini (checkpoint `abbb88f`): ids de itens e artes dados na
-infância existem no catálogo; nada de `Math.random`/`Date.now`; teste da família
-passa. Dois defeitos no narrador, corrigidos:
-- `limparNarracao` apagava a pergunta do fim mesmo quando era FALA de
-  personagem ("— [Guarda] O que você faz aqui?" virava "— [Guarda]"). Agora só
-  corta a pergunta em linha de narração.
-- A regra "NUNCA termine com perguntas" brigava com a do gancho ("uma pergunta
-  feita a ele"). Reescrita: o NARRADOR não pergunta ao jogador; um PERSONAGEM
-  pode, em fala.
-- Mapa rápido do HANDOFF dizia "70–79 Claude"; 70–77c são do Gemini.
-
-Rodízio por tipo de cena: `tipoDeCena` (engine/llm.ts) lê o pedido e diz se a
-cena é íntima (`adulto`), de luta (`gore`) ou comum. Em `narrar`, quem tem
-veredito ✓ para aquele tipo (`config.vereditos["provedor:modelo"]`) vai na
-frente, quem recusou vai por último, e quem não foi testado fica no meio, na
-ordem de sempre. O teste adulto do narrador principal (Configurações) também
-grava veredito agora. Reservas sem modelo escolhido usam o modelo padrão do
-provedor como chave do veredito.
-
-Cultivos por sítio (resto da etapa C): `engine/cultivos.ts`. Cada sítio aceita
-as plantas da região (`CULTIVOS_POR_SITIO`) e cada uma faz uma coisa: trigo
-(cheio), centeio (não quebra no inverno), cevada (80% + estabilidade), linho e
-vinha (ouro), nabo (no inverno o rebanho come nabo e não o celeiro), ervas
-(remédio), painço (aguenta terra ruim), arroz (125%, só com água 3). Trocar
-de planta para a colheita por 10 dias. `processarDiaColonia` usa
-`colheitaDoDia`; `processarRebanhos` recebe a forragem. Aba "Roça" no
-assentamento (`ui/screens/RocaColonia.tsx`). Saves antigos: sem planta
-escolhida, a colônia usa a primeira do sítio — na Colina dos Forcados e na
-Clareira isso é centeio, que rende 85% no verão e mais no inverno. Teste
-`engine/cultivos.selftest.ts` (no `test:engine`); o teste de terreno da
-colônia agora compara os dois sítios com trigo, porque o painço existe
-justamente para encurtar a diferença do ermo.
-
-Mapa dos cartógrafos no jogo. A imagem (`assets/feudo/mapa_continente.jpg`)
-foi lida símbolo por símbolo:
-- Dois lugares pintados que o jogo não tinha viraram lugares de verdade, com
-  estrada, crônica, moradores, histórias e segredos autorais: **Forrarborg
-  Aelha** (a torre no último morro antes das dunas, hoje dos contrabandistas;
-  liga Porto do Sal, Ponta da Areia e Corveira) e **Ponta da Areia** (a
-  língua de areia do sal sem selo). 55 lugares agora.
-- `content/vaelhorn/marcosMapa.ts`: 13 nomes antigos pintados (Tesselgarde,
-  Gelo-Fortis, Vintraborg, Clareira Negra, Sombraltrar, Pedra-Alta,
-  Corveiraborg, Mina de Ferro, Mina de Prata, Solgar Capital, Halvetia,
-  Mareuborg, Enseada Velha) ligados aos lugares do jogo, e 17 lendas dos
-  símbolos (dragão do bosque, as duas serpentes, redemoinho, naufrágio do
-  Tributo, as velas do Oceanus, os três estandartes, a Ponte-Velha, os campos
-  do Rio-Verde, o castelo da serra, a boca na serra, Petra-Áurea, o oásis, o
-  Deserto dos Crânios).
-- Mapa: tocar num símbolo pintado abre a lenda e "o que o povo diz"; a lenda
-  só aparece quando o lugar a que ela se prende já é conhecido no Livro. O
-  cartão de um lugar mostra "no mapa velho: …".
-- Narrador: `local.mapaVelho` (nome antigo + até duas lendas de perto), regra
-  2e2 no prompt (crença, uma frase); sai do pacote em luta e perseguição.
-- Teste `engine/marcosMapa.selftest.ts` (no `test:engine`).
-
-### Sessão 84 (continuação) — partida de verdade no navegador (Playwright)
-
-Joguei uma campanha nova em Vaelhorn pelo Playwright (tela de celular,
-430 px), clicando: aviso, classe (Espadachim), origem (Foragido), infância
-(Expectativas baixas → Olhar de Desdém → Comitiva da Ordem → ficar em casa),
-atributos, taverna, Dizer, Flertar, combate, fim de luta, mapa. Fotos em
-`.playwright-mcp/jogo/` (fora do git). O narrador por IA respondeu 401: a
-chave do `.env.local` está vencida e não uso a do dono; a partida seguiu no
-narrador local, que exercita a engine inteira.
-
-Defeitos achados e corrigidos:
-- **Flertar oferecia pai, mãe e irmã como alvo.** A engine já barrava
-  (`família não é alvo romântico`), mas o seletor listava todos os presentes.
-  Agora a lista passa por `disponibilidadeVerbo`.
-- "Usar narrador local" valia só um turno: a ação seguinte tentava a chave
-  ruim de novo e travava. Agora vale até mexer na configuração
-  (`iaSuspensa`), e a abertura não aparece duplicada.
-- O narrador local mostrava só "A luta terminou"; agora conta as batidas do
-  log antes do fato.
-- Irmã com nome masculino/irmão com nome feminino ("Mara · irmao"): nomes por
-  gênero; "trabalhadora da família" para irmã.
-- Prólogo: "mae"/"irmao" sem acento e "1 anos".
-- "Você lidou com isso sozinho(a)" (o protagonista é homem).
-- "precisa de alaude" mostrava o id do item; agora o nome ("alaúde").
-- "Você tentou flertar Elza" → "flertar com Elza" (e mentir para, conversar com,
-  barganhar com).
-- Aviso de entrada dizia 17+ e "todos os personagens são adultos, sem
-  exceção" — falso (há infância e colonos jovens) e 17+ não cabe em cena
-  sexual explícita. Agora 18+, e o texto diz que cena sexual só existe entre
-  adultos.
-
-Achados que ficaram para o dono decidir:
-- **Combate fácil demais no começo**: personagem de nível 1 matou salteador
-  (16 PV) com um crítico de 36 e lobo com 17, sem levar dano. É o efeito do
-  reforço de crítico e atributos da sessão 77 (Gemini).
-- No celular, os botões táticos do combate ficam espremidos em colunas altas.
-- O turno pendente se perde ao recarregar a página (a fala ficou no feed sem
-  narração).
-
----
-
-## Sessão 85 — Gemini — Sincronização Definitiva Nous Research (Hermes), Fim do Pulo Silencioso de IA e Auto-Renovação Contínua
-
-### Causa Raiz Identificada
-- **Diagnóstico da falha de sincronização**:
-  1. **Migração de Armazenamento do Hermes**: Nas versões recentes do Hermes CLI, as credenciais OAuth e tokens rotativos da Nous Research passaram a ser gravados prioritariamente no repositório compartilhado (`%LOCALAPPDATA%\hermes\shared\nous_auth.json`), enquanto o `auth.json` do perfil principal mantinha `providers: {}` vazio.
-  2. **Origem da quebra na ponte**: `engine/hermesBridge.ts`, `metro.config.js` e `scripts/sync_hermes.ts` procuravam exclusivamente em `hermes/auth.json`. Como não encontravam a entrada, caíam de volta para `.env.local` que continha um JWT emitido há mais de 35 horas e vencido.
-  3. **Origem do "pulo" no jogo**: Ao falhar com 401, a flag `iaSuspensa: true` ativada na Sessão 84 fazia com que todas as jogadas subsequentes caíssem diretamente no narrador canônico local (§20) sem tentar reautenticar o Hermes, mesmo com o Hermes ativo e modelos disponíveis. Em `narrarComFallback`, qualquer 401 descartava sumariamente o provedor em vez de disparar refresh com retry.
-
-### Implementações Realizadas
-1. **Suporte Nativo a `shared/nous_auth.json` e Espelhamento com `auth.json`**:
-   - `engine/hermesBridge.ts` e `metro.config.js`: Atualizados para ler em cascata: `shared/nous_auth.json` → `auth.json` → `.env.local`. Se `shared/nous_auth.json` estiver presente, espelha automaticamente a credencial em `auth.json.providers.nous`, reativando a compatibilidade nativa com o comando `hermes auth refresh nous`.
-   - `scripts/sync_hermes.ts`: Atualizado para sincronizar as duas fontes e persistir a chave fresca em `.env.local`.
-2. **Detecção e Validação de Expiração JWT**:
-   - Nova função utilitária `jwtExpirado(jwt, margemSegundos = 300)` em `engine/hermesBridge.ts` (100% type-safe e compatível tanto em Node.js quanto em browsers sem dependências externas).
-   - `obterTokenNousAtual()` e `tokenEstaPrestesAExpirar()` agora inspecionam a claim `exp` do JWT, prevenindo o uso de tokens vencidos e acionando renovação preventiva antes de qualquer requisição.
-3. **Fim do Pulo da Nous e Recuperação em Tempo de Execução**:
-   - `engine/llm.ts` (`resolverApiKey`): No provedor `nous`, prioriza o token rotativo válido da bridge sobre chaves manuais antigas/expiradas salvas no storage.
-   - `engine/llm.ts` (`chamarNous`, `testarChave`, `listarModelosNous`): Se o token estiver expirado ou prestes a expirar (< 2 min), renova preventivamente. Se a API retornar 401, aciona renovação forçada via bridge e retenta a chamada imediatamente com a nova credencial.
-   - `engine/llm.ts` (`narrarComFallback`): Em caso de 401 sob o provedor `nous`, não descarta o provedor silenciosamente; tenta renovação forçada imediata e reexecuta com o modelo configurado antes de avaliar outros modelos de reserva.
-   - `ui/store.ts` (`narrar`, `tentarNarrarDeNovo`, `renovarHermes`):
-     * Antes de avaliar se cai no narrador canônico local, verifica se a Nous possui token renovável e restaura a chave.
-     * Quando uma narração ou renovação com a Nous obtém sucesso, limpa `iaSuspensa: false` e `iaErro: undefined`.
-     * `tentarNarrarDeNovo()` remove `iaSuspensa` e força refresh na Nous se necessário.
-   - `ui/screens/Sistema.tsx`:
-     * Feedback visual na tela de Configurações agora reflete a validade real do token (`Token do Hermes ativo com renovação automática imperceptível ✓` vs `Token do Hermes expirado. Toque em "Renovar token do Hermes" abaixo.`).
-
-### Validação e Testes
-- `scripts/sync_hermes.ts`: Executado com sucesso. Token da Nous sincronizado e validado até `2026-09-28T16:38:01+00:00`.
-- `scripts/test_hermes_bridge.ts`: 100% aprovado (leitura de token, `testarChave`, renovação forçada e chamada pós-renovação).
-- `scripts/listar_todos_modelos.ts`: 417 modelos da Nous Research catalogados ao vivo via API oficial.
-- `scripts/testar_area_ia.ts`: Teste completo aprovado:
-  * `listarModelos`: 6 modelos retornados em 732ms.
-  * `testarChave`: `{ ok: true }` validado na API da Nous.
-  * `testarCenaAdulta`: `narra: true, recusou: false` com `upstage/solar-pro4:free`.
-  * `testarNarracaoReal` (`narrarComFallback`): narração rica de 1667 caracteres gerada e 3 opções de jogo interpretadas.
-- `npm run typecheck`: 0 erros (TypeScript estrito).
-- `npm run test:engine`: 100% dos testes e simulação longa de 6 campanhas × 10 anos aprovados sem travas nem violações de invariantes (407.5s).
-
----
-
-## Sessão 86 — Gemini — Integração e Validação do Longcat 2.5 Preview (Meituan) no Hermes Free
-
-### Contexto e Descoberta
-- **Longcat 2.0**: O slug `meituan/longcat-2.0:free` foi descontinuado da API de inferência da Nous Research (retorna HTTP 404).
-- **Longcat 2.5 Preview (`meituan/longcat-2.5-preview:free`)**: Lançado pela Meituan em 25 de setembro de 2026 e adicionado ao catálogo gratuito da Nous.
-- **Diferenças Arquiteturais e de Treinamento**:
-  * Enquanto o 2.0 era prioritariamente focado em código/terminal (SWE-bench), o 2.5 mantém a arquitetura MoE de 1.6T (~48B ativos) com 1M de janela de contexto, mas seu pós-treinamento foi totalmente voltado a **agentes autônomos, planejamento multi-etapas, uso de ferramentas e cumprimento estrito de instruções**.
-
-### Adequação ao RO ARCANUM
-1. **JSON Estrito**: Por ser treinado para execução de ferramentas por agentes, gera esquemas `{ texto, opcoes: [...] }` com muito menos risco de quebra de sintaxe ou vazamento de formatação crua na tela.
-2. **Latência de ~4s**: Quase metade do tempo do Solar Pro 4 (~7s) e mais de 20x mais ágil que o Space Bunny (~90s).
-3. **Ausência de Censura (Adulto e Combate/Gore)**: Testado ao vivo com cena adulta explícita em português brasileiro: o modelo respondeu com riqueza descritiva, alta cadência lírica e zero recusa ou julgamento moral.
-
-### Modificações Realizadas
-- `engine/llm.ts`:
-  * Adicionado `meituan/longcat-2.5-preview:free` como 2ª sugestão de destaque em `SUGESTOES_NOUS`.
-  * Adicionado `meituan/longcat-2.5-preview:free` na lista `MODELOS_PARA_CENA_ADULTA` com nota de alta agilidade e sem censura.
-  * Adicionada a chave `'longcat'` em `PERMISSIVOS`.
-  * Mantido `meituan/longcat-2.0:free` em `DEAD_MODELS` para blindar qualquer fallback inválido.
-
-### Validação
-- `npm run typecheck`: 0 erros.
-- `npm run test:engine`: 100% aprovado em 394.3s (todos os testes de sistemas, reflexão cognitiva, cosmologia, intimidade e simulação de 6 campanhas × 10 anos sem violações de invariantes).
-
-
----
-
-## Sessão 87 — Claude — token da Nous vazava para dentro do build
-
-Revisão das sessões 85–86 do Gemini (checkpoint `330114c`). Achado de
-segurança: o token da Nous vivia em `.env.local` como
-`EXPO_PUBLIC_NOUS_API_KEY`, e o cliente lia essa variável (`llm.ts`,
-`store.ts`, `Sistema.tsx`, `hermesBridge.ts`). O Expo **embute no JavaScript**
-toda variável `EXPO_PUBLIC_*` que o código cliente usa: o `expo export` web
-gerado nesta máquina tinha o JWT dentro do bundle. Qualquer APK ou build web
-feito aqui levaria o token do dono junto.
-
-Correção: a variável virou `NOUS_API_KEY_LOCAL` (sem o prefixo, o Expo não
-embute). Quem grava `.env.local` (`scripts/sync_hermes.ts`, `metro.config.js`,
-`hermesBridge.ts`) grava o nome novo; o leitor de arquivo do bridge aceita o
-antigo e o novo. No navegador o token continua chegando pela rota
-`/api/hermes/token` do Metro. Conferido: `expo export --clear` sem nenhum JWT
-no bundle. O build antigo, que tinha o token, foi apagado.
-
-Também para o dono decidir: o jogo agora escreve em
-`%LOCALAPPDATA%\hermes\auth.json` (espelha a credencial de
-`shared/nous_auth.json`, sessão 85). Mexer no arquivo de credenciais de outro
-programa pode quebrar o Hermes se o formato mudar.
-
-Outro: `historias-costa.ts` — desejo de uma moradora nova tinha 38
-caracteres (o teste pede 40+); o `test:engine` da sessão 84 falhou por isso.
-
-### Sessão 87 (continuação) — combate, botões, turno perdido e rolagem
-
-1. **Combate fácil demais.** O banco de provas (`npm run balanco`) já dava
-   20 de 20 faixas fora da meta **antes** da sessão 77 (luta "equilibrada"
-   dando ~80% de vitória em todos os perfis; conferido rodando o código de
-   `4f3213c`). A sessão 77 quase não mexeu nisso no recruta. Correção em
-   `engine/combat.ts`, ao montar o inimigo:
-   - `CALIBRAGEM_INIMIGO` = vida ×1,15 e dano ×1,10 para todo o bestiário;
-   - `REFORCO_CRIATURA_FRACA` = +12% de vida e dano em criatura de nível 1,
-     sumindo até zero no nível 5 — pela ficha da criatura, nunca pelo nível do
-     jogador (regra do jogo: o mundo não se adapta a você; o teste de
-     `expansao.selftest.ts` agora compara novato e veterano contra o mesmo
-     adversário).
-   - O adversário de aferição do banco passou a ter o nível do jogador
-     (`engine/balanco.ts`), para "equivalente" ser equivalente de verdade.
-   Resultado: 5 de 20 faixas fora da meta (recruta 49% na luta equilibrada,
-   veterano 53%, caçador 54%; o mestre ainda vence 64%). Salteador + lobo no
-   começo: o espadachim ainda vence quase sempre, mas em ~3,7 rodadas e
-   levando ~18 de dano, não mais ~12 em duas.
-2. **Botões do combate no celular**: `acaoBtn` tinha `flex: 1` numa linha que
-   quebra; os sete botões se espremiam numa linha só. Agora base de 96 px com
-   quebra (três por linha em 430 px); "Trocar arma" / "Sem outra arma".
-3. **Turno perdido ao recarregar**: `pendente` entra no retrato da sessão; ao
-   continuar, o turno aparece esperando com "Tentar de novo" e "Usar
-   narrador local".
-4. **Rolagem**: quando a cena nova chegava, a tela ia para o fim da página
-   (opções e campo de texto) e o jogador tinha que subir para ler. Agora vai
-   para o começo da cena nova, esperando a medida do `onLayout` (no navegador
-   ela chega depois do render). O prólogo abre cada etapa do topo (`key` por
-   idade na `Pagina`). Conferido no navegador: a cena nova fica a 31 px do
-   topo da tela.
-
-A narração por IA voltou a responder no navegador (a ponte do Hermes da
-sessão 85 funcionou). Primeira cena de luta com as batidas: segue a ordem e
-quem caiu fica caído, mas o Solar erra palavra ("desmaça", "filo" por fio),
-repete frases ("o salteador ainda não se mexe") e a Vess chama o jogador
-pelo nome sem ter sido apresentada.
-
-### Sessão 87 (continuação) — o nome do jogador e o Longcat
-
-**Nome.** A regra "estranho não sabe seu nome" estava só no prompt. Agora é
-da engine (`engine/nomeDoJogador.ts`):
-- sabe o nome: família, quem convive com ele há 3+ dias, e quem estava
-  presente quando ele disse o próprio nome (na ação livre, na aba Dizer, ou
-  numa fala `[você]` da cena) — `camp.sabemSeuNome`;
-- cada presente vai ao narrador com `sabeSeuNome`; a regra do prompt usa isso;
-- depois da resposta, `protegerNome` troca o nome por "forasteiro" nas falas
-  de quem não sabe (narração e falas do próprio jogador ficam como estão).
-- Defeito antigo achado no caminho: `diasDeConvivio` tratava memória do dia 0
-  (primeiro dia da campanha) como "sem data" e devolvia 0 para sempre.
-- Teste `engine/nomeDoJogador.selftest.ts` (no `test:engine`).
-
-**Longcat 2.5 × Solar Pro 4** (Nous grátis, pelo próprio jogo, cena da
-taverna com Aldrica, Vess, Sarine, Rengoku e a família):
-- Solar: 20–29 s; português com erros ("olhar de forasteiro varre as mesas"
-  para o olhar do jogador; antes, "desmaça", "filo"); respeitou o nome.
-- Longcat: 36–87 s (uma vez passou de 75 s e deu tempo esgotado); português
-  bem mais limpo, usou os presentes certos, a crônica do lugar (a viga que
-  nunca apodrece) e a família com intimidade; respeitou o nome; dois
-  deslizes pequenos (Mara "a irmã mais nova", que é mais velha; "só ele
-  conhece" para Ceres). Os dois narram cena adulta no teste.
-- Tempo limite do Longcat subiu para 120 s (como o Space Bunny). A nota "rápido
-  ~4s" da sessão 86 não se confirmou; corrigida.
-- `testarNarracaoReal` agora devolve o texto inteiro (antes só 220
-  caracteres), para dar para comparar modelos.
 
 ---
 
@@ -994,3 +444,93 @@ volta, procura limpa.
 Pendente: crimes de verbo (furtar pego, agredir com testemunhas) ainda só
 mexem na reputação, sem `registrarCrime`; a guarda que você acabou de
 nocautear pode ser a mesma que te aborda logo depois.
+
+## Sessão 92d — Claude — a guarda no mundo: cidades, NPCs, assentamento e cartaz
+
+Pedidos do dono: fazer os pendentes da 92c; combinar a guarda com as
+cidades e com o assentamento dele, "não só comigo"; e trocar as falas da
+guarda por coisa da vida real ("vivo ou morto", procurado…).
+
+Pendentes da 92c resolvidos:
+- Crime de verbo: em `engine/turn.ts`, todo efeito aplicado que derruba a
+  reputação com a guarda (agredir com sucesso, furtar pego…) chama
+  `registrarCrime('arruaca', |delta| × 1,5, "<verbo> em <lugar>")`.
+- Quem foi nocauteado na briga de soco ganha `flags['nocaute.<id>'] = dia`;
+  `guardaNaCena` ignora essa pessoa no mesmo dia.
+
+Guarda e cidades (`engine/guarda.ts`):
+- `forcaGuarda(local)`: cidade viva = 20 + pop/4 (teto 30) + 10 por muralha
+  − desordem/2 − 20 com fome − 15 com epidemia (5 a 100); fora de cidade, 30;
+  no assentamento do jogador, a segurança dele.
+- A força pesa na chance de abordagem (×0,5 a ×1,5), no tamanho da patrulha
+  (≥70: mais um guarda; <25: um a menos) e no suborno (cidade com fome: ×0,7
+  e +15% de chance no sangue; cidade rica: ×1,3).
+- `regiaoDe` também acha a região dos sítios de colônia.
+- `OFICIO_GUARDA` exportado e mais estrito (com fronteira de palavra:
+  "guardião itinerante" não é guarda; antes o Muichiro aparecia como patrulha).
+
+Crime entre NPCs (`engine/crimeUrbano.ts`, novo, no tique diário de
+`engine/mundoVivo.ts`):
+- cada cidade com 5+ moradores sorteia furto, briga ou morte pela desordem e
+  pela fome, menos pela força da guarda (sorteio derivado do dia);
+- furto tira do tesouro; morte tira um morador e vira fato público;
+- pego: desordem −2; não pego: +3 (morte +6);
+- metade das vezes que pega, o culpado tem nome (o morador mais apertado,
+  fora parentes, guarda, grupo e menores): `VidaCivil.objetivo = 'preso'`,
+  `presoAte` = 5/3/40 dias; vira fato público; sai sozinho em
+  `engine/autonomia.ts` ("cumpriu a pena").
+- `'preso'` entra na união de `objetivo` e é tratado como `'cativo'` em
+  availability, convívio, formação, grupo, localEfetivo e progressão.
+
+Assentamento do jogador:
+- No próprio assentamento a guarda é dele: `guardaNaCena` vazio, patrulha de
+  fora com chance × max(0,03; 0,3 × (1 − segurança/100)).
+- Briga/morte do jogador lá dentro (`engine/briga.ts`): sem procura, mas
+  estabilidade −10 por morto (−3 por nocaute), humor dos colonos −15 (−4).
+- Morte na cidade sobe a desordem dela (+5 por morto).
+- Audiências novas (`engine/audiencias.ts`):
+  - `guarda`: procurado por sangue (40+) na região da colônia → a guarda da
+    região vem ao portão (no máximo a cada 15 dias). Entregar-se (só se o
+    jogador estiver lá) → cela; pagar (50 + pontos de ouro) → procura pela
+    metade; recusar → com segurança ≥ 40 ela vai embora, senão invade (25% do
+    tesouro, ordem −10, humor −10).
+  - `crime`: colono briguento ou de humor < 20, com ordem < 50, fere ou mata
+    outro (mata se humor < 10, 25%). Sentença: cela, expulsar, enforcar (só
+    morte) ou perdoar.
+
+Cartaz e caçador de recompensa ("vida real"):
+- `cartazDe(procura)`: sangue tem recompensa = pontos × 1,5; "vivo ou
+  morto" com 120+ pontos ou fugitivo. Arruaça não tem cartaz (é queixa).
+- `registrarCrime` prega cartaz novo (fato público `cartaz_procurado`)
+  quando o caso vira sangue ou passa a "vivo ou morto"; fugir da cela também.
+- Com "vivo ou morto", no ermo sem guarda, quem aparece é o caçador de
+  recompensas (chance 0,3; `abordagem.cacador`): render-se = entregue na
+  guarda; suborno = recompensa + 20, sempre aceita; lutar = `CACADOR` nível 8
+  (besta); matar o caçador no mato não soma sangue (ninguém viu).
+- Falas da engine reescritas: "Ei, você. Parado aí.", "É ele, o do cartaz.",
+  "Vivo ou morto, tanto faz para o juiz.", "Mãos onde eu possa ver",
+  "Você está preso em nome da lei de …", "Não vi ninguém por aqui".
+- Narrador: `procuradoAqui` traz `cartaz`, `recompensa`, `vivoOuMorto`; a
+  regra pede guarda falando seco e prático e gente comum reconhecendo o rosto
+  do cartaz.
+- Tela: o cartão do cerco mostra "PROCURADO — VIVO OU MORTO · crime ·
+  recompensa" e vira "Um caçador de recompensas te achou" quando é ele.
+
+Teste novo: `engine/guardaMundo.selftest.ts` (no `test:engine`): força por
+cidade, guarda forte aborda mais, nocaute, crime de verbo, prisão de NPC e
+soltura, assentamento (patrulha quase não entra, a guarda vem ao portão,
+pagar, entregar-se, invasão), crime de colono, sangue dentro da colônia,
+cartaz, "vivo ou morto", caçador.
+
+Pendente: o caçador de recompensas não tem nome nem memória (cada um é
+novo); a guarda da cidade ainda não persegue NPC fugitivo; o jogador não
+pode caçar recompensa de outros.
+
+Ajuste de teste (92d): `engine/kimetsu.selftest.ts`, "Calendário anual e
+simulação em lote equivalem a dias consecutivos", passou a comparar o estado
+sem `livro`. O Livro sobe de camada quando um mestre está onde o jogador está
+no momento da atualização; dia a dia há 740 momentos, no lote só um. Com o
+crime urbano mexendo na fome, a Sarine foi para casa (a taverna) no dia 143
+e o Livro do caminho dia a dia ficou "acessível". O resto do mundo segue
+idêntico nos dois caminhos. Também: NPC preso (`objetivo 'preso'`) não está
+em lugar nenhum visitável (`localEfetivo` devolve vazio).

@@ -33,10 +33,12 @@ export type VidaCivil = {
   natal?: string;
   casa: string; local: string; deslocado: boolean;
   viagem?: { destino: string; chegada: number };
-  objetivo: 'rotina' | 'trabalhar' | 'tratar' | 'migrar' | 'treinar' | 'cacar' | 'cativo';
+  objetivo: 'rotina' | 'trabalhar' | 'tratar' | 'migrar' | 'treinar' | 'cacar' | 'cativo' | 'preso';
   moedas: number; fome: number; saude: number; habilidade: number; prestigio: number;
   proximaDecisao: number; parceiros: Record<string, number>;
   conjuge?: string; filhos: string[]; tutores?: string[]; cativoAte?: number;
+  /** Na cela da guarda da cidade (engine/guarda.ts) até este dia. */
+  presoAte?: number;
   formacao?: { caminho: 'civil' | 'guarda'; sessoes: number; mentor?: string; concluida: boolean };
 };
 export type GovernoVivo = {

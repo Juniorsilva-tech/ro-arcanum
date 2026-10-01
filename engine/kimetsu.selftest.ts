@@ -199,7 +199,12 @@ teste('Mestre ausente ou morto não ensina; formas avançadas exigem progressão
 
 teste('Calendário anual e simulação em lote equivalem a dias consecutivos', () => {
   const a = campanha('tempo'), b = campanha('tempo');
-  const identidade = (c: Campaign) => JSON.stringify({ ...c, id: '', criadaEm: 0 });
+  // O Livro fica de fora: ele sobe de camada quando um mestre está onde o
+  // jogador está NO MOMENTO da atualização, e dia a dia há 740 momentos contra
+  // um só no lote. A igualdade só valia por sorte (nenhum mestre passava pela
+  // taverna de manhã); o crime urbano da sessão 92d mexe na fome e a Sarine
+  // passou a ir para casa no dia 143. O resto do mundo continua idêntico.
+  const identidade = (c: Campaign) => JSON.stringify({ ...c, id: '', criadaEm: 0, livro: undefined });
   for (let i = 0; i < 740; i++) { a.calendario = avancarPeriodos(a.calendario, 6); avancarMundo(C, a); }
   b.calendario = avancarPeriodos(b.calendario, 740 * 6); avancarMundo(C, b);
   assert.equal(identidade(a), identidade(b));

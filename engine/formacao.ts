@@ -7,7 +7,7 @@ import { inicializarProgressaoNpc, fichaCombatente } from './progressaoNpc';
 export function processarFormacao(content: ContentBundle, camp: Campaign, npc: NPC): boolean {
   if (!camp.npcsProcedurais?.includes(npc) || npc.combatente || npc.especie === 'oni') return false;
   const p = camp.vivo?.pessoas[npc.id], din = camp.npcState[npc.id];
-  if (!p || !din?.vivo || din.vida === 0 || (din.idade ?? npc.idade) < 18 || p.objetivo === 'cativo' || p.viagem) return false;
+  if (!p || !din?.vivo || din.vida === 0 || (din.idade ?? npc.idade) < 18 || p.objetivo === 'cativo' || p.objetivo === 'preso' || p.viagem) return false;
   if (!p.formacao) {
     const oficioMarcial = /soldado|espada|caçador|caçadora|batedor|herói/.test(npc.ocupacao);
     const rng = createRng(seedFromString(`vocacao:${camp.rng.seed}:${npc.id}`));

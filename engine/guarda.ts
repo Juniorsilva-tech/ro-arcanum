@@ -19,7 +19,7 @@
 import type { Campaign, ContentBundle, Criatura, ProcuraGuarda } from './types';
 import { iniciarCombate } from './combat';
 import { calcularContexto } from './availability';
-import { registrarFato } from './historiaViva';
+import { registrarFato, cidadeIdDoLocal } from './historiaViva';
 import { registrarMarco } from './memoria';
 import { avancarPeriodos } from './time';
 import { avancarMundo } from './mundo';
@@ -28,11 +28,36 @@ import { createRng, nextFloat, seedFromString } from './rng';
 
 export const PATRULHA = 'patrulha_guarda';
 export const SARGENTO = 'patrulha_guarda_sargento';
-const OFICIO_GUARDA = /guard|sentinel|soldad|patrulh|sargent|capit|miliciano/i;
+export const CACADOR = 'patrulha_guarda_cacador';
+// Guarda da lei, não "guardião itinerante" (um Hashira não é patrulha).
+export const OFICIO_GUARDA = /(?<!\p{L})(guarda|sentinela|soldad[oa]|patrulh\p{L}*|sargent[oa]|capit[ãa]o?|miliciano|carcereir[oa])(?!\p{L})/iu;
 const ERMO = new Set(['floresta', 'lago', 'mina', 'ruina', 'cripta', 'cemiterio', 'acampamento', 'estrada']);
 
 export function regiaoDe(content: ContentBundle, localId: string): string {
-  return content.locais.find((l) => l.id === localId)?.regiao ?? localId;
+  return content.locais.find((l) => l.id === localId)?.regiao
+    ?? content.sitiosColonia?.find((s) => s.id === localId)?.regiao
+    ?? localId;
+}
+
+/** O lugar é o assentamento do próprio jogador? Lá a guarda é dele. */
+export function ehAssentamentoDoJogador(camp: Campaign, localId: string): boolean {
+  const f = camp.feudo;
+  return !!f && (f.localId === localId || f.sitio === localId);
+}
+
+/**
+ * Força da guarda de um lugar, 0 a 100. Cidade viva: gente, muralha, ordem,
+ * fome e doença. Sem cidade viva: guarda de vila (30). No assentamento do
+ * jogador: a segurança dele.
+ */
+export function forcaGuarda(content: ContentBundle, camp: Campaign, localId: string): number {
+  if (ehAssentamentoDoJogador(camp, localId)) return Math.round(camp.feudo!.seguranca);
+  const cidadeId = cidadeIdDoLocal(content, camp, localId);
+  const c = cidadeId ? camp.vivo?.cidades[cidadeId] : undefined;
+  if (!c || !cidadeId) return 30;
+  const pop = camp.continuidade?.locais[cidadeId]?.populacao ?? 0;
+  const f = 20 + Math.min(30, pop / 4) + c.edificios.muralha * 10 - c.inseguranca / 2 - (c.fomeDias > 0 ? 20 : 0) - (c.doenca > 60 ? 15 : 0);
+  return Math.round(Math.max(5, Math.min(100, f)));
 }
 
 export function estaPreso(camp: Campaign): boolean {
@@ -57,6 +82,19 @@ export function procuraAqui(content: ContentBundle, camp: Campaign): ProcuraGuar
   return camp.procura?.[regiaoDe(content, camp.localAtual)];
 }
 
+const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** A procura de uma região qualquer (o assentamento usa a da região dele). */
+export function procuraDaRegiao(content: ContentBundle, camp: Campaign, regiao: string): ProcuraGuarda | undefined {
+  esfriar(camp);
+  return camp.procura?.[regiao];
+}
+
+/** O jogador se entrega (pela audiência do assentamento): vai para a cela da região. */
+export function entregarSe(content: ContentBundle, camp: Campaign, regiao: string): string {
+  return prender(content, camp, regiao, 'Você abre o portão e se entrega. ');
+}
+
 /** Um crime visto pela guarda (ou contado a ela). */
 export function registrarCrime(
   content: ContentBundle,
@@ -68,14 +106,38 @@ export function registrarCrime(
   esfriar(camp);
   const reg = regiaoDe(content, camp.localAtual);
   const pr = ((camp.procura ??= {})[reg] ??= { gravidade, pontos: 0, motivo, atualizadoDia: camp.calendario.dia });
+  const antes = cartazDe(pr);
   pr.pontos += pontos;
   if (gravidade === 'sangue') pr.gravidade = 'sangue';
   if (!pr.motivo.includes(motivo)) pr.motivo = `${motivo}; ${pr.motivo}`;
   pr.atualizadoDia = camp.calendario.dia;
+  // Cartaz novo na praça quando o caso vira sangue ou passa a "vivo ou morto".
+  const agora = cartazDe(pr);
+  if (agora.recompensa && (!antes.recompensa || agora.vivoOuMorto !== antes.vivoOuMorto) && camp.vivo) {
+    registrarFato(camp, { tipo: 'cartaz_procurado', local: camp.localAtual, texto: textoDoCartaz(camp, pr), atores: ['jogador'], publico: true });
+  }
 }
 
+/**
+ * O cartaz da guarda: recompensa só por sangue (arruaça é intimação); "vivo
+ * ou morto" quando o sangue é muito ou quando a pessoa fugiu da cela.
+ */
+export function cartazDe(pr: ProcuraGuarda): { recompensa?: number; vivoOuMorto: boolean } {
+  if (pr.gravidade !== 'sangue') return { vivoOuMorto: false };
+  return { recompensa: Math.round(pr.pontos * 1.5), vivoOuMorto: pr.pontos >= 120 || !!pr.fugitivo };
+}
+
+export function textoDoCartaz(camp: Campaign, pr: ProcuraGuarda): string {
+  const c = cartazDe(pr);
+  return `Cartaz pregado na praça: PROCURADO${c.vivoOuMorto ? ' — VIVO OU MORTO' : ''}: ${camp.personagem.nome}. Crime: ${pr.motivo}. Recompensa de ${c.recompensa} moedas a quem entregar à guarda.`;
+}
+
+/** Guarda presente e de pé. Quem você nocauteou hoje não vem te prender agora. */
 function guardaNaCena(content: ContentBundle, camp: Campaign) {
-  return calcularContexto(content, camp).presentes.find((n) => OFICIO_GUARDA.test(n.ocupacao ?? ''));
+  if (ehAssentamentoDoJogador(camp, camp.localAtual)) return undefined; // lá a guarda é sua
+  const hoje = camp.calendario.dia;
+  return calcularContexto(content, camp).presentes.find((n) =>
+    OFICIO_GUARDA.test(n.ocupacao ?? '') && camp.flags[`nocaute.${n.id}`] !== hoje);
 }
 
 /**
@@ -90,17 +152,33 @@ export function checarPerseguicao(content: ContentBundle, camp: Campaign): strin
   if (pr.ultimaAbordagemDia === hoje) return undefined;
   const guarda = guardaNaCena(content, camp);
   const tipo = content.locais.find((l) => l.id === camp.localAtual)?.tipo ?? '';
+  // A força da guarda do lugar pesa: cidade murada e cheia acha rápido;
+  // vila com fome mal procura. No seu assentamento, a patrulha de fora só
+  // entra se a sua segurança for fraca.
+  const forca = forcaGuarda(content, camp, camp.localAtual);
+  const fatorLocal = ehAssentamentoDoJogador(camp, camp.localAtual)
+    ? Math.max(0.03, 0.3 * (1 - forca / 100))
+    : (ERMO.has(tipo) ? 0.15 : 0.5) * (0.5 + forca / 100);
+  // "Vivo ou morto" põe caçador de recompensa na estrada: no ermo, onde a
+  // guarda quase não vai, quem aparece é ele.
+  const cacador = !guarda && ERMO.has(tipo) && cartazDe(pr).vivoOuMorto && !ehAssentamentoDoJogador(camp, camp.localAtual);
   const chance = guarda
     ? Math.min(0.95, 0.35 + pr.pontos / 100)
-    : Math.min(0.85, pr.pontos / 100) * (ERMO.has(tipo) ? 0.15 : 0.5);
+    : cacador
+      ? 0.3
+      : Math.min(0.85, pr.pontos / 100) * fatorLocal;
   const rng = createRng((camp.rng.seed ^ seedFromString(`guarda:${hoje}:${camp.calendario.periodoIndex}:${camp.turno}`)) >>> 0);
   if (nextFloat(rng) >= chance) return undefined;
   pr.ultimaAbordagemDia = hoje;
-  const quem = guarda?.nome ?? 'uma patrulha da guarda';
-  camp.abordagem = { dia: hoje, local: camp.localAtual, regiao: regiaoDe(content, camp.localAtual), guarda: quem };
+  const quem = cacador ? 'o caçador de recompensas' : guarda?.nome ?? 'a patrulha da guarda';
+  camp.abordagem = { dia: hoje, local: camp.localAtual, regiao: regiaoDe(content, camp.localAtual), guarda: quem, cacador: cacador || undefined };
+  if (camp.abordagem.cacador) {
+    return `Um homem que você nunca viu sai de trás das árvores com uma besta armada e o seu cartaz dobrado no cinto. "${cartazDe(pr).recompensa} moedas, vivo ou morto. Eu prefiro vivo, dá menos trabalho para carregar."`;
+  }
+  const c = cartazDe(pr);
   return pr.gravidade === 'sangue'
-    ? `${guarda ? `${guarda.nome} e mais dois guardas te cercam` : 'Uma patrulha da guarda te cerca'}, lanças baixas. Você é procurado: ${pr.motivo}.`
-    : `${guarda ? guarda.nome : 'Uma patrulha da guarda'} te para no meio do caminho. Você é procurado por arruaça: ${pr.motivo}.`;
+    ? `${guarda ? `${guarda.nome} e mais dois guardas` : 'Três guardas'} te fecham o caminho, lanças baixas. Um deles desdobra o cartaz e compara o desenho com a sua cara. "É ele, o do cartaz. ${maiuscula(pr.motivo)}. ${c.vivoOuMorto ? 'Vivo ou morto, tanto faz para o juiz. ' : ''}Mãos onde eu possa ver, devagar."`
+    : `"Ei, você. Parado aí." ${guarda ? guarda.nome : 'Um guarda'} vem com a mão no cabo da arma. "Tem queixa contra você: ${pr.motivo}. Ou resolve comigo agora, ou vai explicar para o juiz."`;
 }
 
 // ── Patrulha ───────────────────────────────────────────────────────────────
@@ -127,6 +205,7 @@ function criaturaDePatrulha(id: string, nivel: number, nome: string): Criatura {
 function garantirPatrulha(content: ContentBundle): void {
   if (!content.criaturas.some((c) => c.id === PATRULHA)) content.criaturas.push(criaturaDePatrulha(PATRULHA, 4, 'Guarda'));
   if (!content.criaturas.some((c) => c.id === SARGENTO)) content.criaturas.push(criaturaDePatrulha(SARGENTO, 7, 'Sargento da guarda'));
+  if (!content.criaturas.some((c) => c.id === CACADOR)) content.criaturas.push({ ...criaturaDePatrulha(CACADOR, 8, 'Caçador de recompensas'), ataqueNome: 'virote de besta', sinais: 'Trabalha sozinho e por dinheiro; vivo vale o mesmo que morto.' });
 }
 
 // ── Cela ───────────────────────────────────────────────────────────────────
@@ -158,8 +237,8 @@ function prender(content: ContentBundle, camp: Campaign, regiao: string, motivoE
   camp.abordagem = undefined;
   registrarMarco(camp, `você foi preso: ${pr.motivo}`);
   if (camp.vivo) registrarFato(camp, { tipo: 'prisao', local: camp.localAtual, texto: `${p.nome} foi levado preso pela guarda (${pr.motivo}).`, atores: ['jogador'], publico: true });
-  return `${motivoExtra}A guarda te leva para a cela. A arma fica com eles. Pena: ${dias} dias` +
-    (camp.prisao.fianca ? `, ou fiança de ${camp.prisao.fianca} moedas.` : '. Para sangue não há fiança.');
+  return `${motivoExtra}"Você está preso em nome da lei de ${regiao}." Tiram a sua arma, amarram as suas mãos e te jogam na cela. Pena: ${dias} dias` +
+    (camp.prisao.fianca ? `, ou fiança de ${camp.prisao.fianca} moedas.` : '. Crime de sangue não tem fiança.');
 }
 
 function soltar(camp: Campaign, devolverArma: boolean): void {
@@ -189,7 +268,18 @@ export type EscolhaAbordagem = 'render' | 'subornar' | 'fugir' | 'lutar';
 export function custoDoSuborno(content: ContentBundle, camp: Campaign): number | undefined {
   const pr = camp.abordagem ? camp.procura?.[camp.abordagem.regiao] : undefined;
   if (!pr) return undefined;
-  return pr.gravidade === 'arruaca' ? 10 + Math.round(pr.pontos / 2) : 60 + Math.round(pr.pontos);
+  // O caçador quer pelo menos o que a recompensa paga.
+  if (camp.abordagem?.cacador) return (cartazDe(pr).recompensa ?? 50) + 20;
+  const base = pr.gravidade === 'arruaca' ? 10 + Math.round(pr.pontos / 2) : 60 + Math.round(pr.pontos);
+  return Math.round(base * fatorDeSuborno(content, camp));
+}
+
+/** Guarda de cidade com fome se vende barato; a de cidade rica, caro. */
+function fatorDeSuborno(content: ContentBundle, camp: Campaign): number {
+  const cidadeId = cidadeIdDoLocal(content, camp, camp.localAtual);
+  const c = cidadeId ? camp.vivo?.cidades[cidadeId] : undefined;
+  if (!c) return 1;
+  return c.fomeDias > 0 ? 0.7 : c.tesouro > 400 ? 1.3 : 1;
 }
 
 export function responderAbordagem(
@@ -205,17 +295,20 @@ export function responderAbordagem(
   const p = camp.personagem;
   const rng = createRng((camp.rng.seed ^ seedFromString(`abordagem:${ab.dia}:${escolha}:${camp.turno}`)) >>> 0);
 
-  if (escolha === 'render') return { ok: true, texto: prender(content, camp, ab.regiao, 'Você abaixa as mãos. ') };
+  if (escolha === 'render') return { ok: true, texto: prender(content, camp, ab.regiao, ab.cacador ? 'Você abaixa as mãos. O caçador te amarra no cavalo e te entrega na guarda, e sai de lá contando as moedas da recompensa. ' : 'Você abaixa as mãos. ') };
 
   if (escolha === 'subornar') {
     const custo = custoDoSuborno(content, camp)!;
     if (p.dinheiro < custo) return { ok: false, texto: `o suborno custa ${custo} moedas e você tem ${p.dinheiro}` };
     p.dinheiro -= custo;
-    const colou = pr.gravidade === 'arruaca' || nextFloat(rng) < Math.max(0.15, Math.min(0.75, 0.35 + (p.atributos.social - 10) * 0.04));
-    if (!colou) return { ok: true, texto: prender(content, camp, ab.regiao, `${ab.guarda} pesa as ${custo} moedas, guarda no gibão e manda te amarrar assim mesmo. `) };
+    const fome = fatorDeSuborno(content, camp) < 1 ? 0.15 : 0;
+    const colou = ab.cacador || pr.gravidade === 'arruaca' || nextFloat(rng) < Math.max(0.15, Math.min(0.85, 0.35 + fome + (p.atributos.social - 10) * 0.04));
+    if (!colou) return { ok: true, texto: prender(content, camp, ab.regiao, `${ab.guarda} pesa as ${custo} moedas, enfia no gibão e diz: "Isso aqui é a sua multa. A cela é outra conta." `) };
     pr.pontos = Math.floor(pr.pontos / 2);
     camp.abordagem = undefined;
-    return { ok: true, texto: `${custo} moedas mudam de mão. ${ab.guarda} olha para o outro lado e a patrulha segue. Por enquanto.` };
+    return { ok: true, texto: ab.cacador
+      ? `${custo} moedas, mais do que a recompensa paga. O caçador conta duas vezes, guarda a besta e diz: "Nunca te vi." Mas o cartaz continua na praça.`
+      : `${custo} moedas mudam de mão. "Não vi ninguém por aqui", diz ${ab.guarda}, e a patrulha segue. Por enquanto.` };
   }
 
   if (escolha === 'fugir') {
@@ -235,7 +328,17 @@ export function responderAbordagem(
 
 function iniciarPatrulha(content: ContentBundle, camp: Campaign, pr: ProcuraGuarda): string {
   garantirPatrulha(content);
+  if (camp.abordagem?.cacador) {
+    const s = iniciarCombate(content, camp, [CACADOR]);
+    s.guarda = { regiao: camp.abordagem.regiao };
+    s.log.push('O caçador não grita "em nome da lei". Ele só mira.');
+    return 'O caçador levanta a besta.';
+  }
   const ids = pr.gravidade === 'sangue' ? [SARGENTO, PATRULHA, PATRULHA] : [PATRULHA, PATRULHA];
+  // Guarda forte manda mais gente; guarda fraca, menos.
+  const forca = forcaGuarda(content, camp, camp.localAtual);
+  if (forca >= 70) ids.push(PATRULHA);
+  else if (forca < 25 && ids.length > 1) ids.pop();
   const s = iniciarCombate(content, camp, ids);
   s.guarda = { regiao: camp.abordagem?.regiao ?? regiaoDe(content, camp.localAtual) };
   s.log.push('A patrulha fecha o cerco. Se você cair, acorda na cela.');
@@ -253,6 +356,12 @@ export function concluirConfrontoGuarda(content: ContentBundle, camp: Campaign):
   }
   camp.abordagem = undefined;
   const mortos = s.atores.filter((a) => !a.ehJogador && !a.ehAliado && a.vida <= 0 && !a.capturado).length;
+  const eraCacador = s.atores.some((a) => a.criaturaId === CACADOR);
+  if (s.resultado === 'vitoria' && eraCacador) {
+    const pr = camp.procura?.[regiao];
+    if (pr) pr.ultimaAbordagemDia = hoje;
+    return { fato: 'O caçador de recompensas fica no mato. Ninguém viu. Mas o cartaz continua na praça, e outro vai aparecer.', preso: false };
+  }
   if (s.resultado === 'vitoria' && mortos) {
     registrarCrime(content, camp, 'sangue', 30 * mortos, `matou ${mortos} guarda${mortos > 1 ? 's' : ''}`);
     (camp.reputacao as unknown as Record<string, number>).guarda = ((camp.reputacao as unknown as Record<string, number>).guarda ?? 0) - 20 * mortos;
@@ -304,7 +413,13 @@ export function agirNaCela(content: ContentBundle, camp: Campaign, escolha: Esco
     soltar(camp, false);
     registrarCrime(content, camp, 'sangue', 20, 'fugiu da cela');
     const pr = camp.procura?.[regiao];
-    if (pr) { pr.fugitivo = true; pr.ultimaAbordagemDia = camp.calendario.dia; }
+    if (pr) {
+      const eraVivoOuMorto = cartazDe(pr).vivoOuMorto;
+      pr.fugitivo = true;
+      pr.ultimaAbordagemDia = camp.calendario.dia;
+      // Fugitivo: o cartaz novo sai "vivo ou morto".
+      if (!eraVivoOuMorto && camp.vivo) registrarFato(camp, { tipo: 'cartaz_procurado', local: camp.localAtual, texto: textoDoCartaz(camp, pr), atores: ['jogador'], publico: true });
+    }
     if (camp.vivo) registrarFato(camp, { tipo: 'fuga_cela', local: camp.localAtual, texto: `${p.nome} fugiu da cela da guarda.`, atores: ['jogador'], publico: true });
     return { ok: true, texto: 'A tranca cede de madrugada. Você sai pelo pátio dos fundos, sem a arma, que ficou no depósito da guarda. Agora você é fugitivo.' };
   }

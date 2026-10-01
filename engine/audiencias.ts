@@ -16,6 +16,7 @@ import { ANIMAIS, totalDeAnimais, type AnimalColonia } from './rebanhos';
 import { sitioDe } from './colonia';
 import { registrarMarco } from './memoria';
 import { mudarReputacaoCasa } from './casas';
+import { regiaoDe, procuraDaRegiao, entregarSe } from './guarda';
 
 const nomeDaCasa = (content: ContentBundle | undefined, id?: string) => content?.casas?.find(c => c.id === id)?.nome ?? id ?? 'a casa';
 function reputacaoCasa(content: ContentBundle | undefined, camp: Campaign, id: string | undefined, delta: number) {
@@ -23,7 +24,7 @@ function reputacaoCasa(content: ContentBundle | undefined, camp: Campaign, id: s
   if (content && casa) mudarReputacaoCasa(content, camp, casa, delta);
 }
 
-export type TipoAudiencia = 'briga' | 'fome' | 'mercador' | 'furto' | 'casamento' | 'ferramentas' | 'enviado';
+export type TipoAudiencia = 'briga' | 'fome' | 'mercador' | 'furto' | 'casamento' | 'ferramentas' | 'enviado' | 'crime' | 'guarda';
 
 export type OpcaoAudiencia = {
   id: string;
@@ -75,7 +76,27 @@ type Contexto = { passagem: number };
 type Gerador = (f: FeudoState, camp: Campaign, rng: RngState, ctx: Contexto) => Omit<Audiencia, 'id' | 'dia' | 'ate'> | undefined;
 
 // O enviado não se sorteia aqui: vem do renome (engine/renome.ts).
-const GERADORES: Record<Exclude<TipoAudiencia, 'enviado'>, Gerador> = {
+const GERADORES: Record<Exclude<TipoAudiencia, 'enviado' | 'guarda'>, Gerador> = {
+  // Um colono feriu ou matou outro (engine/guarda.ts): a justiça da colônia é sua.
+  crime: (f, _camp, rng) => {
+    if (f.estabilidade >= 50 || colonos(f).length < 2 || nextFloat(rng) > 0.3) return undefined;
+    const autor = [...colonos(f)].filter(c => c.temperamento === 'briguenta' || c.humor < 20).sort((x, y) => x.humor - y.humor)[0];
+    const vitima = autor && [...colonos(f)].filter(c => c.id !== autor.id).sort((x, y) => x.humor - y.humor)[0];
+    if (!autor || !vitima) return undefined;
+    const matou = autor.humor < 10 && nextFloat(rng) < 0.25;
+    return {
+      tipo: 'crime', envolvidos: [autor.id, vitima.id], valores: { matou: matou ? 1 : 0 },
+      texto: matou
+        ? `${autor.nome} matou ${vitima.nome} atrás do celeiro, numa briga que ninguém separou. A colônia espera a sua sentença.`
+        : `${autor.nome} abriu a cabeça de ${vitima.nome} com um pau de cerca. ${g(vitima, 'Ela', 'Ele')} vai viver; a colônia quer saber o que você faz.`,
+      opcoes: [
+        { id: 'cela', rotulo: `Trancar ${primeiro(autor.nome)} por uns dias`, efeito: `A ordem sobe um pouco; ${primeiro(autor.nome)} sai ${g(autor, 'ressentida', 'ressentido')}.` },
+        { id: 'expulsar', rotulo: `Expulsar ${primeiro(autor.nome)}`, efeito: 'Sai da colônia; a ordem sobe; a estrada fica sabendo.' },
+        ...(matou ? [{ id: 'enforcar', rotulo: `Enforcar ${primeiro(autor.nome)}`, efeito: 'A ordem sobe muito; todo mundo fica com medo e de pior humor.' }] : []),
+        { id: 'perdoar', rotulo: 'Perdoar', efeito: `${primeiro(autor.nome)} fica ${g(autor, 'grata', 'grato')}; a ordem cai${matou ? ' muito' : ''}.` },
+      ],
+    };
+  },
   briga: (f) => {
     const briguentas = colonos(f).filter(c => c.temperamento === 'briguenta' || c.humor < 35);
     if (briguentas.length < 2) return undefined;
@@ -163,7 +184,28 @@ const GERADORES: Record<Exclude<TipoAudiencia, 'enviado'>, Gerador> = {
   },
 };
 
-const ORDEM_DOS_PEDIDOS: Exclude<TipoAudiencia, 'enviado'>[] = ['fome', 'briga', 'furto', 'casamento', 'ferramentas', 'mercador'];
+const ORDEM_DOS_PEDIDOS: Exclude<TipoAudiencia, 'enviado' | 'guarda'>[] = ['fome', 'crime', 'briga', 'furto', 'casamento', 'ferramentas', 'mercador'];
+
+/** A guarda da região vem cobrar o senhor procurado por sangue (engine/guarda.ts). */
+const INTERVALO_EXIGENCIA = 15;
+function exigenciaDaGuarda(content: ContentBundle, camp: Campaign, f: FeudoState): Omit<Audiencia, 'id' | 'dia' | 'ate'> | undefined {
+  const regiao = regiaoDe(content, f.localId);
+  const pr = procuraDaRegiao(content, camp, regiao);
+  if (!pr || pr.gravidade !== 'sangue' || pr.pontos < 40) return undefined;
+  if (camp.calendario.dia - (f.ultimaExigenciaGuarda ?? -99) < INTERVALO_EXIGENCIA) return undefined;
+  f.ultimaExigenciaGuarda = camp.calendario.dia;
+  const preco = Math.round(50 + pr.pontos);
+  const aqui = camp.localAtual === f.localId || camp.localAtual === f.sitio;
+  return {
+    tipo: 'guarda', envolvidos: [], valores: { preco },
+    texto: `Homens da guarda de ${regiao} pararam no portão. Querem o senhor da colônia: ${pr.motivo}. Dizem que voltam com mais gente se não forem atendidos.`,
+    opcoes: [
+      ...(aqui ? [{ id: 'entregar', rotulo: 'Entregar-se', efeito: 'Você vai para a cela da guarda; a colônia fica sem o senhor até a pena acabar.' }] : []),
+      { id: 'pagar', rotulo: `Pagar para irem embora (${preco} de ouro)`, efeito: 'Sai ouro do tesouro; a procura esfria pela metade.' },
+      { id: 'recusar', rotulo: 'Mandar embora', efeito: f.seguranca >= 40 ? 'Sua guarda segura o portão; a procura continua.' : 'Com a segurança fraca, eles voltam e invadem: ouro, ordem e humor.' },
+    ],
+  };
+}
 
 /**
  * Talvez chegue um pedido hoje. Chamado no dia da colônia. Urgência primeiro
@@ -182,6 +224,14 @@ export function talvezAudiencia(content: ContentBundle, camp: Campaign): Audienc
     f.audiencia = undefined;
   }
   if (f.audiencia || dia - (f.ultimaAudiencia ?? -99) < INTERVALO_AUDIENCIA) return undefined;
+  const exigencia = exigenciaDaGuarda(content, camp, f);
+  if (exigencia) {
+    const seq = (f.seqAudiencias = (f.seqAudiencias ?? 0) + 1);
+    const a: Audiencia = { ...exigencia, id: `audiencia_${seq}`, dia, ate: dia + DIAS_PARA_RESPONDER };
+    f.audiencia = a;
+    f.ultimaAudiencia = dia;
+    return a;
+  }
   const rng = rngDe(camp, 'qual');
   if (nextFloat(rng) > 0.6) return undefined;
   const inicio = Math.floor(nextFloat(rng) * 3);
@@ -195,6 +245,12 @@ export function talvezAudiencia(content: ContentBundle, camp: Campaign): Audienc
     f.ultimaAudiencia = dia;
     // O furto já aconteceu quando alguém vem contar.
     if (a.tipo === 'furto') f.comida = Math.max(0, f.comida - (a.valores.sumiu ?? 0));
+    // O crime também: quem morreu já não está na colônia.
+    if (a.tipo === 'crime') {
+      const vitima = porId(f, a.envolvidos[1]);
+      if (a.valores.matou) { f.colonos = colonos(f).filter(c => c.id !== vitima?.id); f.populacao = Math.max(0, f.populacao - 1); }
+      else mexerHumor(vitima, -20);
+    }
     return a;
   }
   return undefined;
@@ -289,6 +345,40 @@ export function resolverAudiencia(camp: Campaign, opcaoId: string, content?: Con
       reputacaoCasa(content, camp, a.origem, -5);
       texto = `O enviado de ${nomeDaCasa(content, a.origem)} foi embora sem acordo.`; break;
     case 'ferramentas:negar': mexerHumor(x, -10); texto = 'Sem ferramentas novas.'; break;
+
+    case 'crime:cela': mexerHumor(x, -20); if (x) x.lealdade = Math.max(0, x.lealdade - 10); ordem(f, v.matou ? 4 : 5); texto = `${x?.nome} passou dias trancado no paiol.`; break;
+    case 'crime:expulsar':
+      if (x) { f.colonos = colonos(f).filter(c => c.id !== x.id); f.populacao = Math.max(0, f.populacao - 1); }
+      ordem(f, 6); renome(f, -1); texto = `${x?.nome} foi ${x ? g(x, 'posta', 'posto') : 'posto'} para fora do portão.`; break;
+    case 'crime:enforcar':
+      if (!v.matou) return { ok: false, mensagem: 'Não houve morte para isso.' };
+      if (x) { f.colonos = colonos(f).filter(c => c.id !== x.id); f.populacao = Math.max(0, f.populacao - 1); }
+      ordem(f, 12); mexerTodos(f, -8); renome(f, -2);
+      texto = `${x?.nome} foi ${x ? g(x, 'enforcada', 'enforcado') : 'enforcado'} na frente da colônia. Ninguém falou durante o jantar.`; registrarMarco(camp, texto); break;
+    case 'crime:perdoar': mexerHumor(x, 10); if (x) x.lealdade = Math.min(100, x.lealdade + 10); ordem(f, v.matou ? -15 : -8); texto = `Você perdoou ${x?.nome}.`; break;
+
+    case 'guarda:entregar': {
+      if (!content) return { ok: false, mensagem: 'Não dá para se entregar daqui.' };
+      f.audiencia = undefined;
+      const msg = entregarSe(content, camp, regiaoDe(content, f.localId));
+      f.historicoEventos.push({ dia: camp.calendario.dia, texto: 'O senhor se entregou à guarda.' });
+      return { ok: true, mensagem: msg };
+    }
+    case 'guarda:pagar': {
+      if (f.tesouro < v.preco) return falta('ouro');
+      f.tesouro -= v.preco;
+      if (content) { const pr = procuraDaRegiao(content, camp, regiaoDe(content, f.localId)); if (pr) pr.pontos = Math.floor(pr.pontos / 2); }
+      texto = `${v.preco} de ouro saíram do tesouro, e a guarda foi embora. Por enquanto.`; break;
+    }
+    case 'guarda:recusar':
+      if (f.seguranca >= 40) { renome(f, 2); texto = 'Sua guarda fechou o portão e a da região foi embora sem você. Vão voltar.'; }
+      else {
+        const levado = Math.round(f.tesouro * 0.25);
+        f.tesouro -= levado; ordem(f, -10); mexerTodos(f, -10);
+        texto = `A guarda da região voltou com mais gente e invadiu a colônia: levou ${levado} de ouro e quebrou o que pôde.`;
+        registrarMarco(camp, texto);
+      }
+      break;
     default: return { ok: false, mensagem: 'Essa resposta não cabe a esse pedido.' };
   }
   f.audiencia = undefined;

@@ -48,7 +48,7 @@ import { menoresNaCena, restricaoDeMenores } from './protecao';
 import { sabeONome } from './nomeDoJogador';
 import { famaDaArma } from './famaArma';
 import { famaDoNome, sobrenome } from './linhagem';
-import { procuraAqui } from './guarda';
+import { procuraAqui, cartazDe, textoDoCartaz } from './guarda';
 
 export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous' | ProvedorCompat;
@@ -696,7 +696,16 @@ export function montarPacote(
       // A guarda (engine/guarda.ts): o que ela quer com ele aqui, e a cela.
       procuradoAqui: (() => {
         const pr = procuraAqui(content, camp);
-        return pr ? { gravidade: pr.gravidade === 'sangue' ? 'procurado por sangue' : 'procurado por arruaça', motivo: pr.motivo, fugitivo: pr.fugitivo } : undefined;
+        if (!pr) return undefined;
+        const c = cartazDe(pr);
+        return {
+          gravidade: pr.gravidade === 'sangue' ? 'procurado por sangue' : 'procurado por arruaça',
+          motivo: pr.motivo,
+          fugitivo: pr.fugitivo,
+          cartaz: c.recompensa ? textoDoCartaz(camp, pr) : undefined,
+          recompensa: c.recompensa,
+          vivoOuMorto: c.vivoOuMorto || undefined,
+        };
       })(),
       cercadoPelaGuarda: camp.abordagem ? `${camp.abordagem.guarda} te cercou e espera resposta` : undefined,
       naCela: camp.prisao ? { motivo: camp.prisao.motivo, diasRestantes: Math.max(0, camp.prisao.ateDia - camp.calendario.dia), armaConfiscada: !!camp.prisao.armaConfiscada } : undefined,
@@ -1113,7 +1122,7 @@ export const INSTRUCAO_SISTEMA =
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens envolvidos em qualquer cena de teor erótico ou sensual são estritamente adultos (18+). Jamais sexualize menores em nenhuma hipótese. Respeite as idades registradas no pacote.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
   '• "sabeDoQueVoceFez" (num presente) é sangue que você derramou em público por aqui, e essa pessoa SABE. Ela reage a isso antes de qualquer outra coisa: guarda tenta prender ou chama reforço, gente comum recua, cala ou foge, parente de vítima odeia. Ninguém trata você como um estranho qualquer.\n' +
-  '• "personagem.procuradoAqui", "cercadoPelaGuarda" e "naCela" são decisão da engine. Na cela, a cena acontece dentro da cela (carcereiro, outro preso, pão duro) e ninguém solta você por conta própria. Cercado, a patrulha espera resposta: não resolva o cerco na narração. Procurado, quem é da guarda desconfia de você.\n' +
+  '• "personagem.procuradoAqui", "cercadoPelaGuarda" e "naCela" são decisão da engine. Na cela, a cena acontece dentro da cela (carcereiro, outro preso, pão duro) e ninguém solta você por conta própria. Cercado, a patrulha espera resposta: não resolva o cerco na narração. Procurado, quem é da guarda desconfia de você, e o "cartaz" com a "recompensa" está pregado na praça: gente comum pode reconhecer seu rosto, cochichar ou pensar no dinheiro. A guarda fala como guarda de verdade, seca e prática ("Parado aí.", "Mãos onde eu possa ver.", "Você está preso em nome da lei.", "Vivo ou morto, tanto faz para o juiz."), nunca com discurso solene.\n' +
   '• Cada presente traz "lembraDeVoce" e "conheceHaDias". USE. Quem já foi ' +
   'traída não recebe você como estranha, e quem você ajudou lembra disso.\n' +
   '• "jaAconteceu" é a história desta campanha. Cite o que couber — uma frase de ' +

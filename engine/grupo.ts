@@ -18,6 +18,7 @@ export function alternarCompanheiro(content: ContentBundle, camp: Campaign, npcI
   if (!camp.npcState[npcId]?.vivo) return { ok: false, motivo: `${npc.nome} está morto` };
   const local = localEfetivo(camp, npc, undefined, content);
   if (camp.vivo?.pessoas[npcId]?.objetivo === 'cativo') return { ok: false, motivo: 'essa pessoa está em cativeiro' };
+  if (camp.vivo?.pessoas[npcId]?.objetivo === 'preso') return { ok: false, motivo: 'essa pessoa está na cela da guarda' };
   if (local !== camp.localAtual) return { ok: false, motivo: `${npc.nome} não está aqui agora` };
   const confianca = camp.npcState[npcId]?.eixos.confianca ?? 0;
   if (confianca < 5 && (camp.reputacao[npc.faccaoId] ?? 0) < 5) return { ok: false, motivo: 'é preciso confiança ou reputação com a facção' };

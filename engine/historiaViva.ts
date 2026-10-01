@@ -74,6 +74,8 @@ export function localEfetivo(camp: Campaign, npc: NPC, periodo: Periodo = period
   if ((camp.grupo ?? []).includes(npc.id)) return camp.localAtual;
   const pessoa = camp.vivo?.pessoas[npc.id];
   if (pessoa?.viagem) return; // In transit, not simultaneously at both ends.
+  // Na cela da guarda (engine/crimeUrbano.ts) não se está em lugar nenhum que se visite.
+  if (pessoa?.objetivo === 'preso') return;
   if (pessoa?.deslocado || pessoa?.objetivo === 'cativo') return pessoa.local;
   const expediente = npc.expediente;
   if (expediente && pessoa) {

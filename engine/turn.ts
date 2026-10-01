@@ -33,6 +33,7 @@ import {
   executarMomentoRomanceServa,
 } from './tsukimichi';
 import { iniciarCombate } from './combat';
+import { registrarCrime } from './guarda';
 import {
   conversarASos,
   apoiarDesejoNpc,
@@ -251,6 +252,15 @@ export function resolverIntencao(
 
   // O que o jogador fez a uma pessoa chega à família dela, mais fraco
   // (engine/familiasNpc.ts).
+  // A guarda viu: todo efeito que derruba a reputação com ela é crime visto
+  // (furto pego, agressão em público…) e deixa o jogador procurado por
+  // arruaça na região (engine/guarda.ts).
+  const vistoPelaGuarda = aplicados.reduce((s, ef) => s + (ef.tipo === 'reputacao' && ef.faccao === 'guarda' && ef.delta < 0 ? -ef.delta : 0), 0);
+  if (vistoPelaGuarda > 0 && !camp.prisao) {
+    const nomeVerbo = intencao.tipo === 'verbo' ? content.verbos.find((v) => v.id === intencao.verboId)?.nome?.toLowerCase() : undefined;
+    const lugar = content.locais.find((l) => l.id === camp.localAtual)?.nome ?? 'aqui';
+    registrarCrime(content, camp, 'arruaca', Math.round(vistoPelaGuarda * 1.5), `${nomeVerbo ?? 'desordem'} em ${lugar}`);
+  }
   for (const ef of aplicados) {
     if (ef.tipo === 'relacao') propagarParaFamilia(content, camp, ef.npc, ef.eixo, ef.delta);
   }
