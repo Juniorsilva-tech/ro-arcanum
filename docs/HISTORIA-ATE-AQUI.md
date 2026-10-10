@@ -1,22 +1,24 @@
-# Vaelhorn — a história até aqui
+# Vaelhorn: a história até aqui
 
 Compilado automaticamente do conteúdo do jogo (`content/vaelhorn/`). É o que o jogo sabe hoje, sem invenção. Tsukimichi (DLC, outro universo) fica de fora.
 
 ## Premissa
-A LEVA MILITAR & O TRIBUTO DE SANGUE — a verdade que explica a miséria deste vale. Há três gerações, após a grande insurreição que reduziu a cidade de Mir a cinzas, o Vale de Halvet foi derrotado pelas legiões da Marca de Tessel e condenado por heresia. Como pena de submissão perpétua, o Tratado da Coroa impôs a Leva Obrigatória: todo jovem que atinge dezoito anos é arrancado de sua família pelas patrulhas armadas, acorrentado em comboios e marchado para morrer como bucha de canhão nas trincheiras do norte ou escravizado nas galerias fundas das minas de Corveira. Nenhum homem volta vivo. Quem resiste é enforcado nas árvores da praça, e a aldeia aprendeu que a forca não perdoa.
+A LEVA. Há vinte anos, Mir queimou numa noite só, e o que saiu do fogo pediu os filhos. Naquela mesma noite, todo homem feito de Halvet levantou da cama, caminhou até a ponte e entrou no rio. Ninguém o obrigou. Desde então, cada menino nascido no vale faz o mesmo no inverno em que completa dezoito anos, como quem lembra de um combinado que nunca fez. Nenhum volta, ou volta errado.
 
-Por isso o vale é das mulheres. Não por virtude poética, mas pela crueza da guerra e da sobrevivência: foram elas que ficaram para enterrar os mortos e sustentar as casas. Elas herdaram a forja pesada, aprenderam a martelar o ferro, a puxar a rede de pesca no lodo, a cobrar as dívidas dos celeiros e a empunhar lanças contra saqueadores. Toda linhagem e ofício de Halvet passou de mãe para filha em três gerações de viuvez amarga e trabalho braçal.
+Por isso o vale é das mulheres. Foram elas que ficaram, enterraram e herdaram. Em vinte anos aprenderam a forja, a rede, a lança e o livro de dívidas, e hoje toda profissão de Halvet tem nome de mulher. As mais velhas ainda lembram do vale com homens; as moças, não.
 
-O CERCO DA FRONTEIRA & O SANTO SELO: A antiga ponte militar de pedra sobre a garganta do rio — por onde os comboios de recrutas e os cobradores de dízimo passavam — foi dinamitada e sabotada numa tentativa desesperada de cortar o avanço dos soldados imperiais. A sabotagem isolou o vale numa quarentena econômica sufocante: o tráfego agora é estrangulado pelo pedágio corrupto do Vau de Pedra, controlado por oficiais venais e contrabandistas. A Igreja dos Santos do Selo domina a província com terror inquisitorial, pregando que o sacrifício dos filhos é a expiação exigida pelos céus. O calendário conta os anos e dias a partir da instituição do Santo Selo.
+O SELO. Sarine, uma arcanista sem casa, desceu sob a Capela de São Vandro e selou o que puxa os meninos. A Leva ficou mais lenta, mas não parou. Na noite em que o selo rachou pela primeira vez, a ponte caiu, e o vale passou a contar os dias a partir dali. Em volta do selo cresceu a Ordem do Santo Selo, que prega que a Leva é penitência e que mãe que esconde o filho condena o vale inteiro.
 
-O JOGADOR é um forasteiro livre vindo das rotas de contrabando do sal, e é homem. Num vale onde nenhum homem adulto livre consegue andar sem grilhões há décadas, sua presença é um choque elétrico. As patrulhas veem você como um desertor foragido, um rebelde ou um mercenário perigoso que deve ser capturado ou extorquido; as mulheres de Halvet olham para você com desconfiança afiada, lembrança dolorosa dos filhos e maridos arrancados, desejo carnal cru e a suspeita de que você pode ser a faísca de uma nova guerra.
+A LEVA DA MARCA. Do outro lado do rio, a Casa Tessel tem a sua própria leva, que nada tem de mistério: recruta à força os rapazes das terras da Marca para a guarnição e para as galerias de Corveira, e vende a isenção a quem pode pagar. Tessel e a Ordem usam a Leva verdadeira de desculpa para a deles, e quem confunde as duas é quem lucra.
 
-Os inimigos vêm das estradas ou das cinzas do passado: desertores sem bandeira, salteadores famintos, fiscais corruptos da Marca e os homens que a guerra devolveu mutilados e desumanizados.
+O JOGADOR é homem e é de fora. Veio pela estrada do sal e não deve nada ao vale, nem à ponte. Faz anos que nenhum homem adulto dorme duas noites em Halvet. Metade do vale acha que você quebra o ciclo; a outra metade acha que você o alimenta. A guarda da Marca vê em você um desertor, e a Ordem, uma heresia que anda.
 
-Desejo e intimidade aqui são escolhas de adultos calejados pela sobrevivência. Nenhuma mulher de Halvet deve servidão a você, e a vida dura ensinou cada uma a cobrar o que vale. O que acontece entre dois corpos na palha de uma estalagem ou num celeiro fechado nasce de vontade própria, necessidade ou paixão, sem hipocrisia puritana.
+Os inimigos vêm de fora ou vêm de volta: salteadores da estrada, desertores sem bandeira, fiscais da Marca, onis que a Casa Sem Nome na Névoa caça, e o que a Leva levou e devolveu errado. Esses podem ser homens. A gente do vale, não.
+
+Desejo aqui é assunto de adulto e de escolha. Nenhuma mulher de Halvet deve nada a você, e nenhuma finge o contrário. O que acontece acontece porque as duas partes quiseram, e o vale comenta no dia seguinte.
 
 ## Pontas soltas conhecidas
-- Linha do tempo de Mir: o cenário diz "três gerações" de Leva; As Ruínas de Mir e Vell dizem "faz vinte anos". Não decidido.
+- Linha do tempo: decidido em vinte anos (Mir queimou há vinte anos). A trama principal, os finais e os arcos estão em `docs/BIBLIA-DA-HISTORIA.md`.
 
 ## As casas nobres
 ### Casa de Halvet — "A pedra permanece"

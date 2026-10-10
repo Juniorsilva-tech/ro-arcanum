@@ -6,9 +6,9 @@
 // `historiaDesteLugar: []` justamente onde o jogo começa. Estas linhas são o
 // que qualquer moradora sabe contar; segredo continua morando nos segredos.
 //
-// Nenhuma linha data o incêndio de Mir: o conteúdo antigo diz "faz vinte
-// anos" (As Ruínas de Mir, Vell) e o cenário diz "três gerações" de Leva. A
-// decisão é do dono (registrada no HANDOFF da sessão 55).
+// Nenhuma linha data o incêndio de Mir. O dono decidiu na sessão 93: faz
+// vinte anos (premissa em scenario.ts, linha do tempo em
+// docs/BIBLIA-DA-HISTORIA.md).
 //
 // Também corrige quatro descrições que contradiziam o mundo: a Casa de Pedra
 // tinha "o senhor de Halvet", o lago tinha "pescadores", a mina "mineiros" e a

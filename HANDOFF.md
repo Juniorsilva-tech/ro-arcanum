@@ -585,3 +585,45 @@ moedas, vivo ou morto — visto por último em A Cripta" (estado injetado).
 
 Pendente: o caçador não caça os fugitivos NPC (só o jogador); o fugitivo não
 se defende de outro jeito além de lutar (não tenta comprar o silêncio).
+
+## Sessão 93 — Claude — a premissa reescrita e a bíblia da história
+
+Decisões do dono, registradas aqui para não voltarem a ser discutidas:
+- A Leva começou há vinte anos (Mir queimou numa noite). Fim da contradição
+  "três gerações" contra "faz vinte anos".
+- O jogador é homem e é de fora (veio pela estrada do sal).
+- O jogo terá vários finais.
+- As duas levas existem (opção "B"): a Leva de Halvet, sobrenatural (todo
+  menino do vale entra no rio aos dezoito), e a leva da Marca, política
+  (Tessel recruta à força e vende isenção). Tessel e a Ordem usam a primeira
+  de desculpa para a segunda.
+- Tsukimichi é outro universo (DLC) e fica fora da trama. Kimetsu entra como
+  linha secundária.
+
+O que mudou:
+- `content/vaelhorn/scenario.ts`: premissa reescrita em sete parágrafos, sem
+  anacronismo ("dinamitada", "bucha de canhão", "choque elétrico", "Santa Sé"
+  saíram) e sem travessão. `ancoraCalendario` passa a ser "desde que a ponte
+  caiu"; `tabuCentral` nomeia a Ordem do Santo Selo.
+- `docs/BIBLIA-DA-HISTORIA.md` (novo): linha do tempo, o segredo central (o
+  pacto dos homens do conselho na fenda de São Vandro), quem sabe o quê, cinco
+  atos, seis finais, arcos das facções, linha Kimetsu, missões menores e uma
+  tabela de horas (de 95 a 120 horas ou mais). Nada disso está implementado:
+  é o roteiro.
+- `docs/HISTORIA-ATE-AQUI.md`: regerado com a premissa nova.
+- `content/vaelhorn/historias-locais.ts`: o comentário que dizia "não
+  decidido" agora aponta a decisão.
+
+As outras "três gerações" no conteúdo (marechalas Varn, mina de Ferro Velho,
+família de Pedravel, matriarcas da parada) são histórias de família e de
+casa, não da Leva, e ficaram.
+
+Pendente:
+- Implementar os atos da bíblia (começando pelo Ato I, o menino de Cera a
+  Surda na Toca do Juncal).
+- Passar os textos do jogo pelas regras do humanizer (frases que não soam
+  português, travessões, contrastes forçados). Só a premissa foi feita.
+- Etapas B a F da colônia (rascunhos em `docs/colonia-etapa-B/`; o outro
+  agente já levou parte delas adiante, conferir antes).
+- O typecheck acusa "Cannot find module 'playwright'" em três scripts de
+  `scripts/playwright_*.ts` que vieram de outro agente. Não mexi.
