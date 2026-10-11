@@ -136,12 +136,12 @@ export const npcsVaelhorn: NPC[] = [
     vozNarrativa: 'Autoridade gasta. Fala como quem já ouviu todas as desculpas, inclusive as boas.',
     relacoes: [
       { npc: 'ruvela', tipo: 'desconfia', nota: 'A desertora serviu sob o seu comando.' },
-      { npc: 'lunn', tipo: 'protege', nota: 'Cobriu a sentinela dela na noite da sabotagem da ponte.' },
+      { npc: 'lunn', tipo: 'protege', nota: 'Cobriu a sentinela dela na noite em que a ponte caiu.' },
     ],
     personalidade: 'Corrompível, mas com uma linha que não cruza. Cansada da vila e de si.',
     corpo: 'Quadrada de ombro, coxa grossa de montaria, uma barriga que a cota já não disfarça. Corta o cabelo ela mesma, curto e torto. Nariz quebrado duas vezes.',
     segredo: {
-      conteudo: 'Derrubou os arcos da ponte de propósito durante a revolta para encobrir um contrabando militar seu.',
+      conteudo: 'Na noite em que a ponte caiu, a tropa dela atravessava com um contrabando seu. Os arcos cederam sem ninguém tocar neles, metade da tropa foi para o rio, e o relatório que ela mandou a Tessel diz sabotagem de rebeldes. A sabotagem nunca existiu.',
       comoDescobrir: 'Confrontá-la com a marca do poço, ou ouvir Grimma bêbada.',
     },
   },
@@ -405,8 +405,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Consciente do dever, aterrorizada pelo escuro, incapaz de mentir sem gaguejar.',
     corpo: 'Magrinha, quase menina de corpo apesar dos vinte e quatro. Peito pequeno amassado sob a armadura mal ajustada, pernas compridas, sardas por toda parte que o sol alcança.',
     segredo: {
-      conteudo: 'Dormiu no posto da sentinela na noite da sabotagem da ponte e não tocou o sino de alarme.',
-      comoDescobrir: 'Subir à torre de madrugada e encontrá-la desperta cedo demais, ou pressioná-la sobre a noite da sabotagem.',
+      conteudo: 'Dormiu no posto da sentinela na noite em que a ponte caiu e não tocou o sino. Acordou com o estrondo e nunca contou que, antes dele, ouviu alguém rir lá embaixo.',
+      comoDescobrir: 'Subir à torre de madrugada e encontrá-la desperta cedo demais, ou pressioná-la sobre a noite em que a ponte caiu.',
     },
   },
   {
@@ -592,8 +592,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Ex-soldada com código próprio. Não mata quem não deve, e decide sozinha quem deve.',
     corpo: 'Alta, de ombro reto de quartel. Cicatriz de lança acima do seio direito, peito pequeno, cintura que ainda cabe na cota velha. Anda como quem espera ser atacada.',
     segredo: {
-      conteudo: 'Serviu sob a Sargenta Bael e desertou na mesma noite em que a ponte militar foi derrubada.',
-      comoDescobrir: 'Mostrar-lhe a insígnia da guarda, ou ouvir Bael falar do dia em que perdeu metade da tropa na sabotagem.',
+      conteudo: 'Serviu sob a Sargenta Bael e estava na ponte quando ela caiu. Nadou até a margem, viu o que puxava as companheiras para o fundo e desertou antes do amanhecer.',
+      comoDescobrir: 'Mostrar-lhe a insígnia da guarda, ou ouvir Bael falar do dia em que perdeu metade da tropa na ponte.',
     },
   },
   {
@@ -672,8 +672,8 @@ export const npcsVaelhorn: NPC[] = [
     personalidade: 'Orgulhosa da própria inutilidade aparente. Sabe tudo que atravessa e nada do que fica.',
     corpo: 'Sentada há tantos anos que o corpo criou a forma da pedra. Olhos brancos, mãos que leem rosto por toque, e ela pede para tocar o seu assim que você chega perto.',
     segredo: {
-      conteudo: 'Estava na ponte na noite da sabotagem e ouviu os conspiradores darem a ordem de dinamitar os arcos.',
-      comoDescobrir: 'Alimentá-la três vezes sem pedir nada, ou perguntar diretamente pela noite da sabotagem.',
+      conteudo: 'Estava no coto norte quando a ponte caiu. Antes do estrondo, ouviu alguém rir do outro lado do rio, onde não havia ninguém.',
+      comoDescobrir: 'Alimentá-la três vezes sem pedir nada, ou perguntar diretamente pela noite em que a ponte caiu.',
     },
   },
   {

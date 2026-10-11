@@ -1,6 +1,6 @@
 # Bíblia da história de Vaelhorn
 
-Decisões do dono (sessão 58): Mir queimou há vinte anos; o jogador é um homem de fora; o jogo tem vários finais. Tsukimichi é outro universo (DLC) e não entra aqui. Kimetsu entra como linha de missões secundárias.
+Decisões do dono (sessões 58 e 93): Mir queimou há vinte anos; o jogador é um homem de fora; o jogo tem vários finais. Tsukimichi é outro universo (DLC) e não entra aqui. Kimetsu entra como linha de missões secundárias.
 
 Este documento é a referência para escrever missões. O que já existe no jogo está em `docs/HISTORIA-ATE-AQUI.md`; aqui está o que falta: a trama, os arcos e os finais. Toda missão nova deve caber nisto ou mudar este documento antes.
 
@@ -44,11 +44,20 @@ Cinco atos. Cada ato termina numa decisão que muda o mundo e abre caminhos dife
 
 ### Ato I: o forasteiro (Halvet)
 
-O jogador chega à Rês Enforcada e descobre, pelo jeito como o olham, onde está. O ato apresenta a Leva sem explicar nada.
+Implementado na sessão 94 (`engine/atoI.ts`, `content/vaelhorn/atoI.ts`).
 
-- Missão de abertura: é inverno, e um menino de Juncal de Baixo, filho de Cera a Surda, faz dezoito anos em sete dias. A mãe o escondeu na Toca do Juncal com outros meninos. A Ordem quer entregá-lo à ponte; Orla, que guarda a Toca, quer que alguém de fora o tire do vale.
-- No caminho: Sarine na taverna, que observa o jogador desde o primeiro dia; Morda na ponte; a cripta com o nicho aberto por dentro.
-- Decisão do ato: o que fazer com o menino. Tirá-lo do vale pela estrada (a Leva o puxa assim mesmo, e ele morre no caminho, a menos que o jogador o leve para fora da Marca); entregá-lo à Ordem (o vale acha que o forasteiro está do lado da ponte); ou ficar com ele na noite do inverno dos dezoito e ver a Leva acontecer de perto, que é o caminho que leva à verdade.
+O jogador chega à Rês Enforcada pela estrada do sal e descobre, pelo jeito como o olham, onde está. O ato mostra a Leva e não explica nada.
+
+- Abertura: no primeiro dia em que o jogador amanhece no vale, Brida, a tecelã da praça, o procura. O filho dela, Edrin, faz dezoito anos em sete dias. Ela não pode sair com ele (a Ordem vê) e ele não pode sair sozinho (a Marca recruta). Um homem de fora com um rapaz do lado passa por pai.
+- Edrin não é NPC do elenco: tem dezessete anos, e o elenco só tem adultos (GDD §25). Ele existe no estado do ato e chega ao narrador pelo bloco "trama".
+- No caminho: Sarine observa na taverna; Morda vira o rosto na ponte; a cripta tem um nicho aberto por dentro (pistas por lugar, só para o narrador).
+- Decisão do ato, decidida pela engine na noite dos dezoito:
+  - Toca do Juncal: o jogador leva Edrin a Juncal de Baixo, e Orla o esconde. A Toca segura quem está dentro: Edrin vive, preso embaixo do charco. Lá está também o filho de Cera a Surda, dado por levado há sete anos. A Toca passa a existir no mapa.
+  - Ordem: entregue na capela, as irmãs o cantam até a ponte. Reputação com a capela sobe, com a praça desce, e Brida não perdoa.
+  - Vigília: Edrin passa a noite com o jogador no vale. Levanta sem acordar e entra no rio. O jogador entra atrás e a correnteza o empurra de volta, como se a água não o quisesse (flag `trama.agua_recusou`, pista do Ato III: o homem de fora não está no contrato). Morda ouve.
+  - Estrada: Edrin passa a noite com o jogador fora do vale. Volta andando e é achado numa vala, virado para Halvet (flag `trama.leva_alcanca_longe`: fugir não basta).
+  - Nada: ele vai sozinho.
+- Mudança em relação ao rascunho: o menino é do vale, não do Juncal. O conteúdo já dizia que Orla abre a Toca a quem "chega ao Juncal com um menino do vale", e que o filho de Cera a Surda vive lá há sete anos; isso fixou a regra de que a Toca protege enquanto se fica dentro.
 
 ### Ato II: as duas levas (o continente)
 

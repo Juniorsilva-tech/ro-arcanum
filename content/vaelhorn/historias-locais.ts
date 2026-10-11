@@ -39,8 +39,8 @@ export const HISTORIAS_LOCAIS: Record<string, string[]> = {
     'A árvore dos enforcados não tem esse nome por justiça. Tem porque, nos anos mais duros da Leva, era para lá que algumas mães iam quando o inverno dos dezoito chegava para o filho.',
   ],
   ponte: [
-    'A ponte militar imperial uniu as duas margens do vale por trezentos anos. Foi deliberadamente sabotada e derrubada na revolta de Mir para cortar o avanço do exército da Coroa, deixando o vale isolado.',
-    'Os arcos de cantaria jazem despedaçados nas pedras do desfiladeiro. Morda estava na margem na noite da sabotagem; senta no coto norte da cabeceira todos os dias, e escuta quem passa.',
+    'A ponte uniu as duas margens por trezentos anos e caiu numa noite de inverno, a mesma em que a laje da capela trincou. Desde então o vale conta os dias a partir dali.',
+    'É para cá que os meninos caminham na noite dos dezoito. Morda estava no coto norte quando a ponte caiu, e jura que ouviu alguém rir do outro lado. Senta lá todo dia e escuta quem passa.',
   ],
   moinho: [
     'O moinho moía o grão de meio vale. Numa noite de cheia a roda parou e nunca mais girou, e havia gente no açude naquela noite que o vale não gosta de nomear.',

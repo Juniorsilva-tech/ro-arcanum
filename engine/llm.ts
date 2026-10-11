@@ -50,6 +50,7 @@ import { famaDaArma } from './famaArma';
 import { famaDoNome, sobrenome } from './linhagem';
 import { procuraAqui, cartazDe, textoDoCartaz } from './guarda';
 import { todosNpcs } from './elenco';
+import { contextoAtoI } from './atoI';
 
 export type ProvedorCompat = 'groq' | 'mistral' | 'gemini' | 'cerebras';
 export type LlmProvider = 'openrouter' | 'anthropic' | 'nous' | ProvedorCompat;
@@ -805,6 +806,8 @@ export function montarPacote(
     boatosDoVale: ecosRecentes(camp, 2, ctx.local.id),
     // Cartazes de procurados da região (engine/crimeUrbano.ts).
     cartazesDaRegiao: cartazesDaRegiao(content, camp),
+    // Trama principal (engine/atoI.ts): prazo, onde está o menino, pista do lugar.
+    trama: contextoAtoI(content, camp),
     presentes: ctx.presentes.map((n) => {
       const crimesConhecidos = crimesPublicosNaRegiao(content, camp, ctx.local.id);
       const hum = calcularHumorNpc(camp, content, n);
@@ -1139,6 +1142,7 @@ export const INSTRUCAO_SISTEMA =
   'Narre o desejo e a entrega física com paixão e sem moralismo.\n' +
   'REGRA ABSOLUTA E INEGOCIÁVEL: todos os personagens envolvidos em qualquer cena de teor erótico ou sensual são estritamente adultos (18+). Jamais sexualize menores em nenhuma hipótese. Respeite as idades registradas no pacote.\n' +
   '\nCONTINUIDADE — o mundo não começa agora:\n' +
+  '• "trama" é a trama principal, decidida pela engine. "situacao" é o prazo; com "meninoComVoce", o menino (17 anos, nunca em cena de desejo) anda ao lado do protagonista e reage à cena. "pistaDoLugar" é um detalhe do lugar para pôr na cena. "aconteceu" é o desfecho, que já é fato. Ninguém explica a Leva nem diz por que ela acontece: quem fala dela fala do que viu, nunca do motivo.\n' +
   '• "procurado" (num presente) é fugitivo com cartaz: quem conhece o cartaz pode reconhecer o rosto, e a pessoa foge do olhar, mente o nome ou tenta comprar silêncio. "cartazesDaRegiao" é o que está pregado na praça; cite só quando a cena pedir.\n' +
   '• "sabeDoQueVoceFez" (num presente) é sangue que você derramou em público por aqui, e essa pessoa SABE. Ela reage a isso antes de qualquer outra coisa: guarda tenta prender ou chama reforço, gente comum recua, cala ou foge, parente de vítima odeia. Ninguém trata você como um estranho qualquer.\n' +
   '• "personagem.procuradoAqui", "cercadoPelaGuarda" e "naCela" são decisão da engine. Na cela, a cena acontece dentro da cela (carcereiro, outro preso, pão duro) e ninguém solta você por conta própria. Cercado, a patrulha espera resposta: não resolva o cerco na narração. Procurado, quem é da guarda desconfia de você, e o "cartaz" com a "recompensa" está pregado na praça: gente comum pode reconhecer seu rosto, cochichar ou pensar no dinheiro. A guarda fala como guarda de verdade, seca e prática ("Parado aí.", "Mãos onde eu possa ver.", "Você está preso em nome da lei.", "Vivo ou morto, tanto faz para o juiz."), nunca com discurso solene.\n' +

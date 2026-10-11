@@ -242,7 +242,7 @@ export const HISTORIAS_VALE: Record<string, HistoriaNpc> = {
   },
   morador_mercado_7: {
     origem: 'Escrivã do registro da feira, filha de outra escrivã. Anota nascimento, morte e dívida de quem compra e vende no vale.',
-    ferida: 'Anotou o nome de todos os rapazes que a Coroa levou nos últimos dez invernos, com a data. Sabe todos de cor.',
+    ferida: 'Anotou o nome de todos os rapazes que a Leva levou nos últimos dez invernos, com a data. Sabe todos de cor.',
     desejo: 'Um inverno sem nenhum nome novo na lista.',
     medo: 'Um inverno em que a lista cresça mais depressa do que ela consegue escrever.',
   },

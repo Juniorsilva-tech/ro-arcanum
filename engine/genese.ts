@@ -153,7 +153,7 @@ export function fatoDeAbertura(genese: GeneseResultado, nomeJogador: string): st
   if (genese.marca === 'indigno') {
     return `${nomeJogador} cresceu sob o teto de ${genese.paiNome} e ${genese.maeNome}, que nunca esperaram muito: o corpo sempre foi devagar para aprender o que se pedia dele.${sufixo}`;
   }
-  return `${nomeJogador} cresceu sob o teto de ${genese.paiNome} e ${genese.maeNome}, sem nada de extraordinário — só o que qualquer infância no vale cobra.${sufixo}`;
+  return `${nomeJogador} cresceu sob o teto de ${genese.paiNome} e ${genese.maeNome}, sem nada de extraordinário, só o que qualquer infância nas salinas cobra.${sufixo}`;
 }
 
 // Carta de memória de infância (documento de dinastia, seção 5 — recortado:

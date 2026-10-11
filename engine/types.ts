@@ -803,6 +803,8 @@ export type ContentBundle = {
   tetoEdificios?: Record<string, number>;
   /** Lugares sem dona onde se pode fundar colônia (engine/colonia.ts). */
   sitiosColonia?: import('../content/vaelhorn/sitios').SitioColonia[];
+  /** Ato I da trama (engine/atoI.ts). Cenário sem ele não tem o ato. */
+  atoI?: import('./atoI').ConteudoAtoI;
   arquetiposColono?: import('../content/vaelhorn/colonos').ArquetipoColono[];
   gruposChegada?: import('../content/vaelhorn/colonos').GrupoChegada[];
   nomesColonas?: string[];
@@ -899,6 +901,8 @@ export type Campaign = {
   asora?: AsoraState;
   // Sistema de Assentamento, Feudo & Reino (Vaelhorn / Mundo Base)
   feudo?: FeudoState;
+  /** Trama principal (engine/atoI.ts). Ausente em saves antigos e antes do Ato I. */
+  trama?: import('./atoI').TramaState;
   ultimoResultado?: {
     grau: Grau;
     verboNome?: string;

@@ -93,6 +93,10 @@ import {
   processarCicloReino,
   fundarColonia,
   reacenderFarol,
+  executarAcaoAtoI,
+  marcarAvisoAtoI,
+  type AvisoAtoI,
+  type AcaoAtoI,
   aceitarChegada,
   recusarChegada,
   comprarAnimais,
@@ -204,6 +208,10 @@ type Rascunho = {
   marcaInfancia?: MarcaInfancia;
   reacaoInfancia?: ReacaoInfancia;
 };
+
+// O jogador é de fora (premissa, sessão 93): cresceu em Porto do Sal e chega
+// a Halvet pela estrada do sal.
+const CHEGADA_VAELHORN = 'Aos dezoito anos, você deixou Porto do Sal pela estrada do sal. No fim dela fica Halvet, o vale de que a costa fala baixo.';
 
 const ATTR_MIN = 8;
 const ATTR_MAX = 16;
@@ -319,6 +327,8 @@ interface GameState {
   fundarFeudoAcao: (nome: string, localId: string, bioma?: BiomaFeudo) => Promise<string>;
   fundarColoniaAcao: (nome: string) => Promise<string>;
   reacenderFarolAcao: () => Promise<string>;
+  acaoAtoI: (id: AcaoAtoI['id']) => Promise<string>;
+  lerAvisoAtoI: (aviso: AvisoAtoI) => Promise<void>;
   aceitarChegadaAcao: (id: string) => Promise<string>;
   resolverAudienciaAcao: (opcaoId: string) => Promise<string>;
   decidirAssembleiaAcao: (entrada: string | import('@/engine').Preparacao[]) => Promise<string>;
@@ -634,7 +644,7 @@ export const useGame = create<GameState>((set, get) => ({
     const genesePrefacio = camp.genese ? fatoDeAbertura(camp.genese, camp.personagem.nome) + ' ' : '';
     const textoAbertura = camp.cenarioId === 'tsukimichi'
       ? `Descartado da presença da Deusa, seu corpo abriu uma cratera na Grande Terra Desolada. Você se ergue sozinho nas terras calcinadas da Wasteland aos dezoito anos. Completamente só, sem ninguém ao seu lado e sem trilhos pré-determinados — apenas seu mana colossal, o domínio do Kai e um mundo desconhecido à sua frente. ${cena.narracao}`
-      : `${genesePrefacio}${memoria} Aos dezoito anos, a vida adulta começa. ${cena.narracao}`;
+      : `${genesePrefacio}${memoria} ${CHEGADA_VAELHORN} ${cena.narracao}`;
 
     // Entrega a cena imediatamente com as opções da engine, sem travar em tela em branco
     set({
@@ -665,7 +675,7 @@ export const useGame = create<GameState>((set, get) => ({
     const genesePrefacio = camp.genese ? fatoDeAbertura(camp.genese, camp.personagem.nome) + ' ' : '';
     const textoAbertura = camp.cenarioId === 'tsukimichi'
       ? `Descartado da presença da Deusa, seu corpo atinge a Grande Terra Desolada em queda livre da estratosfera. Você se ergue sozinho na cratera da Wasteland aos dezoito anos. Nenhum aliado, nenhum caminho pré-programado: você é livre para explorar, treinar, caçar ou marchar para onde quiser. ${cena.narracao}`
-      : `${genesePrefacio}A infância ficou para trás. Aos dezoito anos, sua vida adulta começa. ${cena.narracao}`;
+      : `${genesePrefacio}A infância ficou para trás. ${CHEGADA_VAELHORN} ${cena.narracao}`;
     registrarNaCronica(camp, textoAbertura);
     set({
       camp: { ...camp },
@@ -941,6 +951,24 @@ export const useGame = create<GameState>((set, get) => ({
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;
+  },
+
+  async acaoAtoI(id) {
+    const { camp, content } = get();
+    if (!camp || !content) return '';
+    const r = executarAcaoAtoI(content, camp, id);
+    if (r.ok) registrarNaCronica(camp, r.mensagem);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, r.ok ? 'narracao' : 'sistema')] });
+    await persistir(camp, set);
+    return r.mensagem;
+  },
+
+  async lerAvisoAtoI(aviso) {
+    const { camp } = get();
+    if (!camp) return;
+    marcarAvisoAtoI(camp, aviso.id);
+    set({ camp: { ...camp }, feed: [...get().feed, nf(aviso.texto, 'narracao')] });
+    await persistir(camp, set);
   },
 
   async reacenderFarolAcao() {

@@ -101,7 +101,7 @@ export const locaisVaelhorn: Local[] = [
     descricaoBase:
       'Pedra fria e um Cristo de madeira gasto de tanto ser tocado. A fé aqui é mais medo que amor.',
     atmosferaPorPeriodo: {
-      madrugada: 'Velas quase no fim. O padre reza sozinho, ou finge.',
+      madrugada: 'Velas quase no fim. A madre reza sozinha, ou finge.',
       manha: 'Missa rala. Cabeças baixas, orações mecânicas.',
       tarde: 'Vazia e silenciosa. Só o gotejar em algum canto.',
       entardecer: 'A luz colorida das vidraças se arrasta pelo chão.',
@@ -169,29 +169,29 @@ export const locaisVaelhorn: Local[] = [
     ],
   },
 
-  // ─────────────────────────── A PONTE (antiga artéria militar sabotada)
+  // ─────────────────────────── A PONTE (caiu na noite em que o selo rachou)
   {
     id: 'ponte',
     nome: 'A Ponte Caída',
     regiao: 'Vale de Halvet',
     tipo: 'ruina',
     descricaoBase:
-      'Dois cotos gigantescos de alvenaria militar de cada lado da garganta do rio, e no meio o vazio. Os arcos imperiais foram dinamitados durante a revolta, transformando a principal artéria do vale em escombros na água.',
+      'Dois cotos de cantaria, um de cada lado da garganta do rio, e no meio o vazio. Os arcos caíram numa noite de inverno sem que ninguém encostasse neles, e o vale passou a contar os dias a partir dali.',
     atmosferaPorPeriodo: {
-      madrugada: 'A neblina sobe do rio e engole os cotos de pedra. Só se ouve a água passando veloz por onde havia a calçada militar.',
-      manha: 'Carroceiros avaliam os escombros e xingam a distância. Sem a ponte, são obrigados a descer a lama até o Vau de Pedra.',
-      tarde: 'Restos de carretas queimadas e correntes enferrujadas ainda jazem entre as pedras caídas, lembrança dos comboios barrados.',
-      entardecer: 'A luz baixa mostra o que a pressa esconde: as marcas de picaretas e perfurações nas vigas provam que foram derrubadas de propósito.',
-      anoitecer: 'O vau improvisado rio abaixo cobra pedágio abusivo. Aqui na ruína não passa mais ninguém.',
-      noite: 'Escuridão fria sobre o abismo. O rio corre furioso contra os blocos de pedra submersos.',
+      madrugada: 'A neblina sobe do rio e engole os cotos. Só se ouve a água passando por onde antes passava a calçada.',
+      manha: 'Uma carroceira olha o vão, cospe e vira a mula para o Vau de Pedra. Ninguém atravessa aqui faz anos.',
+      tarde: 'Flores secas amarradas no parapeito do coto, cada ramo com um nome. As mães trocam as flores, não os nomes.',
+      entardecer: 'A luz baixa mostra as pedras caídas no leito. Nenhuma tem marca de ferramenta: a ponte não foi derrubada, ela caiu.',
+      anoitecer: 'O vento sobe da garganta com cheiro de água funda. Quem passa perto do coto apressa o passo sem saber por quê.',
+      noite: 'Escuridão sobre o vão. O rio corre embaixo, e às vezes parece correr para o lado errado.',
     },
     privacidadeBase: { madrugada: 3, manha: 1, tarde: 0, entardecer: 1, anoitecer: 2, noite: 3 },
     perigo: 3,
     ganchos: [
-      'Marcas de cinzel e perfuração militar nas bases dos arcos comprovam a sabotagem interna',
-      'Correntes de ferro com grilhões de prisioneiros ainda presas nas vigas tombadas na água',
+      'As flores do parapeito têm nomes de meninos, e um dos ramos é fresco',
+      'Pegadas descalças na lama da margem, todas indo para a água, nenhuma voltando',
     ],
-    pontos: ['coto norte da fortificação', 'entulho no leito do rio', 'posto abandonado da alfândega'],
+    pontos: ['coto norte', 'parapeito das flores', 'margem de lama'],
     rotas: [
       { destino: 'praca', periodos: 0, perigo: 1 },
       { destino: 'estrada', periodos: 1, perigo: 3 },
@@ -209,7 +209,7 @@ export const locaisVaelhorn: Local[] = [
       'A roda parou quando o rio mudou de humor. Dentro, farinha velha cobre tudo como uma neve suja e antiga.',
     atmosferaPorPeriodo: {
       madrugada: 'O maquinário estala sozinho, dilatando no frio. Parece que alguém anda lá em cima.',
-      manha: 'Poeira de farinha suspensa na luz. O moleiro varre o que não adianta varrer.',
+      manha: 'Poeira de farinha suspensa na luz. A moleira varre o que não adianta varrer.',
       tarde: 'Quente, abafado, cheirando a grão fermentado.',
       entardecer: 'Sombras compridas entre as engrenagens paradas.',
       anoitecer: 'Trancado por fora — o que não impede quem já está dentro.',

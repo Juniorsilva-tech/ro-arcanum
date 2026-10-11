@@ -342,7 +342,7 @@ export const CRONICAS_MAPA: Record<string, CronicaLocalMapa> = {
     regiao: 'Vale de Halvet',
     divindadeOuCrenca: 'Preces aos Afogados do Rio-Verde.',
     passadoGuerraDeuses: 'Os padres diziam que as fundações de pedra branca foram abençoadas para durar para sempre. Duraram trezentos anos.',
-    marcaDasBruxas: 'Caiu na noite da revolta, com cinzel e pólvora nos arcos. Quem não quer saber de sabotagem diz que foi a Invejosa.',
+    marcaDasBruxas: 'O relatório da guarda diz que foi sabotagem. Quem desceu ao leito diz que nenhuma pedra tem marca de ferramenta, e as velhas dizem que foi a Invejosa.',
     supersticaoPopular: 'À meia-noite ainda se ouve os passos da Leva marchando no vazio sobre as águas.',
   },
   moinho: {

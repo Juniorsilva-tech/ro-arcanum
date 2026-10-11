@@ -81,7 +81,9 @@ function estadoNpc(content: ContentBundle, idade: number): NpcDinamico {
 }
 
 function npcDeParente(p: ParenteCampanha): NPC {
-  const localBase = p.condicao === 'cativo' ? 'acampamento' : 'taverna';
+  // A família mora em Porto do Sal: o jogador é de fora (premissa, sessão 93),
+  // e nenhum homem feito vive em Halvet.
+  const localBase = p.condicao === 'cativo' ? 'acampamento' : 'porto_sal';
   return {
     id: p.id, nome: p.nome, idade: Math.max(0, p.idadeNoNascimento), parentesco: p.parentesco,
     ocupacao: p.ocupacao, faccaoId: 'vila', localBase, rotina: {},
@@ -169,7 +171,7 @@ function eventoRuinasDescoberta(idade: number, familia?: FamiliaState): EventoIn
     opcoes: [
       { id: 'descer_catacumbas', rotulo: 'Descer pela fresta e explorar o passado sob a pedra', descricao: 'Aumenta raciocínio e percepção; resgata uma moeda antiga do império.' },
       { id: 'marcar_segredo', rotulo: 'Guardar o segredo do buraco e voltar para casa', descricao: 'Aumenta percepção e resiliência; mantém o segredo inviolado.' },
-      { id: 'avisar_adultos', rotulo: 'Chamar os adultos da vila para inspecionar a abertura', descricao: 'Aumenta social e prestígio com a comunidade do vale.' },
+      { id: 'avisar_adultos', rotulo: 'Chamar os adultos da vila para inspecionar a abertura', descricao: 'Aumenta social e prestígio com a comunidade da vila.' },
     ],
   };
 }
@@ -247,11 +249,11 @@ function eventoTorneioJuventude(idade: number, familia?: FamiliaState): EventoIn
     idade,
     titulo: 'A Disputa do Meio-Verão',
     descricao:
-      `A festa da colheita reuniu os povoados do vale numa arena de terra batida. Entre a torcida da família de ${pai ? pai.nome : 'sua casa'}, disputas tradicionais de força, pontaria e cantoria de lendas desafiavam os jovens.`,
+      `A festa do sal reuniu os povoados da costa numa arena de terra batida. Entre a torcida da família de ${pai ? pai.nome : 'sua casa'}, disputas tradicionais de força, pontaria e cantoria de lendas desafiavam os jovens.`,
     opcoes: [
       { id: 'vencer_na_arena', rotulo: 'Derrubar os rivais no círculo de terra batida', descricao: 'Aumenta físico e precisão; ganha luvas de couro e prestígio na vila.' },
       { id: 'prova_de_arquearia', rotulo: 'Acertar o centro do alvo com arco de junco', descricao: 'Aumenta precisão e percepção; ganha perícia perceber e fama de arqueiro.' },
-      { id: 'cantar_as_cronicas', rotulo: 'Recitar as antigas lendas do vale ao redor da fogueira', descricao: 'Aumenta social e raciocínio; eleva a perícia persuadir e o prestígio familiar.' },
+      { id: 'cantar_as_cronicas', rotulo: 'Recitar as antigas lendas da costa ao redor da fogueira', descricao: 'Aumenta social e raciocínio; eleva a perícia persuadir e o prestígio familiar.' },
     ],
   };
 }
@@ -278,11 +280,11 @@ function eventoRitoDaVigia(idade: number, _familia?: FamiliaState): EventoInfanc
     idade,
     titulo: 'A Vigília Solitária na Torre da Fronteira',
     descricao:
-      'A tradição do vale exige que todo jovem que atinge os quatorze anos passe uma noite inteira sozinho no parapeito alto da Torre de Vigia, vigiando a linha de névoa onde o vale termina.',
+      'A tradição da costa exige que todo jovem que chega aos catorze anos passe uma noite inteira sozinho no alto da Torre de Vigia das salinas, olhando a linha de névoa onde o mar termina.',
     opcoes: [
       { id: 'olhos_na_escuridao', rotulo: 'Vigiar o nevoeiro na torre alta a noite inteira sob chuva', descricao: 'Aumenta percepção e resiliência; ganha perícia perceber e aprende a arte Ler Aura.' },
       { id: 'disciplina_de_ferro', rotulo: 'Praticar posturas e equilíbrio marcial na balaustrada de pedra', descricao: 'Aumenta físico e precisão; aprende a técnica Segundo Fôlego.' },
-      { id: 'mapear_o_vale', rotulo: 'Registrar as trilhas secretas, fogueiras e rotas do vale', descricao: 'Aumenta raciocínio e social; ganha um mapa do vale e perícia decifrar.' },
+      { id: 'mapear_o_vale', rotulo: 'Registrar as trilhas, fogueiras e rotas da costa', descricao: 'Aumenta raciocínio e social; ganha um mapa rasgado e perícia decifrar.' },
     ],
   };
 }
@@ -902,7 +904,7 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
       alterarAtributo(camp, 'precisao', 1);
       camp.personagem.inventario.luvas_de_couro = (camp.personagem.inventario.luvas_de_couro ?? 0) + 1;
       f.prestigio += 2;
-      texto += ' A poeira da arena baixou com você de pé, vitorioso sob os aplausos do vale.';
+      texto += ' A poeira da arena baixou com você de pé, vitorioso sob os aplausos da costa.';
     } else if (opcaoId === 'prova_de_arquearia') {
       alterarAtributo(camp, 'precisao', 2);
       alterarAtributo(camp, 'percepcao', 1);
@@ -976,7 +978,7 @@ export function resolverEtapaInfancia(content: ContentBundle, camp: Campaign, op
       alterarAtributo(camp, 'social', 1);
       camp.personagem.inventario.mapa_rasgado = (camp.personagem.inventario.mapa_rasgado ?? 0) + 1;
       camp.personagem.pericias.decifrar = (camp.personagem.pericias.decifrar ?? 0) + 1;
-      texto += ' Você desenhou as rotas e passagens do vale à luz de vela, desvendando segredos de fronteira.';
+      texto += ' Você desenhou as rotas e passagens da costa à luz de vela, até a estrada do sal.';
     }
   } else if (evento.id === 'encruzilhada_oficio') {
     if (opcaoId === 'seguir_batedores') {
@@ -1136,9 +1138,9 @@ export function resgatarParente(camp: Campaign, parenteId: string, modo: 'resgat
   }
   p.condicao = 'livre';
   const civil = camp.vivo?.pessoas[p.id];
-  if (civil) { civil.objetivo = 'rotina'; civil.local = 'taverna'; civil.casa = 'taverna'; civil.deslocado = false; civil.cativoAte = undefined; }
+  if (civil) { civil.objetivo = 'rotina'; civil.local = 'porto_sal'; civil.casa = 'porto_sal'; civil.deslocado = false; civil.cativoAte = undefined; }
   const npc = camp.npcsProcedurais?.find(n => n.id === p.id);
-  if (npc) npc.localBase = 'taverna';
+  if (npc) npc.localBase = 'porto_sal';
   camp.npcState[p.id].eixos.confianca = Math.min(20, (camp.npcState[p.id].eixos.confianca ?? 0) + 10);
   f.historia.push({ idade: f.idadeJogador, texto: `Você libertou ${p.nome} do cativeiro.` });
   return { ok: true, texto: `${p.nome} está livre e voltou para a família.` };

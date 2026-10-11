@@ -540,7 +540,7 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar pela carga da noite a quem tem idade para lembrar',
   },
   morador_vila_juncal_2: {
-    conteudo: 'Cera Mão-Curta benze cada menino que Orla leva à Toca e anota o nome num junco trançado. Tem quarenta e um juncos pendurados na viga. Três desses meninos voltaram para o vale e foram levados pela Coroa assim mesmo.',
+    conteudo: 'Cera Mão-Curta benze cada menino que Orla leva à Toca e anota o nome num junco trançado. Tem quarenta e um juncos pendurados na viga. Três desses meninos voltaram para o vale e foram levados pela Leva assim mesmo.',
     comoDescobrir: 'contar os juncos trançados na viga da benzedeira',
   },
   morador_vila_juncal_3: {
@@ -712,11 +712,11 @@ export const CONSEQUENCIAS: Record<string, ConsequenciaSegredo> = {
   },
   // Segredos que já existiam e passam a ter consequência.
   sargenta_bael: {
-    texto: 'Você sabe que Bael derrubou os arcos da ponte de propósito durante a revolta. Ruvela, que desertou naquela noite, passa a tratar você como quem enfim entendeu.',
+    texto: 'Você sabe que a sabotagem da ponte é invenção do relatório de Bael. Ruvela, que desertou naquela noite, passa a tratar você como quem enfim entendeu.',
     efeitos: [rel('ruvela', 'confianca', 4), rel('sargenta_bael', 'medo', 5)],
   },
   lunn: {
-    texto: 'Lunn confessou que dormiu na sentinela na noite da sabotagem da ponte e não tocou o sino de alarme. Ela passa a confiar em você como confia na mãe — e com o mesmo medo.',
+    texto: 'Lunn confessou que dormiu na sentinela na noite em que a ponte caiu e não tocou o sino. Ela passa a confiar em você como confia na mãe, e com o mesmo medo.',
     efeitos: [rel('lunn', 'confianca', 4), rel('lunn', 'medo', 2)],
   },
   teoda: {
@@ -756,7 +756,7 @@ export const CONSEQUENCIAS: Record<string, ConsequenciaSegredo> = {
     efeitos: [rel('irma_perla', 'confianca', 4), rel('madre_corvane', 'disposicao', -4), rep('igreja', -2)],
   },
   morda: {
-    texto: 'Morda estava na margem na noite da sabotagem e ouviu a ordem de dinamitar os arcos antes do estrondo. Oda, que nunca a deixou passar fome, passa a confiar em quem a escutou.',
+    texto: 'Morda contou que estava no coto quando a ponte caiu e que, antes do estrondo, alguém riu do outro lado do rio. Oda, que nunca a deixou passar fome, passa a confiar em quem a escutou.',
     efeitos: [rel('oda', 'confianca', 3), rel('morda', 'confianca', 3)],
   },
   viuva_do_farol: {

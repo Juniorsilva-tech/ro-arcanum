@@ -627,3 +627,67 @@ Pendente:
   agente já levou parte delas adiante, conferir antes).
 - O typecheck acusa "Cannot find module 'playwright'" em três scripts de
   `scripts/playwright_*.ts` que vieram de outro agente. Não mexi.
+
+## Sessão 94 — Claude — Ato I da trama: o inverno dos dezoito
+
+Pedido do dono: começar a trama pelo Ato I da bíblia.
+
+**O ato** (`engine/atoI.ts`, `content/vaelhorn/atoI.ts`):
+- No primeiro dia em que o jogador amanhece no vale, Brida, a tecelã da praça
+  (NPC nova), pede ajuda: o filho, Edrin, faz dezoito anos em sete dias.
+- O jogador leva Edrin com ele (na praça). A engine decide a noite dos
+  dezoito ao processar o dia seguinte, pelo que o jogador fez:
+  - Toca: levou a Juncal de Baixo e pediu que o escondessem. Revela o segredo
+    de Orla (abre a Toca no mapa). Edrin vive, embaixo do charco.
+  - Ordem: entregou na capela. Capela +8, praça −5, Brida não perdoa.
+  - Vigília: ficou com ele no vale. Ele entra no rio; a água empurra o jogador
+    de volta. Flag `trama.agua_recusou` (pista do Ato III), Morda confia mais.
+  - Estrada: ficou com ele fora do vale. Morre no caminho. Flag
+    `trama.leva_alcanca_longe`.
+  - Sozinho: não fez nada.
+- Depois da noite, `camp.trama.ato = 2`. Nada consome o RNG da campanha.
+- Tela de jogo: cartão "O inverno dos dezoito" com as ações do lugar; cartão
+  que obriga a ler o pedido da mãe e o desfecho (com ou sem IA), e o texto vai
+  para o histórico; linha com prazo em "o que está aberto".
+- Narrador: bloco `trama` no pacote (prazo, menino com você, retrato dele só
+  quando está na cena, pista do lugar, desfecho) e regra: ninguém explica a
+  Leva nem o motivo dela.
+
+**Decisão conservadora:** Edrin não é NPC do elenco. O `engine/selftest.ts`
+exige elenco só de adultos (GDD §25), e `todosNpcs` esconde menores das cenas.
+Ele vive no estado do ato (nome, casa, onde está) e nunca entra em
+"presentes".
+
+**A bíblia mudou:** o menino é do vale, não do Juncal. O conteúdo já dizia que
+Orla abre a Toca a quem chega com um menino do vale e que o filho de Cera a
+Surda vive lá há sete anos; virou regra que a Toca protege enquanto se fica
+dentro. Seção do Ato I reescrita.
+
+**Contradições corrigidas no caminho do ato:**
+- O jogador agora é de fora de verdade: a família do prólogo mora em Porto do
+  Sal (antes morava na taverna de Halvet, com pai adulto no vale), os textos
+  da infância falam da costa, e a abertura diz que ele chega pela estrada do
+  sal. Saves antigos: a migração move a família da taverna para Porto do Sal.
+- A ponte: o texto de outro agente dizia "dinamitados durante a revolta",
+  "ponte militar imperial", "sabotagem". Agora a ponte caiu sozinha na noite
+  em que o selo rachou. A "sabotagem" virou mentira do relatório de Bael
+  (segredo dela), o que mantém as ligações de Lunn, Ruvela e Morda. Morda
+  ouviu alguém rir do outro lado. A missão `q_ponte` mudou de título e texto.
+- "O padre reza" (capela) virou "a madre"; "o moleiro" virou "a moleira";
+  "a Coroa levou" (Leva) virou "a Leva levou" em dois textos.
+
+Verificado no navegador (build web): chegada pela estrada do sal, cartão do
+pedido, ação "Levar Edrin com você" na praça, sete dias dormindo, cartão "A
+noite dos dezoito de Edrin" com o desfecho da vigília.
+
+Teste novo: `engine/atoI.selftest.ts` (no `test:engine`).
+
+Pendente:
+- Ato II (as duas levas) e as consequências do Ato I nele: Brida depois de
+  cada desfecho, a Toca como lugar com o filho de Cera a Surda, a Ordem
+  sabendo que o forasteiro entregou ou escondeu um menino.
+- Na viagem, o dia do mundo roda antes de o jogador chegar: se a noite cai
+  no meio de uma viagem, conta o lugar de onde ele saiu.
+- Ainda há homens adultos morando no vale no conteúdo Kimetsu (Urokodaki,
+  Inosuke, Sabito, Yushiro na Mata de Corvos e na capela). É linha
+  secundária; decidir se eles ficam fora do vale.

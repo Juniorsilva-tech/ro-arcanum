@@ -47,8 +47,8 @@ export const questsVaelhorn: Quest[] = [
   // ── Segunda leva: o vale inteiro ─────────────────────────────────────────
   {
     id: 'q_ponte',
-    titulo: 'A Sabotagem da Travessia',
-    descricao: 'A ponte imperial não ruiu por acaso: foi derrubada na insurreição. Morda, que mendiga nas ruínas, ouviu os oficiais darem a ordem.',
+    titulo: 'A noite em que a ponte caiu',
+    descricao: 'Ninguém derrubou a ponte. Ela caiu sozinha, numa noite de inverno, e Morda estava no coto norte. Ela ouviu alguma coisa e não conta a qualquer um.',
     dador: 'morda',
     objetivos: [
       { id: 'ir', texto: 'Ir até a Ponte Caída', flag: 'visitou.ponte' },

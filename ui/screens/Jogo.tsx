@@ -17,6 +17,9 @@ import { cores, fontes, esp, raio, corGrau } from '../theme';
 import { useGame, type EntradaFeed } from '../store';
 import { lerEmVoz, pararVoz } from '../voz';
 import {
+  acoesAtoI,
+  avisosAtoI,
+  objetivoAtoI,
   disponibilidadeVerbo,
   custoComoChegada,
   dataPorExtenso,
@@ -184,10 +187,14 @@ export function Jogo() {
   // rolar o histórico para lembrar o que estava fazendo.
   const objetivosAtivos = useMemo(() => {
     if (!content || !camp) return [] as string[];
-    return content.quests
-      .filter((q) => camp.questEstado[q.id] === 'ativa')
-      .flatMap((q) => q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto))
-      .slice(0, 3);
+    // A trama vem primeiro: tem prazo e não espera.
+    const trama = objetivoAtoI(content, camp);
+    return [
+      ...(trama ? [trama] : []),
+      ...content.quests
+        .filter((q) => camp.questEstado[q.id] === 'ativa')
+        .flatMap((q) => q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto)),
+    ].slice(0, 3);
   }, [content, camp]);
 
   const porCategoria = useMemo(() => {
@@ -336,9 +343,12 @@ export function Jogo() {
             <CercoDaGuarda />
           ) : camp.prisao ? (
             <NaCela />
+          ) : avisosAtoI(content, camp).length > 0 ? (
+            <AvisoDaTrama />
           ) : (
             cena.opcoes.length > 0 && (
               <>
+                <InvernoDosDezoito />
                 <Divisor label="o que você faz" />
                 <View style={{ marginTop: esp.md }}>
                   {cena.opcoes.map((op) => (
@@ -711,6 +721,53 @@ function CercoDaGuarda() {
         <Pressable style={styles.botaoOuro} onPress={() => responder('lutar')}>
           <Text style={styles.botaoOuroTxt}>Lutar</Text>
         </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// Ato I da trama (engine/atoI.ts): o pedido da mãe e a noite dos dezoito
+// passam por aqui antes das opções, com ou sem IA.
+function AvisoDaTrama() {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+  const ler = useGame((s) => s.lerAvisoAtoI);
+  const aviso = avisosAtoI(content, camp)[0];
+  if (!aviso) return null;
+  return (
+    <View style={styles.falhaBox}>
+      <Text style={styles.falhaTitulo}>{aviso.titulo}</Text>
+      <Text style={styles.falhaTexto}>{aviso.texto}</Text>
+      <View style={styles.falhaBotoes}>
+        <Pressable style={styles.botaoOuro} onPress={() => ler(aviso)}>
+          <Text style={styles.botaoOuroTxt}>Seguir</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// Ato I da trama (engine/atoI.ts): o que dá para fazer pelo menino aqui.
+function InvernoDosDezoito() {
+  const camp = useGame((s) => s.camp)!;
+  const content = useGame((s) => s.content)!;
+  const agir = useGame((s) => s.acaoAtoI);
+  const ocupado = useGame((s) => s.ocupado);
+  const acoes = acoesAtoI(content, camp);
+  if (!content.atoI || acoes.length === 0) return null;
+  return (
+    <View style={styles.falhaBox}>
+      <Text style={styles.falhaTitulo}>{content.atoI.titulo}</Text>
+      <Text style={styles.falhaMotivo}>{objetivoAtoI(content, camp)}</Text>
+      {acoes.map((a) => (
+        <Text key={a.id} style={styles.falhaTexto}>· {a.descricao}</Text>
+      ))}
+      <View style={styles.falhaBotoes}>
+        {acoes.map((a) => (
+          <Pressable key={a.id} disabled={ocupado} style={a.id === 'levar' || a.id === 'toca' ? styles.botaoOuro : styles.botaoVazio} onPress={() => agir(a.id)}>
+            <Text style={a.id === 'levar' || a.id === 'toca' ? styles.botaoOuroTxt : styles.botaoVazioTxt}>{a.rotulo}</Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   );

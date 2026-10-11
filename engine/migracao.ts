@@ -39,6 +39,16 @@ export function normalizarCampanha(content: ContentBundle, bruto: Campaign): Cam
     const n = [...content.npcs, ...(camp.npcsProcedurais ?? [])].find(n => n.id === id);
     return !!n?.combatente && camp.npcState?.[id]?.vivo !== false;
   }).slice(0, 2);
+  // A família do jogador morava na taverna de Halvet; desde a sessão 93 o
+  // jogador é de fora e ela mora em Porto do Sal.
+  if (content.atoI && camp.familia) {
+    for (const n of camp.npcsProcedurais) {
+      if (!n.id.startsWith('familia_') || n.localBase !== 'taverna') continue;
+      n.localBase = 'porto_sal';
+      const civil = camp.vivo?.pessoas[n.id];
+      if (civil && civil.casa === 'taverna') { civil.casa = 'porto_sal'; if (!civil.deslocado) civil.local = 'porto_sal'; }
+    }
+  }
   camp.reputacao ??= {};
   camp.segredosRevelados ??= [];
   camp.locaisVisitados ??= [];
