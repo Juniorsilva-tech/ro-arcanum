@@ -17,9 +17,9 @@ import { cores, fontes, esp, raio, corGrau } from '../theme';
 import { useGame, type EntradaFeed } from '../store';
 import { lerEmVoz, pararVoz } from '../voz';
 import {
-  acoesAtoI,
-  avisosAtoI,
-  objetivoAtoI,
+  acoesDaTrama,
+  avisosDaTrama,
+  objetivosDaTrama,
   disponibilidadeVerbo,
   custoComoChegada,
   dataPorExtenso,
@@ -188,9 +188,8 @@ export function Jogo() {
   const objetivosAtivos = useMemo(() => {
     if (!content || !camp) return [] as string[];
     // A trama vem primeiro: tem prazo e não espera.
-    const trama = objetivoAtoI(content, camp);
     return [
-      ...(trama ? [trama] : []),
+      ...objetivosDaTrama(content, camp),
       ...content.quests
         .filter((q) => camp.questEstado[q.id] === 'ativa')
         .flatMap((q) => q.objetivos.filter((o) => !camp.flags[o.flag]).map((o) => o.texto)),
@@ -343,12 +342,12 @@ export function Jogo() {
             <CercoDaGuarda />
           ) : camp.prisao ? (
             <NaCela />
-          ) : avisosAtoI(content, camp).length > 0 ? (
+          ) : avisosDaTrama(content, camp).length > 0 ? (
             <AvisoDaTrama />
           ) : (
             cena.opcoes.length > 0 && (
               <>
-                <InvernoDosDezoito />
+                <AcoesDaTrama />
                 <Divisor label="o que você faz" />
                 <View style={{ marginTop: esp.md }}>
                   {cena.opcoes.map((op) => (
@@ -731,8 +730,8 @@ function CercoDaGuarda() {
 function AvisoDaTrama() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
-  const ler = useGame((s) => s.lerAvisoAtoI);
-  const aviso = avisosAtoI(content, camp)[0];
+  const ler = useGame((s) => s.lerAvisoTrama);
+  const aviso = avisosDaTrama(content, camp)[0];
   if (!aviso) return null;
   return (
     <View style={styles.falhaBox}>
@@ -747,25 +746,28 @@ function AvisoDaTrama() {
   );
 }
 
-// Ato I da trama (engine/atoI.ts): o que dá para fazer pelo menino aqui.
-function InvernoDosDezoito() {
+// A trama (engine/trama.ts): o que cada ato aberto deixa fazer aqui.
+function AcoesDaTrama() {
   const camp = useGame((s) => s.camp)!;
   const content = useGame((s) => s.content)!;
-  const agir = useGame((s) => s.acaoAtoI);
+  const agir = useGame((s) => s.acaoTrama);
   const ocupado = useGame((s) => s.ocupado);
-  const acoes = acoesAtoI(content, camp);
-  if (!content.atoI || acoes.length === 0) return null;
+  const acoes = acoesDaTrama(content, camp);
+  if (acoes.length === 0) return null;
+  const objetivos = objetivosDaTrama(content, camp);
   return (
     <View style={styles.falhaBox}>
-      <Text style={styles.falhaTitulo}>{content.atoI.titulo}</Text>
-      <Text style={styles.falhaMotivo}>{objetivoAtoI(content, camp)}</Text>
+      <Text style={styles.falhaTitulo}>{acoes[0].titulo}</Text>
+      {objetivos.map((o) => (
+        <Text key={o} style={styles.falhaMotivo}>{o}</Text>
+      ))}
       {acoes.map((a) => (
         <Text key={a.id} style={styles.falhaTexto}>· {a.descricao}</Text>
       ))}
       <View style={styles.falhaBotoes}>
         {acoes.map((a) => (
-          <Pressable key={a.id} disabled={ocupado} style={a.id === 'levar' || a.id === 'toca' ? styles.botaoOuro : styles.botaoVazio} onPress={() => agir(a.id)}>
-            <Text style={a.id === 'levar' || a.id === 'toca' ? styles.botaoOuroTxt : styles.botaoVazioTxt}>{a.rotulo}</Text>
+          <Pressable key={a.id} disabled={ocupado} style={a.destaque ? styles.botaoOuro : styles.botaoVazio} onPress={() => agir(a.id)}>
+            <Text style={a.destaque ? styles.botaoOuroTxt : styles.botaoVazioTxt}>{a.rotulo}</Text>
           </Pressable>
         ))}
       </View>

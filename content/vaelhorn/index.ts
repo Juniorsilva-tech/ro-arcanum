@@ -10,6 +10,7 @@ import { integrarContinente } from './continente';
 import { povoarContinente } from './povoamento';
 import { npcsVaelhorn } from './npcs';
 import { NPCS_ATO_I, CONTEUDO_ATO_I } from './atoI';
+import { CONTEUDO_ATO_II } from './atoII';
 import { elencoDoContinente } from './elenco-continente';
 import { itensVaelhorn } from './items';
 import { criaturasVaelhorn, encontrosPorTipo, encontrosPorRegiao } from './bestiary';
@@ -104,6 +105,7 @@ const baseVaelhorn: ContentBundle = integrarKimetsu({
   // As do Ato I vão no fim: a ordem dos outros não muda.
   npcs: [...npcsVaelhorn, ...elencoDoContinente, ...membrosDasCasas, ...moradores, ...NPCS_ATO_I],
   atoI: CONTEUDO_ATO_I,
+  atoII: CONTEUDO_ATO_II,
   mestres: mestresVaelhorn,
   trabalhos: trabalhosVaelhorn,
   artes: artesVaelhorn,

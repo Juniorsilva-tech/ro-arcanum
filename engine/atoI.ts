@@ -68,7 +68,7 @@ export type EstadoAtoI = {
 
 export type AvisoAtoI = { id: 'abertura' | 'desfecho'; titulo: string; texto: string };
 
-export type TramaState = { ato: number; atoI?: EstadoAtoI };
+export type TramaState = { ato: number; atoI?: EstadoAtoI; atoII?: import('./atoII').EstadoAtoII };
 
 export type AcaoAtoI = { id: 'levar' | 'devolver' | 'ordem' | 'toca'; rotulo: string; descricao: string };
 

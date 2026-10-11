@@ -1,6 +1,6 @@
 # Bíblia da história de Vaelhorn
 
-Decisões do dono (sessões 58 e 93): Mir queimou há vinte anos; o jogador é um homem de fora; o jogo tem vários finais. Tsukimichi é outro universo (DLC) e não entra aqui. Kimetsu entra como linha de missões secundárias.
+Decisões do dono (sessões 58, 93 e 95): Mir queimou há vinte anos; o jogador é um homem de fora; o jogo tem vários finais. Tsukimichi é outro universo (DLC) e não entra aqui. Kimetsu entra como linha de missões secundárias.
 
 Este documento é a referência para escrever missões. O que já existe no jogo está em `docs/HISTORIA-ATE-AQUI.md`; aqui está o que falta: a trama, os arcos e os finais. Toda missão nova deve caber nisto ou mudar este documento antes.
 
@@ -48,12 +48,12 @@ Implementado na sessão 94 (`engine/atoI.ts`, `content/vaelhorn/atoI.ts`).
 
 O jogador chega à Rês Enforcada pela estrada do sal e descobre, pelo jeito como o olham, onde está. O ato mostra a Leva e não explica nada.
 
-- Abertura: no primeiro dia em que o jogador amanhece no vale, Brida, a tecelã da praça, o procura. O filho dela, Edrin, faz dezoito anos em sete dias. Ela não pode sair com ele (a Ordem vê) e ele não pode sair sozinho (a Marca recruta). Um homem de fora com um rapaz do lado passa por pai.
+- Abertura: no primeiro dia em que o jogador amanhece no vale, Ilka, a tecelã da praça, o procura. O filho dela, Edrin, faz dezoito anos em sete dias. Ela não pode sair com ele (a Ordem vê) e ele não pode sair sozinho (a Marca recruta). Um homem de fora com um rapaz do lado passa por pai.
 - Edrin não é NPC do elenco: tem dezessete anos, e o elenco só tem adultos (GDD §25). Ele existe no estado do ato e chega ao narrador pelo bloco "trama".
 - No caminho: Sarine observa na taverna; Morda vira o rosto na ponte; a cripta tem um nicho aberto por dentro (pistas por lugar, só para o narrador).
 - Decisão do ato, decidida pela engine na noite dos dezoito:
   - Toca do Juncal: o jogador leva Edrin a Juncal de Baixo, e Orla o esconde. A Toca segura quem está dentro: Edrin vive, preso embaixo do charco. Lá está também o filho de Cera a Surda, dado por levado há sete anos. A Toca passa a existir no mapa.
-  - Ordem: entregue na capela, as irmãs o cantam até a ponte. Reputação com a capela sobe, com a praça desce, e Brida não perdoa.
+  - Ordem: entregue na capela, as irmãs o cantam até a ponte. Reputação com a capela sobe, com a praça desce, e Ilka não perdoa.
   - Vigília: Edrin passa a noite com o jogador no vale. Levanta sem acordar e entra no rio. O jogador entra atrás e a correnteza o empurra de volta, como se a água não o quisesse (flag `trama.agua_recusou`, pista do Ato III: o homem de fora não está no contrato). Morda ouve.
   - Estrada: Edrin passa a noite com o jogador fora do vale. Volta andando e é achado numa vala, virado para Halvet (flag `trama.leva_alcanca_longe`: fugir não basta).
   - Nada: ele vai sozinho.
@@ -61,11 +61,18 @@ O jogador chega à Rês Enforcada pela estrada do sal e descobre, pelo jeito com
 
 ### Ato II: as duas levas (o continente)
 
+Começo implementado na sessão 95 (`engine/atoII.ts`, `content/vaelhorn/atoII.ts`).
+
 O jogador segue a pergunta "para onde vão os meninos que não entram no rio?" e descobre a leva da Marca.
 
-- Pistas levam a Tessel (a isenção vendida, o livro das gêmeas Varn), a Corveira (rapazes da Marca nas galerias, o relatório queimado) e a Mareu (a guilda que financia a guarnição).
-- Cada cidade é a porta de um arco de facção (abaixo). O jogador escolhe a ordem.
-- Decisão do ato: com quem ele se alia para enfrentar a leva da Marca. Halvet, Tessel (Ketta, a gêmea do registro), Corveira ou Mareu (Mirel). A aliança decide quem ajuda e quem caça o jogador no ato IV.
+- Abertura: três dias depois de ler a noite dos dezoito, Pia entrega uma carta de Cera, veterana do cerco em Tessel. A leva da Marca levou o filho dela, Tobin, e a guarnição diz que nunca o recebeu. A carta repete o que Tessel ouviu do jogador no Ato I.
+- Três rastros, em qualquer ordem. Cada um é um segredo que já existe no jogo; descobrir qualquer um da lista é achar o rastro da cidade:
+  - Tessel (Odile, Ketta a escrivã, Mira a Velha): a isenção da leva pagou a muralha oeste.
+  - Corveira (Wyn do registro, Quilda Boca-Seca, Halda Verrão): os trinta e quatro nomes que não cabem na lista do desabamento são rapazes da Marca mandados às galerias. Tobin Ost está entre eles.
+  - Mareu (Fenn do Norte, Mirel): o sal sem selo paga a guarda da Marca; a guilda compra depois o braço barato das galerias.
+- Com o rastro de Corveira, o jogador pode contar a Cera o que houve com Tobin.
+- Decisão do ato, com dois rastros: o aliado. Halvet (Dama Valda) sempre; Ketta, Fenn ou Mirel só com o rastro da cidade delas, e só onde elas estão. A aliança grava quem caça o jogador no Ato IV: Odile (Halvet ou Ketta), Halda Verrão (Fenn), Vidar Olho-Vivo (Mirel).
+- Falta: os arcos de cada cidade (abaixo) como missões próprias, e o que a aliança muda no mundo antes do Ato IV.
 
 ### Ato III: Mir
 
@@ -119,7 +126,7 @@ Cada arco tem cinco a oito missões, começo, meio e fim, e um desfecho que entr
 
 ### Mareu: o galpão trancado
 
-- Material: a quarentena decretada tarde por Calder a pedido da guilda; Vidar que passou a tranca; Brida que perdeu a mãe lá dentro; Mirel que compra as dívidas de Rede Rota para quebrar a guilda; Halvo da Ponte com a ponta de arpão que falta no tridente; o farol apagado.
+- Material: a quarentena decretada tarde por Calder a pedido da guilda; Vidar que passou a tranca; Brida do Norte, que perdeu a mãe lá dentro; Mirel que compra as dívidas de Rede Rota para quebrar a guilda; Halvo da Ponte com a ponta de arpão que falta no tridente; o farol apagado.
 - Desfechos: a guilda quebrada por Mirel; Vidar exposta; Mareu financia o vale no ato IV ou financia Tessel.
 
 ### Juncal: a Toca

@@ -31,7 +31,7 @@ import { processarDiretorDeArcos } from './diretor';
 import { avancarCicloSubespaco } from './tsukimichi';
 import { processarCicloReino } from './reino';
 import { processarDiaColonia } from './colonia';
-import { processarDiaAtoI } from './atoI';
+import { processarDiaTrama } from './trama';
 
 export type Clima = 'limpo' | 'nublado' | 'chuva' | 'temporal' | 'neblina' | 'geada';
 
@@ -239,8 +239,8 @@ export function avancarMundo(content: ContentBundle, camp: Campaign): void {
     processarCaravanas(content, camp);
     // No máximo um gancho por dia apontando para o que já existe (diretor.ts).
     processarDiretorDeArcos(content, camp);
-    // Ato I da trama: a semana dos dezoito (engine/atoI.ts).
-    processarDiaAtoI(content, camp);
+    // Trama principal, ato por ato (engine/trama.ts).
+    processarDiaTrama(content, camp);
     if (camp.asora?.desbloqueado) {
       avancarCicloSubespaco(camp);
     }

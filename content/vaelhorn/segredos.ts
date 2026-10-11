@@ -604,10 +604,10 @@ export const SEGREDOS_NOVOS: Record<string, Segredo> = {
     comoDescobrir: 'perguntar pela cicatriz no ombro dela',
   },
   sabito: {
-    conteudo: 'Sabito morreu na Seleção Final matando todos os onis da montanha, menos o último. A espada dele quebrou no pescoço do Oni das Mãos, e ele continua na mata porque o oni ainda come alunos de Urokodaki.',
-    comoDescobrir: 'treinar na mata ao entardecer até ele aparecer',
+    conteudo: 'Sabito morreu na Seleção Final matando todos os onis da montanha, menos o último. A espada dele quebrou no pescoço do Oni das Mãos, e ele continua no morro porque o oni ainda come alunos de Urokodaki.',
+    comoDescobrir: 'treinar no morro da torre ao entardecer até ele aparecer',
     consequencia: {
-      texto: 'Sabito lhe mostrou onde a lâmina dele quebrou. Enquanto o Oni das Mãos viver, os mortos da mata não descansam.',
+      texto: 'Sabito lhe mostrou onde a lâmina dele quebrou. Enquanto o Oni das Mãos viver, os mortos do morro não descansam.',
       efeitos: [rel('urokodaki', 'confianca', 3), rel('giyu', 'confianca', 2)],
     },
   },

@@ -93,10 +93,9 @@ import {
   processarCicloReino,
   fundarColonia,
   reacenderFarol,
-  executarAcaoAtoI,
-  marcarAvisoAtoI,
-  type AvisoAtoI,
-  type AcaoAtoI,
+  executarAcaoTrama,
+  marcarAvisoTrama,
+  type AvisoTrama,
   aceitarChegada,
   recusarChegada,
   comprarAnimais,
@@ -327,8 +326,8 @@ interface GameState {
   fundarFeudoAcao: (nome: string, localId: string, bioma?: BiomaFeudo) => Promise<string>;
   fundarColoniaAcao: (nome: string) => Promise<string>;
   reacenderFarolAcao: () => Promise<string>;
-  acaoAtoI: (id: AcaoAtoI['id']) => Promise<string>;
-  lerAvisoAtoI: (aviso: AvisoAtoI) => Promise<void>;
+  acaoTrama: (id: string) => Promise<string>;
+  lerAvisoTrama: (aviso: AvisoTrama) => Promise<void>;
   aceitarChegadaAcao: (id: string) => Promise<string>;
   resolverAudienciaAcao: (opcaoId: string) => Promise<string>;
   decidirAssembleiaAcao: (entrada: string | import('@/engine').Preparacao[]) => Promise<string>;
@@ -953,20 +952,20 @@ export const useGame = create<GameState>((set, get) => ({
     return r.mensagem;
   },
 
-  async acaoAtoI(id) {
+  async acaoTrama(id) {
     const { camp, content } = get();
     if (!camp || !content) return '';
-    const r = executarAcaoAtoI(content, camp, id);
+    const r = executarAcaoTrama(content, camp, id);
     if (r.ok) registrarNaCronica(camp, r.mensagem);
     set({ camp: { ...camp }, feed: [...get().feed, nf(r.mensagem, r.ok ? 'narracao' : 'sistema')] });
     await persistir(camp, set);
     return r.mensagem;
   },
 
-  async lerAvisoAtoI(aviso) {
-    const { camp } = get();
-    if (!camp) return;
-    marcarAvisoAtoI(camp, aviso.id);
+  async lerAvisoTrama(aviso) {
+    const { camp, content } = get();
+    if (!camp || !content) return;
+    marcarAvisoTrama(content, camp, aviso.id);
     set({ camp: { ...camp }, feed: [...get().feed, nf(aviso.texto, 'narracao')] });
     await persistir(camp, set);
   },

@@ -119,6 +119,24 @@ const ROTINAS_ELENCO: Record<string, Rotina> = {
   yushiro: { madrugada: 'capela', manha: 'capela', tarde: 'capela', entardecer: 'cripta', anoitecer: 'cripta', noite: 'praca' },
 };
 
+// Os homens do elenco (premissa: nenhum homem feito vive no vale).
+const HOMENS_KIMETSU = new Set([
+  'tanjiro', 'zenitsu', 'inosuke', 'genya', 'kagaya', 'urokodaki', 'jigoro', 'shinjuro', 'sabito', 'yushiro',
+  'giyu', 'gyomei', 'rengoku', 'muichiro', 'obanai', 'sanemi', 'tengen',
+]);
+// Lugar do vale -> lugar de fora com o mesmo uso.
+const LUGAR_FORA_DO_VALE: Record<string, string> = {
+  floresta: 'ruinas', praca: 'acampamento', mercado: 'acampamento', taverna: 'acampamento',
+  capela: 'mina', cripta: 'mina', lago: 'ruinas', moinho: 'acampamento', cemiterio: 'ruinas',
+  ponte: 'estrada', casa_senhorial: 'acampamento',
+};
+// Quem mora num lugar só. Urokodaki e os dois espíritos ficam no morro da
+// Torre do Vigia (a prova da montanha); Tamayo e Yushiro, na mina abandonada,
+// que é escura de dia.
+const CASA_FORA_DO_VALE: Record<string, string> = {
+  urokodaki: 'torre', sabito: 'torre', makomo: 'torre', tamayo: 'mina', yushiro: 'mina',
+};
+
 function npc(id: string, nome: string, idade: number, ocupacao: string, personalidade: string, localBase = 'mansao_ubuyashiki'): NPC {
   return { id, nome, idade, ocupacao, personalidade, localBase, faccaoId: 'cacadores',
     rotina: ROTINAS_ELENCO[id] ?? {}, vozNarrativa: personalidade, corpo: 'Veste roupas de viagem e equipamento coerente com seu ofício.', relacoes: [] };
@@ -183,6 +201,23 @@ export function integrarKimetsu(base: ContentBundle): ContentBundle {
     const n = npcs.find(n => n.id === id)!;
     n.especie = 'oni';
     n.rotina = { ...n.rotina, manha: 'capela', tarde: 'capela' };
+  }
+  // Nenhum homem feito vive no Vale de Halvet (premissa, sessões 93 e 95): os
+  // caçadores vêm de fora e ficam fora. A Mata de Corvos vira as Ruínas de
+  // Mir, a vila vira o Acampamento, e quem tem casa fixa ganha uma fora.
+  for (const n of npcs) {
+    if (!HOMENS_KIMETSU.has(n.id)) continue;
+    const casa = CASA_FORA_DO_VALE[n.id];
+    const trocar = (l: string) => casa ?? LUGAR_FORA_DO_VALE[l] ?? l;
+    n.localBase = trocar(n.localBase);
+    n.rotina = Object.fromEntries(Object.entries(n.rotina).map(([p, l]) => [p, trocar(l as string)]));
+  }
+  // Tamayo vai com Yushiro: os dois não se separam.
+  for (const id of ['tamayo', 'makomo']) {
+    const n = npcs.find(x => x.id === id)!;
+    const casa = CASA_FORA_DO_VALE[id]!;
+    n.localBase = casa;
+    n.rotina = Object.fromEntries(Object.keys(n.rotina).map(p => [p, casa]));
   }
   const extras = [
     ['zenitsu', 'respiracao_trovao_primeira'], ['inosuke', 'respiracao_fera_primeira'], ['kanao', 'respiracao_flor_percepcao'],

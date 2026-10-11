@@ -805,6 +805,8 @@ export type ContentBundle = {
   sitiosColonia?: import('../content/vaelhorn/sitios').SitioColonia[];
   /** Ato I da trama (engine/atoI.ts). Cenário sem ele não tem o ato. */
   atoI?: import('./atoI').ConteudoAtoI;
+  /** Ato II da trama (engine/atoII.ts). */
+  atoII?: import('./atoII').ConteudoAtoII;
   arquetiposColono?: import('../content/vaelhorn/colonos').ArquetipoColono[];
   gruposChegada?: import('../content/vaelhorn/colonos').GrupoChegada[];
   nomesColonas?: string[];

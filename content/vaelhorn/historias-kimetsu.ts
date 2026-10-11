@@ -18,7 +18,7 @@ export const HISTORIAS_KIMETSU: Record<string, HistoriaNpc> = {
     medo: 'Perder o irmão de vista numa multidão.',
   },
   giyu: {
-    origem: 'Discípulo de Sakonji Urokodaki na Mata de Corvos, recolhido depois que a irmã mais velha morreu.',
+    origem: 'Discípulo de Sakonji Urokodaki no morro da Torre do Vigia, recolhido depois que a irmã mais velha morreu.',
     ferida: 'A irmã o escondeu de um oni na véspera do próprio casamento e não sobreviveu à noite.',
     desejo: 'Merecer o lugar que ocupa entre os caçadores, coisa que ele acha que não merece.',
     medo: 'Que um discípulo novo de Urokodaki morra onde ele sobreviveu.',
@@ -120,7 +120,7 @@ export const HISTORIAS_KIMETSU: Record<string, HistoriaNpc> = {
     medo: 'Ficar sozinha na casa quando ele se for.',
   },
   urokodaki: {
-    origem: 'Ex-Hashira da Água. Vive numa cabana na Mata de Corvos e treina discípulos para a prova da montanha.',
+    origem: 'Ex-Hashira da Água. Vive numa cabana no morro da Torre do Vigia, fora do vale, e treina discípulos para a prova da montanha.',
     ferida: 'Treinou discípulos por trinta anos e parou de contar quantos voltaram da primeira caçada.',
     desejo: 'Um discípulo que envelheça e venha visitá-lo de cabelo branco.',
     medo: 'Mandar outro menino para a montanha antes da hora.',
@@ -132,19 +132,19 @@ export const HISTORIAS_KIMETSU: Record<string, HistoriaNpc> = {
     medo: 'Ter falhado com um dos dois.',
   },
   sabito: {
-    origem: 'Discípulo de Urokodaki, órfão recolhido na mata e irmão de treino de Giyu.',
+    origem: 'Discípulo de Urokodaki, órfão recolhido no morro e irmão de treino de Giyu.',
     ferida: 'Não voltou da montanha da prova, e Giyu voltou.',
     desejo: 'Que os discípulos novos voltem da montanha, todos eles.',
     medo: 'Ver outro menino subir a montanha despreparado.',
   },
   makomo: {
-    origem: 'Discípula de Urokodaki, a menor da turma dela. Corrige postura e respiração na mata ao entardecer.',
-    ferida: 'Ficou na mata depois da prova para ensinar o que ninguém teve tempo de ensinar a ela.',
+    origem: 'Discípula de Urokodaki, a menor da turma dela. Corrige postura e respiração no morro ao entardecer.',
+    ferida: 'Ficou no morro depois da prova para ensinar o que ninguém teve tempo de ensinar a ela.',
     desejo: 'Ver uma aluna dela descer da montanha viva.',
     medo: 'Esquecer o rosto do mestre.',
   },
   tamayo: {
-    origem: 'Médica de uma cidade que não existe mais. Vive escondida perto da Capela de São Vandro com um assistente.',
+    origem: 'Médica de uma cidade que não existe mais. Vive escondida na Mina de Ferro abandonada, fora do vale, com um assistente.',
     ferida: 'Perdeu a família há mais tempo do que qualquer pessoa viva do vale consegue lembrar.',
     desejo: 'Desfazer a condição de oni em alguém, qualquer um.',
     medo: 'Ser encontrada por quem a fez.',

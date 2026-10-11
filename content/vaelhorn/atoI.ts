@@ -1,6 +1,6 @@
 // ARCANUM · Ato I da trama: o forasteiro (docs/BIBLIA-DA-HISTORIA.md).
 //
-// Brida, tecelã da praça, tem um filho que faz dezoito anos em sete dias.
+// Ilka, tecelã da praça, tem um filho que faz dezoito anos em sete dias.
 // Ela procura o jogador porque ele é de fora: uma mulher do vale saindo com
 // o filho na semana dos dezoito é vista pela Ordem, e um menino sozinho na
 // estrada é recrutado pelos fiscais da Marca. Um homem de fora com um rapaz
@@ -21,7 +21,7 @@ import type { ConteudoAtoI } from '../../engine/atoI';
 export const NPCS_ATO_I: NPC[] = [
   {
     id: 'brida',
-    nome: 'Brida, a Tecelã',
+    nome: 'Ilka, a Tecelã',
     idade: 41,
     ocupacao: 'tecelã',
     faccaoId: 'vila',
@@ -70,15 +70,15 @@ export const CONTEUDO_ATO_I: ConteudoAtoI = {
   titulo: 'O inverno dos dezoito',
   textos: {
     abertura:
-      'Brida, a tecelã da praça, sentou na sua frente sem pedir licença. O filho dela, Edrin, faz dezoito anos em sete dias. ' +
+      'Ilka, a tecelã da praça, sentou na sua frente sem pedir licença. O filho dela, Edrin, faz dezoito anos em sete dias. ' +
       'Ela não explicou o que isso quer dizer e não precisou: viu na sua cara que você ainda não sabia. ' +
       '"Você é de fora. Uma mulher daqui saindo com o filho nesta semana, a Ordem vê. Um menino sozinho na estrada, a Marca leva. ' +
       'Um homem de fora com um rapaz do lado passa por pai." Disse onde ele dorme e foi embora antes que você respondesse.',
     levar:
-      'Brida pôs na mão de Edrin um pão, uma faca pequena e um fio de lã vermelha amarrado no pulso. Não chorou. ' +
+      'Ilka pôs na mão de Edrin um pão, uma faca pequena e um fio de lã vermelha amarrado no pulso. Não chorou. ' +
       'Edrin anda com você agora, meio passo atrás, olhando a estrada como quem olha o mar.',
     devolver:
-      'Você deixou Edrin com a mãe. Brida não perguntou por quê. Fechou a porta devagar.',
+      'Você deixou Edrin com a mãe. Ilka não perguntou por quê. Fechou a porta devagar.',
     ordem:
       'A madre recebeu Edrin na porta da capela como quem recebe uma oferta. A Irmã Perla não olhou para você. ' +
       'Na praça, até a noite, já se sabia: o forasteiro entregou o filho da tecelã à Ordem.',
@@ -88,10 +88,10 @@ export const CONTEUDO_ATO_I: ConteudoAtoI = {
     desfechos: {
       toca:
         'Na noite dos dezoito, Edrin acordou na Toca, levantou e foi até a parede. Orla e os outros o seguraram até o dia clarear. ' +
-        'Ele está vivo, embaixo do charco, e não pode mais sair de lá. Alguém vai precisar contar a Brida.',
+        'Ele está vivo, embaixo do charco, e não pode mais sair de lá. Alguém vai precisar contar a Ilka.',
       ordem:
         'Na noite dos dezoito, a Ordem cantou Edrin da capela até a ponte, com velas. Ele foi andando na frente delas, de olhos abertos, ' +
-        'e entrou no rio sem parar de andar. As irmãs chamam isso de penitência cumprida. Brida não foi.',
+        'e entrou no rio sem parar de andar. As irmãs chamam isso de penitência cumprida. Ilka não foi.',
       vigilia:
         'Na noite dos dezoito, Edrin levantou sem acordar e caminhou para a ponte. Você o segurou pelo braço e ele continuou andando, ' +
         'arrastando você junto, com a força de três homens. Na margem você entrou atrás dele até a cintura, e a correnteza empurrou você ' +
@@ -100,7 +100,7 @@ export const CONTEUDO_ATO_I: ConteudoAtoI = {
         'Na noite dos dezoito, longe do vale, Edrin levantou sem acordar e saiu andando de volta pela estrada. Foi achado de manhã ' +
         'numa vala cheia de água da chuva, de bruços, com o rosto virado para Halvet.',
       sozinho:
-        'Na noite dos dezoito, Edrin saiu de casa sozinho e caminhou até a ponte. Brida o seguiu até a porta e não passou dela. ' +
+        'Na noite dos dezoito, Edrin saiu de casa sozinho e caminhou até a ponte. Ilka o seguiu até a porta e não passou dela. ' +
         'De manhã havia um ramo novo de flores no parapeito.',
     },
     pistas: {

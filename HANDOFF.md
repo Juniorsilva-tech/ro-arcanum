@@ -633,13 +633,13 @@ Pendente:
 Pedido do dono: começar a trama pelo Ato I da bíblia.
 
 **O ato** (`engine/atoI.ts`, `content/vaelhorn/atoI.ts`):
-- No primeiro dia em que o jogador amanhece no vale, Brida, a tecelã da praça
+- No primeiro dia em que o jogador amanhece no vale, Ilka, a tecelã da praça
   (NPC nova), pede ajuda: o filho, Edrin, faz dezoito anos em sete dias.
 - O jogador leva Edrin com ele (na praça). A engine decide a noite dos
   dezoito ao processar o dia seguinte, pelo que o jogador fez:
   - Toca: levou a Juncal de Baixo e pediu que o escondessem. Revela o segredo
     de Orla (abre a Toca no mapa). Edrin vive, embaixo do charco.
-  - Ordem: entregou na capela. Capela +8, praça −5, Brida não perdoa.
+  - Ordem: entregou na capela. Capela +8, praça −5, Ilka não perdoa.
   - Vigília: ficou com ele no vale. Ele entra no rio; a água empurra o jogador
     de volta. Flag `trama.agua_recusou` (pista do Ato III), Morda confia mais.
   - Estrada: ficou com ele fora do vale. Morre no caminho. Flag
@@ -683,7 +683,7 @@ noite dos dezoito de Edrin" com o desfecho da vigília.
 Teste novo: `engine/atoI.selftest.ts` (no `test:engine`).
 
 Pendente:
-- Ato II (as duas levas) e as consequências do Ato I nele: Brida depois de
+- Ato II (as duas levas) e as consequências do Ato I nele: Ilka depois de
   cada desfecho, a Toca como lugar com o filho de Cera a Surda, a Ordem
   sabendo que o forasteiro entregou ou escondeu um menino.
 - Na viagem, o dia do mundo roda antes de o jogador chegar: se a noite cai
@@ -691,3 +691,47 @@ Pendente:
 - Ainda há homens adultos morando no vale no conteúdo Kimetsu (Urokodaki,
   Inosuke, Sabito, Yushiro na Mata de Corvos e na capela). É linha
   secundária; decidir se eles ficam fora do vale.
+
+## Sessão 95 — Claude — homens fora do vale e começo do Ato II
+
+**Kimetsu fora do vale** (decisão do dono: "tira eles do vale"). A regra
+virou "nenhum homem feito vive no vale", não só os quatro citados:
+`content/vaelhorn/kimetsu.ts` remapeia, para os homens do elenco Kimetsu
+(Tanjiro, Zenitsu, Inosuke, Genya, Kagaya, Urokodaki, Jigoro, Shinjuro,
+Sabito, Yushiro e os Hashiras homens), todo lugar do vale para um de fora: a
+Mata de Corvos vira as Ruínas de Mir, praça, mercado e taverna viram o
+Acampamento, capela e cripta viram a Mina. Casas fixas: Urokodaki, Sabito e
+Makomo no morro da Torre do Vigia (a prova da montanha; Makomo vai junto);
+Tamayo e Yushiro na Mina abandonada (ela vai junto, os dois não se separam).
+Histórias e segredos que diziam "Mata de Corvos" ou "perto da capela" foram
+ajustados. Mulheres (Shinobu, Mitsuri, Kanao, Kanae, Nezuko) continuam.
+
+**A tecelã virou Ilka** (id `brida` mantido): já havia uma Brida no
+Acampamento e uma Brida do Norte em Mareu.
+
+**Ato II, começo** (`engine/atoII.ts`, `content/vaelhorn/atoII.ts`):
+- Carta de Cera (Tessel) três dias depois de lida a noite dos dezoito, com o
+  que Tessel ouviu do desfecho do Ato I.
+- Três rastros (Tessel, Corveira, Mareu), cada um um segredo que já existe;
+  conta também segredo descoberto antes do ato. Ler o rastro dá XP uma vez.
+- Corveira põe Tobin Ost entre os trinta e quatro nomes; dá para contar a
+  Cera.
+- Com dois rastros, a aliança: Halvet (Valda), Ketta, Fenn ou Mirel, na
+  presença delas. Grava `trama.atoII.alianca`, `cacam` (Ato IV) e marca
+  `trama.ato = 3`.
+- `engine/trama.ts` junta os atos para o dia do mundo, a tela (cartões e
+  "o que está aberto") e o narrador (bloco "trama" com atoI e atoII; regra
+  nova sobre "quemSabeAqui" e "cacamVoce").
+
+Verificado no navegador: cartão da carta, cartão do rastro, objetivo "2 de 3
+rastros; dá para escolher um aliado" e a ação "Aliar-se à Casa de Halvet"
+(segredos injetados no estado).
+
+Teste novo: `engine/atoII.selftest.ts` (no `test:engine`).
+
+Pendente:
+- Arcos de cada cidade como missões (bíblia: Tessel, Corveira, Mareu).
+- O que a aliança muda no mundo; o Ato III (Mir) e o Ato IV.
+- Os ids dos segredos-chave são de moradores gerados (`morador_tessel_7`,
+  `morador_corveira_7`...). Se o povoamento mudar a ordem, a lista do Ato II
+  precisa acompanhar; `atoII.selftest` confere id por nome e falha se mudar.
